@@ -5972,3 +5972,4 @@ factory23219553完整23页2267 built、0 prebuild：1883belt/202sorter/36assembl
 - 2026-10-11：R1038核销一笔已接受但以`position_stalled`终止的Move，并由普通保存覆盖；固定20窗口维持5/20且冻结，余下3个本目的预算槽位退役。来源与wholeSupply门仍未通过，详见[阶段证据](evidence/2026-10-11/south-turn-stall-save-r1038.md)。
 - 2026-10-11：R1046完成一段短程Move并由普通保存覆盖；第二目标虽通过Native prepare，但岸线风险门阻止commit，未accepted。窗口为7/20且仍冻结，来源与wholeSupply门未通过，详见[东北路线前缀与保存](evidence/2026-10-11/northeast-prefix-save-r1046.md)。
 - 2026-10-11：R1055完成两次短程Move并由普通保存覆盖；第三目标虽通过Native prepare，但岸线风险门阻止commit，未accepted。窗口为10/20且仍冻结，来源与wholeSupply门未通过，详见[东北两段移动与保存](evidence/2026-10-11/northern-two-move-save-r1055.md)。
+- 2026-10-11：R1062从Rod仓转出400件并由普通保存覆盖；R1065短窗观测到Rod净增量，但Warp与钛源输出仍为零，不能据此判持续供给通过。窗口为13/20且仍开放冻结，详见[Rod转存与来源短窗](evidence/2026-10-11/upper-bank-rod400-save-source-r1065.md)。
