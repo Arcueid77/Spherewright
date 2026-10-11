@@ -5974,3 +5974,4 @@ factory23219553完整23页2267 built、0 prebuild：1883belt/202sorter/36assembl
 - 2026-10-11：R1055完成两次短程Move并由普通保存覆盖；第三目标虽通过Native prepare，但岸线风险门阻止commit，未accepted。窗口为10/20且仍冻结，来源与wholeSupply门未通过，详见[东北两段移动与保存](evidence/2026-10-11/northern-two-move-save-r1055.md)。
 - 2026-10-11：R1062从Rod仓转出400件并由普通保存覆盖；R1065短窗观测到Rod净增量，但Warp与钛源输出仍为零，不能据此判持续供给通过。窗口为13/20且仍开放冻结，详见[Rod转存与来源短窗](evidence/2026-10-11/upper-bank-rod400-save-source-r1065.md)。
 - 2026-10-11：R1072 将400根Rod转存、取出600个Warp并保存；R1075短窗观察到Warp 6/min、Rod与钛源输出为零，未证明持续来源。固定窗口为16/20且仍开放冻结，详见[库存转存与来源短窗](evidence/2026-10-11/owned-stock-warp-demand-save-r1075.md)。
+- 2026-10-11：R1088独立核销并封闭旧16/20窗口，未用4槽退役；R1089新20窗口以0/20冻结开启。R1085定位到磁铁炉铁源路径，但Warp上游铁路仍为空，持续来源门未通过，详见[共享氘支路、铁源缺口与封窗](evidence/2026-10-11/shared-deuterium-iron-gap-window-close-r1088.md)。
