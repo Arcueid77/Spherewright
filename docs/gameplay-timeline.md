@@ -5969,3 +5969,4 @@ factory23219553完整23页2267 built、0 prebuild：1883belt/202sorter/36assembl
 - 2026-10-11：R991–R997完成一段北向Move并由普通保存覆盖；第二段因12个岸线风险样本未提交，原余量退役。来源、连续供给与最终候选门仍未通过，详见[阶段证据](evidence/2026-10-11/northern-prefix-flow-r997.md)。
 - 2026-10-11：R1013以17/20提前封窗，保存覆盖全部动作；一段accepted Move以native_move_stalled结束并核销，余3槽退役。完整快照和库存保全通过，但来源及wholeSupply门仍未通过，详见[阶段证据](evidence/2026-10-11/saved17-flow-r1013.md)。
 - 2026-10-11：R1027完成两次成功Move与覆盖保存；第三段虽prepare为positive，但5个岸线风险样本触发精确策略拒绝，未commit，余下3项预算退役。来源与wholeSupply门仍未通过，详见[阶段证据](evidence/2026-10-11/row-skirt-prefix-r1027.md)。
+- 2026-10-11：R1038核销一笔已接受但以`position_stalled`终止的Move，并由普通保存覆盖；固定20窗口维持5/20且冻结，余下3个本目的预算槽位退役。来源与wholeSupply门仍未通过，详见[阶段证据](evidence/2026-10-11/south-turn-stall-save-r1038.md)。
