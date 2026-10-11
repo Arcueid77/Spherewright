@@ -1,16 +1,16 @@
-# R1094 有限铁锭备料与保存
+# R1094 有限铁块备料与保存
 
 更新：2026-10-11（Asia/Singapore）。本阶段只补充有限施工材料并保存，不证明铁源或整案供给通过。
 
 ## 动作与保存边界
 
-本阶段3笔原生动作均成功：一次正常Move、从仓 `28` 转出铁锭 `1101×200`、一次普通保存。仓内铁锭由 `3000` 降至 `2800`，背包铁锭为 `200`；另有Rod `5`、Warp `900`、Ti `500`，背包占用 `35/40` 格。三笔动作均由保存覆盖，保存tick `110275796`、revision `172`、durable Journal `102`。窗口以 lifetime `535` 开始，现为 `3/20`、lifetime `538`，本阶段结束并冻结；整案累计 `139` accepted、`44` 次Move、`41` 次普通保存、`26` 次手工材料动作。当前无在途或未知动作。
+本阶段3笔原生动作均成功：一次正常Move、从仓 `28` 转出铁块（`1101`）`×200`、一次普通保存。Native transfer 终态仓内精确扣料为 `3000→2800`；随后 fresh 实体读回为 `2801`（自然补货），背包铁块为 `200`；另有Rod `5`、Warp `900`、Ti `500`，背包占用 `35/40` 格。三笔动作均由保存覆盖，保存tick `110275796`、revision `172`、durable Journal `102`。窗口以 lifetime `535` 开始，现为 `3/20`、lifetime `538`，本阶段结束并冻结；整案累计 `139` accepted、`44` 次Move、`41` 次普通保存、`26` 次手工材料动作。当前无在途或未知动作。
 
 原调用器末尾因预期字段 `1210` 缺失而返回 `passed=false`。独立核对了全部原件并确认三笔动作的唯一prepare、ACK、terminal、双边库存和保存覆盖；该本地解析错误不是原生动作失败，也未重放动作。末尾库存解析的修正已通过真实PowerShell文件调用的零Game原件fixture回归，但修正后调用器尚无实际Gameplay执行证明。
 
 ## 供给与快照边界
 
-这些200件铁锭是有限库存备料。`sourceConditionsPassed=false`、`wholeSupplyPassed=false`、continuous credit `0`；永久供料线 `6477→1501` 尚未施工。先前活跃铁源 `6476` 到磁铁炉的资格记录不代表新路线完成。
+这些200件铁块（`1101`）是有限库存备料。`sourceConditionsPassed=false`、`wholeSupplyPassed=false`、continuous credit `0`；永久供料线 `6477→1501` 尚未施工。先前活跃铁源 `6476` 到磁铁炉的资格记录不代表新路线完成。
 
 本阶段复用R1088核验的完整 `6492 built / 0 prebuild` 工厂帧，未重新获取完整工厂或电力快照。不得把该复用帧表述成R1094的新鲜全厂/电力核验。旧氘支路、来源长窗和其他验收边界见[共享氘支路与R1088封窗](shared-deuterium-iron-gap-window-close-r1088.md)。
 
@@ -20,6 +20,6 @@
 
 ## 受保护索引
 
-- R1094批准：`0299d7dfe49841f0b44eefb14c697743:229` / `ED54B1CAC64ECB6ECC7C4BC9EBDE5BB456D647AF889B2EA6CDAAB5D7E1FB2EE8`。
+- R1092有限取材阶段批准：`0299d7dfe49841f0b44eefb14c697743:229` / `ED54B1CAC64ECB6ECC7C4BC9EBDE5BB456D647AF889B2EA6CDAAB5D7E1FB2EE8`。
 - R1094独立保存核验：`0299d7dfe49841f0b44eefb14c697743:230` / `E499B27DC27D3C8C76E1260FA54B643B26E8241018BD29AAD5254B259F563B8F`。
 - R1095调用器库存解析回归：`0299d7dfe49841f0b44eefb14c697743:232` / `A41E319D9F754C13637358DE58871BA643B85A8BA67A0B4222213F2970ABE95F`。
