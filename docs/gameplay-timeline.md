@@ -5967,3 +5967,4 @@ factory23219553完整23页2267 built、0 prebuild：1883belt/202sorter/36assembl
 - 2026-10-11：R971完成Warp转入和短程逃离Move，下一涉水目标在commit前被本地拒绝且未重试；R976普通保存、R977独立核验覆盖成功前缀，当前窗口仍冻结开放10/20，来源与连续供给门未过。[Warp补给、受限移动与保存核验](evidence/2026-10-11/warp-escape-save-r977.md)
 - 2026-10-11：R988将144件物料1108转入断开仓773并完成普通保存；fixed-20窗口维持12/20且冻结。R981短窗观察到Rod与Warp库存产出受阻，但来源及整案持续供给门仍未通过。[Rod容量与保管转存核验](evidence/2026-10-11/rod-capacity-custody-r988.md)
 - 2026-10-11：R991–R997完成一段北向Move并由普通保存覆盖；第二段因12个岸线风险样本未提交，原余量退役。来源、连续供给与最终候选门仍未通过，详见[阶段证据](evidence/2026-10-11/northern-prefix-flow-r997.md)。
+- 2026-10-11：R1013以17/20提前封窗，保存覆盖全部动作；一段accepted Move以native_move_stalled结束并核销，余3槽退役。完整快照和库存保全通过，但来源及wholeSupply门仍未通过，详见[阶段证据](evidence/2026-10-11/saved17-flow-r1013.md)。

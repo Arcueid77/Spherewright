@@ -4,18 +4,19 @@
 
 ## 当前保存与窗口
 
-- 最近普通保存为 tick `109172487`、revision `142`、durable Journal `102`。R997 独立核验确认本阶段动作均已保存覆盖，无在途或未知动作；本阶段已结束。
-- 固定 20 窗口以 lifetime `502` 开始，当前 `14/20`、lifetime `516`。整案累计 `117` accepted、`34` 次 Move、`33` 次普通保存、`22` 次手工材料动作。R991–R997 本阶段有 2 个 accepted：一次成功 Move 与一次普通保存；原阶段未执行的 7 项动作预算退役，不转移。
-- 玩家背包：Warp `300`、Ti Ingot `500`、Rod `5`、Stone Ore `0`、Stone `0`；占用 `27/40` 格，空余 `13` 格。Rod `400` 尚未取用。
+- 最近普通保存为 tick `109303045`、revision `146`、durable Journal `102`。R1013 独立封窗确认所有当前动作均由保存覆盖，无在途或未知动作。
+- 固定 20 窗口从 lifetime `502` 开始，现以 `17/20`、lifetime `519` 提前封窗；未用 3 槽退役、不转移。整案累计 `120` accepted、`36` 次 Move、`34` 次普通保存、`22` 次手工材料动作。accepted 计数包含已接受但终态失败的动作。
+- 玩家持有 Warp `300`、Ti `500`、Rod `5`，背包占用 `27/40` 格；核心能量 `1.6 GJ`。Rod `400`尚未取用。
 
-## 路线与保管状态
+## 封窗与保管状态
 
-- R991–R997 的第一段普通移动成功。第二段 fresh 向下路线预览观察到 12 个岸线风险样本，未提交第二次移动。没有重放动作或延长原预算。
-- 成功前缀通过同一入口内 3 次只读刷新并经运行时边界核验；普通保存覆盖成功 Move。R997 核验了 9 个受影响对象和 P104 本地电网满供；其他星球电网未在本阶段 fresh 核验。
-- 保管仓 `286` 的有序缓冲内容保持守恒：Stone Ore `6`、Oil `261`。完整工厂 `6492 built / 0 prebuild` 为已封存静态基线复用，本阶段未重新采集完整全厂帧。
+- 本阶段请求的三次移动中，两次 accepted；一段成功到达，另一次以 `action_failed` / `native_move_stalled` 结束，181 ticks 内进展小于 `0.75 m`、距目标 `22.44 m`。原 action 已核销，没有重放或恢复，具体碰撞原因未证明。
+- R1013完整帧为 `6492 built / 0 prebuild`、65页，相对已核基线无静态变化；三座已加载工厂均满供。保管仓有序缓冲中 Oil `261`、Stone Ore `6`，Stone物料仓存 `2932`。
 
-## 未通过的验收门
+## 来源与最终验收边界
 
-`sourceConditionsPassed=false`、`wholeSupplyPassed=false`、continuous credit `0`。Rod `400`、Warp/Rod及钛源持续供给、完整物料长窗、双补给、整合恢复和最终同 SHA 双候选验收仍未通过。下一步依据 12 个岸线风险样本设计结构不同的有限路线并重新核验；这不是等待用户授权，也不代表新路线已获 Native 资格。
+`sourceConditionsPassed=false`、`wholeSupplyPassed=false`、continuous credit `0`。Rod `400`、Warp/Rod与钛源持续供给、完整供需长窗、双补给、整合保存恢复和最终同 SHA 双候选门仍未通过；库存保全、短窗和封窗均不替代这些验收。
 
-阶段证据：[R991–R997 北向路线前缀与保存边界](evidence/2026-10-11/northern-prefix-flow-r997.md)、[R982–R988 Rod 容量与保管转存核验](evidence/2026-10-11/rod-capacity-custody-r988.md)、[R783 完整来源长窗](evidence/2026-10-10/current-full-source-long-r783.md)。
+流程数据仅作不同阶段样本：本次移动前缀到覆盖保存约 `11.31 min`，前一成功前缀约 `6.36 min`；两者情境不同，不能作直接性能比较。115次游戏请求调用者约 `49.07 s`，完整本地审计约 `49.40 s`，不涵盖整段协调等待。
+
+阶段证据：[R991–R1013有限路线、保存与封窗](evidence/2026-10-11/saved17-flow-r1013.md)、[R991–R997北向路线前缀](evidence/2026-10-11/northern-prefix-flow-r997.md)、[R783完整来源长窗](evidence/2026-10-10/current-full-source-long-r783.md)。
