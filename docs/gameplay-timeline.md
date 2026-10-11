@@ -3,6 +3,8 @@
 更新时间：2026-10-10（Asia/Singapore）
 公开存档 ID：`owned-world-001`（真实存档名不进入仓库）
 
+2026-10-11 — R935核销并保存固定窗口13笔accepted，退役未用7笔，fresh完整工厂封存为6492 built/0 prebuild；持续来源与整案验收仍未通过。[R935固定窗口封存与完整工厂核验](evidence/2026-10-11/saved13-window-close-r935.md)
+
 2026-10-10 — R585独立核销固定20写窗口中的10笔唯一accepted均由正常Save覆盖；全厂快照6366 built/0 prebuild，石料矿机仍未接电或开采，来源及持续供给门未通过。[R585石料路由前缀保存与固定窗口封存](evidence/2026-10-10/stone-route-prefix-save-r585.md)
 
 2026-10-10 — R577完成由6332经16条NEW带材至6318的高端双接缝Native cover；旧路径开放空载、矿机仍未接电，施工尚未由新Save覆盖。R579同scope余段正在执行。[R577高端双接缝Native核验](evidence/2026-10-10/stone-raised-dual-cover-r577.md)
