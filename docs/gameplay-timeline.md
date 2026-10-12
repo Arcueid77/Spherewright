@@ -5988,3 +5988,5 @@ factory23219553完整23页2267 built、0 prebuild：1883belt/202sorter/36assembl
 - 2026-10-12：R1190–R1195维护动作已由普通保存和独立核验闭合；R1196–R1197只读路线勘探无写入，A/B/C候选均未通过几何守卫，完整 Native 路径检查为0，来源与持续供给仍未通过，详见[原生网格路线批量读取与障碍勘探](evidence/2026-10-12/iron-native-grid-batch-live-and-maintenance-r1197.md)。
 
 - 2026-10-12：R1198–R1206批量只读勘探新增21段点列并复用成功前缀；124点延长下穿主选整线预览因只读指纹误入施工模式入口返回内部异常，日志/精确DLL复现已定位。0写入/accepted，仍15/20、lifetime550、J102；最小修复待验证。[阶段证据](evidence/2026-10-12/iron-readonly-underpass-and-fingerprint-r1206.md)。
+
+- 2026-10-12（R1216维护与Native版本变化）：只读指纹修复128ec5f准确CI38230443288与247相关测试通过；普通Save112747810/R3/J102后窗口16/20、lifetime551、无在途。228文件冷安装/一次桌面启动完成，尚未Load；实际Native更新至0.10.35.29131，原存档与凭据为29104且未消费。已按原始零Game拒绝与一次只读状态核实版本变化，未改白名单/Journal上限或加载。来源/整供false、连续信用0；详见[统一阶段证据](evidence/2026-10-12/readonly-fingerprint-maintenance-and-native-drift-r1214.md)。
