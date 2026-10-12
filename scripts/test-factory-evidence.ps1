@@ -44,6 +44,24 @@ foreach($id in $plainView.entities.Keys){
         ($plainView.entities[$id].dynamic -ceq $nullFuelView.entities[$id].dynamic)
 }
 Assert-Factory $sameFuelProjection 'legacy rows and current null fuel placeholders preserve the exact same projection'
+$nullGeometryPage=New-FixturePage 100
+foreach($entity in $nullGeometryPage.entities){$entity|Add-Member -NotePropertyName geometryCut -NotePropertyValue $null}
+$nullGeometryView=New-SpherewrightFactoryEvidenceView -Pages @($nullGeometryPage) -ExpectedEntityCount 2
+$sameGeometryProjection=$plainView.entityCount -eq $nullGeometryView.entityCount
+foreach($id in $plainView.entities.Keys){
+    $sameGeometryProjection=$sameGeometryProjection -and
+        ((ConvertTo-SpherewrightEvidenceJson $plainView.entities[$id].static) -ceq (ConvertTo-SpherewrightEvidenceJson $nullGeometryView.entities[$id].static)) -and
+        ($plainView.entities[$id].dynamic -ceq $nullGeometryView.entities[$id].dynamic)
+}
+Assert-Factory $sameGeometryProjection 'legacy rows and current null geometry placeholders preserve the exact same projection'
+foreach($geometryKind in @('observed','unknown','emptyObject','emptyArray')) {
+    $geometryPage=New-FixturePage 100
+    $geometry=switch($geometryKind){observed{[pscustomobject]@{state='observed';factoryGeometryHash=('A'*64)}}unknown{[pscustomobject]@{state='unavailable'}}emptyObject{[pscustomobject]@{}}emptyArray{,@()}}
+    $geometryPage.entities[0]|Add-Member -NotePropertyName geometryCut -NotePropertyValue $geometry
+    $rejected=$false
+    try{New-SpherewrightFactoryEvidenceView -Pages @($geometryPage) -ExpectedEntityCount 2|Out-Null}catch{$rejected=$_.Exception.Message -ceq 'Populated geometryCut is not an immutable factory entity row.'}
+    Assert-Factory $rejected "$geometryKind geometry wrapper cannot be silently discarded"
+}
 foreach($fuelKind in @('observed','unknown','emptyObject','emptyArray')) {
     $fuelPage=New-FixturePage 100
     $fuel=switch($fuelKind){observed{[pscustomobject]@{state='observed';fuelCount=1}}unknown{[pscustomobject]@{state='unknown'}}emptyObject{[pscustomobject]@{}}emptyArray{,@()}}
