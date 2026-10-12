@@ -309,14 +309,21 @@ internal sealed class OwnedWorldResumeTicketStore
         out OwnedWorldResumeTicket? ticket, out string fingerprint, out string rejection)
         => TryGetProtectedProvenance(resumeToken, true, out ticket, out fingerprint, out rejection);
 
-    private bool TryGetProtectedProvenance(string resumeToken, bool requireActiveCredential,
+    public bool TryGetVersionChangedPrimaryProvenance(string resumeToken,
         out OwnedWorldResumeTicket? ticket, out string fingerprint, out string rejection)
+        => TryGetProtectedProvenance(resumeToken, true, out ticket, out fingerprint, out rejection,
+            versionChangedPrimary: true);
+
+    private bool TryGetProtectedProvenance(string resumeToken, bool requireActiveCredential,
+        out OwnedWorldResumeTicket? ticket, out string fingerprint, out string rejection,
+        bool versionChangedPrimary = false)
     {
         ticket = null;
         fingerprint = string.Empty;
         rejection = "Protected recovery provenance is missing, changed, consumed, expired for this mode, or incomplete.";
         try
         {
+            if (versionChangedPrimary && !requireActiveCredential) return false;
             if (string.IsNullOrWhiteSpace(resumeToken)) return false;
             // A malformed tombstone is still a refusal here; never resurrect consumed provenance.
             var hash = HashToken(resumeToken);
@@ -337,7 +344,9 @@ internal sealed class OwnedWorldResumeTicketStore
                 || (_currentTicket is not null && !string.Equals(PluginJson.Serialize(_currentTicket),
                     PluginJson.Serialize(runtime), StringComparison.Ordinal))
                 || runtime.Version != TicketVersion || !FixedTimeEquals(runtime.ResumeToken, resumeToken)
-                || !(requireActiveCredential
+                || !(versionChangedPrimary
+                    ? OwnedWorldPrimaryMigrationPolicy.IsSupportedPair(runtime.GameVersion, _gameVersion)
+                    : requireActiveCredential
                     ? string.Equals(runtime.GameVersion, _gameVersion, StringComparison.Ordinal)
                     : OwnedWorldVersionCompatibilityPolicy.AllowsReauthorization(runtime.GameVersion, _gameVersion))
                 || string.IsNullOrWhiteSpace(runtime.OwnedSaveName)
@@ -355,7 +364,8 @@ internal sealed class OwnedWorldResumeTicketStore
                     IsConsumed(resumeToken), runtime.IssuedAtUtc, runtime.ExpiresAtUtc, DateTimeOffset.UtcNow))) return false;
             if (!TryValidateGameplayJournalContinuity(runtime, true, out var journalHash, out rejection)) return false;
             ticket = runtime;
-            fingerprint = CanonicalStateHash.Combine(requireActiveCredential ? "active-fixed-autosave0-provenance-v1"
+            fingerprint = CanonicalStateHash.Combine(versionChangedPrimary ? "active-version-primary-provenance-v1"
+                : requireActiveCredential ? "active-fixed-autosave0-provenance-v1"
                 : "expired-primary-provenance-v2", PluginJson.Serialize(runtime), journalHash, _gameVersion);
             rejection = string.Empty;
             return true;
@@ -369,10 +379,11 @@ internal sealed class OwnedWorldResumeTicketStore
     }
 
     public bool TryConsumeReauthorization(string resumeToken, string expectedFingerprint,
-        string actionId, string confirmationDigest, bool requireActiveCredential = false)
+        string actionId, string confirmationDigest, bool requireActiveCredential = false,
+        bool versionChangedPrimary = false)
     {
         if (!Guid.TryParse(actionId, out _) || string.IsNullOrWhiteSpace(confirmationDigest)
-            || !TryGetProtectedProvenance(resumeToken, requireActiveCredential, out var ticket, out var currentFingerprint, out _)
+            || !TryGetProtectedProvenance(resumeToken, requireActiveCredential, out var ticket, out var currentFingerprint, out _, versionChangedPrimary)
             || !FixedTimeEquals(currentFingerprint, expectedFingerprint)) return false;
         var tokenHash = HashToken(resumeToken);
         var handoffDirectory = Path.GetDirectoryName(_handoffTicketPath)!;
@@ -398,14 +409,14 @@ internal sealed class OwnedWorldResumeTicketStore
     }
 
     public FileStream OpenReauthorizationJournalLease(OwnedWorldResumeTicket ticket, string provenance,
-        bool requireActiveCredential = false)
+        bool requireActiveCredential = false, bool versionChangedPrimary = false)
     {
         var identity = GameplayJournalIdentity.HashOwnedSaveIdentity(ticket.OwnedSaveName);
         var stream = new FileStream(Path.Combine(_runtimeDirectory, "journals", $"gameplay-{identity}.json"),
             FileMode.Open, FileAccess.Read, FileShare.Read);
         try
         {
-            if (!TryGetProtectedProvenance(ticket.ResumeToken, requireActiveCredential, out _, out var fresh, out _)
+            if (!TryGetProtectedProvenance(ticket.ResumeToken, requireActiveCredential, out _, out var fresh, out _, versionChangedPrimary)
                 || !FixedTimeEquals(provenance, fresh))
                 throw new IOException("The exact journal changed before its protected load lease.");
             return stream;

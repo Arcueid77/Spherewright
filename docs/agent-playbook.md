@@ -2,6 +2,14 @@
 
 Read this playbook before the first gameplay action in a session, especially after creating a new world. It is also available from the MCP resource `spherewright://agent/playbooks/opening-movement-v1`.
 
+## Active primary after the exact29131 version change
+
+When advertised by a matching cohort, `reauthorize_version_changed_primary` uses existing owned-resume tools with evidence5. Only unchanged active healthy29104 provenance, its exact saved primary and original Journal qualify on29131. Default resume still requires equal versions. Never edit expiry or substitute an expired/autosave mode.
+
+Prepare from the idle menu with the protected token and explicit mode; leave confirmation false and tick overrides absent. Require source29104/target29131, complete identity, candidate equal to recorded saved tick, evidence5 and exact prompt/digest, confirmation required and commit disallowed. Prepare neither loads nor consumes. Show the concrete disclosure and obtain a subsequent explicit conversation reply before commit; a preparation grant alone does not authorize loading.
+
+Commit fresh-rechecks the same primary, replicas, mode-specific provenance, complete Journal and menu revision under read-only leases, then consumes durably before native loading. Preserve origin, entries and two prior transitions; only the exact third29104→29131 transition may append after adoption, before normal resave/new credential. Unknown/same-version pairs, skipped links, fourth transitions, stale evidence and replay reject. Poll the one accepted action and verify actual owned identity, planet, tick, durable history, saved header and inventory; failure after consumption requires reconciliation. Offline tests remain separate from live validation.
+
 ## Session entry and ownership
 
 Version migration is not a default resume exception. The exact researched expired-primary pairs are `0.10.34.28529 → 0.10.35.29057`, `0.10.34.28529 → 0.10.35.29088`, and `0.10.35.29088 → 0.10.35.29104`; no other direct or chained jump is implied. `reauthorize_expired_primary` may prepare only the exact healthy expired primary after full source/Journal checks. Verify evidence version 2 and its `sourceGameVersion` / `targetGameVersion` disclosure before confirming. Never edit ticket expiry or relabel historical Journal versions. Adoption must preserve all entries and prior transitions, persist the new directional transition, normally resave, and read back the new native format before issuing a new credential. Verify Journal `originGameVersion`, `currentGameVersion`, `versionTransitions`, durable sequence and pending/error status. Unknown pairs, downgrades and ordinary cross-version default resume reject; consumed failures require reconciliation, not replay. Offline build/tests are not native-load validation.

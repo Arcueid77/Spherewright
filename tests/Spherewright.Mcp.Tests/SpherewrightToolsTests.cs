@@ -463,6 +463,51 @@ public sealed class SpherewrightToolsTests
     }
 
     [Fact]
+    public async Task VersionChangedPrimaryRejectsConfirmationBeforeAnyBridgeCall()
+    {
+        var bridge = new FakeBridgeClient(SuccessResult());
+        var result = await SpherewrightTools.PrepareOwnedWorldResumeAsync(bridge, "active-ticket",
+            recoveryMode: OwnedWorldResumeModes.ReauthorizeVersionChangedPrimary, userConfirmedInConversation: true);
+        Assert.True(result.IsError);
+        Assert.Null(bridge.LastResumePrepareRequest);
+    }
+
+    [Theory]
+    [InlineData("valid", false)]
+    [InlineData("old-evidence", true)]
+    [InlineData("default-mode", true)]
+    [InlineData("wrong-target", true)]
+    [InlineData("old-prompt", true)]
+    [InlineData("missing-digest", true)]
+    public async Task VersionChangedPrimaryOnlyExposesTheExactV5Disclosure(string fault, bool error)
+    {
+        var plan = new PreparedOwnedWorldResumePlan
+        {
+            Prepared = true, PlanToken = "synthetic-active-migration-plan",
+            RecoveryMode = OwnedWorldResumeModes.ReauthorizeVersionChangedPrimary, RecoveryEvidenceVersion = 5,
+            CandidateGameTick = 12345, MinimumGameTick = 12345, ExactEmbeddedIdentityVerified = true,
+            UserConfirmationRequired = true, CommitAllowedNow = false,
+            SourceGameVersion = "0.10.35.29104", TargetGameVersion = "0.10.35.29131",
+            ConfirmationPrompt = Spherewright.Bridge.Core.Safety.OwnedWorldPrimaryMigrationPolicy.ConfirmationPrompt,
+            ConfirmationDigest = "synthetic-disclosure-digest",
+        };
+        switch (fault)
+        {
+            case "old-evidence": plan.RecoveryEvidenceVersion = 2; break;
+            case "default-mode": plan.RecoveryMode = OwnedWorldResumeModes.Default; break;
+            case "wrong-target": plan.TargetGameVersion = "0.10.35.29132"; break;
+            case "old-prompt": plan.ConfirmationPrompt = Spherewright.Bridge.Core.Safety.OwnedWorldReauthorizationPolicy.ConfirmationPrompt; break;
+            case "missing-digest": plan.ConfirmationDigest = ""; break;
+        }
+        var bridge = new FakeBridgeClient(SuccessResult()) { ResumePlan = plan };
+        var result = await SpherewrightTools.PrepareOwnedWorldResumeAsync(bridge, "active-ticket",
+            recoveryMode: OwnedWorldResumeModes.ReauthorizeVersionChangedPrimary);
+        Assert.Equal(error, result.IsError);
+        Assert.False(bridge.LastResumePrepareRequest!.UserConfirmedInConversation);
+        if (error) Assert.DoesNotContain("planToken", result.StructuredContent!.Value.GetRawText());
+    }
+
+    [Fact]
     public async Task ExpiredPrimaryDoesNotAcceptAVerifiedLastExitEcho()
     {
         var bridge = new FakeBridgeClient(SuccessResult())

@@ -10,6 +10,8 @@ public static class OwnedWorldRecoveryPolicy
 
     public static string? ValidateRequest(PrepareOwnedWorldResumeRequest request)
     {
+        if (request.RecoveryMode == OwnedWorldResumeModes.ReauthorizeVersionChangedPrimary)
+            return OwnedWorldPrimaryMigrationPolicy.ValidateRequest(request);
         if (OwnedWorldAutosaveRecoveryPolicy.IsFixedAutosaveMode(request.RecoveryMode))
             return OwnedWorldAutosaveRecoveryPolicy.ValidateRequest(request);
         if (request.RecoveryMode == OwnedWorldResumeModes.ReauthorizeExpiredPrimary)

@@ -16,6 +16,10 @@ public sealed class OwnedWorldVersionCompatibilityPolicyTests
         Assert.True(OwnedWorldVersionCompatibilityPolicy.IsSupportedMigration(Source, Target));
         Assert.True(OwnedWorldVersionCompatibilityPolicy.IsSupportedMigration(Source, TargetPatch));
         Assert.True(OwnedWorldVersionCompatibilityPolicy.IsSupportedMigration(TargetPatch, CurrentPatch));
+        Assert.True(OwnedWorldVersionCompatibilityPolicy.IsSupportedMigration(CurrentPatch, LatestPatch));
+        Assert.False(OwnedWorldVersionCompatibilityPolicy.IsSupportedMigration(TargetPatch, LatestPatch));
+        Assert.False(OwnedWorldVersionCompatibilityPolicy.IsSupportedMigration(Source, LatestPatch));
+        Assert.False(OwnedWorldVersionCompatibilityPolicy.IsSupportedMigration(LatestPatch, CurrentPatch));
         Assert.False(OwnedWorldVersionCompatibilityPolicy.IsSupportedMigration(Source, CurrentPatch));
         Assert.False(OwnedWorldVersionCompatibilityPolicy.IsSupportedMigration(Target, CurrentPatch));
         Assert.False(OwnedWorldVersionCompatibilityPolicy.IsSupportedMigration(CurrentPatch, TargetPatch));
@@ -47,6 +51,24 @@ public sealed class OwnedWorldVersionCompatibilityPolicyTests
     public void ReauthorizationAllowsOnlySameVersionOrTheExactSupportedPair(
         string source, string target, bool allowed) =>
         Assert.Equal(allowed, OwnedWorldVersionCompatibilityPolicy.AllowsReauthorization(source, target));
+
+    [Fact]
+    public void ThirdTransitionPreservesTheExactExistingHistoryAndRejectsAFourth()
+    {
+        var first = ValidTransition(to: TargetPatch);
+        var second = ValidTransition(from: TargetPatch, to: CurrentPatch, adoptedAt: AdoptedTick + 1);
+        var third = ValidTransition(from: CurrentPatch, to: LatestPatch, adoptedAt: AdoptedTick + 2);
+        Assert.True(OwnedWorldVersionCompatibilityPolicy.CanAppendTransition(
+            Source, new[] { first, second }, EntryCount, CurrentPatch, LatestPatch, third));
+        Assert.True(OwnedWorldVersionCompatibilityPolicy.JournalMatches(
+            Source, new[] { first, second, third }, EntryCount, LatestPatch));
+        Assert.False(OwnedWorldVersionCompatibilityPolicy.JournalMatches(
+            Source, new[] { first, third }, EntryCount, LatestPatch));
+        Assert.False(OwnedWorldVersionCompatibilityPolicy.JournalMatches(
+            Source, new[] { first, second, third, third }, EntryCount, LatestPatch));
+        Assert.False(OwnedWorldVersionCompatibilityPolicy.CanAppendTransition(
+            Source, new[] { first, second, third }, EntryCount, CurrentPatch, LatestPatch, third));
+    }
 
     [Fact]
     public void NullVersionsFailClosed()
@@ -202,6 +224,7 @@ public sealed class OwnedWorldVersionCompatibilityPolicyTests
     private const string Target = OwnedWorldVersionCompatibilityPolicy.TargetVersion;
     private const string TargetPatch = OwnedWorldVersionCompatibilityPolicy.TargetPatchVersion;
     private const string CurrentPatch = OwnedWorldVersionCompatibilityPolicy.CurrentPatchVersion;
+    private const string LatestPatch = OwnedWorldVersionCompatibilityPolicy.LatestPatchVersion;
 
     private static GameplayJournalVersionTransition ValidTransition(
         string from = Source,

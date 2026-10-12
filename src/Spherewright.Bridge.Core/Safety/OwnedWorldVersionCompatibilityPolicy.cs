@@ -5,18 +5,21 @@ namespace Spherewright.Bridge.Core.Safety;
 /// <summary>Researched, directional native migration; never a wildcard version bypass.</summary>
 public static class OwnedWorldVersionCompatibilityPolicy
 {
-    public const int MaximumDurableTransitions = 2;
+    public const int MaximumDurableTransitions = 3;
     public const string SourceVersion = "0.10.34.28529";
     public const string TargetVersion = "0.10.35.29057";
     public const string TargetPatchVersion = "0.10.35.29088";
     public const string CurrentPatchVersion = "0.10.35.29104";
+    public const string LatestPatchVersion = "0.10.35.29131";
 
     public static bool IsResearchedTarget(string version) =>
-        version == TargetVersion || version == TargetPatchVersion || version == CurrentPatchVersion;
+        version == TargetVersion || version == TargetPatchVersion || version == CurrentPatchVersion
+        || version == LatestPatchVersion;
 
     public static bool IsSupportedMigration(string source, string target) =>
         (source == SourceVersion && (target == TargetVersion || target == TargetPatchVersion))
-        || (source == TargetPatchVersion && target == CurrentPatchVersion);
+        || (source == TargetPatchVersion && target == CurrentPatchVersion)
+        || (source == CurrentPatchVersion && target == LatestPatchVersion);
 
     public static bool AllowsReauthorization(string source, string target) =>
         !string.IsNullOrWhiteSpace(source) && (source == target || IsSupportedMigration(source, target));

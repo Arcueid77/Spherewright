@@ -16,11 +16,64 @@ public sealed class OwnedWorldResumeTicketStoreIntegrationTests
     private const string TargetGameVersion = "0.10.35.29057";
     private const string TargetPatchGameVersion = "0.10.35.29088";
     private const string CurrentPatchGameVersion = "0.10.35.29104";
+    private const string LatestPatchGameVersion = "0.10.35.29131";
     private const string OwnedSaveName = "synthetic-protected-world-identity";
     private const string SessionId = "synthetic-session";
     private const int PlanetId = 104;
     private const long MinimumTick = 12345;
     private const string ConfirmationDigest = "sha256:test-confirmation";
+
+    [Fact]
+    public void ActiveVersionPrimaryUsesExactHistoryAndCannotBecomeDefaultOrAutosaveAuthority()
+    {
+        using var scenario = VersionTransitionScenario.CreateActive(
+            CurrentPatchGameVersion, GameVersion, OriginalTwoTransitions());
+        var store = scenario.OpenStore(LatestPatchGameVersion);
+        Assert.False(store.TryGetActiveTicket(scenario.Token, out _, out _));
+        Assert.False(store.TryGetExpiredPrimaryProvenance(scenario.Token, out _, out _, out _));
+        Assert.False(store.TryGetFixedAutosaveProvenance(scenario.Token, out _, out _, out _));
+        Assert.True(store.TryGetVersionChangedPrimaryProvenance(scenario.Token,
+            out var ticket, out var fingerprint, out var rejection));
+        Assert.Equal(CurrentPatchGameVersion, ticket!.GameVersion);
+        Assert.Equal(string.Empty, rejection);
+        Assert.False(store.TryConsumeReauthorization(scenario.Token, fingerprint,
+            Guid.NewGuid().ToString(), ConfirmationDigest, requireActiveCredential: true));
+        using (store.OpenReauthorizationJournalLease(ticket, fingerprint,
+            requireActiveCredential: true, versionChangedPrimary: true)) { }
+        Assert.True(store.TryConsumeReauthorization(scenario.Token, fingerprint,
+            Guid.NewGuid().ToString(), ConfirmationDigest, requireActiveCredential: true, versionChangedPrimary: true));
+        Assert.False(scenario.OpenStore(LatestPatchGameVersion).TryGetVersionChangedPrimaryProvenance(
+            scenario.Token, out _, out _, out _));
+    }
+
+    [Fact]
+    public void ActiveVersionPrimaryCannotAcceptExpiredProvenance()
+    {
+        using var scenario = VersionTransitionScenario.CreateExpired(
+            CurrentPatchGameVersion, LatestPatchGameVersion, GameVersion, OriginalTwoTransitions());
+        Assert.False(scenario.Store.TryGetVersionChangedPrimaryProvenance(scenario.Token, out _, out _, out _));
+        Assert.True(scenario.Store.TryGetExpiredPrimaryProvenance(scenario.Token, out _, out _, out _));
+    }
+
+    [Theory]
+    [InlineData("0.10.35.29104")]
+    [InlineData("0.10.35.29132")]
+    [InlineData("0.10.35.29088")]
+    public void ActiveVersionPrimaryRejectsSameUnknownAndDowngradedRuntime(string runtime)
+    {
+        using var scenario = VersionTransitionScenario.CreateActive(
+            CurrentPatchGameVersion, GameVersion, OriginalTwoTransitions());
+        Assert.False(scenario.OpenStore(runtime).TryGetVersionChangedPrimaryProvenance(
+            scenario.Token, out _, out _, out _));
+    }
+
+    private static GameplayJournalVersionTransition[] OriginalTwoTransitions() => new[]
+    {
+        new GameplayJournalVersionTransition { FromGameVersion = GameVersion, ToGameVersion = TargetPatchGameVersion,
+            AdoptedAtGameTick = MinimumTick - 2, DurableThroughSequence = 2, RecordedAtUtc = "2026-09-24T00:00:00Z" },
+        new GameplayJournalVersionTransition { FromGameVersion = TargetPatchGameVersion, ToGameVersion = CurrentPatchGameVersion,
+            AdoptedAtGameTick = MinimumTick - 1, DurableThroughSequence = 2, RecordedAtUtc = "2026-09-29T00:00:00Z" },
+    };
 
     [Fact]
     public void ExpiredTicketIsRejectedByDefaultButHealthyCompleteProvenanceCanBePrepared()

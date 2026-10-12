@@ -112,7 +112,8 @@ internal sealed class OwnedWorldResumeCoordinator
             ExpectedPlanetId = ticket.ExpectedPlanetId,
             MinimumGameTick = payload!.MinimumGameTick,
             RecoveryMode = payload.Request.RecoveryMode,
-            RecoveryEvidenceVersion = payload.FixedAutosaveRecovery ? OwnedWorldAutosaveRecoveryPolicy.EvidenceVersionFor(payload.Request.RecoveryMode)
+            RecoveryEvidenceVersion = payload.VersionChangedPrimary ? OwnedWorldPrimaryMigrationPolicy.EvidenceVersion
+                : payload.FixedAutosaveRecovery ? OwnedWorldAutosaveRecoveryPolicy.EvidenceVersionFor(payload.Request.RecoveryMode)
                 : payload.Reauthorizing ? OwnedWorldReauthorizationPolicy.EvidenceVersion
                 : payload.VerifiedRecovery ? OwnedWorldRecoveryPolicy.EvidenceVersion : 0,
             CandidateGameTick = payload.VerifiedRecovery || payload.Reauthorizing ? payload.MinimumGameTick : (long?)null,
@@ -120,12 +121,15 @@ internal sealed class OwnedWorldResumeCoordinator
             UserConfirmationRequired = payload.Reauthorizing,
             SourceGameVersion = ticket.GameVersion,
             TargetGameVersion = _tickets.CurrentGameVersion,
-            ConfirmationPrompt = payload.FixedAutosaveRecovery ? OwnedWorldAutosaveRecoveryPolicy.ConfirmationPromptFor(payload.Request.RecoveryMode)
+            ConfirmationPrompt = payload.VersionChangedPrimary ? OwnedWorldPrimaryMigrationPolicy.ConfirmationPrompt
+                : payload.FixedAutosaveRecovery ? OwnedWorldAutosaveRecoveryPolicy.ConfirmationPromptFor(payload.Request.RecoveryMode)
                 : payload.Reauthorizing ? OwnedWorldReauthorizationPolicy.ConfirmationPrompt : string.Empty,
             ConfirmationDigest = payload.Reauthorizing ? payload.Fingerprint : string.Empty,
             CommitAllowedNow = blockers.Count == 0,
             CommitBlockers = blockers,
-            CompletionCondition = payload.FixedAutosaveRecovery
+            CompletionCondition = payload.VersionChangedPrimary
+                ? "Only the exact active-credential owned primary at the recorded tick may migrate from 0.10.35.29104 to 0.10.35.29131 after subsequent explicit confirmation of this disclosure. Unchanged ticket replicas, full primary evidence and original durable Journal are rechecked and held read-only. Provenance is durably consumed before loading; the exact transition preserves Journal origin/history before normal primary resave and a target-version credential. No expiry edits, alternate source, fallback or replay."
+                : payload.FixedAutosaveRecovery
                 ? "Only the fixed native AutoSave0 at this exact verified tick may load under explicit conversation authority for this candidate. Identity, known progress floor, current version, file evidence and original Journal are rechecked; protected provenance is durably consumed before loading without editing expiry. Adoption and Journal continuity precede normal save to the original owned primary and a fresh credential. No fallback, slot selection or replay after interruption."
                 : payload.Reauthorizing
                 ? "Only the exact primary and original Journal at this checkpoint may continue after subsequent explicit consent. Commit revalidates all evidence, consumes expired provenance before loading, and normal save alone issues a fresh credential. No fallback or import."
@@ -238,9 +242,10 @@ internal sealed class OwnedWorldResumeCoordinator
         {
             if (payload.Reauthorizing)
                 journalLease = _tickets.OpenReauthorizationJournalLease(currentTicket, payload.Provenance,
-                    payload.ActiveFixedAutosaveRecovery);
+                    payload.ActiveCredentialReauthorization, payload.VersionChangedPrimary);
             if (payload.Reauthorizing && !_tickets.TryConsumeReauthorization(currentTicket.ResumeToken,
-                payload.Provenance, action.ActionId, payload.Fingerprint, payload.ActiveFixedAutosaveRecovery))
+                payload.Provenance, action.ActionId, payload.Fingerprint,
+                payload.ActiveCredentialReauthorization, payload.VersionChangedPrimary))
                 return GameCallResult<OwnedWorldResumeResult>.Failed(BridgeError.Create(
                     BridgeErrorCodes.StaleState,
                     "The exact provenance changed or durable consumption failed; no load was started.",
@@ -369,6 +374,8 @@ internal sealed class OwnedWorldResumeCoordinator
         out OwnedWorldResumeTicket? ticket, out string provenance, out string rejection)
     {
         provenance = string.Empty;
+        if (request.RecoveryMode == OwnedWorldResumeModes.ReauthorizeVersionChangedPrimary)
+            return _tickets.TryGetVersionChangedPrimaryProvenance(token, out ticket, out provenance, out rejection);
         if (request.RecoveryMode == OwnedWorldResumeModes.ReauthorizeFixedAutosave0)
             return _tickets.TryGetFixedAutosaveProvenance(token, out ticket, out provenance, out rejection);
         return request.RecoveryMode == OwnedWorldResumeModes.ReauthorizeExpiredPrimary
@@ -433,10 +440,14 @@ internal sealed class OwnedWorldResumeCoordinator
                 primaryLease = null;
                 return false;
             }
-            if (request.RecoveryMode == OwnedWorldResumeModes.ReauthorizeExpiredPrimary)
+            if (request.RecoveryMode == OwnedWorldResumeModes.ReauthorizeExpiredPrimary
+                || request.RecoveryMode == OwnedWorldResumeModes.ReauthorizeVersionChangedPrimary)
             {
                 lease = OwnedSaveRecoveryLease.Open(GameSave.SavePath(ticket.OwnedSaveName), ticket.OwnedSaveName);
-                rejection = OwnedWorldReauthorizationPolicy.ValidateCandidate(ticket.MinimumGameTick, ticket.GameVersion, lease.Prefix)
+                rejection = (request.RecoveryMode == OwnedWorldResumeModes.ReauthorizeVersionChangedPrimary
+                    ? OwnedWorldPrimaryMigrationPolicy.ValidateCandidate(ticket.MinimumGameTick,
+                        ticket.GameVersion, _tickets.CurrentGameVersion, lease.Prefix)
+                    : OwnedWorldReauthorizationPolicy.ValidateCandidate(ticket.MinimumGameTick, ticket.GameVersion, lease.Prefix))
                     ?? string.Empty;
                 if (rejection.Length == 0)
                 {
@@ -647,8 +658,12 @@ internal sealed class OwnedWorldResumeCoordinator
 
         public bool ActiveFixedAutosaveRecovery => Request.RecoveryMode == OwnedWorldResumeModes.ReauthorizeFixedAutosave0;
 
+        public bool VersionChangedPrimary => Request.RecoveryMode == OwnedWorldResumeModes.ReauthorizeVersionChangedPrimary;
+
+        public bool ActiveCredentialReauthorization => ActiveFixedAutosaveRecovery || VersionChangedPrimary;
+
         public bool Reauthorizing => Request.RecoveryMode == OwnedWorldResumeModes.ReauthorizeExpiredPrimary
-            || FixedAutosaveRecovery;
+            || FixedAutosaveRecovery || VersionChangedPrimary;
 
         public string Provenance { get; }
 
