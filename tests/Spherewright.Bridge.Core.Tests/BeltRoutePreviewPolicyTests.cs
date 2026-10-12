@@ -1,4 +1,5 @@
 using Spherewright.Bridge.Core.Factory;
+using Spherewright.Bridge.Core.Safety;
 using Spherewright.Contracts.Actions;
 using Spherewright.Contracts.Factory;
 using Xunit;
@@ -8,6 +9,51 @@ namespace Spherewright.Bridge.Core.Tests;
 public sealed class BeltRoutePreviewPolicyTests
 {
     private const string GeometryHash = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
+
+    [Fact]
+    public void ReadOnlyRouteFingerprintHasItsOwnDomainAndBindsTheCompleteGeometry()
+    {
+        var geometry = CanonicalStateHash.Combine("build-steps", GeometryHash);
+        var preview = BeltRoutePreviewPolicy.BindReadOnlyGeometry(BeltPathModes.NativeRoutePreview, geometry);
+        Assert.StartsWith("sha256:", preview);
+        Assert.Equal(71, preview.Length);
+        Assert.Equal(preview, BeltRoutePreviewPolicy.BindReadOnlyGeometry(BeltPathModes.NativeRoutePreview, geometry));
+        foreach (var mode in new[] { BeltPathModes.NativeGrid, BeltPathModes.NativeGeodesic, BeltPathModes.NativeElevatedGrid })
+            Assert.NotEqual(BeltPathRoutingPolicy.BindGeometry(mode, geometry), preview);
+        Assert.NotEqual(preview, BeltRoutePreviewPolicy.BindReadOnlyGeometry(BeltPathModes.NativeRoutePreview,
+            CanonicalStateHash.Combine("build-steps", "changed geometry")));
+    }
+
+    [Fact]
+    public void PreviewModeRemainsRejectedByExecutableBeltRouting()
+    {
+        Assert.Equal("belt_routing_mode_unknown", BeltPathRoutingPolicy.ValidateRequest(Request(), true));
+        Assert.Throws<ArgumentException>(() => BeltPathRoutingPolicy.BindGeometry(BeltPathModes.NativeRoutePreview, GeometryHash));
+        Assert.False(BeltPathRoutingPolicy.ConfirmsPlanEcho(BeltPathModes.NativeRoutePreview, new BeltPathPlanSnapshot
+        {
+            RoutingMode = BeltPathModes.NativeRoutePreview,
+            NativeValidationMode = "full_path_stage1_and_joint_all_objects",
+        }));
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("straight")]
+    [InlineData(BeltPathModes.NativeGrid)]
+    [InlineData(BeltPathModes.NativeGeodesic)]
+    [InlineData(BeltPathModes.NativeElevatedGrid)]
+    public void ReadOnlyFingerprintCannotAcceptAnExecutableOrUnknownMode(string? mode)
+        => Assert.Throws<ArgumentException>(() => BeltRoutePreviewPolicy.BindReadOnlyGeometry(mode!, GeometryHash));
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData(" ")]
+    [InlineData("partial-geometry")]
+    [InlineData(GeometryHash)]
+    public void ReadOnlyFingerprintRequiresACompleteGeometryHash(string? hash)
+        => Assert.Throws<ArgumentException>(() => BeltRoutePreviewPolicy.BindReadOnlyGeometry(BeltPathModes.NativeRoutePreview, hash!));
 
     [Fact]
     public void AllowsTwelveContinuousBoundedSegmentsAndTheFullPolylineLimit()

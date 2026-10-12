@@ -5986,3 +5986,5 @@ factory23219553完整23页2267 built、0 prebuild：1883belt/202sorter/36assembl
 2026-10-12 — R1186批量72模型仍无候选；R1187接口模式错误经原件独立核验修正，R1188取得五段97个完整生成点但点79与旧带5071重合，在pre-Native守卫停止，完整Native条件检查0次。勘测0写/0accepted/0Save、窗口12/20冻结。必要原生点列批量读取仅为源码准备，尚未部署或施工。[R1188生成点列与批量读取准备](evidence/2026-10-12/iron-native-grid-point-generation-and-batch-reader-r1189.md)
 
 - 2026-10-12：R1190–R1195维护动作已由普通保存和独立核验闭合；R1196–R1197只读路线勘探无写入，A/B/C候选均未通过几何守卫，完整 Native 路径检查为0，来源与持续供给仍未通过，详见[原生网格路线批量读取与障碍勘探](evidence/2026-10-12/iron-native-grid-batch-live-and-maintenance-r1197.md)。
+
+- 2026-10-12：R1198–R1206批量只读勘探新增21段点列并复用成功前缀；124点延长下穿主选整线预览因只读指纹误入施工模式入口返回内部异常，日志/精确DLL复现已定位。0写入/accepted，仍15/20、lifetime550、J102；最小修复待验证。[阶段证据](evidence/2026-10-12/iron-readonly-underpass-and-fingerprint-r1206.md)。

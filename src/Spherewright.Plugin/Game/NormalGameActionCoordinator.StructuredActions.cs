@@ -3236,6 +3236,10 @@ internal sealed partial class NormalGameActionCoordinator
         CanonicalStateHash.FactoryEndpoint(snapshot);
 
     private static string BuildPlanFingerprint(BuildPreparation preparation)
+        => BeltPathRoutingPolicy.BindGeometry(preparation.Steps[0].BeltPathMode,
+            BuildPlanGeometryFingerprint(preparation));
+
+    private static string BuildPlanGeometryFingerprint(BuildPreparation preparation)
     {
         var fields = new List<object?>
         {
@@ -3250,8 +3254,7 @@ internal sealed partial class NormalGameActionCoordinator
             step.AppendFingerprint(fields);
         }
 
-        return BeltPathRoutingPolicy.BindGeometry(preparation.Steps[0].BeltPathMode,
-            CanonicalStateHash.Combine("build-steps", fields.ToArray()));
+        return CanonicalStateHash.Combine("build-steps", fields.ToArray());
     }
 
     private static bool BuildStepsEqual(

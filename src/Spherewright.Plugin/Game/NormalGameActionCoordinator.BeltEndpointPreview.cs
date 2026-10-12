@@ -245,7 +245,10 @@ internal sealed partial class NormalGameActionCoordinator
                 return StalePlan("Player/inventory changed during read-only qualification; no native positive is returned.");
             snapshot.AssessmentHash = CanonicalStateHash.Combine(BeltEndpointPreviewPolicy.Phase,
                 snapshot.SessionId, snapshot.PlanetId, snapshot.Revision, playerBefore.StateHash,
-                BuildPlanFingerprint(preparation), parameters.SorterItemId, parameters.FilterItemId,
+                route is null ? BuildPlanFingerprint(preparation)
+                    : BeltRoutePreviewPolicy.BindReadOnlyGeometry(preparation.Steps[0].BeltPathMode,
+                        BuildPlanGeometryFingerprint(preparation)),
+                parameters.SorterItemId, parameters.FilterItemId,
                 string.Join(";", snapshot.Attachments.Select(a => a.Role + ":" + a.ExistingObjectId + ":" + a.EndpointStateHash
                     + ":" + a.Attachment.SourceSlot + ":" + a.Attachment.DestinationSlot + ":" + a.ExistingBeltQuarterTurns
                     + ":" + a.PlannedBeltQuarterTurns + ":" + a.SorterItemId + ":" + a.NativeCondition + ":" + a.NativeSpan)),

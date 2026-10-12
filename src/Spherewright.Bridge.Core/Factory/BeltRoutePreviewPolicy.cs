@@ -1,5 +1,6 @@
 using Spherewright.Contracts.Actions;
 using Spherewright.Contracts.Factory;
+using Spherewright.Bridge.Core.Safety;
 
 namespace Spherewright.Bridge.Core.Factory;
 
@@ -9,6 +10,17 @@ public static class BeltRoutePreviewPolicy
     public const int MaximumSegments = 12;
     public const int MaximumPoints = 192;
     public const double MaximumPolylineMetres = 240;
+
+    // An assessment hash cannot enter the executable belt-routing domain.
+    public static string BindReadOnlyGeometry(string mode, string geometryHash)
+    {
+        if (mode != BeltPathModes.NativeRoutePreview)
+            throw new ArgumentException("A read-only route fingerprint requires the explicit preview mode.", nameof(mode));
+        if (geometryHash is null || !geometryHash.StartsWith("sha256:", StringComparison.Ordinal)
+            || !FactoryGeometryReadPolicy.ValidHash(geometryHash.Substring(7)))
+            throw new ArgumentException("A complete build-step geometry hash is required.", nameof(geometryHash));
+        return CanonicalStateHash.Combine(Phase, mode, geometryHash);
+    }
 
     public static string? ValidateRequest(PrepareBuildRequest request)
     {
