@@ -1,5 +1,6 @@
 using Spherewright.Contracts.Factory;
 using Spherewright.Contracts.Actions;
+using Spherewright.Bridge.Core.Safety;
 
 namespace Spherewright.Bridge.Core.Factory;
 
@@ -78,6 +79,19 @@ public static class BeltSourceReusePolicy
 
     public static bool SameEvidence(string? before, string? after) =>
         !string.IsNullOrEmpty(before) && string.Equals(before, after, StringComparison.Ordinal);
+
+    public static string BindEmptyElevatedPathEvidence(string sourceBinding, string emptyPathBinding) =>
+        CanonicalStateHash.Combine("belt-elevated-empty-source-cover-v1", sourceBinding, emptyPathBinding);
+
+    public static bool MatchesPreparedCreationBinding(string? preparedBinding, string? sourceBinding,
+        string? preparedEmptyPathBinding, string? currentEmptyPathBinding)
+    {
+        if (string.IsNullOrEmpty(sourceBinding)) return false;
+        if (preparedEmptyPathBinding is null)
+            return currentEmptyPathBinding is null && SameEvidence(preparedBinding, sourceBinding);
+        return SameEvidence(preparedEmptyPathBinding, currentEmptyPathBinding)
+            && SameEvidence(preparedBinding, BindEmptyElevatedPathEvidence(sourceBinding!, currentEmptyPathBinding!));
+    }
 
     public static bool ConfirmsPlanEcho(PreparedNormalAction? plan, int itemId, int sourceId, int destinationId)
     {

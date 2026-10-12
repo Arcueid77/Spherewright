@@ -1,5 +1,13 @@
 # v0.4 Foundry DSP API evidence
 
+## Elevated source creation binding (2026-10-13; source correction, not deployed)
+
+R1237 installed67ccc62 prepared a free0→3 span and a source-bound3→2 span with complete Native checks. The first consumed13 ordinary belts and completed through drones. The second was accepted but ended as`outcome_unknown` during action start. Its exact retained-action reconciliation preview reports a frozen item delta0 rather than the planned-25; the independent full factory contains only the first13 additions and no prebuilds. The original accepted action remains quarantined. Runtime receipts expose the exception type, not its callsite.
+
+The adapter contains a deterministic mismatch: elevated preparation wraps the base source/path binding with the independently captured empty-path binding, while`CreateWithSourceCoverProof` compares that prepared hash with a newly captured base hash before Native create. The correction recaptures the complete empty/open/unfed path and compares the prepared and current bindings at the same level. The post-create proof continues to compare the original base source/path bindings, exact cargo, non-removing identity and reciprocal output to the actual new prebuild. Flat sources retain their existing base-hash semantics. No DSP method, tool, public observation field, path limit, material guard or quarantine rule changes. The current Native reference remains0.10.35.29131, Assembly-CSharp SHA-256`74AC6162CEF8394A6021C8475132CAE4DF4F840871A99E63CC7D2C8297661BC0`.
+
+The hash mismatch explains a supported pre-create failure path; it is not a claim that the runtime exception's precise throwing line was observed. Nine new regression cases plus the related source-cover, elevation, rotation, destination and routing cases passed279/279. The current29131-reference Plugin Release build passed with0 warnings/errors after its necessary locked restore. Root independently checked the original command streams, exact source/reference hashes and actual TRX. Current installed code and the original action record are not patched in place. Protected recovery and fresh live construction remain separate gates. See the [stage evidence](../evidence/2026-10-13/raised-source-creation-binding-and-quarantine-r1238.md).
+
 ## Machine-site rejection boundaries (2026-09-19, local read-only evidence)
 
 Three original `get_foundry_plan` replies were rechecked offline against their SHA-256, revision59, exact check stage and missing-material budget. No new game request or construction was made during that replay. They concern one2302/r59 high-purity-silicon furnace; they do not prove a complete supply route or sustained production.

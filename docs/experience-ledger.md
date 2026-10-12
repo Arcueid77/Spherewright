@@ -1,6 +1,12 @@
 # Spherewright experience ledger
 
-更新时间：2026-10-12（Asia/Singapore）
+更新时间：2026-10-13（Asia/Singapore）
+## EXP-344 — 同层次比较建造绑定，实际扣料与accepted分开
+
+- 状态：validated_offline_live_pending，2026-10-13；279项相关Core与当前29131 Plugin Release通过，接缝修复未部署。
+- 可复用规则：玩家hash、组合建造计划hash、基本source/path绑定及附加empty-path绑定各有契约；以真实可执行Native DTO验证caller，不凭同名或合成夹具假设它们相等。准备与create比较同一层次的fresh完整绑定，post-create保留基本path/cargo/互惠证据，不能靠去掉保护让差异通过。accepted只记录接受事件，不自动成为材料或已建段；unknown保留原intent和计数，只有真实全厂/库存与Native核销共同决定合法续接。
+- R1236真实正例暴露组合build/player误比较；R1237首段13条正常建成、第二原action保留unknown。R1238完整6505实体工厂和原action preview证明第二段0实际差量，但Native仍拒绝核销，不能将其改为未提交或清除隔离。见[原件与恢复边界](evidence/2026-10-13/raised-source-creation-binding-and-quarantine-r1238.md)。
+
 ## EXP-343 — canonical参数绑定与原始流保留
 
 - 状态：observed，2026-10-12。

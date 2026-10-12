@@ -1,6 +1,6 @@
 # 存档日记 001：从落地到当前的决策、科技与首次产出
 
-更新时间：2026-10-12（Asia/Singapore）
+更新时间：2026-10-13（Asia/Singapore）
 公开存档 ID：`owned-world-001`（真实存档名不进入仓库）
 
 2026-10-11 — R935核销并保存固定窗口13笔accepted，退役未用7笔，fresh完整工厂封存为6492 built/0 prebuild；持续来源与整案验收仍未通过。[R935固定窗口封存与完整工厂核验](evidence/2026-10-11/saved13-window-close-r935.md)
@@ -5995,3 +5995,5 @@ factory23219553完整23页2267 built、0 prebuild：1883belt/202sorter/36assembl
 
 2026-10-12 / R1222–R1224：用户实机披露后确认同主档29104→29131迁移；唯一Load正常重存112747841/R1/J102，三条版本记录及6492实体完整工厂独立核验通过，17/20/lifetime552仍冻结。当前29131六段124点整线及两端Native只读检查成功，无新增施工/持续来源信用；下一项为空载2001抬升尾端接续的必要窄适配。详见[迁移与完整工厂](evidence/2026-10-12/native-primary-29131-preparation-r1218.md)及[整线修复实测](evidence/2026-10-12/iron-readonly-underpass-and-fingerprint-r1206.md)。
 - 2026-10-12：R1226–R1235完成raised empty-tail source-cover维护、同主档健康恢复及保存前缀；6492实体完整工厂、静态拓扑、相关cargo及三处已加载工厂供电由独立原件核验。来源、整案供给与最终双候选门仍未通过，详见[抬升尾段维护与健康恢复](evidence/2026-10-12/raised-tail-maintenance-and-healthy-resume-r1235.md)。
+
+- 2026-10-13：R1237首段13条带正常建成；第二段accepted后启动异常进入隔离。R1238独立66页全厂及原action preview核实第二段0扣料/0新增，旧配置/拓扑/J保持；原intent和5/20、lifetime557不清除。接缝绑定hash窄修复及受保护恢复正准备，尚未保存首段或解除隔离，详见[首段施工、接缝隔离与修复](evidence/2026-10-13/raised-source-creation-binding-and-quarantine-r1238.md)。
