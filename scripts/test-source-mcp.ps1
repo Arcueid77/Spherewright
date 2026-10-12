@@ -51,7 +51,7 @@ try {
     $taskReadback = Invoke-SourceMetadataRequest 4 'resources/read' @{uri=$taskMatches[0].uri}
     $taskText = [string]@($taskReadback.contents)[0].text
     Assert-SpherewrightPackageSurface -Version ([version]$taskInit.serverInfo.version) -Tools $taskTools `
-        -PackagedPlaybook $taskGuide -ResourcePlaybook $taskText
+        -Resources $taskResources -PackagedPlaybook $taskGuide -ResourcePlaybook $taskText
     $taskProcess.StandardInput.Close()
     $taskExtraOutput = $taskProcess.StandardOutput.ReadToEndAsync()
     if (-not $taskProcess.WaitForExit(5000) -or $taskProcess.ExitCode -ne 0) { throw 'Source MCP did not exit normally after stdin closed.' }

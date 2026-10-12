@@ -174,7 +174,7 @@ try {
     }
 
     Assert-SpherewrightPackageSurface -Version $serverVersion -Tools $tools `
-        -PackagedPlaybook $packagedPlaybook -ResourcePlaybook $resourceText
+        -Resources @($resourceListResponse.result.resources) -PackagedPlaybook $packagedPlaybook -ResourcePlaybook $resourceText
     $process.StandardInput.Close()
     $remainingStdout = $process.StandardOutput.ReadToEndAsync()
     if (-not $process.WaitForExit(5000)) { throw 'The packaged MCP did not stop after stdin closed.' }
