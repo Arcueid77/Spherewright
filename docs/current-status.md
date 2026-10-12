@@ -1,17 +1,15 @@
 # Spherewright 当前快照
 
-更新：2026-10-13（Asia/Singapore）。当前实际安装源码仍为 67ccc62936c0594a62568b46cb4f79c0718ee89c，228 文件、64 工具/1资源。R1237首段普通施工完成，第二段accepted后为outcome_unknown；R1238独立完整核验确认第二段0扣料/0新增，但Native隔离仍在。接缝绑定哈希的窄修复已通过279项直接相关Core回归及当前29131引用下Plugin Release构建（0警告/错误），未部署/未实机施工。持续来源、wholeSupply 与最终同 SHA 双候选包仍未通过/交付，无正式发布。
+更新：2026-10-13（Asia/Singapore）。当前安装源码为6528e1f7101a714826f7364cef2b0ad75c4b6e82（版本0.4.0+该提交SHA，游戏0.10.35.29131）。源码CI38278446205成功，279项相关验证已绑定；同源隔离构件和安装读回已独立核验。它们不代表最终双候选包交付或持续来源通过。
 
 ## 当前保存与窗口
 
-最近普通保存仍为 tick 113054820、revision 2、durable Journal 102，游戏版本0.10.35.29131，尚未覆盖首段13条带。最新原生观察tick113267791、revision5，writeHealth=quarantined、writesAllowed=false，绑定R1237第二笔原action；不能将DTO的ownedSaveState=saved当成新施工已保存。当前固定20窗口从lifetime552开始，目前5/20、lifetime557，保持冻结并保留原intent及Save槽。整案累计158 accepted、46次Move、51次显式普通Save、27次手工材料动作；实际建成累计186条带/13段，第二段计划25条与已接受计数分开。上一窗口17笔原动作已核销，未用3槽仍退役。
+R1243–R1249案件累计完成Close、Install、Dispatch、Load及普通Save各一次；R1249本轮只包含原Load完成后的读回核对与普通Save。新案accepted增加2，即原Load和普通Save。最近普通保存为tick 113467495、revision 2、durable Journal 102；保存后状态读取tick 113467501。截至R1249最新独立核销边界，会话健康、无在途或未决unknown，已核销效果均由保存覆盖。
 
-R1234的同版本 exact-primary healthy Load 与内建重存已由独立原件核验：tick 113040701、revision 1、Journal 102；R1235后续普通保存到tick 113054820、revision 2、Journal 102。
+截至R1249最新独立核销边界，固定20窗口opening lifetime 552，为7/20、lifetime 559。整案累计160 accepted、46次Move、52次普通Save、27次手工材料动作；实际建成186条带、13段。历史unknown仍保留原状，不重分类为成功，也不重放。R1248已按批准入口启动；该阶段仍限五段、111条空带，尚无终态或独立验收，不向源端放料；新增差量待原回执核销。
 
-## 抬升尾段与来源边界
+R1249独立核对79对原始请求/响应、66页完整工厂数据、6505个实体、0个预建；13条已有空带、count/inc/held库存、Journal 102和三次版本转换均保全。源码安装和菜单核验过程中的本地metadata/字段检查停止不代表Native拒绝，详见[R1249隔离恢复与保存前缀](evidence/2026-10-13/fixed-quarantine-recovery-and-saved-prefix-r1249.md)。
 
-R1236首段Native准备成功但caller误比较组合建造hash与玩家hash，独立核7帧为0commit/0accepted；修正后的实际File smoke含18个守卫，未重放旧入口。R1237首段0→3的13条带正常扣料177→164并由无人机建成；第二段3→2的完整Native计划25条通过并accepted，但启动异常后进入隔离，后四段和两端分拣器未执行。抬升source-cover的prepare正例不提升为施工正例。
+## 来源与后续范围
 
-R1238仅77个只读/原action证明preview请求、0写入。完整66页工厂为6505实体/0预建，相对R1235完整基线仅增加首段13条带，旧静态配置、连接、全背包count/inc/held及Journal102/三条版本记录保全，本地网络满供。Native精确核销preview拒绝：保留动作的材料差量0而非计划-25。原accepted与历史unknown不清零、不改判未提交。最近主档早于已建前缀；后续仅准备同owned固定LastExit受保护恢复，实际隔离恢复仍须新的明确确认。材料现为164条带、2011/2012各1个。
-
-sourceConditionsPassed=false、wholeSupplyPassed=false、连续来源信用0，最终同SHA双候选包未交付。当前原件、代码修复与恢复边界见[首段施工和接缝隔离](evidence/2026-10-13/raised-source-creation-binding-and-quarantine-r1238.md)，此前成功保存恢复见[维护证据](evidence/2026-10-12/raised-tail-maintenance-and-healthy-resume-r1235.md)。
+sourceConditionsPassed=false、wholeSupplyPassed=false、continuousCreditTicks=0，最终同SHA双候选包尚未交付。R1248的原回执核销完成后，再按当前已批准五段、111条空带上限确认新边界。既有accepted、窗口与来源验收门均不因本次恢复而清零或降低。

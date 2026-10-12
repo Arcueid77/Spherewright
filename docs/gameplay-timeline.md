@@ -5997,3 +5997,4 @@ factory23219553完整23页2267 built、0 prebuild：1883belt/202sorter/36assembl
 - 2026-10-12：R1226–R1235完成raised empty-tail source-cover维护、同主档健康恢复及保存前缀；6492实体完整工厂、静态拓扑、相关cargo及三处已加载工厂供电由独立原件核验。来源、整案供给与最终双候选门仍未通过，详见[抬升尾段维护与健康恢复](evidence/2026-10-12/raised-tail-maintenance-and-healthy-resume-r1235.md)。
 
 - 2026-10-13：R1237首段13条带正常建成；第二段accepted后启动异常进入隔离。R1238独立66页全厂及原action preview核实第二段0扣料/0新增，旧配置/拓扑/J保持；原intent和5/20、lifetime557不清除。接缝绑定hash窄修复及受保护恢复正准备，尚未保存首段或解除隔离，详见[首段施工、接缝隔离与修复](evidence/2026-10-13/raised-source-creation-binding-and-quarantine-r1238.md)。
+- 2026-10-13：R1243–R1249案件累计各完成一次Close/Install/Dispatch/Load/普通Save；R1249本轮为Load后的只读回核与普通Save，新增accepted 2。R1249最新独立核销边界为7/20、lifetime559；R1248已启动，终态及新增差量待原回执核销。来源与整案持续供给门仍未通过，详见[隔离恢复与保存前缀](evidence/2026-10-13/fixed-quarantine-recovery-and-saved-prefix-r1249.md)。
