@@ -31,7 +31,7 @@ internal static class NativeFactoryGeometry
         if(raw?.heightData is null || raw.modData is null || raw.heightData.Length>4194304 || raw.modData.Length>4194304)
             throw new InvalidOperationException("factory_geometry_terrain_bounds_unavailable");
         using var stream=new MemoryStream(); using var writer=new BinaryWriter(stream);
-        writer.Write("owned-factory-layout-and-terrain-v1"); writer.Write(sessionId); writer.Write(factory.planetId);
+        writer.Write("owned-factory-layout-runtime-belt-colliders-and-terrain-v2"); writer.Write(sessionId); writer.Write(factory.planetId);
         writer.Write(planet.radius); writer.Write(planet.scale); writer.Write(planet.waterHeight); writer.Write(planet.waterItemId);
         writer.Write(factory.entityCursor); writer.Write(factory.prebuildCursor);
         var models=new HashSet<int>();
@@ -55,6 +55,18 @@ internal static class NativeFactoryGeometry
             writer.Write(entity.assemblerId>0?factory.factorySystem.assemblerPool[entity.assemblerId].recipeId:0);
             writer.Write(entity.labId>0?factory.factorySystem.labPool[entity.labId].recipeId:0);
             writer.Write(entity.inserterId>0?factory.factorySystem.inserterPool[entity.inserterId].filter:0);
+            if (entity.beltId > 0)
+            {
+                writer.Write(entity.colliderId);
+                var actual = ReadRuntimeBeltCollider(factory, id);
+                writer.Write(actual.HasValue);
+                if (actual is { } collider)
+                {
+                    writer.Write(collider.idType); writer.Write(collider.link);
+                    writer.Write((int)collider.shape); WriteVector(writer, collider.pos);
+                    WriteQuaternion(writer, collider.q); WriteVector(writer, collider.ext); writer.Write(collider.radius);
+                }
+            }
         }
         for(var id=1;id<factory.prebuildCursor;id++)
         {
@@ -121,7 +133,26 @@ internal static class NativeFactoryGeometry
             lpos2=b.position,lrot2=b.rotation,tilt=result.Tilt,inputObjId=linkedInput,outputObjId=linkedOutput};
         try
         {
-            result.Colliders=NormalGameActionCoordinator.ReadOnlyWorldBuildColliders(preview);
+            if (objectId > 0 && desc.isBelt)
+            {
+                result.GeometrySource = "native_runtime_belt_collider_world_bounds";
+                var actual = ReadRuntimeBeltCollider(factory, objectId);
+                if (actual is not { } collider || collider.shape != EColliderShape.Box
+                    || !FactoryGeometryReadPolicy.ValidPoint(Vector(collider.pos))
+                    || !FactoryGeometryReadPolicy.ValidRotation(Rotation(collider.q))
+                    || !FactoryGeometryReadPolicy.Finite(collider.ext.x) || !FactoryGeometryReadPolicy.Finite(collider.ext.y)
+                    || !FactoryGeometryReadPolicy.Finite(collider.ext.z) || collider.ext.x <= 0 || collider.ext.y <= 0 || collider.ext.z <= 0)
+                    throw new InvalidOperationException("factory_geometry_runtime_belt_collider_unavailable");
+                result.Colliders = new List<FactoryBuildColliderSnapshot> { new()
+                {
+                    NativeShape = collider.shape.ToString(), ConservativeEnclosure = false,
+                    Centre = Vector(collider.pos), AxisX = Vector((collider.q * Vector3.right).normalized),
+                    AxisY = Vector((collider.q * Vector3.up).normalized), AxisZ = Vector((collider.q * Vector3.forward).normalized),
+                    HalfExtents = Vector(new Vector3(Math.Abs(collider.ext.x), Math.Abs(collider.ext.y), Math.Abs(collider.ext.z))),
+                    PaddingMetres = 0,
+                } };
+            }
+            else result.Colliders=NormalGameActionCoordinator.ReadOnlyWorldBuildColliders(preview);
             result.InserterSpanExpanded=desc.isInserter;
             result.Observed=!desc.hasBuildCollider || result.Colliders.Count>0;
             result.ReasonCode=result.Observed?null:"factory_geometry_build_colliders_unavailable";
@@ -129,6 +160,21 @@ internal static class NativeFactoryGeometry
         catch(InvalidOperationException) {result.ReasonCode="factory_geometry_build_colliders_unavailable";}
         finally {preview.Free();}
         return result;
+    }
+
+    private static ColliderData? ReadRuntimeBeltCollider(PlanetFactory factory, int entityId)
+    {
+        // Same bounded identity/chunk checks already used by the installed
+        // native belt rotation/extent preservation proof. Read data only.
+        var entity = factory.entityPool[entityId];
+        var chunks = factory.planet.physics?.colChunks;
+        var chunk = entity.colliderId >> 20;
+        var index = entity.colliderId & 0xFFFFF;
+        if (!factory.planet.factoryLoaded || entity.beltId <= 0 || entity.colliderId <= 0 || chunks is null
+            || chunk < 0 || chunk >= chunks.Length || chunks[chunk]?.colliderPool is null
+            || index <= 0 || index >= chunks[chunk].cursor || index >= chunks[chunk].colliderPool.Length) return null;
+        var collider = chunks[chunk].colliderPool[index];
+        return collider.objId == entityId && collider.objType == EObjectType.Entity && collider.link == 0 ? collider : null;
     }
 
     internal static FactoryTerrainPointSnapshot CaptureTerrain(PlanetData planet,Vector3Snapshot requested,int index)

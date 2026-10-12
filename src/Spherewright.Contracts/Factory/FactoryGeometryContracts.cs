@@ -10,7 +10,7 @@ public sealed class FactoryGeometryReadRequest
 
 public sealed class FactoryGeometryCutSnapshot
 {
-    public string Phase { get; set; } = "read_only_factory_geometry_cut_v1";
+    public string Phase { get; set; } = "read_only_factory_geometry_cut_v2";
     public bool Executable => false;
     public string State { get; set; } = "unavailable";
     public string SessionId { get; set; } = string.Empty;
@@ -39,6 +39,9 @@ public sealed class FactoryObjectGeometrySnapshot
     public float Tilt { get; set; }
     public bool NativeHasBuildCollider { get; set; }
     public bool InserterSpanExpanded { get; set; }
+    // Built belt collider extents/centre are adjusted by CargoTraffic and can
+    // differ from the prefab. Expose the source of the returned world bounds.
+    public string GeometrySource { get; set; } = "native_build_collider_world_bounds";
     public List<FactoryBuildColliderSnapshot> Colliders { get; set; } = new();
     public List<FactoryConnectionSnapshot> Connections { get; set; } = new();
 }

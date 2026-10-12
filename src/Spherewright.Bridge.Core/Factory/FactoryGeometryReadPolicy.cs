@@ -32,7 +32,7 @@ public static class FactoryGeometryReadPolicy
         FactoryGeometryCutSnapshot? cut, string sessionId, int planetId)
     {
         if (ValidateRequest(request) is not null || cut is null || cut.Executable
-            || cut.Phase != "read_only_factory_geometry_cut_v1" || cut.SessionId != sessionId
+            || cut.Phase != "read_only_factory_geometry_cut_v2" || cut.SessionId != sessionId
             || cut.PlanetId != planetId || cut.Revision < 0 || cut.CapturedAtGameTick < 0
             || !ValidHash(cut.FactoryGeometryHash)
             || request.ExpectedFactoryGeometryHash is { } expected && cut.FactoryGeometryHash != expected
@@ -44,6 +44,9 @@ public static class FactoryGeometryReadPolicy
                 || o.Colliders.Any(c => !ValidCollider(c))
                 || o.Observed && (!ValidPoint(o.Position) || !ValidPoint(o.Position2)
                     || !ValidRotation(o.Rotation) || !ValidRotation(o.Rotation2) || !Finite(o.Tilt)
+                    || o.GeometrySource is not ("native_build_collider_world_bounds" or "native_runtime_belt_collider_world_bounds")
+                    || o.ObjectId > 0 && (o.ItemId is 2001 or 2002 or 2003) && o.GeometrySource != "native_runtime_belt_collider_world_bounds"
+                    || o.GeometrySource == "native_runtime_belt_collider_world_bounds" && (o.ObjectId <= 0 || o.Colliders.Count != 1 || o.Colliders[0].NativeShape != "Box")
                     || o.ItemId<=0 || o.NativeHasBuildCollider && o.Colliders.Count==0)
                 || !o.Observed && string.IsNullOrWhiteSpace(o.ReasonCode))
             || cut.Objects.Sum(o => o.Colliders.Count) > MaximumColliders

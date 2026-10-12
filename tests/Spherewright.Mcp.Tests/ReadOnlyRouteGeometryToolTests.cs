@@ -180,6 +180,12 @@ public sealed class ReadOnlyRouteGeometryToolTests
         if (state == "observed")
         {
             Assert.All(cut.GetProperty("objects").EnumerateArray(), item => Assert.True(item.GetProperty("observed").GetBoolean()));
+            var runtimeBelt = cut.GetProperty("objects")[0];
+            Assert.Equal("native_runtime_belt_collider_world_bounds",
+                runtimeBelt.GetProperty("geometrySource").GetString());
+            var runtimeCollider = runtimeBelt.GetProperty("colliders")[0];
+            Assert.Equal(51, runtimeCollider.GetProperty("centre").GetProperty("x").GetSingle());
+            Assert.Equal(3, runtimeCollider.GetProperty("halfExtents").GetProperty("x").GetSingle());
             Assert.All(cut.GetProperty("terrain").EnumerateArray(), item => Assert.True(item.GetProperty("observed").GetBoolean()));
             Assert.Empty(cut.GetProperty("blockers").EnumerateArray());
         }
@@ -241,7 +247,7 @@ public sealed class ReadOnlyRouteGeometryToolTests
         var geometry = request.Geometry!;
         var cut = new FactoryGeometryCutSnapshot
         {
-            Phase = "read_only_factory_geometry_cut_v1",
+            Phase = "read_only_factory_geometry_cut_v2",
             State = state,
             SessionId = "owned-session",
             PlanetId = request.PlanetId,
@@ -262,8 +268,24 @@ public sealed class ReadOnlyRouteGeometryToolTests
                 Rotation = IdentityRotation(),
                 Rotation2 = IdentityRotation(),
                 Tilt = 0,
-                NativeHasBuildCollider = false,
-                Colliders = new(),
+                GeometrySource = observed && id > 0
+                    ? "native_runtime_belt_collider_world_bounds"
+                    : "native_build_collider_world_bounds",
+                NativeHasBuildCollider = observed && id > 0,
+                Colliders = observed && id > 0
+                    ? new()
+                    {
+                        new FactoryBuildColliderSnapshot
+                        {
+                            NativeShape = "Box",
+                            Centre = Point(id + 10),
+                            AxisX = new Vector3Snapshot { X = 1 },
+                            AxisY = new Vector3Snapshot { Y = 1 },
+                            AxisZ = new Vector3Snapshot { Z = 1 },
+                            HalfExtents = new Vector3Snapshot { X = 3, Y = .5f, Z = .5f },
+                        },
+                    }
+                    : new(),
                 Connections = new(),
             }).ToList(),
             Terrain = geometry.TerrainPoints.Select((point, index) => new FactoryTerrainPointSnapshot

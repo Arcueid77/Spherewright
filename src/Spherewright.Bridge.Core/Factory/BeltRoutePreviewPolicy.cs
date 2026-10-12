@@ -5,7 +5,7 @@ namespace Spherewright.Bridge.Core.Factory;
 
 public static class BeltRoutePreviewPolicy
 {
-    public const string Phase = "read_only_bounded_belt_route_preview_v1";
+    public const string Phase = "read_only_bounded_belt_route_preview_v2";
     public const int MaximumSegments = 12;
     public const int MaximumPoints = 192;
     public const double MaximumPolylineMetres = 240;

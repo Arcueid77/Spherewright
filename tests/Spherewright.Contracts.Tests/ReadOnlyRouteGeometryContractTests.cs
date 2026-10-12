@@ -15,7 +15,7 @@ public sealed class ReadOnlyRouteGeometryContractTests
     {
         var priorGeometryCut = new FactoryGeometryCutSnapshot
         {
-            Phase = "read_only_factory_geometry_cut_v1",
+            Phase = "read_only_factory_geometry_cut_v2",
             State = "observed",
             SessionId = "owned-session",
             PlanetId = 104,
@@ -111,7 +111,7 @@ public sealed class ReadOnlyRouteGeometryContractTests
             },
             BeltRoutePreview = new BeltRoutePreviewSnapshot
             {
-                Phase = "read_only_bounded_belt_route_preview_v1",
+                Phase = "read_only_bounded_belt_route_preview_v2",
                 FactoryGeometryHash = GeometryHash,
                 NativePathCheckPerformed = true,
                 NativePathCheckPassed = false,
@@ -173,6 +173,62 @@ public sealed class ReadOnlyRouteGeometryContractTests
     }
 
     [Fact]
+    public void RuntimeBeltColliderWorldBoundsSourceRoundTripsSeparatelyFromEntityPose()
+    {
+        var cut = new FactoryGeometryCutSnapshot
+        {
+            Phase = "read_only_factory_geometry_cut_v2",
+            State = "observed",
+            SessionId = "owned-session",
+            PlanetId = 104,
+            Revision = 23,
+            CapturedAtGameTick = 7900,
+            FactoryGeometryHash = GeometryHash,
+            BuiltObjectCount = 6492,
+            PrebuildObjectCount = 0,
+            Objects = new()
+            {
+                new FactoryObjectGeometrySnapshot
+                {
+                    ObjectId = 41,
+                    ItemId = 2001,
+                    Name = "belt",
+                    Observed = true,
+                    Position = Point(10, 200, 0),
+                    Position2 = Point(11, 200, 0),
+                    Rotation = IdentityRotation(),
+                    Rotation2 = IdentityRotation(),
+                    GeometrySource = "native_runtime_belt_collider_world_bounds",
+                    NativeHasBuildCollider = true,
+                    Colliders = new()
+                    {
+                        new FactoryBuildColliderSnapshot
+                        {
+                            NativeShape = "Box",
+                            Centre = Point(15, 200, 0),
+                            AxisX = Point(1, 0, 0),
+                            AxisY = Point(0, 1, 0),
+                            AxisZ = Point(0, 0, 1),
+                            HalfExtents = Point(4, .5f, .5f),
+                        },
+                    },
+                },
+            },
+        };
+
+        var restored = JsonSerializer.Deserialize<FactoryGeometryCutSnapshot>(
+            JsonSerializer.Serialize(cut, CamelCase), CamelCase)!;
+        var belt = Assert.Single(restored.Objects);
+        var collider = Assert.Single(belt.Colliders);
+
+        Assert.Equal("native_runtime_belt_collider_world_bounds", belt.GeometrySource);
+        Assert.NotEqual(belt.Position.X, collider.Centre.X);
+        Assert.NotEqual(Math.Abs(belt.Position2.X - belt.Position.X) / 2, collider.HalfExtents.X);
+        Assert.Equal((15f, 200f, 0f), Coordinates(collider.Centre));
+        Assert.Equal((4f, .5f, .5f), Coordinates(collider.HalfExtents));
+    }
+
+    [Fact]
     public void FactoryGeometryCutRoundTripsSignedIdsBoundsUnknownsAndConservativeFlag()
     {
         var request = new InspectFactoryEntityRequest
@@ -194,7 +250,7 @@ public sealed class ReadOnlyRouteGeometryContractTests
             ItemId = 2011,
             GeometryCut = new FactoryGeometryCutSnapshot
             {
-                Phase = "read_only_factory_geometry_cut_v1",
+                Phase = "read_only_factory_geometry_cut_v2",
                 State = "unavailable",
                 SessionId = "owned-session",
                 PlanetId = 104,

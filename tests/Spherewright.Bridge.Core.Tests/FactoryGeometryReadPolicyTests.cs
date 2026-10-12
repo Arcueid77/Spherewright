@@ -97,8 +97,76 @@ public sealed class FactoryGeometryReadPolicyTests
         Assert.Equal(16, cut.Objects[0].Connections.Count);
     }
 
+    [Fact]
+    public void AcceptsObservedRuntimeBeltColliderBoundsThatDifferFromEntityPose()
+    {
+        var request = Request();
+        request.ObjectIds = new() { 42 };
+        var cut = CompleteCut(request);
+        var belt = cut.Objects[0];
+        belt.GeometrySource = "native_runtime_belt_collider_world_bounds";
+        belt.NativeHasBuildCollider = true;
+        belt.Position = Point(10, 200, 0);
+        belt.Position2 = Point(11, 200, 0);
+        belt.Colliders = new()
+        {
+            new FactoryBuildColliderSnapshot
+            {
+                NativeShape = "Box",
+                Centre = Point(15, 200, 0),
+                AxisX = Point(1, 0, 0),
+                AxisY = Point(0, 1, 0),
+                AxisZ = Point(0, 0, 1),
+                HalfExtents = Point(4, .5f, .5f),
+            },
+        };
+
+        Assert.True(FactoryGeometryReadPolicy.ConfirmsReadOnlyEcho(request, cut, "owned-session", 104));
+        Assert.Equal("native_runtime_belt_collider_world_bounds", belt.GeometrySource);
+        Assert.NotEqual(belt.Position.X, belt.Colliders[0].Centre.X);
+        Assert.NotEqual(Math.Abs(belt.Position2.X - belt.Position.X) / 2, belt.Colliders[0].HalfExtents.X);
+        Assert.Equal(15, belt.Colliders[0].Centre.X);
+        Assert.Equal(4, belt.Colliders[0].HalfExtents.X);
+    }
+
+    [Theory]
+    [InlineData(2001)]
+    [InlineData(2002)]
+    [InlineData(2003)]
+    public void RequiresRuntimeColliderWorldBoundsForObservedBuiltBelts(int beltItemId)
+    {
+        var request = Request();
+        request.ObjectIds = new() { 42 };
+        var cut = CompleteCut(request);
+        cut.Objects[0].ItemId = beltItemId;
+        cut.Objects[0].GeometrySource = "native_build_collider_world_bounds";
+
+        Assert.False(FactoryGeometryReadPolicy.ConfirmsReadOnlyEcho(request, cut, "owned-session", 104));
+    }
+
+    [Theory]
+    [InlineData("nonfinite_runtime_centre")]
+    [InlineData("nonunit_runtime_axis")]
+    [InlineData("nonpositive_runtime_extent")]
+    public void RejectsInvalidRuntimeBeltColliderWorldBounds(string fault)
+    {
+        var request = Request();
+        request.ObjectIds = new() { 42 };
+        var cut = CompleteCut(request);
+        var collider = cut.Objects[0].Colliders[0];
+        switch (fault)
+        {
+            case "nonfinite_runtime_centre": collider.Centre.X = float.NaN; break;
+            case "nonunit_runtime_axis": collider.AxisX.X = 2; break;
+            case "nonpositive_runtime_extent": collider.HalfExtents.X = 0; break;
+        }
+
+        Assert.False(FactoryGeometryReadPolicy.ConfirmsReadOnlyEcho(request, cut, "owned-session", 104));
+    }
+
     [Theory]
     [InlineData("phase")]
+    [InlineData("old_v1_phase")]
     [InlineData("session")]
     [InlineData("planet")]
     [InlineData("negative_revision")]
@@ -115,6 +183,10 @@ public sealed class FactoryGeometryReadPolicyTests
     [InlineData("null_colliders")]
     [InlineData("too_many_colliders")]
     [InlineData("observed_with_unknown")]
+    [InlineData("unknown_geometry_source")]
+    [InlineData("negative_prebuild_runtime_source")]
+    [InlineData("missing_runtime_collider")]
+    [InlineData("extra_runtime_collider")]
     [InlineData("missing_ground_grid_snap")]
     [InlineData("nonfinite_ground_grid_snap")]
     [InlineData("missing_altitude_grid_snaps")]
@@ -134,6 +206,7 @@ public sealed class FactoryGeometryReadPolicyTests
         switch (fault)
         {
             case "phase": cut.Phase = "normal_build"; break;
+            case "old_v1_phase": cut.Phase = "read_only_factory_geometry_cut_v1"; break;
             case "session": cut.SessionId = "other-session"; break;
             case "planet": cut.PlanetId = 103; break;
             case "negative_revision": cut.Revision = -1; break;
@@ -155,6 +228,21 @@ public sealed class FactoryGeometryReadPolicyTests
             case "observed_with_unknown":
                 cut.Objects[0].Observed = false;
                 cut.Objects[0].ReasonCode = "native_geometry_unavailable";
+                break;
+            case "unknown_geometry_source": cut.Objects[1].GeometrySource = "legacy_prefab_pose_bounds"; break;
+            case "negative_prebuild_runtime_source":
+                cut.Objects[0].GeometrySource = "native_runtime_belt_collider_world_bounds";
+                cut.Objects[0].NativeHasBuildCollider = true;
+                break;
+            case "missing_runtime_collider":
+                cut.Objects[1].GeometrySource = "native_runtime_belt_collider_world_bounds";
+                cut.Objects[1].NativeHasBuildCollider = true;
+                cut.Objects[1].Colliders.Clear();
+                break;
+            case "extra_runtime_collider":
+                cut.Objects[1].GeometrySource = "native_runtime_belt_collider_world_bounds";
+                cut.Objects[1].NativeHasBuildCollider = true;
+                cut.Objects[1].Colliders.Add(Collider(conservative: false));
                 break;
             case "missing_ground_grid_snap": cut.Terrain[0].GroundGridSnapPosition = null; break;
             case "nonfinite_ground_grid_snap": cut.Terrain[0].GroundGridSnapPosition!.X = float.NaN; break;
@@ -283,7 +371,7 @@ public sealed class FactoryGeometryReadPolicyTests
 
     private static FactoryGeometryCutSnapshot CompleteCut(FactoryGeometryReadRequest request) => new()
     {
-        Phase = "read_only_factory_geometry_cut_v1",
+        Phase = "read_only_factory_geometry_cut_v2",
         State = "observed",
         SessionId = "owned-session",
         PlanetId = 104,
@@ -297,6 +385,10 @@ public sealed class FactoryGeometryReadPolicyTests
             ObjectId = id,
             ItemId = 2001,
             Name = "belt",
+            GeometrySource = id > 0
+                ? "native_runtime_belt_collider_world_bounds"
+                : "native_build_collider_world_bounds",
+            NativeHasBuildCollider = true,
             Observed = true,
             Position = Point(Math.Abs(id), 200, 0),
             Rotation = IdentityRotation(),

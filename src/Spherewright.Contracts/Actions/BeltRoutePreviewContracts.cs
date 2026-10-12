@@ -25,7 +25,7 @@ public sealed class BeltRouteSegment
 
 public sealed class BeltRoutePreviewSnapshot
 {
-    public string Phase { get; set; } = "read_only_bounded_belt_route_preview_v1";
+    public string Phase { get; set; } = "read_only_bounded_belt_route_preview_v2";
     public bool Executable => false;
     public string FactoryGeometryHash { get; set; } = string.Empty;
     public bool NativePathCheckPerformed { get; set; }

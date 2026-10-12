@@ -168,6 +168,16 @@ public sealed class BeltRoutePreviewPolicyTests
     }
 
     [Fact]
+    public void RejectsOldV1RoutePreviewEcho()
+    {
+        var request = Request();
+        var result = SuccessfulResult(request);
+        result.BeltRoutePreview!.Phase = "read_only_bounded_belt_route_preview_v1";
+
+        Assert.False(BeltRoutePreviewPolicy.ConfirmsReadOnlyEcho(request, result, "owned-session"));
+    }
+
+    [Fact]
     public void DeduplicatesBudgetWhenBothEndpointsUseTheSameSorterItem()
     {
         var request = Request();
