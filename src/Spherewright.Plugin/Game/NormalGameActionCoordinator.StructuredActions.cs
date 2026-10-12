@@ -16,6 +16,8 @@ internal sealed partial class NormalGameActionCoordinator
         string? requestedSessionId,
         PrepareBuildRequest request)
     {
+        var routePreviewError = BeltRoutePreviewPolicy.ValidateRequest(request);
+        if (routePreviewError is not null) return InvalidPlan(routePreviewError);
         var endpointPreviewError = BeltEndpointPreviewPolicy.ValidateRequest(request);
         if (endpointPreviewError is not null) return InvalidPlan(endpointPreviewError);
         var common = ValidatePrepareCommon(requestedSessionId, request.PlanetId, request.StateHashVersion);
@@ -44,7 +46,7 @@ internal sealed partial class NormalGameActionCoordinator
         if (filterError is not null)
             return GameCallResult<PreparedNormalAction>.Failed(filterError);
 
-        var routingError = BeltPathRoutingPolicy.ValidateRequest(request, item.prefabDesc.isBelt);
+        var routingError = request.BeltRoutePreview is null ? BeltPathRoutingPolicy.ValidateRequest(request, item.prefabDesc.isBelt) : null;
         if (routingError is not null)
             return InvalidPlan(routingError + ": " + (request.BeltPathMode == BeltPathModes.NativeElevatedGrid
                 ? BeltElevationPolicy.Recovery : BeltPathRoutingPolicy.Recovery));
@@ -76,6 +78,11 @@ internal sealed partial class NormalGameActionCoordinator
         if (!string.Equals(request.ExpectedPlayerStateHash, playerResult.Value.StateHash, StringComparison.Ordinal))
         {
             return StalePlan("Player inventory, construction queue, or position changed after inspection.");
+        }
+        if (request.BeltRoutePreview is not null)
+        {
+            try { return PrepareBoundedBeltRoutePreviewOnMainThread(request,playerResult.Value); }
+            catch (InvalidOperationException error) { return NotReadyPlan(error.Message); }
         }
 
         BuildPreparation preparation;
@@ -1199,14 +1206,16 @@ internal sealed partial class NormalGameActionCoordinator
         IReadOnlyList<BuildStepPlan> candidates,
         out List<BuildStepPlan> accepted,
         out string rejection,
-        out BridgeError? rejectionError)
+        out BridgeError? rejectionError,
+        BeltRoutePreviewSnapshot? readOnlyRoute = null)
     {
         accepted = new List<BuildStepPlan>();
         rejection = string.Empty;
         rejectionError = null;
         if (candidates.Count < 2 || candidates.Any(step => step.BeltPathMode != candidates[0].BeltPathMode)
             || (candidates[0].BeltPathMode != BeltPathModes.NativeGrid && candidates[0].BeltPathMode != BeltPathModes.NativeGeodesic
-                && candidates[0].BeltPathMode != BeltPathModes.NativeElevatedGrid))
+                && candidates[0].BeltPathMode != BeltPathModes.NativeElevatedGrid
+                && !(readOnlyRoute is not null && candidates[0].BeltPathMode == BeltPathModes.NativeRoutePreview)))
         {
             rejection = "belt_routing_mode_inconsistent";
             return false;
@@ -1252,6 +1261,14 @@ internal sealed partial class NormalGameActionCoordinator
             tool.buildPreviews.AddRange(previews);
             if (!TryAttachDestinationCover(factory, item, candidates, previews, tool, out var destinationCover, out rejection)) return false;
             var valid = tool.CheckFullPathConditions();
+            if (readOnlyRoute is not null)
+            {
+                readOnlyRoute.NativePathCheckPerformed=true;
+                readOnlyRoute.Points=previews.Select((p,i)=>new NativeBeltRoutePoint{Index=i,PlannedPosition=Snapshot(candidates[i].Position),Position=Snapshot(p.lpos),
+                    Rotation=NativeFactoryGeometry.Rotation(p.lrot),Tilt=p.tilt,NativeCondition=p.condition.ToString()}).ToList();
+                var failed=previews.FindIndex(p=>p.condition!=EBuildCondition.Ok);
+                if(failed>=0) {readOnlyRoute.FailedBeltIndex=failed;readOnlyRoute.FailureCondition=previews[failed].condition.ToString();}
+            }
             var rejected = previews.FirstOrDefault(preview => preview.condition != EBuildCondition.Ok || preview.coverObjId != 0 || preview.willRemoveCover)
                 ?? (cover is not null && cover.condition != EBuildCondition.Ok ? cover : null)
                 ?? (destinationCover is not null && destinationCover.condition != EBuildCondition.Ok ? destinationCover : null);

@@ -148,6 +148,8 @@ public sealed class PrepareSelectResearchRequest
 
 public sealed class PrepareBuildRequest
 {
+    /// <summary>Explicit bounded multispan READ-ONLY qualification, never a build plan.</summary>
+    public BeltRoutePreviewRequest? BeltRoutePreview { get; set; }
     /// <summary>Optional read-only qualification of exact existing endpoints against one NEW belt span. Never creates a commit capability.</summary>
     public BeltEndpointPreviewRequest? BeltEndpointPreview { get; set; }
 
@@ -346,6 +348,7 @@ public sealed class CommitNormalActionRequest
 
 public sealed class PreparedNormalAction
 {
+    public BeltRoutePreviewSnapshot? BeltRoutePreview { get; set; }
     public MoveStateBindingSnapshot? MoveStateBinding { get; set; }
 
     public BeltEndpointPreviewSnapshot? BeltEndpointPreview { get; set; }

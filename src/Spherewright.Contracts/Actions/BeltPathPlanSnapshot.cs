@@ -22,6 +22,8 @@ public sealed class BeltPathPlanSnapshot
 
 public static class BeltPathModes
 {
+    // Not a construction routing mode. Legacy cohorts reject this before a token.
+    public const string NativeRoutePreview = "native_bounded_route_preview";
     public const string NativeGrid = "native_grid";
     public const string NativeGeodesic = "native_geodesic";
     public const string NativeElevatedGrid = "native_elevated_grid";

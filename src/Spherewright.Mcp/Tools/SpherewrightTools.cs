@@ -283,13 +283,24 @@ public static partial class SpherewrightTools
         [Description("Current local planet ID, or a planet ID from the current owned star-system snapshot for an already-created, identity-verified simulation-resident factory.")] int planetId,
         [Description("Required nonzero positive built entity ID or negative prebuild ID in that exact factory. The Bridge field is objectId, not entityId; for remote same-star reads, use an already-known native object ID. This read does not load or enumerate another factory, and a missing ID never proves absence.")] int objectId,
         [Description("Optional explicit material cut: at most256 unique positive built-object IDs in the requested factory. Omit for the ordinary single-object read. Captures selected item stock and each selected belt's ENTIRE native cargo path once at the same game tick, at most64 paths / 32768 total cells / 4096 path members. Station stock is logisticsStation.storageSlots.count, excluding orders. Ordinary thermal/fusion stock is fuelPowerState.bufferedFuelCount; loadedFuelEnergyJoules is separate residual heat. Do not add power-generation-current-tick buffers to item stock. No traversal or automatic selection. Require materialInventoryCut.state=observed; missing/unavailable is unknown, not zero. Inspect all returned path members: counts may include belts outside the selection; never prorate or sum again per belt. A stock cut is not production, flow, source allocation or sustained supply.")] int[]? materialInventoryObjectIds = null,
+        [Description("Optional READ-ONLY local-planet geometry cut: at most256 explicitly selected built/prebuild IDs and64 terrain points. Returns actual native poses, world collision bounds, complete selected connections, terrain rays and ground/layer0..3 native snap positions at one tick, bound to a whole static factory/configuration/terrain hash. Missing geometry is unavailable, never clear space; non-box bounds are conservative enclosures. No automatic traversal, selection, route search or placement approval. Remote same-star geometry is unsupported. Require the matching geometryCut echo; mixed cohorts fail closed.")] FactoryGeometryReadRequest? geometry = null,
         [Description("Cancellation token supplied by the MCP host.")] CancellationToken cancellationToken = default)
     {
+        var geometryError = Spherewright.Bridge.Core.Factory.FactoryGeometryReadPolicy.ValidateRequest(geometry);
+        if (geometryError is not null)
+            return ToToolResult(BridgeCallResult<FactoryEntitySnapshot>.Failed(BridgeError.Create(
+                BridgeErrorCodes.InvalidRequest, geometryError, false,
+                "Use bounded explicit local object IDs and finite terrain positions.")), "No geometry cut captured.");
         var result = await bridgeClient.InspectFactoryEntityAsync(
             sessionId,
             new InspectFactoryEntityRequest
-            { PlanetId = planetId, ObjectId = objectId, MaterialInventoryObjectIds = materialInventoryObjectIds?.ToList() ?? new List<int>() },
+            { PlanetId = planetId, ObjectId = objectId, MaterialInventoryObjectIds = materialInventoryObjectIds?.ToList() ?? new List<int>(), Geometry = geometry },
             cancellationToken).ConfigureAwait(false);
+        if (geometry is not null && result.Success
+            && !Spherewright.Bridge.Core.Factory.FactoryGeometryReadPolicy.ConfirmsReadOnlyEcho(geometry, result.Value?.GeometryCut, sessionId, planetId))
+            result = BridgeCallResult<FactoryEntitySnapshot>.Failed(BridgeError.Create(
+                BridgeErrorCodes.BridgeNotReady, "The Plugin did not confirm the exact read-only geometry cut.", false,
+                "Use matching Plugin/MCP files; missing or malformed geometry is unknown, never zero or clear space."));
         return ToToolResult(result, "Live factory object captured from the owned ordinary world.");
     }
 
@@ -524,6 +535,8 @@ public static partial class SpherewrightTools
         int? beltEndAltitudeLevel = null,
         [Description("Optional READ-ONLY qualification: one explicit free-to-free NEW2001 native_grid/native_elevated_grid span and at most two exact existing entity/hash/slot bindings. Source feeds its first belt; last belt feeds Destination. Specify ordinary2011/2012 sorter and positive runtime filter, explicit existing/planned belt quarter-turns0..3; an existing belt uses virtual slot-1. Planned quarter-turns select the NEW belt outward slot pose: Source role faces back toward the existing source; Destination role faces toward the existing destination. The adapter already applies the destination-end180-degree transform; do not apply it twice or copy a completed belt's path-derived quarter-turn into a spherical prebuild. Native path, angles, collision, whole NEW budget and technology are checked. Returns beltEndpointPreview with executable=false, no token/action/prebuild; it does NOT extend blueprint external matching or authorize construction. Native positive is not ongoing supply/power/whole-chain proof. Actual later construction still fresh-prepares each ordinary action. Mixed-cohort normal token responses are withheld.")]
         BeltEndpointPreviewRequest? beltEndpointPreview = null,
+        [Description("Optional READ-ONLY complete NEW2001 route qualification. Supply a fresh factory geometry hash, both exact existing endpoint/hash/slot bindings, positive runtime filter, separate ordinary2011/2012 source/destination grades and1..12 explicit native_grid/native_elevated_grid spans. Use previously observed native snap positions, identical shared endpoints/layers, each1.5..30m, total<=240m and<=192 distinct NEW points. No automatic search, cover, resource binding or legacy position/path arguments. Native validates the entire path, then ALL NEW belts and both exact sorters together. Returns tokenless beltRoutePreview/executable=false with every point and both bindings, or honest pre-guard/native failure stages; no action, prebuild or construction capability. Full native positive is not continuous production or power proof. Actual construction requires separate fresh ordinary plans. Mixed-cohort normal tokens are withheld.")]
+        BeltRoutePreviewRequest? beltRoutePreview = null,
         CancellationToken cancellationToken = default)
     {
         var request = new PrepareBuildRequest
@@ -534,28 +547,35 @@ public static partial class SpherewrightTools
                 PreferredDistance = preferredDistance,
                 PreferredPosition = CreateOptionalVector(preferredPositionX, preferredPositionY, preferredPositionZ),
                 PreferredYaw = preferredYaw,
-                ResourceNodeId = resourceNodeId > 0 || (beltPathMode != BeltPathModes.NativeGrid && resourceNodeId != 0) ? resourceNodeId : (int?)null,
+                ResourceNodeId = resourceNodeId > 0 || ((beltRoutePreview is not null || beltPathMode != BeltPathModes.NativeGrid) && resourceNodeId != 0) ? resourceNodeId : (int?)null,
                 ExpectedResourceStateHash = string.IsNullOrWhiteSpace(expectedResourceStateHash) ? null : expectedResourceStateHash,
-                SourceObjectId = sourceObjectId > 0 || (beltPathMode != BeltPathModes.NativeGrid && sourceObjectId != 0) ? sourceObjectId : (int?)null,
+                SourceObjectId = sourceObjectId > 0 || ((beltRoutePreview is not null || beltPathMode != BeltPathModes.NativeGrid) && sourceObjectId != 0) ? sourceObjectId : (int?)null,
                 ExpectedSourceStateHash = string.IsNullOrWhiteSpace(expectedSourceStateHash) ? null : expectedSourceStateHash,
-                DestinationObjectId = destinationObjectId > 0 || (beltPathMode != BeltPathModes.NativeGrid && destinationObjectId != 0) ? destinationObjectId : (int?)null,
+                DestinationObjectId = destinationObjectId > 0 || ((beltRoutePreview is not null || beltPathMode != BeltPathModes.NativeGrid) && destinationObjectId != 0) ? destinationObjectId : (int?)null,
                 ExpectedDestinationStateHash = string.IsNullOrWhiteSpace(expectedDestinationStateHash) ? null : expectedDestinationStateHash,
                 PathEnd = CreateOptionalVector(pathEndX, pathEndY, pathEndZ),
                 PathLength = pathLength,
-                BeltPathMode = beltPathMode,
+                BeltPathMode = beltRoutePreview is not null && beltPathMode == BeltPathModes.NativeGrid ? BeltPathModes.NativeRoutePreview : beltPathMode,
                 BeltStartAltitudeLevel = beltStartAltitudeLevel,
                 BeltEndAltitudeLevel = beltEndAltitudeLevel,
                 ExpectedPlayerStateHash = expectedPlayerStateHash,
                 StateHashVersion = stateHashVersion,
                 BeltEndpointPreview = beltEndpointPreview,
+                BeltRoutePreview = beltRoutePreview,
             };
+        var routePreviewError = Spherewright.Bridge.Core.Factory.BeltRoutePreviewPolicy.ValidateRequest(request);
+        if (routePreviewError is not null)
+            return ToToolResult(BridgeCallResult<PreparedNormalAction>.Failed(BridgeError.Create(
+                BridgeErrorCodes.InvalidRequest, routePreviewError, false,
+                "Use one explicit bounded read-only route request with fresh layout/player/endpoint hashes.")),
+                "No read-only complete-route qualification performed.");
         var previewError = Spherewright.Bridge.Core.Factory.BeltEndpointPreviewPolicy.ValidateRequest(request);
         if (previewError is not null)
             return ToToolResult(BridgeCallResult<PreparedNormalAction>.Failed(BridgeError.Create(
                 BridgeErrorCodes.InvalidRequest, previewError, false,
                 "Use an explicit NEW2001 span and exact existing endpoint bindings; no covers or implicit matching.")),
                 "No read-only endpoint qualification performed.");
-        var routingError = Spherewright.Bridge.Core.Factory.BeltPathRoutingPolicy.ValidateRequest(request,
+        var routingError = beltRoutePreview is not null ? null : Spherewright.Bridge.Core.Factory.BeltPathRoutingPolicy.ValidateRequest(request,
             buildingItemId >= 2001 && buildingItemId <= 2003);
         if (routingError is not null)
             return ToToolResult(BridgeCallResult<PreparedNormalAction>.Failed(BridgeError.Create(
@@ -564,6 +584,14 @@ public static partial class SpherewrightTools
                     ? Spherewright.Bridge.Core.Factory.BeltElevationPolicy.Recovery
                     : Spherewright.Bridge.Core.Factory.BeltPathRoutingPolicy.Recovery)), "No construction plan prepared.");
         var result = await bridgeClient.PrepareBuildAsync(sessionId, request, cancellationToken).ConfigureAwait(false);
+        if (beltRoutePreview is not null)
+        {
+            if (result.Success && !Spherewright.Bridge.Core.Factory.BeltRoutePreviewPolicy.ConfirmsReadOnlyEcho(request, result.Value, sessionId))
+                result = BridgeCallResult<PreparedNormalAction>.Failed(BridgeError.Create(BridgeErrorCodes.BridgeNotReady,
+                    "The Plugin did not confirm the complete read-only route; no construction token is exposed.",
+                    false, "Use matching Plugin/MCP files; never commit a substituted, partial or legacy route response."));
+            return ToToolResult(result, "Read-only complete route qualification; no token/action/prebuild. Inspect all point and endpoint native results and failure stages.");
+        }
         if (beltEndpointPreview is not null)
         {
             if (result.Success && !Spherewright.Bridge.Core.Factory.BeltEndpointPreviewPolicy.ConfirmsReadOnlyEcho(request, result.Value, sessionId))

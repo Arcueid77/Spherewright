@@ -660,6 +660,10 @@ internal sealed partial class GameStateReader
         if (idError is not null) return GameCallResult<FactoryEntitySnapshot>.Failed(idError);
         var selectionError = MaterialInventoryCutPolicy.ValidateSelection(request.MaterialInventoryObjectIds);
         if (selectionError is not null) return GameCallResult<FactoryEntitySnapshot>.Failed(selectionError);
+        var geometryError = FactoryGeometryReadPolicy.ValidateRequest(request.Geometry);
+        if (geometryError is not null) return GameCallResult<FactoryEntitySnapshot>.Failed(InvalidRequest(geometryError,"Use explicit bounded local geometry selections."));
+        if (request.Geometry is not null && request.PlanetId != localPlanetId)
+            return GameCallResult<FactoryEntitySnapshot>.Failed(InvalidRequest("factory_geometry_current_local_planet_only","Read geometry only in the currently loaded local factory."));
 
         FactoryEntitySnapshot? snapshot = null;
         if (request.ObjectId > 0 && request.ObjectId < factory!.entityCursor)
@@ -679,6 +683,11 @@ internal sealed partial class GameStateReader
 
         if (snapshot is not null && request.MaterialInventoryObjectIds?.Count > 0)
             snapshot.MaterialInventoryCut = CaptureMaterialInventoryCut(factory!, request.MaterialInventoryObjectIds);
+        if (snapshot is not null && request.Geometry is not null)
+        {
+            try { snapshot.GeometryCut = CaptureFactoryGeometryCut(factory!,request.Geometry); }
+            catch (InvalidOperationException error) {return GameCallResult<FactoryEntitySnapshot>.Failed(InvalidRequest(error.Message,"Refresh the explicit geometry cut; no route qualification or write was performed."));}
+        }
 
         return snapshot is null
             ? InvalidFactoryEntity("The requested factory object no longer exists in the local factory.")

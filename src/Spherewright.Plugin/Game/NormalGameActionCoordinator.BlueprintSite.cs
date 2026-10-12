@@ -115,4 +115,24 @@ internal sealed partial class NormalGameActionCoordinator
                 && LDB.items.Select(factory.entityPool[objectId].protoId).prefabDesc.isBelt;
         }
     }
+
+    internal static List<FactoryBuildColliderSnapshot> ReadOnlyWorldBuildColliders(BuildPreview preview)
+    {
+        var desc=preview.desc;
+        var source=desc.buildColliders is {Length:>0}?desc.buildColliders:desc.hasBuildCollider?new[]{desc.buildCollider}:Array.Empty<ColliderData>();
+        if(source.Length>64 || source.Any(c=>c.shape!=EColliderShape.Box && c.shape!=EColliderShape.Sphere && c.shape!=EColliderShape.Capsule)
+            || desc.isInserter && source.Any(c=>c.shape!=EColliderShape.Box))
+            throw new InvalidOperationException("factory_geometry_native_collider_shape_unavailable");
+        // The established inserter expansion helper uses buildColliders, not its
+        // fallback. Missing native inserter arrays must remain explicitly unknown.
+        if(desc.isInserter && desc.hasBuildCollider && desc.buildColliders is not {Length:>0})
+            throw new InvalidOperationException("factory_geometry_native_inserter_colliders_unavailable");
+        var boxes=BlueprintPreviewColliders(preview);
+        if(boxes.Count!=source.Length && desc.hasBuildCollider)
+            throw new InvalidOperationException("factory_geometry_native_collider_count_mismatch");
+        return boxes.Select((b,i)=>new FactoryBuildColliderSnapshot{NativeShape=source[i].shape.ToString(),
+            ConservativeEnclosure=source[i].shape!=EColliderShape.Box,Centre=NativeFactoryGeometry.Vector(b.Center),
+            AxisX=NativeFactoryGeometry.Vector(b.AxisX),AxisY=NativeFactoryGeometry.Vector(b.AxisY),AxisZ=NativeFactoryGeometry.Vector(b.AxisZ),
+            HalfExtents=NativeFactoryGeometry.Vector(b.Extents),PaddingMetres=desc.isInserter?0:.01f}).ToList();
+    }
 }

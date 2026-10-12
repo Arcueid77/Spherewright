@@ -12,37 +12,41 @@ namespace Spherewright.Plugin.Game;
 internal sealed partial class NormalGameActionCoordinator
 {
     private GameCallResult<PreparedNormalAction> PrepareBeltEndpointPreviewOnMainThread(
-        PrepareBuildRequest request, BuildPreparation preparation, PlayerStateSnapshot playerBefore)
+        PrepareBuildRequest request, BuildPreparation preparation, PlayerStateSnapshot playerBefore,
+        BeltRoutePreviewSnapshot? route = null)
     {
         var factory = GameMain.localPlanet!.factory;
         var player = GameMain.mainPlayer;
-        var parameters = request.BeltEndpointPreview!;
+        var parameters = request.BeltEndpointPreview ?? new BeltEndpointPreviewRequest{
+            Source=request.BeltRoutePreview!.Source,Destination=request.BeltRoutePreview.Destination,
+            FilterItemId=request.BeltRoutePreview.FilterItemId,SorterItemId=request.BeltRoutePreview.SourceSorterItemId};
         if (!BuildUiIsIdle(player) || preparation.Kind != NormalBuildKinds.Belt
-            || preparation.Steps.Count < 2 || preparation.Steps.Count > BeltEndpointPreviewPolicy.MaximumBeltObjects
+            || preparation.Steps.Count < 2 || preparation.Steps.Count > (route is null?BeltEndpointPreviewPolicy.MaximumBeltObjects:BeltRoutePreviewPolicy.MaximumPoints)
             || preparation.Steps.Any(s => s.InputObjectId != 0 || s.OutputObjectId != 0
                 || s.SourceBeltAnchor is not null || s.DestinationBeltAnchor is not null)
-            || Vector3.Distance(preparation.Steps[0].Position, preparation.Steps[preparation.Steps.Count - 1].Position) > 30f
+            || route is null && Vector3.Distance(preparation.Steps[0].Position, preparation.Steps[preparation.Steps.Count - 1].Position) > 30f
             || factory.entityCursor > 131072 || factory.prebuildCursor > 131072)
             return InvalidPlan("belt_endpoint_preview_span_or_factory_limit");
-        var sorter = LDB.items.Select(parameters.SorterItemId);
-        if (sorter?.prefabDesc is null || !sorter.prefabDesc.isInserter)
-            return InvalidPlan("belt_endpoint_preview_sorter_prototype_unavailable");
-        var filterError = ValidateInitialSorterFilter(sorter, parameters.FilterItemId);
-        if (filterError is not null) return GameCallResult<PreparedNormalAction>.Failed(filterError);
-        if (!GameMain.history.ItemUnlocked(sorter.ID))
-            return InvalidPlan("belt_endpoint_preview_sorter_technology_locked");
         var count = (parameters.Source is null ? 0 : 1) + (parameters.Destination is null ? 0 : 1);
-        if (player.package.GetItemCount(sorter.ID) < count)
-            return GameCallResult<PreparedNormalAction>.Failed(BridgeError.Create(BridgeErrorCodes.InventoryInsufficient,
+        var grades=route is null?Enumerable.Repeat(parameters.SorterItemId,count):new[]{request.BeltRoutePreview!.SourceSorterItemId,request.BeltRoutePreview.DestinationSorterItemId};
+        foreach(var group in grades.GroupBy(id=>id))
+        {
+            var prototype=LDB.items.Select(group.Key);
+            if(prototype?.prefabDesc is null || !prototype.prefabDesc.isInserter) return InvalidPlan("belt_endpoint_preview_sorter_prototype_unavailable");
+            var filterError=ValidateInitialSorterFilter(prototype,parameters.FilterItemId);
+            if(filterError is not null) return GameCallResult<PreparedNormalAction>.Failed(filterError);
+            if(!GameMain.history.ItemUnlocked(prototype.ID)) return InvalidPlan("belt_endpoint_preview_sorter_technology_locked");
+            if(player.package.GetItemCount(prototype.ID)<group.Count()) return GameCallResult<PreparedNormalAction>.Failed(BridgeError.Create(BridgeErrorCodes.InventoryInsufficient,
                 "The NEW route endpoint preview lacks its complete sorter budget. No joint native placement pass is claimed.",
                 true, "Supply the declared materials normally only after the whole stage is executable, then fresh-prepare."));
+        }
 
         var snapshot = new BeltEndpointPreviewSnapshot
         {
             SessionId = _sessions.SessionId!, PlanetId = request.PlanetId, Revision = _sessions.Revision,
             CapturedAtGameTick = GameMain.gameTick,
         };
-        var response = new PreparedNormalAction
+        var response = route is not null?CreateReadOnlyRouteResponse(request,route,preparation.Steps):new PreparedNormalAction
         {
             Prepared = false, CommitAllowedNow = false, PlanToken = string.Empty, ActionKind = NormalActionKinds.Build,
             ExpectedStateHash = playerBefore.StateHash,
@@ -57,15 +61,20 @@ internal sealed partial class NormalGameActionCoordinator
             },
             CompletionCondition = "Read-only native qualification only: no prebuild, action, token or whole-chain production proof.",
         };
-        response.ItemBudget.Add(new ActionItemBudget { ItemId = 2001, Count = preparation.Steps.Count,
-            Name = LDB.items.Select(2001).name, Direction = "preview-construction-consumption" });
-        response.ItemBudget.Add(new ActionItemBudget { ItemId = sorter.ID, Count = count, Name = sorter.name,
-            Direction = "preview-construction-consumption" });
+        if(route is null)
+        {
+            response.ItemBudget.Add(new ActionItemBudget { ItemId = 2001, Count = preparation.Steps.Count,
+                Name = LDB.items.Select(2001).name, Direction = "preview-construction-consumption" });
+            response.ItemBudget.Add(new ActionItemBudget { ItemId = parameters.SorterItemId, Count = count, Name = LDB.items.Select(parameters.SorterItemId).name,
+                Direction = "preview-construction-consumption" });
+        }
+        else route.Endpoints=snapshot;
         var belts = CreateLinkedPreviews(preparation.Steps, LDB.items.Select(2001));
         var sorters = new List<BuildPreview>();
         var mirrors = new List<BuildPreview>();
         var bindings = new List<(PlannedBeltEndpointBinding Binding, FactoryEntitySnapshot Existing)>();
         var toolOwnsSorters = false;
+        var toolOwnsBelts = false;
         try
         {
             foreach (var role in new[] { "source", "destination" })
@@ -85,6 +94,7 @@ internal sealed partial class NormalGameActionCoordinator
                     return InvalidPlan("The specified existing slot is occupied, unavailable or of the wrong endpoint kind.");
                 var actual = selected[isBelt ? binding.ExistingBeltQuarterTurns : 0];
                 var source = role == "source";
+                var sorter=LDB.items.Select(route is null?parameters.SorterItemId:source?request.BeltRoutePreview!.SourceSorterItemId:request.BeltRoutePreview!.DestinationSorterItemId);
                 var index = source ? 0 : belts.Count - 1;
                 var belt = belts[index];
                 var rotation = Quaternion.AngleAxis(belt.tilt, belt.lrot * Vector3.forward) * belt.lrot
@@ -135,6 +145,8 @@ internal sealed partial class NormalGameActionCoordinator
                 snapshot.Blockers.Add("planned_endpoint_collision_or_prototype_unavailable");
                 snapshot.Blockers.Add(occupancyBlocker);
             }
+            if(route is not null && ReadOnlyRouteCoverBlocker(factory,belts) is { } coverBlocker)
+                snapshot.Blockers.Add(coverBlocker);
             // These are PRE-call guards: detecting a covered reference only after
             // native checking would be too late to prevent connection reservations.
             if (sorters.Any(p => !p.desc.isInserter || p.input is null || p.output is null)
@@ -147,7 +159,8 @@ internal sealed partial class NormalGameActionCoordinator
                 tool._Init(GameMain.data!);
                 tool.SetFactoryReferences();
                 if (!ReferenceEquals(tool.factory, factory)) return NotReadyPlan("Native linked preview factory mismatch.");
-                tool.SetReadOnlyLinkedSorters(sorters, belts.Count + sorters.Count);
+                if(route is null) tool.SetReadOnlyLinkedSorters(sorters, belts.Count + sorters.Count);
+                else {tool.SetReadOnlyLinkedObjects(belts.Concat(sorters).ToArray());toolOwnsBelts=true;route.JointNativeCheckPerformed=true;}
                 toolOwnsSorters = true;
                 var exact = sorters.Select(p => (Input: p.input, Output: p.output,
                     Rotation: p.lrot, Rotation2: p.lrot2, Tilt: p.tilt)).ToArray();
@@ -192,6 +205,35 @@ internal sealed partial class NormalGameActionCoordinator
                         snapshot.Blockers.Add("native_changed_existing_endpoint_reference:" + snapshot.Attachments[i].Role);
                 }
                 snapshot.NativeCheckPassed = valid && snapshot.Blockers.Count == 0;
+                if (route is not null)
+                {
+                    // Capture the native results while the tool still owns live
+                    // previews. Its disposal frees every object in the pool.
+                    route.Points = belts.Select((p, i) => new NativeBeltRoutePoint
+                    {
+                        Index = i, PlannedPosition = route.Points[i].PlannedPosition,
+                        Position = Snapshot(p.lpos), Rotation = NativeFactoryGeometry.Rotation(p.lrot),
+                        Tilt = p.tilt, NativeCondition = p.condition.ToString(),
+                    }).ToList();
+                    var failed = belts.FindIndex(p => p.condition != EBuildCondition.Ok);
+                    if (failed >= 0)
+                    {
+                        route.FailedBeltIndex = failed;
+                        route.FailureCondition = belts[failed].condition.ToString();
+                        snapshot.Blockers.Add("native_joint_belt_rejected:" + failed);
+                    }
+                    route.JointNativeCheckPassed = snapshot.NativeCheckPassed && failed < 0;
+                    snapshot.NativeCheckPassed = route.JointNativeCheckPassed;
+                }
+            }
+            if(route is not null)
+            {
+                if(!route.JointNativeCheckPassed)
+                {
+                    route.FailureStage=route.JointNativeCheckPerformed?"joint_native":"pre_native_endpoint_guard";
+                    route.FailureCondition ??= snapshot.Blockers.FirstOrDefault()??"native_joint_check_rejected";
+                    if(snapshot.Blockers.Count==0) snapshot.Blockers.Add(route.FailureCondition);
+                }
             }
             foreach (var b in bindings)
                 if (!TryReadBuildEndpoint(request, b.Binding.ExistingObjectId, b.Binding.ExpectedEndpointStateHash,
@@ -206,7 +248,7 @@ internal sealed partial class NormalGameActionCoordinator
                 BuildPlanFingerprint(preparation), parameters.SorterItemId, parameters.FilterItemId,
                 string.Join(";", snapshot.Attachments.Select(a => a.Role + ":" + a.ExistingObjectId + ":" + a.EndpointStateHash
                     + ":" + a.Attachment.SourceSlot + ":" + a.Attachment.DestinationSlot + ":" + a.ExistingBeltQuarterTurns
-                    + ":" + a.PlannedBeltQuarterTurns + ":" + a.NativeCondition + ":" + a.NativeSpan)),
+                    + ":" + a.PlannedBeltQuarterTurns + ":" + a.SorterItemId + ":" + a.NativeCondition + ":" + a.NativeSpan)),
                 snapshot.NativeCheckPerformed, snapshot.NativeCheckPassed, string.Join(";", snapshot.Blockers));
             return GameCallResult<PreparedNormalAction>.Succeeded(response);
         }
@@ -214,8 +256,57 @@ internal sealed partial class NormalGameActionCoordinator
         {
             if (!toolOwnsSorters) foreach (var p in sorters) p.Free();
             foreach (var p in mirrors) p.Free();
-            foreach (var p in belts) p.Free();
+            if(!toolOwnsBelts) foreach (var p in belts) p.Free();
         }
+    }
+
+    private static string? ReadOnlyRouteCoverBlocker(PlanetFactory factory,IReadOnlyList<BuildPreview> belts)
+    {
+        // The established blueprint no-cover guard is stricter than the belt
+        // centre guard: eliminate possible native cover matching BEFORE checking.
+        for(var id=1;id<factory.entityCursor;id++)
+        {
+            var e=factory.entityPool[id]; if(e.id!=id) continue;
+            if(belts.Any(b=>(b.lpos-e.pos).sqrMagnitude<=1f)) return "read_only_route_existing_cover_risk:"+id;
+        }
+        for(var id=1;id<factory.prebuildCursor;id++)
+        {
+            var p=factory.prebuildPool[id]; if(p.id!=id) continue;
+            if(belts.Any(b=>(b.lpos-p.pos).sqrMagnitude<=1f)) return "read_only_route_prebuild_cover_risk:"+id;
+        }
+        // Native blueprint belt-cover matching is also reachable from its
+        // 0.23m sphere against a long existing belt collider. Centre distance
+        // alone cannot exclude that branch. Read the SAME native physics query
+        // and reject every existing-belt hit before CheckBuildConditions can
+        // reserve (WriteObjectConn) or clear a covered object's connection.
+        var physics = factory.planet.physics;
+        if (physics is null) return "read_only_route_native_physics_unavailable";
+        var colliders = new Collider[256];
+        for (var index = 0; index < belts.Count; index++)
+        {
+            var position = belts[index].lpos;
+            Array.Clear(colliders, 0, colliders.Length);
+            var count = Physics.OverlapSphereNonAlloc(position + position.normalized * .2f, .23f,
+                colliders, 395264, QueryTriggerInteraction.Collide);
+            if (count >= colliders.Length) return "read_only_route_native_cover_query_saturated:" + index;
+            for (var hit = 0; hit < count; hit++)
+            {
+                if (!physics.GetColliderData(colliders[hit], out var data))
+                    return "read_only_route_native_collider_identity_unavailable:" + index;
+                if (!data.isForBuild) continue;
+                var id = data.objType == EObjectType.None ? data.objId : data.objType == EObjectType.Prebuild ? -data.objId : 0;
+                if (id == 0) continue;
+                var slot = Math.Abs(id);
+                if (id > 0 ? slot >= factory.entityCursor || factory.entityPool[slot].id != slot
+                    : slot >= factory.prebuildCursor || factory.prebuildPool[slot].id != slot)
+                    return "read_only_route_native_collider_object_unavailable:" + index;
+                var model = id > 0 ? factory.entityPool[slot].modelIndex : factory.prebuildPool[slot].modelIndex;
+                var desc = LDB.models.Select(model)?.prefabDesc;
+                if (desc is null) return "read_only_route_native_collider_prototype_unavailable:" + index;
+                if (desc.isBelt) return "read_only_route_native_belt_cover_risk:" + index + ":" + id;
+            }
+        }
+        return null;
     }
 
     private static string? PreviewSorterOccupancyBlocker(PlanetFactory factory,

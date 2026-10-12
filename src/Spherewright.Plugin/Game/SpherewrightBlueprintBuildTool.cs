@@ -78,5 +78,12 @@ internal sealed class SpherewrightBlueprintBuildTool : BuildTool_BlueprintPaste,
         gratBoxCursor = 0; // No translated blueprint area; one already validated normal belt span.
     }
 
+    internal void SetReadOnlyLinkedObjects(IReadOnlyList<BuildPreview> objects)
+    {
+        SetReadOnlyLinkedSorters(objects,objects.Count);
+        // The complete route, including ALL intermediate belts and both exact
+        // sorters, enters ONE native condition pool. Never invoke CreatePrebuilds.
+    }
+
     public void Dispose() => _Free();
 }
