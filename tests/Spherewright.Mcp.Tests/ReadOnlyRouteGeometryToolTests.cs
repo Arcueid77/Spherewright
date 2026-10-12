@@ -234,6 +234,56 @@ public sealed class ReadOnlyRouteGeometryToolTests
         };
     }
 
+    [Fact]
+    public async Task NativeSegmentBatchUsesOnlyTheReadEndpointAndPreservesGeneratedOnlyEcho()
+    {
+        var request = GeometryRequest();
+        request.NativeBeltSegments = new() { new BeltRouteSegment { Start=Point(0),End=Point(6) } };
+        var bridge = NewGeometryBridge(r => GeometryEntity(r, "observed"));
+        var result = await SpherewrightTools.InspectFactoryEntityAsync(bridge, "owned-session", 104, 41, geometry:request);
+        Assert.False(result.IsError);
+        Assert.Single(Proxy(bridge).Calls);
+        Assert.Single(Proxy(bridge).LastInspectRequest!.Geometry!.NativeBeltSegments!);
+        var row=result.StructuredContent!.Value.GetProperty("result").GetProperty("geometryCut").GetProperty("nativeBeltSegments")[0];
+        Assert.Equal("read_only_native_belt_segment_points_v1",row.GetProperty("phase").GetString());
+        Assert.False(row.GetProperty("executable").GetBoolean());
+        Assert.False(row.GetProperty("nativeConditionsChecked").GetBoolean());
+        Assert.Equal(4,row.GetProperty("points").GetArrayLength());
+    }
+
+    [Theory]
+    [InlineData("legacy_missing_segment_echo")]
+    [InlineData("claims_native_check")]
+    [InlineData("drops_last_point")]
+    public async Task NativeSegmentEchoCannotDowngradeIntoLegacyGeometryOrPlacementEvidence(string fault)
+    {
+        var request=GeometryRequest();request.NativeBeltSegments=new(){new BeltRouteSegment{Start=Point(0),End=Point(6)}};
+        var bridge=NewGeometryBridge(r =>
+        {
+            var entity=GeometryEntity(r,"observed");var rows=entity.GeometryCut!.NativeBeltSegments;
+            if(fault=="legacy_missing_segment_echo")rows.Clear();
+            else if(fault=="claims_native_check")rows[0].NativeConditionsChecked=true;
+            else rows[0].Points.RemoveAt(rows[0].Points.Count-1);
+            return entity;
+        });
+        var result=await SpherewrightTools.InspectFactoryEntityAsync(bridge,"owned-session",104,41,geometry:request);
+        Assert.True(result.IsError);
+        Assert.Equal(BridgeErrorCodes.BridgeNotReady,result.StructuredContent!.Value.GetProperty("error").GetProperty("code").GetString());
+        Assert.Single(Proxy(bridge).Calls);
+    }
+
+    [Fact]
+    public async Task NativeSegmentWithoutLayoutHashDoesNotCallTheBridge()
+    {
+        var request=GeometryRequest();request.ExpectedFactoryGeometryHash=null;
+        request.NativeBeltSegments=new(){new BeltRouteSegment{Start=Point(0),End=Point(6)}};
+        var bridge=NewGeometryBridge(r=>GeometryEntity(r,"observed"));
+        var result=await SpherewrightTools.InspectFactoryEntityAsync(bridge,"owned-session",104,41,geometry:request);
+        Assert.True(result.IsError);
+        Assert.Equal(BridgeErrorCodes.InvalidRequest,result.StructuredContent!.Value.GetProperty("error").GetProperty("code").GetString());
+        Assert.Empty(Proxy(bridge).Calls);
+    }
+
     private static FactoryGeometryReadRequest GeometryRequest() => new()
     {
         ObjectIds = new() { 41, 43 },
@@ -305,6 +355,14 @@ public sealed class ReadOnlyRouteGeometryToolTests
                 AltitudeGridSnapPositions = observed
                     ? new() { Point(point.X), Point(point.X + 1), Point(point.X + 2), Point(point.X + 3) }
                     : new(),
+            }).ToList(),
+            NativeBeltSegments = (geometry.NativeBeltSegments ?? new()).Select((s,index) => new FactoryNativeBeltSegmentSnapshot
+            {
+                Index=index,Observed=observed,ReasonCode=observed?null:"native_segment_unavailable",
+                Segment=new BeltRouteSegment{RoutingMode=s.RoutingMode,Start=ClonePoint(s.Start),End=ClonePoint(s.End),
+                    StartAltitudeLevel=s.StartAltitudeLevel,EndAltitudeLevel=s.EndAltitudeLevel},
+                NativeGroundRadius=200.2f,NativeMaximumSlope=0,
+                Points=observed?new(){ClonePoint(s.Start),Point(s.Start.X+(s.End.X-s.Start.X)/3),Point(s.Start.X+(s.End.X-s.Start.X)*2/3),ClonePoint(s.End)}:new(),
             }).ToList(),
             Blockers = observed ? new() : new() { "native_geometry_unavailable" },
         };

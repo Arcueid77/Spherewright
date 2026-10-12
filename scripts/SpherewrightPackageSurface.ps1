@@ -124,7 +124,9 @@ function Assert-SpherewrightPackageSurface {
             @(@('objectIds','array'), @('objectIds.items','integer'),
                 @('terrainPoints','array'), @('terrainPoints.items','object'),
                 @('terrainPoints.items.x','number'), @('terrainPoints.items.y','number'), @('terrainPoints.items.z','number'),
-                @('expectedFactoryGeometryHash','string'))
+                @('expectedFactoryGeometryHash','string'), @('nativeBeltSegments','array'), @('nativeBeltSegments.items','object'),
+                @('nativeBeltSegments.items.routingMode','string'), @('nativeBeltSegments.items.start','object'), @('nativeBeltSegments.items.end','object'),
+                @('nativeBeltSegments.items.startAltitudeLevel','integer'), @('nativeBeltSegments.items.endAltitudeLevel','integer'))
         } else {
             @(@('expectedFactoryGeometryHash','string'), @('filterItemId','integer'),
                 @('sourceSorterItemId','integer'), @('destinationSorterItemId','integer'),
@@ -134,6 +136,13 @@ function Assert-SpherewrightPackageSurface {
         }
         foreach ($entry in $shape) {
             $null = Get-RequiredPackageSchemaNode $schema "$field.$($entry[0])" $entry[1]
+        }
+        if ($field -ceq 'geometry') {
+            foreach ($endpoint in @('start','end')) {
+                foreach ($coordinate in @('x','y','z')) {
+                    $null = Get-RequiredPackageSchemaNode $schema "$field.nativeBeltSegments.items.$endpoint.$coordinate" 'number'
+                }
+            }
         }
         if ($field -ceq 'beltRoutePreview') {
             foreach ($endpoint in @('source','destination')) {
@@ -169,7 +178,7 @@ function Assert-SpherewrightPackageSurface {
             'validationBaselineProposalHash', 'inputEndpointFacingDot/outputEndpointFacingDot',
             'foundryIntent', 'expectedFoundryPlanHash', 'boundaryPorts', '2011/2012', 'transportBudget',
             'inspect_factory_entity.geometry', 'beltRoutePreview', 'native_runtime_belt_collider_world_bounds',
-            'ALL-belts-plus-two-sorters', 'tokenless')) {
+            'ALL-belts-plus-two-sorters', 'tokenless', 'nativeBeltSegments', 'nativeConditionsChecked=false')) {
         if ($ResourcePlaybook.IndexOf($rule, [StringComparison]::Ordinal) -lt 0) {
             throw "The merged 0.4 playbook lacks required finite-construction/Governor rule: $rule."
         }

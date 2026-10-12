@@ -1,3 +1,5 @@
+using Spherewright.Contracts.Actions;
+
 namespace Spherewright.Contracts.Factory;
 
 public sealed class FactoryGeometryReadRequest
@@ -6,6 +8,9 @@ public sealed class FactoryGeometryReadRequest
     public List<Vector3Snapshot> TerrainPoints { get; set; } = new();
     // Omit only for the first cut. Subsequent cuts and route previews bind this hash.
     public string? ExpectedFactoryGeometryHash { get; set; }
+    // Explicit free-to-free native point generation, never placement validation.
+    // Omit for existing object/terrain reads. A whole-layout hash is required.
+    public List<BeltRouteSegment>? NativeBeltSegments { get; set; }
 }
 
 public sealed class FactoryGeometryCutSnapshot
@@ -22,7 +27,24 @@ public sealed class FactoryGeometryCutSnapshot
     public int PrebuildObjectCount { get; set; }
     public List<FactoryObjectGeometrySnapshot> Objects { get; set; } = new();
     public List<FactoryTerrainPointSnapshot> Terrain { get; set; } = new();
+    public List<FactoryNativeBeltSegmentSnapshot> NativeBeltSegments { get; set; } = new();
     public List<string> Blockers { get; set; } = new();
+}
+
+public sealed class FactoryNativeBeltSegmentSnapshot
+{
+    public string Phase { get; set; } = "read_only_native_belt_segment_points_v1";
+    public bool Executable => false;
+    public bool NativeConditionsChecked { get; set; }
+    public int Index { get; set; }
+    public BeltRouteSegment Segment { get; set; } = new();
+    public bool Observed { get; set; }
+    public string? ReasonCode { get; set; }
+    public float? NativeGroundRadius { get; set; }
+    public float? NativeMaximumSlope { get; set; }
+    // Complete SnapLineNonAlloc output before occupancy or native build checks.
+    // No truncation, endpoint replacement, collider or placement approval.
+    public List<Vector3Snapshot> Points { get; set; } = new();
 }
 
 public sealed class FactoryObjectGeometrySnapshot

@@ -5,7 +5,7 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot 'SpherewrightPackageSurface.ps1')
 
-$playbook = 'maximumObjectsToSubmit resumeBuildId never replay the whole blueprint spherewright_get_governor_plan nonzero measured baseline ten game minutes researchQueueReadback validationBaselineProposalHash inputEndpointFacingDot/outputEndpointFacingDot foundryIntent expectedFoundryPlanHash boundaryPorts 2011/2012 transportBudget inspect_factory_entity.geometry beltRoutePreview native_runtime_belt_collider_world_bounds ALL-belts-plus-two-sorters tokenless'
+$playbook = 'maximumObjectsToSubmit resumeBuildId never replay the whole blueprint spherewright_get_governor_plan nonzero measured baseline ten game minutes researchQueueReadback validationBaselineProposalHash inputEndpointFacingDot/outputEndpointFacingDot foundryIntent expectedFoundryPlanHash boundaryPorts 2011/2012 transportBudget inspect_factory_entity.geometry beltRoutePreview native_runtime_belt_collider_world_bounds ALL-belts-plus-two-sorters tokenless nativeBeltSegments nativeConditionsChecked=false'
 $readNames = @('spherewright_get_overseer_production', 'spherewright_get_overseer_summary',
     'spherewright_get_overseer_diagnostic_bundle', 'spherewright_get_foundry_plan',
     'spherewright_inspect_blueprint', 'spherewright_export_blueprint',
@@ -49,6 +49,10 @@ function New-TestSurface {
                     objectIds=[pscustomobject]@{type=@('array','null');items=[pscustomobject]@{type='integer'}}
                     terrainPoints=[pscustomobject]@{type=@('array','null');items=(New-TestVectorSchema)}
                     expectedFactoryGeometryHash=[pscustomobject]@{type=@('string','null')}
+                    nativeBeltSegments=[pscustomobject]@{type=@('array','null');items=[pscustomobject]@{type=@('object','null');properties=[pscustomobject]@{
+                        routingMode=[pscustomobject]@{type=@('string','null')};start=(New-TestVectorSchema);end=(New-TestVectorSchema)
+                        startAltitudeLevel=[pscustomobject]@{type='integer'};endAltitudeLevel=[pscustomobject]@{type='integer'}
+                    }}}
                 }}
                 beltRoutePreview=[pscustomobject]@{type=@('object','null');description='READ-ONLY tokenless executable=false';properties=[pscustomobject]@{
                     expectedFactoryGeometryHash=[pscustomobject]@{type=@('string','null')};filterItemId=[pscustomobject]@{type='integer'}
@@ -150,6 +154,18 @@ foreach ($member in @('routingMode','start','end','startAltitudeLevel','endAltit
     $route.properties.segments.items.properties.PSObject.Properties.Remove($member)
     Assert-Rejects { Test-Surface $caseTools } 'lacks the read-only geometry/route schema'; $cases++
 }
+foreach ($member in @('routingMode','start','end','startAltitudeLevel','endAltitudeLevel')) {
+    $caseTools = @(New-TestSurface)
+    $geometry = @($caseTools | Where-Object name -eq 'spherewright_inspect_factory_entity')[0].inputSchema.properties.geometry
+    $geometry.properties.nativeBeltSegments.items.properties.PSObject.Properties.Remove($member)
+    Assert-Rejects { Test-Surface $caseTools } 'lacks the read-only geometry/route schema'; $cases++
+}
+$caseTools = @(New-TestSurface)
+@($caseTools | Where-Object name -eq 'spherewright_inspect_factory_entity')[0].inputSchema.properties.geometry.properties.PSObject.Properties.Remove('nativeBeltSegments')
+Assert-Rejects { Test-Surface $caseTools } 'lacks the read-only geometry/route schema'; $cases++
+$caseTools = @(New-TestSurface)
+@($caseTools | Where-Object name -eq 'spherewright_inspect_factory_entity')[0].inputSchema.properties.geometry.properties.nativeBeltSegments.items.properties.end.properties.z.type = 'string'
+Assert-Rejects { Test-Surface $caseTools } 'incompatible read-only geometry/route schema type'; $cases++
 $caseTools = @(New-TestSurface)
 @($caseTools | Where-Object name -eq 'spherewright_inspect_factory_entity')[0].inputSchema.properties.geometry.properties.objectIds.items.type = 'number'
 Assert-Rejects { Test-Surface $caseTools } 'incompatible read-only geometry/route schema type'; $cases++

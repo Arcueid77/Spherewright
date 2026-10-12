@@ -25,6 +25,13 @@ internal sealed partial class GameStateReader
             var row=NativeFactoryGeometry.CaptureTerrain(factory.planet,request.TerrainPoints[i],i);result.Terrain.Add(row);
             if(!row.Observed) result.Blockers.Add(row.ReasonCode+":"+i);
         }
+        if(request.NativeBeltSegments is { } segments)
+            for(var i=0;i<segments.Count;i++)
+            {
+                var row=NormalGameActionCoordinator.ReadOnlyNativeBeltSegment(factory,segments[i],i);
+                result.NativeBeltSegments.Add(row);
+                if(!row.Observed) result.Blockers.Add(row.ReasonCode+":"+i);
+            }
         if(NativeFactoryGeometry.Fingerprint(factory,_sessions.SessionId!,tool,out _,out _)!=hash)
             throw new InvalidOperationException("factory_geometry_layout_changed_during_read");
         result.State=result.Blockers.Count==0?"observed":"unavailable";

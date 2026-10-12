@@ -11,6 +11,51 @@ public sealed class ReadOnlyRouteGeometryContractTests
     private const string GeometryHash = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
 
     [Fact]
+    public void NativeSegmentBatchRoundTripsExactLayersPointsAndSlopeWithoutPlacementCredit()
+    {
+        var segment=Segment(Point(2,200,0),Point(8,200,0));
+        segment.RoutingMode=BeltPathModes.NativeElevatedGrid;segment.StartAltitudeLevel=1;segment.EndAltitudeLevel=2;
+        var request=new FactoryGeometryReadRequest{ExpectedFactoryGeometryHash=GeometryHash,NativeBeltSegments=new(){segment}};
+        var restored=JsonSerializer.Deserialize<FactoryGeometryReadRequest>(JsonSerializer.Serialize(request,CamelCase),CamelCase)!;
+        Assert.Equal(GeometryHash,restored.ExpectedFactoryGeometryHash);
+        var copied=Assert.Single(restored.NativeBeltSegments!);
+        Assert.Equal(Coordinates(segment.Start),Coordinates(copied.Start));
+        Assert.Equal(Coordinates(segment.End),Coordinates(copied.End));
+        Assert.Equal(1,copied.StartAltitudeLevel);Assert.Equal(2,copied.EndAltitudeLevel);
+        var row=new FactoryNativeBeltSegmentSnapshot{Observed=true,Segment=segment,NativeGroundRadius=200.2f,
+            NativeMaximumSlope=.25f,Points=new(){Point(2,200,0),Point(5,201,0),Point(8,202,0)}};
+        var json=JsonSerializer.Serialize(row,CamelCase);
+        var result=JsonSerializer.Deserialize<FactoryNativeBeltSegmentSnapshot>(json,CamelCase)!;
+        Assert.Equal("read_only_native_belt_segment_points_v1",result.Phase);
+        Assert.False(result.Executable);Assert.False(result.NativeConditionsChecked);
+        Assert.Equal(.25f,result.NativeMaximumSlope);Assert.Equal(row.Points.Select(Coordinates),result.Points.Select(Coordinates));
+        Assert.DoesNotContain("planToken",json,StringComparison.Ordinal);
+        Assert.DoesNotContain("prepared",json,StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void LegacyGeometryWithoutSegmentsKeepsOrdinaryReadDefaultsAndNoInventedGeneration()
+    {
+        var request=JsonSerializer.Deserialize<FactoryGeometryReadRequest>("{\"objectIds\":[41],\"terrainPoints\":[]}",CamelCase)!;
+        var result=JsonSerializer.Deserialize<FactoryGeometryCutSnapshot>("{\"state\":\"observed\"}",CamelCase)!;
+        Assert.Null(request.NativeBeltSegments);Assert.Empty(result.NativeBeltSegments);
+        Assert.False(result.Executable);
+    }
+
+    [Fact]
+    public void NegativeGenerationRetainsReasonAndNoPartialPointOrConditionClaim()
+    {
+        var row=new FactoryNativeBeltSegmentSnapshot{Index=3,Observed=false,
+            ReasonCode="native_belt_segment_requires_exact_snapped_endpoints",Segment=Segment(Point(2,200,0),Point(8,200,0))};
+        var result=JsonSerializer.Deserialize<FactoryNativeBeltSegmentSnapshot>(JsonSerializer.Serialize(row,CamelCase),CamelCase)!;
+        Assert.Equal(3,result.Index);Assert.False(result.Observed);Assert.False(result.NativeConditionsChecked);
+        Assert.Equal(row.ReasonCode,result.ReasonCode);Assert.Empty(result.Points);
+        // A malformed wire claim survives decoding so the policy can reject it.
+        var claimed=JsonSerializer.Deserialize<FactoryNativeBeltSegmentSnapshot>("{\"nativeConditionsChecked\":true}",CamelCase)!;
+        Assert.True(claimed.NativeConditionsChecked);
+    }
+
+    [Fact]
     public void BoundedRouteRequestRoundTripsExplicitSegmentsAndMixedSorterBindings()
     {
         var priorGeometryCut = new FactoryGeometryCutSnapshot

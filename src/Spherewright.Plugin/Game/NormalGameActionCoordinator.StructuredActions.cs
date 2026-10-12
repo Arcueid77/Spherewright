@@ -657,7 +657,9 @@ internal sealed partial class NormalGameActionCoordinator
         EndpointPoint destination,
         string routingMode,
         out List<BuildStepPlan> steps,
-        out string rejection)
+        out string rejection,
+        Action<float>? nativeSlopeReadback = null,
+        Action<IReadOnlyList<Vector3>>? nativePointsReadback = null)
     {
         steps = new List<BuildStepPlan>();
         rejection = string.Empty;
@@ -711,11 +713,15 @@ internal sealed partial class NormalGameActionCoordinator
             forceVertical: false,
             ref maxSlope,
             useOldPath: sourceIsBelt && destinationIsBelt);
+        nativeSlopeReadback?.Invoke(maxSlope);
         if (count < 2 || count >= points.Length)
         {
             rejection = "DSP's terrain grid did not return a complete, unsaturated bounded belt path.";
             return false;
         }
+        // Geometry observation copies the full native result before endpoint
+        // canonicalisation. Ordinary action callers do not request this copy.
+        nativePointsReadback?.Invoke(points.Take(count).ToArray());
 
         if (geodesic && !BeltPathRoutingPolicy.CompleteGroundPath(points.Take(count).Select(Snapshot).ToArray(),
             points.Length, Snapshot(source.Pose.position), Snapshot(destination.Pose.position), factory.planet.realRadius + .2f))
