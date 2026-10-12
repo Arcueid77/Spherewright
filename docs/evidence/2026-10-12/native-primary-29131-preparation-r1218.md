@@ -18,4 +18,27 @@
 
 相关策略、实际票据仓储与Coordinator的合成文件/原生替身、MCP回声/拒绝测试已在隔离源码中通过：Core366/366、MCP34/34，共400项，无失败/跳过。基于29131五项引用的完整Plugin Release（net472）编译通过，0警告/0错误。16个批准文件的隔离覆盖与当前源码hash一致；原13份stdout/stderr/TRX/产物独立核hash并读取两份TRX。独立索引b42f4943395e43e88e839e052a234f3c:144，SHA 3243E7D158B18EA7002FCD5C502F2F4E3390A3C4CB81C49783ADB93E58886E8B，label root-r1218-active-primary-migration-related-validation-independent-audit。
 
-五个SDK步骤耗时合计55.372秒；准备步骤原始独立耗时/日志未捕获，整体耗时不宣称，原汇总错误已单独更正且未重跑验证。上述预提交产物不可部署。后续按准确源码绿CI→从该提交重建同批Plugin/MCP→菜单冷维护→一次限定prepare-only披露推进；尚未取得fresh实机prepare，不在这些步骤里加载主档。
+五个SDK步骤耗时合计55.372秒；准备步骤原始独立耗时/日志未捕获，整体耗时不宣称，原汇总错误已单独更正且未重跑验证。上述预提交产物不可部署。源码核验时尚未取得fresh实机prepare；随后准确源码绿CI、同批重建/菜单冷维护与prepare-only披露的实际结果见下一节，主档未加载。
+
+## 同提交安装与实机披露结果（R1219–R1220）
+
+源码提交c488fb72a64f31db4fed722dccbe2a833ec63f0b，父979820bbb6f5ff275ffdbca6b81fbe20f2b9fa3f，tree cd9d2b7fb81de18d2339e7b18589df205c43465e；仅16个批准路径。普通push后本地main、origin/main、远端main一致且工作树干净，准确源码[Windows CI38242390651](https://github.com/AvaloNero/Spherewright/actions/runs/38242390651)及12个实际步骤成功。源交付14对原输出与16个reviewed Git内容独立核验；各Git原exitCode未单独封存，按原输出、准确远端/CI及下一步提交标识archive共同验证。
+
+基于该提交和29131的五项DLL重新locked restore、完整Release build、自包含MCP publish，三项全部成功，完整cohort228文件（4Plugin、224MCP），六个程序集均0.4.0+同一完整SHA，隔离metadata64工具/1资源、playbook匹配、纯stdout。Git archive包含准确提交标识，16个reviewed source与archive/提取源码相比仅允许CRLF/LF及UTF8 BOM表现差异。cohort未重复测试，明确tests=0/sourceRelatedTests=400，绑定前述独立源验证与准确CI。首次cohort入口缺证据reader导入，在0SDK/0Game时退出；补齐导入并实际pwsh-File smoke后有限修正成功。四个冷维护/准备入口pwsh与5.1 inert smoke通过，不冒充5.1实机执行。
+
+R1219仅一次正常关闭未加载菜单DSP42364、保留Steam36408、事务安装228文件、桌面broker dispatch一次。实际耗时47.282秒，1次菜单read；0Save/Load/accepted。原29104主档凭据原hash保留。随后首个get_session_state回执为REQUEST_TIMEOUT、retryable=true，0prepare/写入；该目的立即停止并独立核原件，耗时12.091秒。Root允许一次启动后只读guard续接，复用同一prepare入口，不重复冷安装/启动、不增write额度。R1220成功菜单/metadata/prepare/末菜单共4次调用、6.503秒。超时根因未证明；一次本地80行上限log读取只取得1行，不能据此证明没有异常。
+
+实机Native/MCP evidence5披露：`reauthorize_version_changed_primary`，源0.10.35.29104、目标0.10.35.29131，candidate/minimum tick112747810，P104，embedded identity已验证。`userConfirmationRequired=true`、`commitAllowedNow=false`，唯一blocker USER_CONFIRMATION_REQUIRED。完整主档/原Journal及有效凭据的资格由真实prepare验证；未消费、未Load。准备前后同一健康未加载菜单revision0、票据hash不变，DSP34540与Steam不属当前清理Job。累计本阶段6次Game调用（含先前1失败read及冷维护1read），其中仅1prepare；0accepted/Load/Save/Move/commit。固定20窗仍16/20、lifetime551/opening535，保留来源Save112747810/R3/J102及已有两条迁移。
+
+后续具体执行只允许这个同一主档/版本对/候选：用户在该披露之后明确确认→fresh prepare并核同candidate/digest与所有guards→唯一commit，先durable消费原凭据再原生加载→同action终态、owned身份/P104、原Journal102连续性及准确第三条迁移→正常保存签发29131新凭据并fresh审计。已披露的短期token不跨进程保留或复用，确认后仍须重prepare；candidate或digest变化须重新核范围，不能自动换档。消费后失败/中断只调查同action与原意图，不重放、不改expiry、不改存档/历史Journal、不选LastExit/AutoSave。当前未取得实际Load授权，实际迁移/重存/实体持久性未通过。
+
+独立阶段索引（原件均为受保护记录，DLL、存档、真实名、token和原日志不进Git）：
+
+| 内容 | ref | SHA256 | label |
+| --- | --- | --- | --- |
+| 源码/准确CI | b42f4943395e43e88e839e052a234f3c:146 | E8DCE7319F48B88F989BC34DA6D1F4C93CAD7E76550FE34C84ED75ACC42E9B19 | root-r1219-active-primary-migration-clean-source-ci-independent-audit |
+| 当前Native同提交cohort | b42f4943395e43e88e839e052a234f3c:149 | 6FB428624B3A58D687F4D0B2C51F8C590A67B9E4F47B72EDB4A41AE59F5DCC90 | root-r1219-current-native-exact-migration-cohort-independent-audit |
+| 冷维护与首次只读超时 | b42f4943395e43e88e839e052a234f3c:152 | 66AEC889EC60066A26B8B42AF43EBD6B54DB749A9031D239CCF88D0C0CC641E4 | root-r1219-menu-cold-success-and-first-read-timeout-independent-audit |
+| 实机v5披露及完整原件 | b42f4943395e43e88e839e052a234f3c:154 | A3654D098FF8777DB196EF6C67BD881A18AC3D6D4D36F3FA7D2A89D5918501F8 | root-r1219-same-primary-migration-menu-cold-and-prepare-independent-audit |
+
+上述结果不增加铁路线原生资格、连续供给/配平信用或0.4最终验收通过项。执行cohort为c488fb7，后续仅事实交付不触发重新冷部署。

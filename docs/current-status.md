@@ -1,20 +1,20 @@
 # Spherewright 当前快照
 
-更新：2026-10-12（Asia/Singapore）。只读整线指纹修复源码来自提交 128ec5fee8ec536d8f84971e110a1405983b7a7c，准确源码 Windows CI [38230443288](https://github.com/AvaloNero/Spherewright/actions/runs/38230443288) 已成功。对应隔离 cohort 的247项相关测试、完整Plugin Release编译、自包含MCP publish及64工具/1资源元数据通过；冷安装228文件（4个Plugin、224个MCP）已独立核验。它基于旧游戏程序集构建，尚未通过新游戏版本的安装菜单/恢复/整线实测。旧0df9740 cohort的2,940项回归仅保留为旧批次证据。最终双候选包未交付，也未正式发布。
+更新：2026-10-12（Asia/Singapore）。当前安装源码为 c488fb72a64f31db4fed722dccbe2a833ec63f0b，准确源码 Windows CI [38242390651](https://github.com/AvaloNero/Spherewright/actions/runs/38242390651) 成功。该提交包含既有只读整线指纹修复及仅29104→29131的有效凭据同主档迁移准备。400项相关测试、基于当前29131引用的完整Plugin Release编译、自包含MCP publish、228安装文件（4个Plugin、224个MCP）、实机菜单及64工具/1资源已独立核验；一次fresh迁移准备成功。主档尚未Load，迁移后的保存/Journal与整线实测未通过。旧批次测试仅保留为历史证据。最终双候选包未交付，也未正式发布。
 
 ## 当前保存与窗口
 
-最近正常保存为 tick 112747810、revision 3、durable Journal 102，源游戏版本0.10.35.29104。R1209一次普通保存已独立核验全部原回执、精确库存/持物/增产点、完整Journal与已保存前缀；无在途或未知动作。R1210正常关闭旧DSP、保留Steam并一次事务安装/桌面启动完成，尚未Load。原健康主档凭据未消费、未编辑。
+最近正常保存为 tick 112747810、revision 3、durable Journal 102，源游戏版本0.10.35.29104。R1209一次普通保存已独立核验全部原回执、精确库存/持物/增产点、完整Journal与已保存前缀；无在途或未知写动作。R1219正常关闭未加载菜单中的DSP、保留Steam并一次事务安装/桌面启动完成，当前DSP34540仍在健康未加载29131菜单。R1220实机prepare前后菜单revision0、凭据hash不变；原健康主档凭据未消费、未编辑。
 
 固定20窗口从lifetime535开始，目前16/20、lifetime551，冻结但仍开放，剩4槽不转移。整案累计152 accepted、46次Move、49次普通保存、27次手工材料动作。最近完整静态基线含6,492实体、0预建对象、65页，属于旧已保存session的缓存；本轮没有载入新session，不能声称新版本实体持久性已通过。
 
-## 当前游戏版本变化与恢复边界
+## 当前29131同主档迁移准备与确认边界
 
-一次菜单入口在首次Game读取前拒绝：实际Assembly-CSharp哈希已变化。R1214独立核验的一次只读状态返回确认新DSP处于未加载菜单，实际游戏版本为0.10.35.29131，write health健康；0accepted、0Load/Save/部署/启动。文件写入时间早于本次新DSP启动，Steam manifest有新build记录，与启动期间更新相符；没有证明更新操作者，不能把推断写成确定原因。
+此前冷启动出现Assembly-CSharp哈希变化，R1214只读状态确认游戏为0.10.35.29131；与启动期间Steam更新相符，更新操作者未证明。用户随后明确选择“以29131继续，准备同主档迁移方案”，仅授权准备，实际Load保留具体披露之后的确认门。
 
-当前代码不支持0.10.35.29104→0.10.35.29131迁移，Journal已有2条迁移且当前上限也是2；凭据仍在有效期内，既有expired-primary流程也不能提前代用。旧同版本恢复caller已退役且未调用Game。新写保持冻结，未修改游戏程序集、凭据有效期、版本白名单或Journal上限。后续须先解决这个具体版本对及受保护恢复路径，实际迁移仍须按原授权的后续确认边界执行；不能用“继续”或降低版本校验绕过。
+当前代码新增显式 `reauthorize_version_changed_primary` / evidence5，仅支持有效健康原凭据、准确29104→29131、同一ticket-bound primary及原完整Journal。已有两条Journal迁移保留，只允许这个准确第三条，第四条/跳级/降级仍拒绝；默认健康恢复仍要求同版本。实机披露candidate/minimum tick均112747810、P104、embedded identity已验证，`userConfirmationRequired=true`、`commitAllowedNow=false`，唯一blocker为 `USER_CONFIRMATION_REQUIRED`。实际Load尚未授权；下一步须用户确认这个具体披露，再fresh prepare并核同一candidate/digest，不能复用过期token。游戏程序集、凭据日期、存档及历史Journal未编辑。
 
-离线对比检查了Plugin引用的944项Native成员：934项直接签名匹配；10项泛型引用在同一简化匹配器中对新旧均未展开，没有观测到匹配计数变化。11个选定保存/导入/路径方法的规范化IL一致。这些仅是离线接口证据，不代表完整兼容、原生线路资格或实机保存恢复通过。详见[修复安装与版本变化证据](evidence/2026-10-12/readonly-fingerprint-maintenance-and-native-drift-r1214.md)。
+当前29131程序集SHA74AC6162CEF8394A6021C8475132CAE4DF4F840871A99E63CC7D2C8297661BC0。944项Plugin Native成员引用全部匹配（含10项展开泛型），11个选定保存/导入/路径方法规范化IL一致；这些仍不代表实际迁移加载或重存已通过。首次安装后菜单读取出现可重试的Unity主线程超时，0prepare/accepted；原件独立核销后一次启动后重读与prepare成功，超时原因未证明。详见[同主档迁移准备证据](evidence/2026-10-12/native-primary-29131-preparation-r1218.md)。
 
 ## 当前只读主候选与实现修复
 
@@ -26,6 +26,6 @@ R1198–R1205共75次只读请求，新增21段完整原生点列、3次tokenles
 
 ## 流程效率的实际结论
 
-完整静态快照与成功路段复用、同批多候选筛选、相关最小测试和阶段统一事实交付均已执行。本批75次只读请求内部执行累计19.915秒；R1205批准到首次业务prepare为66.491秒，而执行本身2.775秒。准确SHA cohort构建43.04秒，冷安装59.299秒。这些没有包含全部设计、caller准备、审计、失败入口、Git/CI和交接，不能冒充端到端速度或计算提速比例。当前主要额外耗时仍在准备/协调以及实现异常与版本变化；本轮未新增实机验收通过项。
+完整静态快照与成功路段复用、同批多候选筛选、相关最小测试和阶段统一事实交付继续执行；本阶段400项定向测试仅在本地跑一次，绿CI后同提交cohort不重跑。隔离cohort构建37.991秒，菜单冷维护47.282秒；首个只读超时12.091秒，成功菜单/prepare6.503秒。此前75次只读内部执行19.915秒，R1205准备等待66.491秒/执行2.775秒。这些均未覆盖完整设计、入口准备、审计、Git/CI、失败与交接，不能计算端到端提速比例。版本适配与实机准备取得推进，生产/保存恢复验收门仍未新增通过项。
 
 sourceConditionsPassed=false、wholeSupplyPassed=false、连续来源信用0，最终同SHA双候选包未交付、无正式发布。持续目标仍active。详见[批量下穿勘探与指纹异常证据](evidence/2026-10-12/iron-readonly-underpass-and-fingerprint-r1206.md)；此前安装维护和原A/B/C批次见[前一阶段证据](evidence/2026-10-12/iron-native-grid-batch-live-and-maintenance-r1197.md)。
