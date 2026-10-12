@@ -667,15 +667,16 @@ internal sealed partial class NormalGameActionCoordinator
         BeltDestinationState? destinationAnchor = null;
         var geodesic = routingMode == BeltPathModes.NativeGeodesic;
         var elevated = routingMode == BeltPathModes.NativeElevatedGrid;
-        if (elevated && (item.ID != 2001 || source.ObjectId != 0 || destination.ObjectId != 0
+        var sourceIsBelt = source.ObjectId > 0 && factory.entityPool[source.ObjectId].beltId > 0;
+        var destinationIsBelt = destination.ObjectId > 0 && factory.entityPool[destination.ObjectId].beltId > 0;
+        if (elevated && (item.ID != 2001 || source.ObjectId != 0 && (!sourceIsBelt || source.Slot != 0)
+            || destination.ObjectId != 0
             || !BeltElevationPolicy.ValidEndpoints(Snapshot(source.Pose.position), Snapshot(destination.Pose.position),
                 factory.planet.radius + .2f)))
         {
             rejection = "belt_elevation_span_unsupported: requires one explicit free-to-free2001 span with verified native levels, 1.5–30m apart.";
             return false;
         }
-        var sourceIsBelt = source.ObjectId > 0 && factory.entityPool[source.ObjectId].beltId > 0;
-        var destinationIsBelt = destination.ObjectId > 0 && factory.entityPool[destination.ObjectId].beltId > 0;
         var dualCover = sourceIsBelt && destinationIsBelt && item.ID == 2001 && source.ObjectId != destination.ObjectId;
         if (geodesic && (((source.ObjectId != 0 || destination.ObjectId != 0) && !dualCover)
             || !BeltPathRoutingPolicy.ValidGroundEndpoints(Snapshot(source.Pose.position),
@@ -686,7 +687,8 @@ internal sealed partial class NormalGameActionCoordinator
         }
         if (sourceIsBelt)
         {
-            if (!TryCaptureBeltSource(factory, source.ObjectId, out sourceAnchor, out rejection)
+            if (!TryCaptureBeltSource(factory, source.ObjectId, out sourceAnchor, out rejection,
+                    requireEmptyElevatedPath: elevated)
                 || !BeltSourceReusePolicy.Supports(source.ObjectId, sourceAnchor!.ItemId, item.ID, source.Slot,
                     destinationIsBelt ? 0 : destination.ObjectId, sourceAnchor.Tilt, false, sourceAnchor.Connections[0].OtherObjectId,
                     sourceAnchor.Connections.Skip(1).Take(3).Count(c => c.OtherObjectId != 0)))
@@ -767,8 +769,13 @@ internal sealed partial class NormalGameActionCoordinator
             // Only the exact zero-cost source is partitioned out of the NEW-object
             // plan. It is retained as a native non-removing cover in BOTH validation
             // and creation. No native point is dropped to evade a collision/angle.
-            if (!BeltSourceReusePolicy.TrySeparateNewPoints(points.Take(count).Select(Snapshot).ToArray(),
-                    Snapshot(sourceAnchor.Position), out var newPoints))
+            List<Vector3Snapshot> newPoints;
+            var partitioned = elevated
+                ? BeltElevationPolicy.TrySeparateRaisedSourceCover(points.Take(count).Select(Snapshot).ToArray(),
+                    Snapshot(sourceAnchor.Position), factory.planet.radius + .2f, out newPoints)
+                : BeltSourceReusePolicy.TrySeparateNewPoints(points.Take(count).Select(Snapshot).ToArray(),
+                    Snapshot(sourceAnchor.Position), out newPoints);
+            if (!partitioned)
             {
                 rejection = "belt_source_path_unsupported: retain an exact source cover plus at least two complete, flat NEW points.";
                 return false;

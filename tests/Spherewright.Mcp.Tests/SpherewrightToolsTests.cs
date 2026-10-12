@@ -729,6 +729,46 @@ public sealed class SpherewrightToolsTests
     }
 
     [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task RaisedTailCoverRequiresTheInstalledSourcePreservationEcho(bool confirmedCover)
+    {
+        var bridge = new FakeBridgeClient(SuccessResult())
+        {
+            BuildBeltRoutingMode = BeltPathModes.NativeElevatedGrid,
+            BuildBeltNewObjectCount = 4,
+            BuildBeltStartAltitudeLevel = 2,
+            BuildBeltEndAltitudeLevel = 1,
+            BuildBeltSourceCover = confirmedCover,
+            BuildBeltPreservationMode = confirmedCover ? "whole_path_native_rotation_v1" : null,
+        };
+        var result = await SpherewrightTools.PrepareBuildAsync(bridge, "session", 104, 2001, "player",
+            preferredPositionX: 0, preferredPositionY: 202.86667f, preferredPositionZ: 0,
+            pathEndX: 10, pathEndY: 201.53333f, pathEndZ: 0,
+            sourceObjectId: 754, expectedSourceStateHash: "source",
+            beltPathMode: BeltPathModes.NativeElevatedGrid,
+            beltStartAltitudeLevel: 2, beltEndAltitudeLevel: 1);
+        Assert.NotNull(bridge.LastBuildRequest);
+        Assert.Equal(!confirmedCover, result.IsError);
+        if (confirmedCover)
+        {
+            var request = Assert.IsType<PrepareBuildRequest>(bridge.LastBuildRequest);
+            Assert.Equal(754, request.SourceObjectId);
+            Assert.Equal("source", request.ExpectedSourceStateHash);
+            Assert.Null(request.DestinationObjectId);
+            var echo = result.StructuredContent!.Value.GetProperty("result").GetProperty("plannedBeltPath");
+            Assert.Equal("non_removing_belt_cover", echo.GetProperty("sourceBindingMode").GetString());
+            Assert.Equal(754, echo.GetProperty("reusedSourceObjectId").GetInt32());
+            Assert.Equal(4, echo.GetProperty("newObjectCount").GetInt32());
+        }
+        else
+        {
+            Assert.Equal(BridgeErrorCodes.BridgeNotReady,
+                result.StructuredContent!.Value.GetProperty("error").GetProperty("code").GetString());
+        }
+    }
+
+    [Theory]
     [InlineData("item", 2002)]
     [InlineData("source", 754)]
     [InlineData("source", -1)]

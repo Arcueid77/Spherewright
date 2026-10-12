@@ -3,14 +3,14 @@ using Spherewright.Contracts.Factory;
 
 namespace Spherewright.Bridge.Core.Factory;
 
-/// <summary>Guards one native free-to-free span, never generates a route or grants placement permission.</summary>
+/// <summary>Guards one native span, including one explicitly bound empty raised tail cover.</summary>
 public static class BeltElevationPolicy
 {
     public const float NativeLayerHeight = 1.3333333f;
     public const float MaximumNativeSlope = .5f;
     public const int MaximumAltitudeLevel = 3;
     public const int MaximumPoints = 64;
-    public const string Recovery = "Choose one explicit free-to-free 2001 native_elevated_grid span with start/end levels 0..3 (at least one raised), at most 30 m, flat ends and a native gentle slope. Do not concatenate routes, drop points, omit endpoint bindings or replay rejected coordinates. Complete native placement, material and connection checks remain mandatory.";
+    public const string Recovery = "Choose one explicit 2001 native_elevated_grid span with start/end levels 0..3 (at least one raised), at most 30 m, flat ends and a native gentle slope. The sole bound subset is one exact empty independent raised 2001 tail, source ID/hash/position and a free destination. Retain the complete native path and its non-removing source cover; do not drop points, omit bindings or replay rejected coordinates. Complete native placement, material and connection checks remain mandatory.";
     private const double RadiusTolerance = .01;
 
     public static string? ValidateRequest(PrepareBuildRequest request, bool nativeBelt)
@@ -18,13 +18,19 @@ public static class BeltElevationPolicy
         if (request.BeltPathMode != BeltPathModes.NativeElevatedGrid)
             return request.BeltStartAltitudeLevel.HasValue || request.BeltEndAltitudeLevel.HasValue
                 ? "belt_elevation_requires_explicit_mode" : null;
-        if (!nativeBelt || request.BuildingItemId != 2001 || request.SourceObjectId.HasValue
+        var boundSource = request.SourceObjectId.HasValue;
+        if (!nativeBelt || request.BuildingItemId != 2001
+            || boundSource && (request.SourceObjectId.GetValueOrDefault() <= 0
+                || request.SourceObjectId.GetValueOrDefault() > BeltBuildOccupancyPolicy.MaximumFactorySlots
+                || string.IsNullOrWhiteSpace(request.ExpectedSourceStateHash))
+            || !boundSource && !string.IsNullOrEmpty(request.ExpectedSourceStateHash)
             || request.DestinationObjectId.HasValue || request.ResourceNodeId.HasValue
-            || !string.IsNullOrEmpty(request.ExpectedSourceStateHash)
             || !string.IsNullOrEmpty(request.ExpectedDestinationStateHash)
             || !string.IsNullOrEmpty(request.ExpectedResourceStateHash)
             || !Valid(request.PreferredPosition) || !Valid(request.PathEnd))
             return "belt_elevation_requires_explicit_free_endpoints";
+        if (boundSource && request.BeltStartAltitudeLevel.GetValueOrDefault() <= 0)
+            return "belt_elevation_source_cover_requires_raised_start";
         return ValidLevels(request.BeltStartAltitudeLevel, request.BeltEndAltitudeLevel)
             ? null : "belt_elevation_levels_unsupported";
     }
@@ -84,14 +90,46 @@ public static class BeltElevationPolicy
             && Math.Abs(Radius(points[points.Count - 2]) - last) <= RadiusTolerance;
     }
 
-    public static bool ConfirmsPlanEcho(int? requestedStart, int? requestedEnd, BeltPathPlanSnapshot? echo) =>
+    public static bool ConfirmsPlanEcho(int? requestedStart, int? requestedEnd, BeltPathPlanSnapshot? echo,
+        int expectedSourceObjectId = 0) =>
         ValidLevels(requestedStart, requestedEnd) && echo is not null
         && echo.RoutingMode == BeltPathModes.NativeElevatedGrid && echo.NativeValidationMode == "full_path_stage1"
         && echo.StartAltitudeLevel == requestedStart && echo.EndAltitudeLevel == requestedEnd
-        && echo.NewObjectCount >= 4 && echo.NewObjectCount <= MaximumPoints
-        && echo.SourceBindingMode == "none" && echo.DestinationBindingMode == "none"
-        && !echo.ReusedSourceObjectId.HasValue && !echo.ReusedDestinationObjectId.HasValue
-        && echo.SourcePreservationMode is null && echo.DestinationPreservationMode is null;
+        && expectedSourceObjectId >= 0 && expectedSourceObjectId <= BeltBuildOccupancyPolicy.MaximumFactorySlots
+        && echo.NewObjectCount >= (expectedSourceObjectId > 0 ? 3 : 4)
+        && echo.NewObjectCount <= (expectedSourceObjectId > 0 ? MaximumPoints - 1 : MaximumPoints)
+        && (expectedSourceObjectId == 0
+            ? echo.SourceBindingMode == "none" && !echo.ReusedSourceObjectId.HasValue && echo.SourcePreservationMode is null
+            : requestedStart > 0 && echo.SourceBindingMode == "non_removing_belt_cover"
+                && echo.ReusedSourceObjectId == expectedSourceObjectId
+                && echo.SourcePreservationMode == BeltSourceRotationPolicy.PreservationMode)
+        && echo.DestinationBindingMode == "none" && !echo.ReusedDestinationObjectId.HasValue
+        && echo.DestinationPreservationMode is null && !echo.UnpoweredSourceMinerObjectId.HasValue
+        && echo.UnpoweredSourceMinerStateHash is null;
+
+    public static bool TrySeparateRaisedSourceCover(IReadOnlyList<Vector3Snapshot>? fullPath,
+        Vector3Snapshot source, float groundRadius, out List<Vector3Snapshot> newPoints)
+    {
+        newPoints = new List<Vector3Snapshot>();
+        if (fullPath is null || fullPath.Count < 4 || !Valid(fullPath[0]) || !TryGetLevel(source, groundRadius, out var level)
+            || level <= 0 || DistanceSquared(fullPath[0], source) > .0001
+            || !CompleteNativePath(fullPath, BeltBuildOccupancyPolicy.MaximumPathPoints,
+                source, fullPath[fullPath.Count - 1], groundRadius)) return false;
+        // Only the bound, zero-cost source is partitioned; every NEW point remains.
+        newPoints = fullPath.Skip(1).Select(p => new Vector3Snapshot { X = p.X, Y = p.Y, Z = p.Z }).ToList();
+        return true;
+    }
+
+    public static bool ConfirmsPreparedEcho(PreparedNormalAction? plan, int itemId,
+        int? requestedStart, int? requestedEnd, int expectedSourceObjectId) =>
+        itemId == 2001 && plan is not null && plan.Prepared && plan.BuildKind == "belt"
+        && ConfirmsPlanEcho(requestedStart, requestedEnd, plan.PlannedBeltPath, expectedSourceObjectId)
+        && plan.SourceObjectId.GetValueOrDefault() == expectedSourceObjectId
+        && plan.DestinationObjectId.GetValueOrDefault() == 0
+        && plan.PlannedPath is not null && plan.PlannedPath.Count == plan.PlannedBeltPath!.NewObjectCount
+        && plan.PlannedPath.All(Valid) && plan.ItemBudget is { Count: 1 }
+        && plan.ItemBudget[0].ItemId == itemId && plan.ItemBudget[0].Count == plan.PlannedPath.Count
+        && plan.ItemBudget[0].Direction == "construction-consumption";
 
     private static bool Valid(Vector3Snapshot? p) => p is not null && Finite(p.X) && Finite(p.Y) && Finite(p.Z)
         && Math.Abs(p.X) <= 10000 && Math.Abs(p.Y) <= 10000 && Math.Abs(p.Z) <= 10000

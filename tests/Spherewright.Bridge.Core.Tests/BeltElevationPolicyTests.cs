@@ -284,6 +284,112 @@ public sealed class BeltElevationPolicyTests
         Assert.False(BeltElevationPolicy.ConfirmsPlanEcho(requestedStart, requestedEnd, echo));
     }
 
+    [Fact]
+    public void RaisedSourceRequestRequiresExactIdHashPositionAndFreeDestination()
+    {
+        var request = Request();
+        request.SourceObjectId = 92;
+        request.ExpectedSourceStateHash = "fresh-endpoint";
+        request.BeltStartAltitudeLevel = 2;
+        request.BeltEndAltitudeLevel = 1;
+        Assert.Null(BeltElevationPolicy.ValidateRequest(request, true));
+        Assert.Null(BeltPathRoutingPolicy.ValidateRequest(request, true));
+        request.ExpectedSourceStateHash = " ";
+        Assert.NotNull(BeltElevationPolicy.ValidateRequest(request, true));
+        request.ExpectedSourceStateHash = "fresh-endpoint";
+        request.BeltStartAltitudeLevel = 0;
+        Assert.Equal("belt_elevation_source_cover_requires_raised_start", BeltElevationPolicy.ValidateRequest(request, true));
+        request.BeltStartAltitudeLevel = 2;
+        request.DestinationObjectId = 93;
+        Assert.NotNull(BeltElevationPolicy.ValidateRequest(request, true));
+    }
+
+    [Fact]
+    public void RaisedCoverRetainsEveryNewPointAcrossAnActualLayerChange()
+    {
+        var full = new[] { Point(2, 0), Point(2, 1.2f), Point(1.5f, 2.4f), Point(1, 3.6f), Point(1, 4.8f) };
+        Assert.True(BeltElevationPolicy.TrySeparateRaisedSourceCover(full, full[0], GroundRadius, out var points));
+        Assert.Equal(full.Length - 1, points.Count);
+        for (var i = 0; i < points.Count; i++)
+        {
+            Assert.Equal(full[i + 1].X, points[i].X);
+            Assert.Equal(full[i + 1].Y, points[i].Y);
+            Assert.Equal(full[i + 1].Z, points[i].Z);
+            Assert.NotSame(full[i + 1], points[i]);
+        }
+        Assert.False(BeltSourceReusePolicy.TrySeparateNewPoints(full, full[0], out _));
+    }
+
+    [Theory]
+    [InlineData("wrong_source")]
+    [InlineData("ground_source")]
+    [InlineData("clipped_end")]
+    [InlineData("duplicate")]
+    [InlineData("null_first")]
+    [InlineData("nonfinite")]
+    public void RaisedCoverCannotHideIncompleteOrChangedNativePoints(string fault)
+    {
+        var full = HighFlat();
+        var source = Copy(full[0]);
+        switch (fault)
+        {
+            case "wrong_source": source = Point(2, 1.2f); break;
+            case "ground_source": source = Point(0, 0); break;
+            case "clipped_end": full[3] = Point(1.5f, 3.6f); break;
+            case "duplicate": full[1] = Copy(full[0]); break;
+            case "null_first": full[0] = null!; break;
+            case "nonfinite": full[2].X = float.NaN; break;
+        }
+        Assert.False(BeltElevationPolicy.TrySeparateRaisedSourceCover(full, source, GroundRadius, out var points));
+        Assert.Empty(points);
+    }
+
+    [Theory]
+    [InlineData("none")]
+    [InlineData("wrong_source")]
+    [InlineData("no_preservation")]
+    [InlineData("destination")]
+    [InlineData("wrong_budget")]
+    [InlineData("truncated")]
+    [InlineData("sixty_four_new")]
+    public void RaisedPreparedEchoRequiresBoundSourceAndExactNewObjectBill(string fault)
+    {
+        var plan = RaisedPrepared();
+        Assert.True(BeltElevationPolicy.ConfirmsPreparedEcho(plan, 2001, 2, 1, 92));
+        switch (fault)
+        {
+            case "none": plan.PlannedBeltPath!.SourceBindingMode = "none"; break;
+            case "wrong_source": plan.PlannedBeltPath!.ReusedSourceObjectId = 93; break;
+            case "no_preservation": plan.PlannedBeltPath!.SourcePreservationMode = null; break;
+            case "destination": plan.DestinationObjectId = 93; break;
+            case "wrong_budget": plan.ItemBudget[0].Count = 2; break;
+            case "truncated": plan.PlannedPath.RemoveAt(2); break;
+            case "sixty_four_new": plan.PlannedBeltPath!.NewObjectCount = 64; break;
+        }
+        Assert.False(BeltElevationPolicy.ConfirmsPreparedEcho(plan, 2001, 2, 1, 92));
+    }
+
+    private static PreparedNormalAction RaisedPrepared() => new()
+    {
+        Prepared = true,
+        BuildKind = "belt",
+        SourceObjectId = 92,
+        PlannedBeltPath = new BeltPathPlanSnapshot
+        {
+            RoutingMode = BeltPathModes.NativeElevatedGrid,
+            NativeValidationMode = "full_path_stage1",
+            StartAltitudeLevel = 2,
+            EndAltitudeLevel = 1,
+            NewObjectCount = 4,
+            SourceBindingMode = "non_removing_belt_cover",
+            ReusedSourceObjectId = 92,
+            SourcePreservationMode = BeltSourceRotationPolicy.PreservationMode,
+            DestinationBindingMode = "none",
+        },
+        PlannedPath = new() { Point(2, 1.2f), Point(1.5f, 2.4f), Point(1, 3.6f), Point(1, 4.8f) },
+        ItemBudget = new() { new() { ItemId = 2001, Count = 4, Direction = "construction-consumption" } },
+    };
+
     private static PrepareBuildRequest Request() => new()
     {
         BuildingItemId = 2001,

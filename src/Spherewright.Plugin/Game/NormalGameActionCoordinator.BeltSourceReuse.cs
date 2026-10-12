@@ -19,11 +19,12 @@ internal sealed partial class NormalGameActionCoordinator
         internal string CompletionTopologyHash = string.Empty;
         internal string BindingHash = string.Empty;
         internal string CargoHash = string.Empty;
+        internal EmptyBeltPathState? ElevatedEmptyPath;
         internal List<FactoryConnectionSnapshot> Connections = new List<FactoryConnectionSnapshot>();
     }
 
     private static bool TryCaptureBeltSource(PlanetFactory factory, int entityId,
-        out BeltSourceState? state, out string reason)
+        out BeltSourceState? state, out string reason, bool requireEmptyElevatedPath = false)
     {
         state = null;
         reason = "belt_source_identity_unavailable";
@@ -89,6 +90,14 @@ internal sealed partial class NormalGameActionCoordinator
                 Connections = connections, TopologyHash = topology, CompletionTopologyHash = completionTopology,
                 BindingHash = CanonicalStateHash.Combine("belt-source-binding-v1", fields.ToArray()),
                 CargoHash = CanonicalStateHash.Combine("belt-source-cargo-v1", cargoFields.ToArray()) };
+            if (requireEmptyElevatedPath)
+            {
+                if (!TryCaptureEmptyBeltPath(factory, entityId, 0, out var empty, out reason))
+                { state = null; return false; }
+                state.ElevatedEmptyPath = empty;
+                state.BindingHash = CanonicalStateHash.Combine("belt-elevated-empty-source-cover-v1",
+                    state.BindingHash, empty!.BindingHash);
+            }
             reason = string.Empty;
             return true;
         }
@@ -165,7 +174,8 @@ internal sealed partial class NormalGameActionCoordinator
             || steps[0].InputObjectId != bound.EntityId || steps[0].InputFromSlot != 0 || steps[0].InputToSlot != 1
             || steps[0].InputStepIndex != -1 || steps[steps.Count - 1].OutputObjectId != (destination?.EntityId ?? 0)
             || (destination is not null && (destination.SourcePath?.AnchorId != bound.EntityId || !EmptyJoinBindingsMatch(factory, destination)))
-            || !TryCaptureBeltSource(factory, bound.EntityId, out var fresh, out reason)
+            || !TryCaptureBeltSource(factory, bound.EntityId, out var fresh, out reason,
+                requireEmptyElevatedPath: steps[0].BeltPathMode == Spherewright.Contracts.Actions.BeltPathModes.NativeElevatedGrid)
             || !BeltSourceReusePolicy.SameEvidence(bound.BindingHash, fresh!.BindingHash)
             || !BeltSourceReusePolicy.Supports(bound.EntityId, fresh.ItemId, item.ID, 0, 0, fresh.Tilt, false,
                 fresh.Connections[0].OtherObjectId, fresh.Connections.Skip(1).Take(3).Count(c => c.OtherObjectId != 0))) return false;

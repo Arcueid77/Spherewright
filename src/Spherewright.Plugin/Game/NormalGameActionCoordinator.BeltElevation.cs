@@ -8,7 +8,7 @@ namespace Spherewright.Plugin.Game;
 
 internal sealed partial class NormalGameActionCoordinator
 {
-    private static BuildPreparation TryPrepareElevatedBeltBuild(
+    private BuildPreparation TryPrepareElevatedBeltBuild(
         PlanetFactory factory, Player player, ItemProto item, PrepareBuildRequest request)
     {
         var error = BeltElevationPolicy.ValidateRequest(request, item.prefabDesc.isBelt);
@@ -23,12 +23,28 @@ internal sealed partial class NormalGameActionCoordinator
             return BuildPreparation.Failed(BridgeErrorCodes.BuildLocationInvalid,
                 "belt_elevation_native_layer_mismatch: native Snap did not retain the exact requested altitude level.",
                 BeltElevationPolicy.Recovery);
+        FactoryEntitySnapshot? boundSource = null;
+        if (request.SourceObjectId is { } sourceId)
+        {
+            if (!TryReadBuildEndpoint(request, sourceId, request.ExpectedSourceStateHash!, out boundSource, out var sourceError)
+                || boundSource!.ItemId != 2001 || Vector3.Distance(ToVector(boundSource.Position), start.Pose.position) > .01f)
+                return BuildPreparation.Failed(BridgeErrorCodes.StaleState,
+                    sourceError ?? "The exact raised source belt does not match the requested native start layer/position.");
+            start = new EndpointPoint(sourceId, 0,
+                new Pose(ToVector(boundSource.Position), Maths.SphericalRotation(ToVector(boundSource.Position), 0f)));
+        }
         if (!TryCreateBeltSteps(factory, item, start, end, request.BeltPathMode, out var candidate, out var rejection))
             return BuildPreparation.Failed(BridgeErrorCodes.BuildLocationInvalid, rejection, BeltElevationPolicy.Recovery);
         if (!TryValidateBeltBuild(factory, player, item, candidate, out var accepted, out rejection, out var rejectionError))
             return BuildPreparation.Failed(rejectionError?.Code ?? BridgeErrorCodes.BuildLocationInvalid,
                 rejection, rejectionError?.Recovery ?? BeltElevationPolicy.Recovery);
-        return BuildPreparation.Succeeded(NormalBuildKinds.Belt, accepted);
+        var preparation = BuildPreparation.Succeeded(NormalBuildKinds.Belt, accepted);
+        if (boundSource is not null)
+        {
+            preparation.SourceObjectId = boundSource.ObjectId;
+            preparation.SourceEndpointHash = BuildEndpointHash(boundSource);
+        }
+        return preparation;
     }
 
     private static bool TryResolveElevatedBeltEndpoint(PlanetFactory factory, Vector3Snapshot requested,
@@ -47,21 +63,30 @@ internal sealed partial class NormalGameActionCoordinator
     private static bool CompletePreparedElevatedBeltPath(IReadOnlyList<BuildStepPlan> steps, float radius,
         IReadOnlyList<BuildStepPlan>? original = null)
     {
-        if (steps.Count < 4 || steps.Count > BeltElevationPolicy.MaximumPoints
+        var anchor = steps.Count > 0 ? steps[0].SourceBeltAnchor : null;
+        var covered = anchor is not null;
+        if (steps.Count < (covered ? 3 : 4) || steps.Count > (covered ? BeltElevationPolicy.MaximumPoints - 1 : BeltElevationPolicy.MaximumPoints)
             || original is not null && original.Count != steps.Count) return false;
+        if (covered && (anchor!.ElevatedEmptyPath is null || anchor.ElevatedEmptyPath.AnchorId != anchor.EntityId
+            || anchor.ElevatedEmptyPath.EntityIds.Length == 0
+            || anchor.ElevatedEmptyPath.EntityIds[anchor.ElevatedEmptyPath.EntityIds.Length - 1] != anchor.EntityId
+            || !BeltElevationPolicy.TryGetLevel(Snapshot(anchor.Position), radius, out var level) || level <= 0)) return false;
         for (var i = 0; i < steps.Count; i++)
         {
             var step = steps[i];
             if (step.ItemId != 2001 || step.BeltPathMode != BeltPathModes.NativeElevatedGrid || step.Tilt != 0
-                || step.SourceBeltAnchor is not null || step.DestinationBeltAnchor is not null
-                || step.InputObjectId != 0 || step.OutputObjectId != 0
+                || (i == 0 ? !ReferenceEquals(step.SourceBeltAnchor, anchor) : step.SourceBeltAnchor is not null)
+                || step.DestinationBeltAnchor is not null
+                || step.InputObjectId != (i == 0 ? anchor?.EntityId ?? 0 : 0) || step.OutputObjectId != 0
+                || covered && i == 0 && (step.InputFromSlot != 0 || step.InputToSlot != 1)
                 || step.InputStepIndex != (i > 0 ? i - 1 : -1)
                 || step.OutputStepIndex != (i + 1 < steps.Count ? i + 1 : -1)
                 || !(Vector3.Distance(step.Position, step.Position2) <= .01f)
                 || original is not null && !(Vector3.Distance(step.Position, original[i].Position) <= .01f))
                 return false;
         }
-        var points = steps.Select(step => Snapshot(step.Position)).ToArray();
+        var points = (covered ? new[] { Snapshot(anchor!.Position) } : Array.Empty<Vector3Snapshot>())
+            .Concat(steps.Select(step => Snapshot(step.Position))).ToArray();
         return BeltElevationPolicy.CompleteNativePath(points, BeltBuildOccupancyPolicy.MaximumPathPoints,
             points[0], points[points.Length - 1], radius);
     }
@@ -88,13 +113,15 @@ internal sealed partial class NormalGameActionCoordinator
                 || !(Quaternion.Angle(prebuild.rot, rotation) <= .1f) || !(Quaternion.Angle(prebuild.rot2, rotation) <= .1f))
                 return false;
         }
-        return ProvesFreeElevatedConnections(factory, ids);
+        return ProvesFreeElevatedConnections(factory, ids, steps[0].SourceBeltAnchor?.EntityId ?? 0);
     }
 
     private static bool ProvesCompletedElevatedPath(PlanetFactory factory, NormalActionPlanPayload plan,
         IReadOnlyList<int> ids)
     {
-        if (ids.Count != plan.BuildSteps.Count || ids.Count < 4 || ids.Count > BeltElevationPolicy.MaximumPoints
+        var anchor = plan.BuildSteps.Count > 0 ? plan.BuildSteps[0].SourceBeltAnchor : null;
+        if (ids.Count != plan.BuildSteps.Count || ids.Count < (anchor is null ? 4 : 3)
+            || ids.Count > (anchor is null ? BeltElevationPolicy.MaximumPoints : BeltElevationPolicy.MaximumPoints - 1)
             || ids.Distinct().Count() != ids.Count) return false;
         for (var i = 0; i < ids.Count; i++)
         {
@@ -108,18 +135,28 @@ internal sealed partial class NormalGameActionCoordinator
         // This helper proves directed membership, native rotations, component
         // reciprocity and an empty independent open path. Its cover-specific
         // allowance for external consumers/changing slots is NOT allowed here.
-        return TryCaptureEmptyBeltPath(factory, ids[0], 1, out var path, out _)
-            && path!.EntityIds.SequenceEqual(ids) && ProvesFreeElevatedConnections(factory, ids);
+        if (anchor is null)
+            return TryCaptureEmptyBeltPath(factory, ids[0], 1, out var path, out _)
+                && path!.EntityIds.SequenceEqual(ids) && ProvesFreeElevatedConnections(factory, ids);
+        var previous = anchor.ElevatedEmptyPath;
+        if (previous is null) return false;
+        var expected = previous.EntityIds.Concat(ids).ToArray();
+        return expected.Length <= BeltUpgradePathPolicy.MaximumBelts
+            && TryCaptureEmptyBeltPath(factory, expected[expected.Length - 1], 0, out var joined, out _)
+            && joined!.EntityIds.SequenceEqual(expected)
+            && TryEmptyBeltMembersHash(factory, previous.EntityIds, previous.AnchorId, 0, true, out var oldMembersHash)
+            && BeltSourceReusePolicy.SameEvidence(previous.PreservationHash, oldMembersHash)
+            && ProvesFreeElevatedConnections(factory, ids, anchor.EntityId);
     }
 
-    private static bool ProvesFreeElevatedConnections(PlanetFactory factory, IReadOnlyList<int> ids)
+    private static bool ProvesFreeElevatedConnections(PlanetFactory factory, IReadOnlyList<int> ids, int sourceId = 0)
     {
         for (var i = 0; i < ids.Count; i++)
         {
             for (var slot = 0; slot < 16; slot++)
             {
                 var expected = slot == 0 ? (i + 1 < ids.Count ? ids[i + 1] : 0)
-                    : slot == 1 ? (i > 0 ? ids[i - 1] : 0) : 0;
+                    : slot == 1 ? (i > 0 ? ids[i - 1] : sourceId) : 0;
                 factory.ReadObjectConn(ids[i], slot, out var output, out var other, out var otherSlot);
                 if (other != expected || other != 0 && (output != (slot == 0) || otherSlot != (slot == 0 ? 1 : 0)))
                     return false;
