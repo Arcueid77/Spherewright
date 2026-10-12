@@ -5994,3 +5994,4 @@ factory23219553完整23页2267 built、0 prebuild：1883belt/202sorter/36assembl
 - 2026-10-12（R1221同主档29131迁移准备）：29131最小同主档适配c488fb7准确CI38242390651、400相关测试与当前Native同批228文件通过；菜单冷维护一次完成，首个只读超时独立核销后启动后重读/实机v5 prepare成功。候选仅源Save112747810/R3/J102/P104，29104→29131、exact identity verified，后续明确确认仍必需；0Load/Save/accepted，固定20窗16/20/lifetime551不变。详见[同主档迁移准备](evidence/2026-10-12/native-primary-29131-preparation-r1218.md)。
 
 2026-10-12 / R1222–R1224：用户实机披露后确认同主档29104→29131迁移；唯一Load正常重存112747841/R1/J102，三条版本记录及6492实体完整工厂独立核验通过，17/20/lifetime552仍冻结。当前29131六段124点整线及两端Native只读检查成功，无新增施工/持续来源信用；下一项为空载2001抬升尾端接续的必要窄适配。详见[迁移与完整工厂](evidence/2026-10-12/native-primary-29131-preparation-r1218.md)及[整线修复实测](evidence/2026-10-12/iron-readonly-underpass-and-fingerprint-r1206.md)。
+- 2026-10-12：R1226–R1235完成raised empty-tail source-cover维护、同主档健康恢复及保存前缀；6492实体完整工厂、静态拓扑、相关cargo及三处已加载工厂供电由独立原件核验。来源、整案供给与最终双候选门仍未通过，详见[抬升尾段维护与健康恢复](evidence/2026-10-12/raised-tail-maintenance-and-healthy-resume-r1235.md)。

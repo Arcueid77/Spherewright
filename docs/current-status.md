@@ -1,31 +1,15 @@
 # Spherewright 当前快照
 
-更新：2026-10-12（Asia/Singapore）。当前安装源码为 c488fb72a64f31db4fed722dccbe2a833ec63f0b，准确源码 Windows CI [38242390651](https://github.com/AvaloNero/Spherewright/actions/runs/38242390651) 成功。400项相关测试、基于29131引用的完整Plugin Release、自包含MCP publish、228安装文件、64工具/1资源已独立核验。用户后续明确确认后，同主档29104→29131迁移、正常重存、Journal连续性和完整工厂持久性已实机并独立通过；持续供给及最终双候选包仍未完成，未正式发布。
+更新：2026-10-12（Asia/Singapore）。当前运行源码为 67ccc62936c0594a62568b46cb4f79c0718ee89c，准确 Windows Core CI [38257947591](https://github.com/AvaloNero/Spherewright/actions/runs/38257947591) 成功。相关 Core 289 项、MCP 183 项及当前 29131 引用下 Plugin Release 已通过；同提交隔离 cohort 复用这些验证，228 文件、64 工具/1资源，未重复测试。持续来源、wholeSupply 与最终同 SHA 双候选包仍未通过/交付，无正式发布。
 
 ## 当前保存与窗口
 
-最近正常保存为 tick 112747841、revision 1、durable Journal 102，游戏版本0.10.35.29131。R1222仅一次accepted Load恢复同一主档/P104；第三条29104→29131记录在正常重存前durable，已有完整102条日记及两条版本记录精确保留。恢复后会话与已安装游戏进程精确匹配，owned/和平/非沙盒/1×/healthy writes及目标版本新凭据通过原件独立核验；无在途或未知写动作。原凭据由受保护恢复机制消费，没有延长期限或编辑存档/Journal。
+最近普通保存为 tick 113054820、revision 2、durable Journal 102，游戏版本0.10.35.29131。R1235 root 独立核对完整65页、6492实体、0预建；增删、静态配置及互惠连接差异为0，9个相关物件的cargo、库存与隔离仓均保全，全部三处已加载工厂完整满供。源6480和目标1501的Native几何与碰撞体保持；新会话几何指纹已核对，旧session指纹退役。当前固定20窗口从 lifetime 552 开始，目前3/20、lifetime555；本阶段已独立结束，窗口保持冻结开放。整案累计156 accepted、46次Move、51次显式普通Save、27次手工材料动作，无在途动作。上一窗口从opening535的17项原动作已完整核销并保存，未用3槽退役。
 
-固定20窗口从lifetime535开始，目前17/20、lifetime552，冻结且仍开放，剩3槽不转移。整案累计153 accepted、46次Move、49次显式普通Save、27次手工材料动作；迁移内建正常重存不虚构另一条Save commit。R1223新session完整65页6,492实体与旧已保存完整帧比较：增删/静态配置/配方/站配置/互惠连接均0差异，独立预建0，库存/inc/持物、隔离仓286货物及J102保持，全三处loaded工厂完整供电。148个动态对象变化仅按后台生产记账，不获得连续来源信用。当前完整帧可本地复用。
+R1234的同版本 exact-primary healthy Load 与内建重存已由独立原件核验：tick 113040701、revision 1、Journal 102；R1235后续普通保存到tick 113054820、revision 2、Journal 102。
 
-## 同主档迁移已核验
+## 抬升尾段与来源边界
 
-此前R1214确认游戏版本变为29131，用户先授权准备，实机v5披露之后再明确回复“确认同主档迁移并继续”。R1222 fresh prepare与原披露的主档、版本对、P104、candidate tick112747810及digest完全相同，唯一commit及同action终态通过独立核验，没有换档或重放。
+源代码维护修复和同提交冷安装完成，但不代表游戏内已建造。R1224旧只读整线正例曾验证6段、124点与两端Native条件；它不是本轮fresh几何审计或施工。当前新session几何上下文已由R1235独立核验。当前材料约束仍为177条带及2011、2012物件各1个，逐片预算须经Native确认；raised source-cover尚无实机施工正例。
 
-`reauthorize_version_changed_primary` / evidence5仍仅支持有效健康凭据和准确29104→29131同主档路径；第四条/跳级/降级拒绝，普通健康恢复仍要求同版本。当前Journal版本记录为29029→29088/91、29088→29104/91、29104→29131/102。实机第三条durable后正常保存并签发新目标版本凭据；不把这次授权推广到另一候选或将来的迁移。
-
-当前29131程序集SHA74AC6162CEF8394A6021C8475132CAE4DF4F840871A99E63CC7D2C8297661BC0。944项Native引用/11个规范化IL比对仍只是离线依据，本轮另有实际迁移、正常重存及完整实体持久性证明。布局指纹显式绑定sessionId；新指纹064E4A5C5488DAA7B14D9F107F6A2522207F925C70078937B14BA60BC17DDE77替代旧A78，源6480/目标1501原生geometry和colliders精确保持。详见[同主档迁移证据](evidence/2026-10-12/native-primary-29131-preparation-r1218.md)。
-
-## 当前只读主候选与实现修复
-
-R1198–R1205共75次只读请求，新增21段完整原生点列、3次tokenless短端点预览和一次新有限目的整线预览；0游戏写入/accepted/Save/Load/Move/部署。原survey两次预览额度已结束，不重开。保留同一完整静态页与成功源13点/目标11点，批量淘汰西源6479（planned sorter重叠矿机1213）、宽西南225（旧带5424/5037/5385）及超出原生跨度的270走廊。建筑包围框筛选不替代原生带条件；对象1501现场是普通传送带2001。
-
-“延长下穿东135”主候选6480→1501已在当前29131实机完成一次完整只读验证：6跨度/124点全部原生位置保持，full-path及joint检查各一次均通过，两端2011/2012、iron1001、虚拟belt slot-1、既有/新带朝向与Native span2均通过。Root独立核26个原请求/响应、全部124点/6段/两端、18个关键geometry/colliders与前后健康保存/J102边界；无token/commit/accepted。R1205的INTERNAL_ERROR已由安装态只读指纹修复消除，不重放旧预览或把旧29104片段当新资格。
-
-完整只读正例仍不是可提交施工计划；124点不是精确施工材料账。现有`native_elevated_grid`仅支持独立free-to-free路径，明确拒绝bound source及destination；六段共享接缝无法靠另建重合点或裁剪点列合法续接。下一步是仅为该已证路线准备空载普通2001抬升尾端source cover的必要窄适配，保留Native完整点/碰撞/材料/旧边与货物保护，不扩任意布局。未来真实ID、接缝和精确预算逐片fresh验证；9动作估计仍超过剩3槽，施工前须独立封原窗口，不能补额度。
-
-## 流程效率的实际结论
-
-完整帧本地复用、同批多候选筛选、相关最小测试及仅事实交付不阻塞已核验执行cohort的规则继续执行。400项相关测试仅本地一次，cohort37.991秒/菜单冷维护47.282秒不重跑；R1222迁移11请求/11.9秒，R1223完整工厂74请求、调用方进程墙钟26.55秒，R1224整线13请求/4.358秒、委派到首prepare34.694秒。R1223首次入口因dot-source覆盖Mode只运行空检查、0Game，root修正后成功；不隐去准备失败。Root修正JSON自动解析日期后丢失时区的统计计算，没有重跑游戏验证。设计、脚本、审计、Git/CI与交接尚未全量计时，不能计算端到端提速比例。此次新增迁移/保存/工厂持久性及整线只读原生正例，持续供给仍未通过。
-
-sourceConditionsPassed=false、wholeSupplyPassed=false、连续来源信用0，最终同SHA双候选包未交付、无正式发布。持续目标仍active。详见[批量下穿勘探与指纹异常证据](evidence/2026-10-12/iron-readonly-underpass-and-fingerprint-r1206.md)；此前安装维护和原A/B/C批次见[前一阶段证据](evidence/2026-10-12/iron-native-grid-batch-live-and-maintenance-r1197.md)。
+sourceConditionsPassed=false、wholeSupplyPassed=false、连续来源信用0，最终同SHA双候选包未交付。详见[抬升尾段维护与健康恢复证据](evidence/2026-10-12/raised-tail-maintenance-and-healthy-resume-r1235.md)。

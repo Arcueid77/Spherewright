@@ -1,6 +1,11 @@
 # Spherewright experience ledger
 
-更新时间：2026-10-09（Asia/Singapore）
+更新时间：2026-10-12（Asia/Singapore）
+## EXP-343 — canonical参数绑定与原始流保留
+
+- 状态：observed，2026-10-12。
+- 可复用规则：受保护动作入口应从已核验的canonical索引读取session、窗口、保存哈希和批准参数，避免手抄值造成零RPC的本地拒绝。若参数保护门拒绝，先确认零RPC、零accepted、无once intent，再修正参数；不重放已成功前缀。每次调用保留真实stdout/stderr；未捕获的流明确记为缺失，不从摘要重建。旧克隆摘要不能代替当前canonical状态。
+- R1234首次Load参数在本地参数校验处退出，未产生RPC/accepted/once；后续canonical绑定的健康恢复通过独立核验。R1235保存及全厂边界也由独立原件核验；整案统计模板旧比较值在root使用完整缓存核验数据纠正，没有新游戏读取或保存。见[阶段证据](evidence/2026-10-12/raised-tail-maintenance-and-healthy-resume-r1235.md)。
 
 ## EXP-342 — 建造后证明绑定原生后态，异常时保留隔离证据
 
