@@ -59,3 +59,13 @@ sourceConditionsPassed=false、wholeSupplyPassed=false、连续来源信用0；�
 ## R1207 最小修复相关验证
 
 Core的四个相关测试类共247/247通过，0失败/跳过；Core/Plugin锁定restore各exit0，Plugin完整Release编译exit0、0warning/0error，原TRX、8个stdout/stderr流、6个本地引用哈希和4个源码文件/当前规则均由root独立核原件。普通施工模式指纹语义保留，preview mode仍被施工入口拒绝。新二进制尚未按准确源码提交重建/安装，CI与实机整线结果仍待后续。root核验：b42f4943395e43e88e839e052a234f3c:118，SHA B2D9ABA209DD6362FEF3064C9596C16DE306215387346AF8256BFC5BE8556F7E，label root-r1207-related-fingerprint-source-validation-independent-audit。
+
+## R1224 当前29131安装态完整正例
+
+在用户确认同主档迁移、正常重存及[R1223完整工厂审计](native-primary-29131-preparation-r1218.md)通过之后，复用R1205成熟入口，只替换当前c488fb7执行cohort、session/process、实际新几何指纹和审计基线。新的有限目的为验证已安装只读指纹修复及当前29131的同一完整六段路线；原survey两次额度仍结束，不清零、不重开。真实pwsh-File smoke零游戏及8个越界拒绝通过，随后仅13请求、一次tokenless prepare_build、4.358秒；0commit/accepted/Move/Save/Load/冷维护。
+
+Native返回完整124点与13/26/32/31/16/11六段，各接缝共享且没有裁剪/换点/原生位置调整；full-path及joint-all-objects检查各一次并通过。两端6480→1501、普通2011/高速2012、filter1001、虚拟belt slot-1、planned quarter-turns1/0及existing quarter-turn3、Native span2均Ok，无失败stage/condition/index。Root独立核26个原请求/响应、完整点列/段边界/两端、前后18个关键geometry/runtime colliders、reciprocal边、保存/健康/玩家及完整J102三版本记录；empty token由实际caller的length0证明，脱敏占位符不冒充空token。旧29104点列只作预期形状，本次资格来自实际29131完整Native结果。
+
+委派到启动32.375秒，到首业务prepare34.694秒，业务执行4.358秒。首次root统计把JSON已解析日期重新转成缺时区文本，产生错误的负差；已按DateTime/DateTimeOffset的原Kind转换UTC封存更正，没有重跑Game或Native验证。正确独立索引b42f4943395e43e88e839e052a234f3c:166，SHA6D0C539EE7B1BE57081B8EF16EA2BAECA56C2ED93338FD1CA404318C22094E3B，label root-r1224-whole-native-audit-with-typed-utc-timing；它更正:165的时间计算并保留相同原资格证据。
+
+只读整线Native正例不签发施工token或许可。现有抬升建造/echo策略只支持独立free-to-free路径，拒绝source/destination绑定；共享接缝无法合法用重合新点或截断点列继续。下一必要适配仅为这条已证线路的空载普通2001尾端source cover续接，保留完整Native路径/碰撞/材料、旧边/货物与逐实际ID核验，不扩任意布局。实际片段/接缝及精确建材账仍待fresh证明，9动作估计超过旧窗剩3槽，施工前须独立封窗。当前17/20/lifetime552仍冻结，无在途；sourceConditionsPassed/wholeSupplyPassed仍false、连续信用0，未交付或发布最终双包。

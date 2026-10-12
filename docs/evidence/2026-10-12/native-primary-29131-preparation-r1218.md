@@ -42,3 +42,21 @@ R1219仅一次正常关闭未加载菜单DSP42364、保留Steam36408、事务安
 | 实机v5披露及完整原件 | b42f4943395e43e88e839e052a234f3c:154 | A3654D098FF8777DB196EF6C67BD881A18AC3D6D4D36F3FA7D2A89D5918501F8 | root-r1219-same-primary-migration-menu-cold-and-prepare-independent-audit |
 
 上述结果不增加铁路线原生资格、连续供给/配平信用或0.4最终验收通过项。执行cohort为c488fb7，后续仅事实交付不触发重新冷部署。
+
+## 后续确认、实际迁移与完整工厂审计（R1222–R1223）
+
+本节更新实际结果；上文“尚未授权/加载”保留准备阶段截面。用户在实机v5披露之后明确回复“确认同主档迁移并继续”。Root封存该答复并授权唯一有限Load，执行前fresh prepare的candidate tick112747810、P104、29104→29131版本对及披露digest精确保持，旧短期token未复用。11次请求、11.9秒，唯一accepted Load终态completed；无Move/施工/显式Save commit、未知结果或重放。
+
+恢复仍是同一主档/P104，新会话与已安装进程精确匹配，具体运行标识仅留受保护原件。完整Journal102条、原journalId和已有两条版本记录保持；准确第三条29104→29131在durableThrough102持久后，恢复机制正常重存到112747841/R1并签发目标29131新凭据。Root逐核11个原响应、唯一持久intent/ACK/同action终态、正常保存状态、完整Journal及新凭据文件hash，背包/inc/持物、玩家位置、燃料设置保持，owned/和平/非沙盒/1×/healthy writes通过。凭据日期和存档/历史Journal未编辑，未选择其他恢复候选。外部审计数仅增加实际Load1：17/20、lifetime552，原窗口opening535，仍冻结开放；整案153 accepted/46 Move/49显式普通Save/27手工材料动作。
+
+R1223首个caller因dot-source覆盖Mode只执行了inert smoke、0Game/Bridge，writer停止后root保存入口参数并做真实pwsh-File smoke；新caller仅采74次只读、65页单一完整快照，真实调用方进程墙钟26.55秒。Root按精确索引核74原件并复用旧完整帧作本地比较：6492实体增删/静态配置/配方/站配置/互惠连接全0差异，独立prebuild0，库存/inc/持物、隔离仓286配置与完整货物、原Journal102和3条版本记录保持；全3处loaded工厂的网络覆盖完整且即时供电满足。148个动态对象变化按后台生产处理，不声明连续来源、吞吐或供电长窗通过。
+
+当前几何指纹064E4A5C5488DAA7B14D9F107F6A2522207F925C70078937B14BA60BC17DDE77；源码Fingerprint显式写入sessionId，因此旧session A78指纹退役。源6480和目标1501的原Native geometry/colliders逐字段相同，完整静态帧可继续本地复用。源相关测试/同cohort不重跑，事实文档不触发冷部署。
+
+| 内容 | ref | SHA256 | label |
+| --- | --- | --- | --- |
+| 实机披露后的实际执行确认 | b42f4943395e43e88e839e052a234f3c:157 | E9FA8EEEA530067D7B630A7D059A626F1C5683F1A35FAD78489087EEC7E771DA | root-user-confirmed-exact-same-primary-migration-after-v5-disclosure |
+| 实际迁移及保存独立核验 | b42f4943395e43e88e839e052a234f3c:159 | 89EF2B3B0CAD43EDDB16242B9A65E35CF89B07CADD58751E65DDA146A4F7DD09 | root-r1222-exact-confirmed-primary-migration-independent-audit |
+| 完整迁移后工厂核验 | b42f4943395e43e88e839e052a234f3c:163 | 0B1A692F4D858455D5DC5A0AFF83D8703C96384ECDC70B74BDDA2A128EEB4CD4 | root-r1223-complete-migrated-factory-saved-prefix-independent-audit |
+
+本次通过的是准确同主档迁移、正常重存、Journal与完整实体持久性；全0.4最终门、持续供给、准备清单及最终同提交双候选包仍未完成。
