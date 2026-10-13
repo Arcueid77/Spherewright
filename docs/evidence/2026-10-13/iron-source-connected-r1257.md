@@ -209,3 +209,13 @@ R1301完成4次材料转存、6次手工制作和1次普通Save，共新增11个
 | 阶段 | 受保护记录 | SHA-256 | label |
 | --- | --- | --- | --- |
 | R1301 root：材料动作、保存与独立审计 | `9c9fff04318249758eaed638128587b7:8` | `3C704195A7CD0F0BE13A69E42A43704922F16392EEC37C86B2FB2A71F053B887` | `root-r1301-exact-foundry-kit-four-transfer-six-handcraft-save-audit` |
+
+## R1302 Foundry场地Native检查未通过
+
+R1302完成一次普通Move与一次普通Save，root独立核对32对原请求/响应及完整动作终态。Save位于tick `115857958`、revision `46`、durable Journal `102`；固定20窗口为`13/20`、lifetime `601`，无当前在途或未决unknown。整案累计`202 accepted / 47 Moves / 63 ordinary Saves`。历史unknown保持原分类，不重放。
+
+这次对27对象候选实际执行了场地Native检查，结果为20项`Ok`、2项`NeedGround`、5项`ConnWithErrorBuilding`；库存与科技条件通过。另有10个生产消费者未覆盖供电，候选新增基础负载为`1,026,000 W`，没有供电组件。因此本候选不可施工，不能视作完整Foundry计划或验收通过。R1300来源连续窗仍只证明重启前来源就绪；`wholeSupplyPassed=false`，最终同SHA双候选验收仍未通过。
+
+| 阶段 | 受保护记录 |
+| --- | --- |
+| R1302 root：现场Foundry Native与保存独立核验 | `9c9fff04318249758eaed638128587b7:12` |

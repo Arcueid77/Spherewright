@@ -4,7 +4,7 @@
 
 ## 当前保存与窗口
 
-R1301最近完成的独立核验确认Save tick `115835973`、revision `43`、durable Journal `102`。当前固定20窗口为`11/20`、lifetime `599`；本阶段11个accepted动作均已保存，无在途写入或未决unknown。更早的历史unknown保留，不重分类或重放。R1300前整案累计为`189 accepted / 7`台已知分拣器 / `61`次普通Save / `297`条实际带 / `18`段 / `46`次Move / `32`次手工材料动作；R1301新增4次转存、6次制作和1次普通Save后，累计为`200 accepted / 7`台已知分拣器 / `62`次普通Save / `297`条实际带 / `18`段 / `46`次Move / `42`次手工材料动作。R1301确认完整工厂仍为`6621 built / 0 prebuild`。R1300的重启前来源连续长窗仍是已通过的来源证据，但不替代恢复后复产或完整0.4验收。
+R1302最近完成的独立核验确认Save tick `115857958`、revision `46`、durable Journal `102`。当前固定20窗口为`13/20`、lifetime `601`；本阶段唯一Move与普通Save均已核销，无当前在途写入或未决unknown。更早的历史unknown保留，不重分类或重放。整案累计为`202 accepted / 47 Moves / 63 ordinary Saves`。R1302对27对象Foundry候选执行了场地Native检查，但结果未通过：20项`Ok`、2项`NeedGround`、5项`ConnWithErrorBuilding`；10个生产消费者未被供电覆盖，新增基础需求为`1,026,000 W`，没有可用供电组件。该候选不可施工，不能视为Foundry验收通过。R1300的来源连续长窗仅证明重启前来源就绪，不替代恢复后复产或完整0.4验收。
 
 ## 燃料方向与来源边界
 
@@ -54,4 +54,4 @@ R1298在4对只读请求/响应后因调用器错误地假定可选字段`materi
 
 ## 下一步
 
-下一步继续补齐完整Foundry设备、电力、物流与精确成本计划，以及中途普通保存/重启后的续建去重、失效计划重规划，并完成最终同档恢复后复产验证。R1300的80个有效窗口连续覆盖`36348` ticks，`sourceConditionsPassed=true`、`continuousCreditTicks=36348`，仅证明重启前来源就绪。R1301完成有限建材准备并保存，但没有现场Foundry Native场地检查；完整设备、供电、外部接线和恢复后的自动复产仍未通过。`wholeSupplyPassed=false`，最终同SHA双候选门仍未通过。阶段细节与受保护原件索引见[燃料来源方向、容量重分配与共享来源短窗](evidence/2026-10-13/iron-source-connected-r1257.md)。
+下一步仍需解决Foundry候选的接地、消费者供电覆盖及完整设备/物流/成本核验，并完成中途保存/重启后的续建去重、失效计划重规划和最终同档恢复后复产验证。R1300的80个有效窗口连续覆盖`36348` ticks，`sourceConditionsPassed=true`、`continuousCreditTicks=36348`，仅证明重启前来源就绪；R1302现场Native候选未通过，且`wholeSupplyPassed=false`，最终同SHA双候选门仍未通过。阶段细节与受保护原件索引见[燃料来源方向、容量重分配与共享来源短窗](evidence/2026-10-13/iron-source-connected-r1257.md)。
