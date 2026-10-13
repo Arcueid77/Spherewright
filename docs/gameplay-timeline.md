@@ -5998,3 +5998,4 @@ factory23219553完整23页2267 built、0 prebuild：1883belt/202sorter/36assembl
 
 - 2026-10-13：R1237首段13条带正常建成；第二段accepted后启动异常进入隔离。R1238独立66页全厂及原action preview核实第二段0扣料/0新增，旧配置/拓扑/J保持；原intent和5/20、lifetime557不清除。接缝绑定hash窄修复及受保护恢复正准备，尚未保存首段或解除隔离，详见[首段施工、接缝隔离与修复](evidence/2026-10-13/raised-source-creation-binding-and-quarantine-r1238.md)。
 - 2026-10-13：R1243–R1249案件累计各完成一次Close/Install/Dispatch/Load/普通Save；R1249本轮为Load后的只读回核与普通Save，新增accepted 2。R1249最新独立核销边界为7/20、lifetime559；R1248已启动，终态及新增差量待原回执核销。来源与整案持续供给门仍未通过，详见[隔离恢复与保存前缀](evidence/2026-10-13/fixed-quarantine-recovery-and-saved-prefix-r1249.md)。
+- 2026-10-13：R1251确认R1248仅调用一次的原动作最终完成25条带，未重放；R1250普通Save覆盖成功前缀，窗口为9/20、lifetime561。R1252余下四段仍在有限执行中，尚无终态或独立验收；来源与整案持续供给门未通过，详见[保存前缀与后续有限阶段](evidence/2026-10-13/fixed-quarantine-recovery-and-saved-prefix-r1251.md)。
