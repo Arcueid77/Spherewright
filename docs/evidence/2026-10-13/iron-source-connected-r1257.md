@@ -1,4 +1,4 @@
-# 铁源接入、启动观察与接口核验（R1257–R1273）
+# 铁源接入、启动观察与接口核验（R1257–R1285）
 
 R1257完成两台分拣器的原生建造并由普通保存覆盖。root独立审计覆盖151对原件、67页完整工厂快照及保存边界；建造后为`6618 built / 0 prebuild`，没有未核销在途或未知结果。
 
@@ -79,3 +79,25 @@ R1280的17组原始请求/响应由root独立核验，唯一完成的两项accep
 | R1278 路线筛选 | `23a9b8e84fdc42558679ca803e39b173:84` | `7F70129C8F9CAE5589F5E31BC216B63AC7591E5AA60D57B58A3292C6CA48205F` | `root-r1278-original-three-fuel-route-local-matrix-and-native-batch-audit` |
 | R1279 零提交拒绝 | `23a9b8e84fdc42558679ca803e39b173:87` | `EAEC97F57D040B4CC7507C97AADB682F2FED4A5EE9940E24C6B0DFEB0A86EDEF` | `root-r1279-all14-originals-zero-commit-native3060-denial-and-local-finalizer-failure-audit` |
 | R1280 取料与保存 | `23a9b8e84fdc42558679ca803e39b173:90` | `38F290A62DFC0E3F00B7C7B5661AD155C7C7C7F5CD440AAF4CBF1C28B292D16A` | `root-r1280-original-two-accepted-finite-fuel60-kit-and-covering-save-audit` |
+
+## R1281–R1285短窗、Persist修复与保存前缀
+
+R1281完成三个、R1282完成六个相互独立的600-tick窗口，窗口之间有间隔，不能拼成连续样本。R1282中四类目标物出现非零输出；这些短时读数没有通过保存/重载后的重复输出门，也不产生连续来源信用，`continuousCreditTicks=0`。来源条件与整案持续供给仍未通过。
+
+R1283只读检查显示燃料仓`3955`的30个格位各有30件，合计900并达到仓容量。该库存截面没有证明自动出料或稳定来源，且没有发生施工。
+
+R1284中Native prepare给出允许结果，但调用器导入的Persist回调因ledger路径为空而失败。commit没有发生，accepted增量为0。commit-intent在回调失败前已写入；独立核验确认无commit后才退休该原意图，未重放。故障位于本地持久化路径，不是Native拒绝，也不能表述成intent未写入。
+
+R1285将ledger路径显式绑定，并通过17项隔离的Persist回归。随后实际建成一座新仓`6619`和一台筛选物品`1210`的分拣器`6620`，在`5331`增加一条互返连接且保留原输入`5365`。同tick观察到一次自动到货，普通Save覆盖本阶段动作。独立审计核对125组原件、67页完整工厂快照、`6620 built / 0 prebuild`、库存和拓扑；本阶段新增3个accepted，全部已保存，无在途或unknown。保存位于tick `114881508`，当前窗口`8/20`、lifetime `580`；整案为`181 accepted / 60`次普通Save / `6`台分拣器 / `297`条带 / `18`段 / `46`次Move / `30`次手工材料动作。
+
+R1285的一次到货只证明这条有限前缀有货物到达，不证明完整Foundry建造链、双source稳定或连续供给。完整Foundry设备、电力、物流与精确成本计划，以及中途普通保存/重启续建去重和失效计划重规划，仍缺完整证据。当前仍有燃料容量问题；来源门、整案门与≥36000-tick连续门均未通过，`sourceConditionsPassed=false`、`wholeSupplyPassed=false`、`continuousCreditTicks=0`。历史unknown仍保留，不重分类或重放。
+
+### R1281–R1285受保护原件索引
+
+| 阶段 | 受保护记录 | SHA-256 | label |
+| --- | --- | --- | --- |
+| R1281 三个共享来源短窗 | `23a9b8e84fdc42558679ca803e39b173:93` | `DA6024A9B419BECC078ACA2B5F37FF1CFCD5057713A516555FEFAC01423893B9` | `root-r1281-original-three-native-readiness-windows-full221-stock-fuels-audit` |
+| R1282 六个共享来源短窗 | `23a9b8e84fdc42558679ca803e39b173:97` | `914524A6F215E2EF314EF3B09C116630EDF79E2597B5F684746281B35BF8F1A5` | `root-r1282-original-six-native-hydrogen-deuterium-windows-full233-stock-fuels-audit` |
+| R1283 燃料仓容量 | `23a9b8e84fdc42558679ca803e39b173:100` | `7FD845039823F45A2D2914A1F59E95F61439BBD8802694DBC46F0A80105AB05A` | `root-r1283-original-output-capacity-six-warehouses-four-port-details253-colliders-audit` |
+| R1284 零commit调用器路径故障 | `23a9b8e84fdc42558679ca803e39b173:104` | `174DAEC22FCDAF69283E53636523BD69F7FFF9BC6D45A93C281E5C3D3DB1E230` | `root-r1284-seven-original-reads-positive-native-prepare-local-persist-failure-zero-commit` |
+| R1285 自动到货与保存审计 | `23a9b8e84fdc42558679ca803e39b173:107` | `DCDFF678269FA9B2336723E1B27BE9DE3C97FBDF760476791665CD1521ED8D8F` | `root-r1285-one-real-warehouse-sorter-full-factory-automatic-arrival-and-save-audit` |
