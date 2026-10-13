@@ -104,7 +104,7 @@ R1285的一次到货只证明这条有限前缀有货物到达，不证明完整
 
 ## R1288–R1291自动到货、只读核验与容量重分配
 
-R1288原件中，建筑物品`2011`分拣器`6621`的建造与配置两项accepted，且记录一次燃料自动到货。第三项配置在Native提交前收到`STALE_STATE`，所以该有限阶段留下两个未保存成功动作；root独立核验它们没有重复提交。R1289以只读五对象截面确认29个燃料过滤格已满、输入与输出分拣器等待、融合机正在消耗燃料；不能由此推断长期供给状态。
+R1288原件中，建筑物品`2011`分拣器`6621`的建造与配置两项accepted，且记录一次燃料自动到货。第三项配置在Native提交前收到`STALE_STATE`，所以该有限阶段留下两个未保存成功动作；root独立核验它们没有重复提交。R1289以只读五对象截面确认29个燃料过滤格已满、输入与输出分拣器等待，并观察到融合机燃料能量缓冲下降和发电运行。这是能量与发电状态读数，不代表燃料棒物品计数下降，也不能据此推断长期供给状态。
 
 R1290进行了9个只读请求的Native容量预检，0 accepted。R1291完成六项唯一accepted并普通保存：暂停并恢复原有分拣器过滤，从仓`3074`取出210根燃料棒，经玩家库存存入仓`3348`；`3074`按23个燃料格、1个氢格、6个氘格重新配置。`3348`最终持有610根燃料棒。root独立审计确认玩家库存守恒、拓扑未变、相关电力摘要平衡、全部动作已保存；保存边界为tick `115498158`、revision `26`、durable Journal `102`，三条版本转换保留。窗口为`16/20`、lifetime `588`，当前没有在途或未决unknown，历史unknown不重分类、不重放。
 
@@ -122,3 +122,18 @@ R1290进行了9个只读请求的Native容量预检，0 accepted。R1291完成�
 | R1290 root：预检批准与边界 | `23a9b8e84fdc42558679ca803e39b173:125` | `0C7D0AEAEF4BB076BA863F937CB925EE9C10BDEB1439C8511CF0CC850C42177A` | `root-r1290-exact-native-zero-write-preflight-approval` |
 | R1291 writer：六项动作与普通保存 | `48ee9b6359c14f0ea8b7341979a36229:111` | `62274263874CB8D6594BAAA19109F047203548E666F09B3E83F2E4DCE8736F5C` | `r1291-original-hd-capacity-fuel-reserve-and-covering-save` |
 | R1291 root：独立保存与容量核销 | `23a9b8e84fdc42558679ca803e39b173:130` | `57E84F79C306FD5505CDC4E615A26C76715BF8F93B45DC5F4C8A1D97F8B51FA4` | `root-r1291-six-original-native-actions-save-and-capacity-independent-audit` |
+
+## R1292–R1293氢/氘/燃料因果读取与分离短窗
+
+R1292以26组只读原请求和R1293以74个只读请求完成因果读取及六个彼此独立的Native 600-tick窗口，观察耗时98.3秒，0 accepted、0写入。窗口有间隔，以下为分离窗口读数合计，不是连续速率或拼接样本：氢产出/消耗`158/157`，氘`30/40`，燃料棒物品`1802`为`2/3`，翘曲器物品`1210`为`2/0`。所选截面中氘节点为`18→16`，`3955`燃料格为`35→35`，仓`3074=690`与`3348=610`六次均未变；相关电网六次均满供。短窗中的燃料产消是间歇观察，不建立自动稳定来源信用。
+
+两轮均为只读，最新独立核验仍是同一owned保存边界：tick `115498158`、revision `26`、durable Journal `102`；固定20窗口`16/20`、lifetime `588`，无在途或未决unknown。R1289的融合机读数是燃料能量缓冲下降并处于发电运行，不是燃料棒物品计数下降；以J/tick表示的能量读数不当作离散物品消耗。`sourceConditionsPassed=false`、`wholeSupplyPassed=false`、`continuousCreditTicks=0`；六个分离短窗未满足窗口连续性或≥36000-tick验收门。
+
+### R1292–R1293受保护原件索引
+
+| 阶段 | 受保护记录 | SHA-256 | label |
+| --- | --- | --- | --- |
+| R1292 writer：因果只读读取 | `135616dbb0754502a714db262d0b5f78:53` | `F46677AD104EDD12B991C89101A67BF77EA9C1256C744F2B3B23722D2E18F9E1` | `r1292-fresh-hd-fuel-causal-readonly` |
+| R1292 root：独立原件审计 | `23a9b8e84fdc42558679ca803e39b173:134` | `AB901F2586EFC057010E793D0BC02C28024CA5F0D24695E8B3860E3F3C0797BA` | `root-r1292-all26-original-current-hd-fuel-causal-readonly-audit` |
+| R1293 writer：六窗采样 | `f7e1177a231b45db84857e556db0f513:83` | `CD1C0220786D07966E9294EF571F440FA7F0A68F4356E90FFD1A9613FA01AB73` | `r1293-independent-hd-fuel-causal-sampling` |
+| R1293 root：独立原件审计 | `23a9b8e84fdc42558679ca803e39b173:138` | `8D1DE10D638C1FD0D720576474D4BAD34A7D4EAA9D7D2A76C399F32911A30A8C` | `root-r1293-all83-original-six-native-hd-fuel-causal-sampling-independent-audit` |
