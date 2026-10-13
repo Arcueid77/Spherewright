@@ -1,15 +1,15 @@
 # Spherewright 当前快照
 
-更新：2026-10-13（Asia/Singapore）。当前安装源码为6528e1f7101a714826f7364cef2b0ad75c4b6e82（版本0.4.0+该提交SHA，游戏0.10.35.29131）。源码CI38278446205成功，279项相关验证已绑定；同源隔离构件和安装读回已独立核验。它们不代表最终双候选包交付或持续来源通过。
+更新：2026-10-13（Asia/Singapore）。仓库 `main` 的正式源码提交为 `e1ff2bf21f3a6beac65586e4ab4b93cb2eef8a4e`，用于连续采样任务初始墙钟预算修正；125项直接相关 `pwsh -File` 零Game断言已在本地通过，准确源码提交的独立 Windows Core CI `38337769901` 也已成功。当前 Native 安装cohort仍来自 `6528e1f7101a714826f7364cef2b0ad75c4b6e82`（游戏 `0.10.35.29131`），新源码没有热换或部署。代码CI与已安装运行时证据分开记录；最终同SHA双候选包仍未交付。
 
 ## 当前保存与窗口
 
-R1250是当前最新独立核销边界：普通Save位于tick 113665126，完整Journal为102；固定20窗口opening lifetime 552，当前9/20、lifetime 561。整案累计162 accepted、53次普通Save、211条实际带、14段。保存覆盖全部已核动作，无未核销在途；38条既有路线仍为空且未供料，完整工厂为6530 built、0 prebuild；玩家背包有139条普通传送带（2001）。详见[R1250保存前缀与R1251原动作完成核验](evidence/2026-10-13/fixed-quarantine-recovery-and-saved-prefix-r1251.md)。
+R1253是最新独立核销边界：普通保存位于tick `113712512`，revision `14`，durable Journal `102`。固定20窗口当前 `14/20`、lifetime `566`；整案累计 `167 accepted`、`54`次普通保存、`297`条实际传送带、`18`段。当前动作均已保存，无未核销在途或未知结果。
 
-R1248的原带路动作只调用一次，caller在600秒后超时。R1251只读核验确认同一原action最终成功完成25条带，经过9458个游戏tick；未重放。可界定完成发生在后续只读核验之前，但没有精确的完成墙钟时间。R1250随后普通保存覆盖该成功前缀。旧unknown仍保留历史状态，不重分类为成功。
+该保存覆盖R1252施工的四段、86条新带（各段31/30/15/10）；R1253保存独立核验了84条原始保存回执与67页完整工厂快照。快照为 `6616 built / 0 prebuild`，整条124带路线仍为空且未供料；玩家背包有53条普通传送带（`2001`）。旧unknown继续保留历史状态，不重分类为成功或重放。详见[抬升铁路线与保存前缀](evidence/2026-10-13/raised-iron-route-saved-r1253.md)。
 
-R1252正在执行余下四段、86条空带的有限阶段，最多4 accepted、3700 requests、7200秒；当前尚无终态或独立验收，不写作通过，也不向源端放料。sourceConditionsPassed=false、wholeSupplyPassed=false、continuousCreditTicks=0；最终同SHA双候选包也尚未交付。
+R1255已结束：记录为12次read、2次prepare；两端分拣器各取得一次Native prepare结果。两项均为 `prepared=true`、`commitAllowedNow=true`、无Native blocker，但阶段未commit，`0 accepted`。随后本地库存cut因把无物料缓冲的电力节点列入 `materialInventoryObjectIds` 而不可用，失败原因为 `material_inventory_buffers_unavailable_or_unsupported`；root已核对全部12对原件与完整stdout/stderr，原失败与exit 1均保留，未重做prepare。R1256正在补做135个物料对象、235个几何对象及2个既有电力代理的只读核验，尚无施工准入。来源门与整案供给门仍未通过：`sourceConditionsPassed=false`、`wholeSupplyPassed=false`、`continuousCreditTicks=0`。最终同SHA双候选包未交付。
 
 ## 来源与后续范围
 
-sourceConditionsPassed=false、wholeSupplyPassed=false、continuousCreditTicks=0，最终同SHA双候选包尚未交付。R1252当前阶段的终态及独立核验仍待原回执；在此之前不把剩余空带写作已建成或已供料。既有accepted、窗口与来源验收门均不因本次恢复而清零或降低。
+既有accepted计数、窗口与来源验收门均不因本次保存而清零或降低。R1252/R1253形成了已保存的建造前缀，但未证明来源准入或持续产出；R1255的prepare结果没有转为commit或accepted。后续状态以新的独立核验为准。
