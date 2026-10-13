@@ -1,4 +1,4 @@
-# 铁源接入、启动观察与接口核验（R1257–R1260）
+# 铁源接入、启动观察与接口核验（R1257–R1268）
 
 R1257完成两台分拣器的原生建造并由普通保存覆盖。root独立审计覆盖151对原件、67页完整工厂快照及保存边界；建造后为`6618 built / 0 prebuild`，没有未核销在途或未知结果。
 
@@ -21,10 +21,24 @@ R1259独立核验了12组原请求/响应，协议闭合通过，写入计数不
 
 R1260再核验26组原件，独立审核通过、调用器退出码为0；当前状态tick `113802032`、revision `19`，未产生accepted或新保存。后续本地生产读回中电动机`1203`仍为0产出、消耗4；电动机`724`未工作，配方输入`1101`仅1件（该配方记录需求2件），输出电动机为0。结合三短窗内电动机总产出0、消耗18，这些是缺料/需求相关的观察，尚不足以证明唯一根因。氘核燃料棒装配机`3403`未工作、输出缓冲20（目录容量19）；燃料仓`3955`的30个格位各存30件，合计900且已满。带段`1582`和`2348`各自快照未见对齐货包，分拣器`2317`处于`Returning`；这些瞬时字段不能证明持续堵塞或唯一供需原因。
 
-R1258–R1260均为只读，没有新增accepted。当前来源和整案验收仍为`sourceConditionsPassed=false`、`wholeSupplyPassed=false`、`continuousCreditTicks=0`。后续须普通保存并完成同版本健康恢复，再核输出是否重复；三段短窗不替代≥36000-tick连续门。
+R1258–R1260均为只读，没有新增accepted；当时保存边界仍为R1257。其后的普通保存、同版本健康恢复与输出核验见下一节；短窗本身不替代≥36000-tick连续门。
+
+## R1261–R1268恢复、封窗与新窗口
+
+R1262的一次菜单只读请求以`REQUEST_TIMEOUT`结束，保留该原始失败，不重放。R1263后续Native只读读取到健康菜单；其原始调用文件位置没有独立证明，因此不扩大该次结果的证明范围。随后R1264同一owned主档Load恢复、R1265普通保存完成。R1265保存边界为tick `113839396`、revision `2`、durable Journal `102`，三条版本记录保留；完整工厂快照为`6618 built / 0 prebuild`，静态配置未变。恢复流程没有重新分类或重放更早的历史unknown。
+
+R1266完成三个独立、每个600-tick的窗口，共1800个采样tick，未拼接或延长声明。产出合计：`1206=2`、`1127=1`、`1209=1`、`1210=0`；电动机`1203`在三窗均为零产出、零消耗，燃料棒`1802`也无产出。Cargo读数显示目的端有到货，但源端分类观察、三层启动输出和保存/重载后的重复输出检查均未通过。该观察不授予启动恢复或持续供给信用。
+
+R1260接口读回中，电动机`724`未工作，铁块输入`1101`为1（低于该配方记录的2件需求）；R1266三窗电动机无产出。燃料棒装配机`3403`未工作，输出缓冲20（目录容量19）；燃料仓`3955`的30格各存30件，共900件且已满。带段`1582`和`2348`的采样时刻未见对齐货包，分拣器`2317`显示`Returning`。这些瞬时观察不能证明持续堵塞或唯一根因；氢、重氢和精炼油共享供给的因果关系也未据此定论。
+
+R1267封闭opening lifetime `552`的旧固定20窗口：20个accepted动作均被唯一核销并保存，其中19个为成功终态，1个历史unknown继续保留，不重分类或重放。封窗后无当前在途或未决unknown；整案累计为`173 accepted / 5`台分拣器、`57`次普通保存、`297`条带、`18`段、`46`次Move与`27`次手工材料动作。R1268随后开启新的固定20窗口，opening external为`0`、opening lifetime为`572`，当前`0/20`；旧窗口未用额度不转移，当前阶段尚未批准写入/建造。
+
+截至该核验，`sourceConditionsPassed=false`、`wholeSupplyPassed=false`、`continuousCreditTicks=0`，最终同SHA双候选仍未交付。后续仍需在新窗口获批后，有限核验电动机铁料支路、燃料出口满仓及氢/重氢/精炼油共享供给关系；不得将短窗、库存截面或满供快照提升为唯一根因或连续供给通过。
 
 `sourceConditionsPassed=false`、`wholeSupplyPassed=false`、`continuousCreditTicks=0`；最终同SHA双候选包仍未交付。
 
 受保护原件索引：R1257 writer `7d393909d32b46b19ce0afd8b066451f:316`，SHA-256 `D8A2D9C4C3CF008ABBCE7227E7EA1B49F907303D1B403BA9FA5F60148C02CD31`；R1257独立审计 `23a9b8e84fdc42558679ca803e39b173:20`，SHA-256 `5C362843F380770BF03D182766216EDF025680E78C8051A37FA30D1A0B9093BE`。
 
 R1258原件独立审计 `23a9b8e84fdc42558679ca803e39b173:23`，SHA-256 `ACCD0192094C29E349A8DD00E8C1FC195EE518743996917CF24C6F7C935ED5F0`，label `root-r1258-original-three-native-windows-and-full221-atomic-supply-fuels-audit`。R1259接口/路线审计 `23a9b8e84fdc42558679ca803e39b173:27`，SHA-256 `7FF47DA9FD33E311DB72A7B2FD8E262E04395F18CA8C84F88AE366A8087DC8D5`，label `root-r1259-twelve-original-route-closure-readbacks-and-power-audit`。R1260接口细节审计 `23a9b8e84fdc42558679ca803e39b173:30`，SHA-256 `371168F27DCA5B2A097DED440F76D2D7EBFBF2B6CB53D86AFD57A5F315E1B16A`，label `root-r1260-original-interface-detail-and-atomic-brackets-audit`.
+
+R1265启动恢复与保存审计 `23a9b8e84fdc42558679ca803e39b173:46`，SHA-256 `A9FEA771435DDC0865D428AB7F2F6B9CD9997565B72E1205FCFD0E0576D6C754`，label `root-r1265-startup-save-original-terminal-full-factory-and-fresh-primary-audit`。R1266三窗来源/启动审计 `23a9b8e84fdc42558679ca803e39b173:50`，SHA-256 `958E2825974C26CC9CD474F0A4CFE9A534E067FC386FFB7E171335F5C979D90E`，label `root-r1266-original-three-native-windows-and-full221-atomic-supply-fuels-audit`。R1267旧窗完整封闭审计 `23a9b8e84fdc42558679ca803e39b173:49`，SHA-256 `08A28A6E6ABDB3FCA15361F5EE2DF01A092C9483AA72ABB4FC1B464A5E10AE1E`，label `root-r1267-independent-all20-original-acks-terminals-and-complete-factory-window-close`。R1268新固定20窗口交接审计 `23a9b8e84fdc42558679ca803e39b173:51`，SHA-256 `59E73E8AF429C2C994CD34BBDA8439F211F0C79C8438CC0002556469EBE37203`，label `root-r1268-new-fixed20-after-complete20-closure-for-bounded-shared-source-repair`。
