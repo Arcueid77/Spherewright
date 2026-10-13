@@ -23,10 +23,10 @@ function Invoke-SpherewrightBridgeRequest([string]$Method,[string]$SessionId,[ha
         $script:now=$script:now.AddMilliseconds($latency)
     }
     $index=[math]::Min($script:sampleIndex,$script:ends.Count-1);$tick=$script:ends[$index]
-    if($script:fault -in @('15fps','source15fps','source20fps','source60fps','jitter15fps','jitter20fps')){$ticksPerSecond=if($script:fault -ceq 'source60fps'){60}elseif($script:fault -in @('source20fps','jitter20fps')){20}else{15};$tick=[long](($script:now-$script:startTime).TotalSeconds*$ticksPerSecond)}
+    if($script:fault -in @('7.5fps','15fps','source15fps','source20fps','source60fps','jitter15fps','jitter20fps')){$ticksPerSecond=if($script:fault -ceq '7.5fps'){7.5}elseif($script:fault -ceq 'source60fps'){60}elseif($script:fault -in @('source20fps','jitter20fps')){20}else{15};$tick=[long](($script:now-$script:startTime).TotalSeconds*$ticksPerSecond)}
     $result=switch($Method){
         get_session_state {
-            if($script:entryBoundaryPending){if($script:fault -notin @('15fps','source15fps','source20fps','source60fps','jitter15fps','jitter20fps')){$tick=if($script:sampleIndex -eq 0){0}else{$script:ends[$script:sampleIndex-1]}};$script:entryBoundaryPending=$false}
+            if($script:entryBoundaryPending){if($script:fault -notin @('7.5fps','15fps','source15fps','source20fps','source60fps','jitter15fps','jitter20fps')){$tick=if($script:sampleIndex -eq 0){0}else{$script:ends[$script:sampleIndex-1]}};$script:entryBoundaryPending=$false}
             if($script:fault -ceq 'paused' -and $index -gt 0){$tick=$script:ends[0]}
             [pscustomobject]@{sessionId=$SessionId;localPlanetId=104;gameVersion=$(if($script:fault -ceq 'version'){'other'}else{'fixture'});gameLoaded=$true;ownedBySpherewright=$true;accessRestricted=$false;writeHealth=$(if($script:fault -ceq 'quarantine'){'quarantined'}else{'healthy'});writeBlockers=@();gameTick=$tick;revision=$(if($script:fault -ceq 'revision' -and $script:sampleIndex -gt 0){23}else{22})}
         }
@@ -295,10 +295,30 @@ $slowContinuousResult=Invoke-SpherewrightProductionExperiment @slowContinuous
 Assert-Sampling ($slowContinuousResult.result -ceq 'sampling_completed' -and $slowContinuousResult.coveredGameTicks -ge 36000 -and $slowContinuousResult.resetCount -eq 0) 'predeclared2700-second finite task covers36000 contiguous ticks at15fps'
 Assert-Sampling ($slowContinuousResult.timingMs.total -ge 2400000 -and $slowContinuousResult.timingMs.total -le 2700000 -and $slowContinuousResult.requests -le 4096 -and $slowContinuousResult.samples -le 120) 'slow continuous fixture obeys initial wall/read/sample bounds'
 Assert-Sampling ($slowContinuousResult.gameWrites -eq 0 -and $slowContinuousResult.modelDecisionsInsideLoop -eq 0 -and -not $slowContinuousResult.governorAcceptance) 'longer initial budget grants no mutations,model loop or production sign-off'
+$verySlow=@{};foreach($key in $slowContinuous.Keys){$verySlow[$key]=$slowContinuous[$key]};$verySlow.TimeoutSeconds=3600
+Reset-Sampling @(600) '7.5fps'
+$verySlowError=$null;try{Invoke-SpherewrightProductionExperiment @verySlow|Out-Null}catch{$verySlowError=$_}
+$verySlowFailures=@($script:records|Where-Object event -EQ 'production-experiment-failed')
+Assert-Sampling ($null -ne $verySlowError -and $verySlowError.Exception.Data['spherewrightSamplingFailureKind'] -in @('deadline_exhausted','read_crossed_deadline') -and $verySlowFailures.Count -eq 1 -and -not $verySlowFailures[0].automaticRestart) '7.5fps original3600-second declaration stops and persists failure without extension'
+$verySlow.TimeoutSeconds=5400
+Reset-Sampling @(600) '7.5fps'
+$verySlowError=$null;try{Invoke-SpherewrightProductionExperiment @verySlow|Out-Null}catch{$verySlowError=$_}
+$verySlowFailures=@($script:records|Where-Object event -EQ 'production-experiment-failed')
+Assert-Sampling ($null -ne $verySlowError -and $verySlowError.Exception.Data['spherewrightSamplingFailureKind'] -ceq 'request_budget_exhausted' -and $script:calls.Count -eq 4096 -and $verySlowFailures.Count -eq 1 -and -not $verySlowFailures[0].automaticRestart) '7.5fps two-second polling spends the original4096-request cap before its5400-second deadline'
+# A separately declared slower cadence uses the same5400-second/read/sample
+# bounds; neither of the two failed fixture tasks is extended or restarted.
+$verySlow.PollSeconds=5
+Reset-Sampling @(600) '7.5fps'
+$verySlowResult=Invoke-SpherewrightProductionExperiment @verySlow
+Assert-Sampling ($verySlowResult.result -ceq 'sampling_completed' -and $verySlowResult.coveredGameTicks -ge 36000 -and $verySlowResult.resetCount -eq 0 -and $verySlowResult.timingMs.total -ge 4800000 -and $verySlowResult.timingMs.total -le 5400000 -and $verySlowResult.requests -le 4096 -and $verySlowResult.samples -le 120) 'predeclared5400-second continuous task covers36000 native fixture ticks at7.5fps within unchanged read/sample bounds'
+Assert-Sampling ($verySlowResult.gameWrites -eq 0 -and $verySlowResult.modelDecisionsInsideLoop -eq 0 -and -not $verySlowResult.governorAcceptance) 'slow-clock initial budget grants no mutation,model loop or acceptance credit'
 Reset-Sampling @(600)
-$tooLong=@{};foreach($key in $arguments.Keys){$tooLong[$key]=$arguments[$key]};$tooLong.TimeoutSeconds=3601
+$tooLong=@{};foreach($key in $arguments.Keys){$tooLong[$key]=$arguments[$key]};$tooLong.TimeoutSeconds=7201;$tooLong.Mode='continuous'
 $tooLongError=$null;try{Invoke-SpherewrightProductionExperiment @tooLong|Out-Null}catch{$tooLongError=$_}
-Assert-Sampling ($null -ne $tooLongError -and $script:calls.Count -eq 0) 'over3600-second declaration rejects before any request'
+Assert-Sampling ($null -ne $tooLongError -and $script:calls.Count -eq 0) 'over7200-second declaration rejects before any request'
+$tooLong.Mode='independent';$tooLong.TimeoutSeconds=3601
+$tooLongError=$null;try{Invoke-SpherewrightProductionExperiment @tooLong|Out-Null}catch{$tooLongError=$_}
+Assert-Sampling ($null -ne $tooLongError -and $script:calls.Count -eq 0) 'independent mode retains its3600-second ceiling before any request'
 
 $continuous=@{};foreach($key in $arguments.Keys){$continuous[$key]=$arguments[$key]};$continuous.Mode='continuous';$continuous.IntervalGameTicks=600;$continuous.MaximumSamples=60;$continuous.MaximumRequests=300
 Reset-Sampling @(1..60|ForEach-Object {$_*600})

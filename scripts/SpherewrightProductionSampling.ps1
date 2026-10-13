@@ -46,10 +46,10 @@ function Invoke-SpherewrightProductionExperiment {
         [ValidateRange(1,3600)][int]$IntervalGameTicks=606,
         [ValidateSet(600)][int]$WindowGameTicks=600,
         [ValidateRange(36000,360000)][int]$RequiredContinuousGameTicks=36000,
-        # At15 game ticks/second,36000 ticks require2400 wall seconds.
+        # Slow native simulation may need more than an hour for36000 ticks.
         # Only the initial finite declaration may use this larger bound; a
         # running experiment's original deadline is never extended or replayed.
-        [ValidateRange(1,3600)][int]$TimeoutSeconds=180,
+        [ValidateRange(1,7200)][int]$TimeoutSeconds=180,
         [ValidateRange(1,4096)][int]$MaximumRequests=90,
         [ValidateRange(1,10)][int]$PollSeconds=5,
         # Explicit continuous-mode observation cadence, not cached entity data.
@@ -63,7 +63,8 @@ function Invoke-SpherewrightProductionExperiment {
         @($EntityIds|Sort-Object -Unique).Count -ne $EntityIds.Count -or @($ItemIds|Sort-Object -Unique).Count -ne $ItemIds.Count -or
         ($Mode -ceq 'independent' -and $MaximumSamples -lt $RequiredWindows) -or
         ($Mode -ceq 'independent' -and $EntitySampleEvery -ne 1) -or
-        ($Mode -ceq 'continuous' -and $IntervalGameTicks -gt $WindowGameTicks)) { throw 'Invalid fixed scope/cadence/budget; no request sent.' }
+        ($Mode -ceq 'continuous' -and $IntervalGameTicks -gt $WindowGameTicks) -or
+        ($Mode -cne 'continuous' -and $TimeoutSeconds -gt 3600)) { throw 'Invalid fixed scope/cadence/budget; no request sent.' }
     $materialSelections=@{}
     foreach($key in $MaterialInventorySelections.Keys){
         $anchor=0
