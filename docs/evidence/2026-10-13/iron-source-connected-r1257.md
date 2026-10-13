@@ -137,3 +137,20 @@ R1292以26组只读原请求和R1293以74个只读请求完成因果读取及六
 | R1292 root：独立原件审计 | `23a9b8e84fdc42558679ca803e39b173:134` | `AB901F2586EFC057010E793D0BC02C28024CA5F0D24695E8B3860E3F3C0797BA` | `root-r1292-all26-original-current-hd-fuel-causal-readonly-audit` |
 | R1293 writer：六窗采样 | `f7e1177a231b45db84857e556db0f513:83` | `CD1C0220786D07966E9294EF571F440FA7F0A68F4356E90FFD1A9613FA01AB73` | `r1293-independent-hd-fuel-causal-sampling` |
 | R1293 root：独立原件审计 | `23a9b8e84fdc42558679ca803e39b173:138` | `8D1DE10D638C1FD0D720576474D4BAD34A7D4EAA9D7D2A76C399F32911A30A8C` | `root-r1293-all83-original-six-native-hd-fuel-causal-sampling-independent-audit` |
+
+## R1294–R1295 Foundry范围与共享供需只读核验
+
+R1294对27个对象的三段Foundry组合通过内部路线组合检查，但未执行场地Native检查：全部27个对象均超出当前玩家施工范围。候选还缺7个建筑物品`2011`、1个`2302`和2个`2303`，供电覆盖未核验；既有透镜`5333`没有奇异物质。因此这不是可施工方案，也没有提供完整设备、供电、物流与精确成本计划的通过证据。
+
+R1295完成28组只读读取。独立审计核对56对原始请求/响应及两个各25对象的同tick截面，分别在tick `115705858`与`115706076`；新增accepted为0。`3074`氘仓为空、氢为20、燃料为690；`3073`氘输出`1→0`；`5326`有5氘但未工作；`3403`氘`11→12`且燃料输出0；氘路径`209`有7，奇异物质路径`213`有1但`5333`透镜仍为0；`3083`氢输出59、接近满仓。融合机`3079`的载入燃料能量下降、缓冲燃料棒读数为10，相关网络均满供。这些只读短时库存和能量截面不能证明燃料棒物品被消耗、持续自动补给或稳定来源；R1293彼此分开的六个短窗也不能合并为连续信用。
+
+保存边界未变化：同一owned P104、Save tick `115498158`、revision `26`、durable Journal `102`；固定20窗口`16/20`、lifetime `588`，无在途或未决unknown。`sourceConditionsPassed=false`、`wholeSupplyPassed=false`、`continuousCreditTicks=0`。
+
+### R1294–R1295受保护原件索引
+
+| 阶段 | 受保护记录 | SHA-256 | label |
+| --- | --- | --- | --- |
+| R1294 root：Foundry组合与范围审计 | `23a9b8e84fdc42558679ca803e39b173:143` | `4FF835F82011992E5469EF2DE53566F7E5A0D77662C4A701B5672C0E7F7082F4` | `root-r1294-all77-original-warper-foundry-readonly-independent-audit` |
+| R1295 writer：共享氢/氘/燃料只读读取 | `270cb9f07409434ca09aada8ddefd5cb:57` | `884C36029010A032E6DEF6750D7EAE8307059176005269A1DB89F1B3B76605D7` | `r1295-shared-deuterium-fuel-consumer-causal-readonly` |
+| R1295 root：56对原件独立审计 | `23a9b8e84fdc42558679ca803e39b173:148` | `02557A2D78C2C35E08B92327B04785315C581052A8A570143624BDBB51A88D49` | `root-r1295-all57-original-two-cuts-consumer-causal-independent-audit` |
+| R1295 root：只读范围封闭 | `23a9b8e84fdc42558679ca803e39b173:149` | `CA5D0E04621AD0AC8CD0488F90B26D2755D81C0761019C1DFD7FF0E75B149868` | `root-r1295-independent-readonly-scope-closure` |
