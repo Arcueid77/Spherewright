@@ -185,3 +185,17 @@ R1298在4对只读请求/响应后停止：调用器假定可选字段`materialI
 | R1299 writer：提前停止原件索引 | `801c042f86954ec7b9997aee5fe2ebe6:1` | `19B8C30A805B1579E155026CCFE5E327991A206F218B21F321E989120D4BD930` |
 | R1299 root：独立只读审计 | `23a9b8e84fdc42558679ca803e39b173:170` | `A07C06DD483CDCB6FB848F7BECCA371AE80633354426B2961621D49EB57C6DCFB` |
 | R1299 root：只读范围封闭 | `23a9b8e84fdc42558679ca803e39b173:171` | `419F34DB8381342E8458F0BB9A9188DF02C6B8ECAAB4F14E98D11759CF709E67` |
+
+## R1300重启前来源连续长窗
+
+R1300完成80个有效Native 600-tick窗口，连续覆盖`36348` ticks，无gap/reset；全程0 Game写入、0 accepted。保守翘曲器物品`1210`产出为15–20件，对应`1.486–1.981/min`；燃料棒物品`1802`产出16–18件、消耗11–16件。22次覆盖25个对象与3类cargo的同tick截面读取记录翘曲器`456→471`、燃料棒`1368→1373`、氘`20→25`；80个窗口的相关电网均满供。
+
+该结果证明本次重启前来源条件通过：`sourceConditionsPassed=true`、`continuousCreditTicks=36348`。它不代表完整Foundry设备/电力/物流/成本计划、出发清单，或最终同档恢复后的复产已通过。R1300未改变Save `115498158`、revision `26`、durable Journal `102`，旧窗口保持已关闭`16/20`、lifetime `588`；无新增accepted或在途动作。`wholeSupplyPassed=false`，最终同SHA双候选包仍未通过及验收。
+
+### R1300受保护原件索引
+
+| 阶段 | 受保护记录 | SHA-256 | label |
+| --- | --- | --- | --- |
+| writer：连续来源窗口原件索引 | `3812cc96d903492e84456121638c395b:2969` | `89620933FA4A0C1636269365DEEF1A0F9DEB7368219EE38C66014A9BEEFC669E` | `r1300-fuel-warper-continuous-original-result` |
+| root：独立长窗审计 | `9c9fff04318249758eaed638128587b7:1` | `52635A83858A3916ADA17C291C3C9EEB4A54E8CF4CA7EBBB023C93BAC784B7A7` | `root-r1300-pre-restart-continuous-source-original-audit` |
+| root：范围封闭记录 | `9c9fff04318249758eaed638128587b7:2` | `7E8C6602D078A55066E1A607B4A3B0958E63B404BBD81A05F0AB77F8F69F17AF9` | `root-r1300-continuous-readonly-scope-closure-persisted` |
