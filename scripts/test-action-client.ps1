@@ -60,6 +60,7 @@ function Reset-ActionStub([object[]]$States, [int]$ReadMilliseconds = 0, [object
     $script:actionStubTransportFailure = $false
     $script:commitStubTransportFailure = $false
     $script:commitStubResult = $null
+    $script:commitStubError = $null
     $script:actionStubBridgeError = $null
 }
 function Get-Date { $script:actionStubTime }
@@ -73,6 +74,7 @@ function Invoke-SpherewrightBridgeRequest([string]$Method, [string]$SessionId, [
         'prepare_build' { [pscustomobject]@{prepared=$true;commitAllowedNow=$true;planToken='offline-test-placeholder'} }
         'commit_build' {
             if ($script:commitStubTransportFailure) { throw 'offline commit transport failure' }
+            if ($null -ne $script:commitStubError) { return [pscustomobject]@{success=$false;result=$null;error=$script:commitStubError} }
             if ($null -ne $script:commitStubResult) { return [pscustomobject]@{success=$true;result=$script:commitStubResult} }
             [pscustomobject]@{accepted=$true;actionId='offline-action'}
         }
@@ -159,6 +161,30 @@ Assert-Action ($commitFailure.Message -ceq 'offline commit transport failure' -a
     $commitFailure.Data['spherewrightPhase'] -ceq 'commit' -and
     $commitFailure.Data['spherewrightCommitMayHaveBeenAccepted'] -eq $true -and
     ($script:actionStubCalls.method -join ',') -ceq 'prepare_build,commit_build') 'commit transport failure stays uncertain and is never replayed'
+
+# Exact R1288-shaped native rejection happens before the Plugin accepts an
+# action. Keep the negative response distinct from a missing ACK.
+Reset-ActionStub @()
+$script:commitStubError = [pscustomobject]@{code='STALE_STATE';message='The exact warehouse, ordered grids, inventory, or automation configuration changed.';retryable=$true;recovery='Inspect current state and prepare a fresh action.'}
+$staleFailure = $null
+try {
+    Invoke-SpherewrightNormalAction -PrepareMethod prepare_build -CommitMethod commit_build -PreparePayload @{buildingItemId=2001} -SessionId offline-session -PlanetId 104 | Out-Null
+} catch { $staleFailure = $_.Exception }
+Assert-Action ($staleFailure.Data['spherewrightPhase'] -ceq 'commit' -and
+    $staleFailure.Data['spherewrightCommitMayHaveBeenAccepted'] -eq $false -and
+    $staleFailure.Data['spherewrightCommitAccepted'] -eq $false -and
+    $staleFailure.Data['spherewrightDefinitiveCommitRejectionCode'] -ceq 'STALE_STATE' -and
+    ($script:actionStubCalls.method -join ',') -ceq 'prepare_build,commit_build') 'exact preaccept STALE_STATE is rejected without polling or replay'
+
+Reset-ActionStub @()
+$script:commitStubError = [pscustomobject]@{code='REQUEST_TIMEOUT';message='Commit response unavailable.';retryable=$true}
+$timeoutFailure = $null
+try {
+    Invoke-SpherewrightNormalAction -PrepareMethod prepare_build -CommitMethod commit_build -PreparePayload @{buildingItemId=2001} -SessionId offline-session -PlanetId 104 | Out-Null
+} catch { $timeoutFailure = $_.Exception }
+Assert-Action ($timeoutFailure.Data['spherewrightCommitMayHaveBeenAccepted'] -eq $true -and
+    $null -eq $timeoutFailure.Data['spherewrightDefinitiveCommitRejectionCode'] -and
+    ($script:actionStubCalls.method -join ',') -ceq 'prepare_build,commit_build') 'timeout-shaped response never becomes definitive rejection'
 
 Reset-ActionStub @() 0
 $terminalFailure = $null

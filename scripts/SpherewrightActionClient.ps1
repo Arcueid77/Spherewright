@@ -145,6 +145,7 @@ function Invoke-SpherewrightNormalAction {
     $phase = 'prepare'
     $commitMayHaveBeenAccepted = $false
     $commitAccepted = $null
+    $definitiveCommitRejectionCode = $null
     $actionId = $null
     try {
         $prepareResponse = Invoke-SpherewrightBridgeRequest -Method $PrepareMethod -SessionId $SessionId -Payload $PreparePayload
@@ -182,6 +183,21 @@ function Invoke-SpherewrightNormalAction {
             planetId = $PlanetId
             planToken = $planToken
             idempotencyKey = $IdempotencyKey.ToString('D')
+        }
+        # The Plugin returns STALE_STATE before it creates an action or stores
+        # the idempotency key. An exact negative reply closes this attempt;
+        # missing replies, malformed replies and transport errors remain uncertain.
+        if ($null -ne $commitResponse -and
+            $null -ne $commitResponse.PSObject.Properties['success'] -and
+            $commitResponse.success -is [bool] -and -not $commitResponse.success -and
+            $null -ne $commitResponse.PSObject.Properties['error'] -and
+            $null -ne $commitResponse.error -and
+            $null -ne $commitResponse.error.PSObject.Properties['code'] -and
+            $commitResponse.error.code -ceq 'STALE_STATE' -and
+            ($null -eq $commitResponse.PSObject.Properties['result'] -or $null -eq $commitResponse.result)) {
+            $commitMayHaveBeenAccepted = $false
+            $commitAccepted = $false
+            $definitiveCommitRejectionCode = 'STALE_STATE'
         }
         $committed = Get-SpherewrightBridgeResult -Response $commitResponse -Operation $CommitMethod
         $committedTicks = [Diagnostics.Stopwatch]::GetTimestamp()
@@ -224,6 +240,9 @@ function Invoke-SpherewrightNormalAction {
             $_.Exception.Data['spherewrightPhase'] = $phase
             $_.Exception.Data['spherewrightCommitMayHaveBeenAccepted'] = $commitMayHaveBeenAccepted
             $_.Exception.Data['spherewrightCommitAccepted'] = $commitAccepted
+            if ($null -ne $definitiveCommitRejectionCode) {
+                $_.Exception.Data['spherewrightDefinitiveCommitRejectionCode'] = $definitiveCommitRejectionCode
+            }
             if ($commitAccepted -eq $true -and $null -ne $committed.PSObject.Properties['idempotentReplay']) {
                 $_.Exception.Data['spherewrightIdempotentReplay'] = $committed.idempotentReplay
             }
