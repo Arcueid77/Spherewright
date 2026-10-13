@@ -4,7 +4,7 @@
 
 ## 当前保存与窗口
 
-最近完成的独立核验确认Save tick `115498158`、revision `26`、durable Journal `102`仍未改变。R1296封闭固定20窗口时已有16/20个accepted，未用4个槽位退役，lifetime为`588`；R1297为只读、没有新增accepted或Save。当前无在途或未决unknown；更早的历史unknown保留，不重分类或重放。整案累计`189 accepted / 7`台已知分拣器 / `61`次普通Save / `297`条实际带 / `18`段 / `46`次Move / `32`次手工材料动作。R1296完整工厂普查为`6621 built / 0 prebuild`。
+截至R1299最近完成的独立核验仍确认Save tick `115498158`、revision `26`、durable Journal `102`。固定20窗口于R1296以`16/20`封闭，未用4个槽位退役，lifetime为`588`；R1298与R1299均为只读且没有新增accepted或写入。当前无在途写入或未决unknown；更早的历史unknown保留，不重分类或重放。整案累计`189 accepted / 7`台已知分拣器 / `61`次普通Save / `297`条实际带 / `18`段 / `46`次Move / `32`次手工材料动作。R1296完整工厂普查为`6621 built / 0 prebuild`。R1300只读长窗正在运行，尚无已核结果，不计为通过。
 
 ## 燃料方向与来源边界
 
@@ -48,6 +48,10 @@ R1297核对50对只读请求/响应，并完成两个25对象同tick截面，覆
 
 R1297之后保存边界仍为tick `115498158`、revision `26`、durable Journal `102`；窗口保持已关闭、lifetime `588`，`sourceConditionsPassed=false`、`wholeSupplyPassed=false`、`continuousCreditTicks=0`。
 
+## R1298–R1299只读停止与采样边界
+
+R1298在4对只读请求/响应后因调用器错误地假定可选字段`materialInventoryCut.unavailable`存在而停止；root独立核验后确认0 Game写入、0 accepted。R1299随后完成593对只读请求/响应，27个有效连续窗口累计覆盖`9246/36000` ticks；root依据原预算外推提前停止。该长窗未达到声明目标，未获连续来源信用，不能拼接或记作通过。两阶段均未改变已保存边界或窗口计数。
+
 ## 下一步
 
-下一步在持续授权内继续核自动来源与共享供需；R1291库存重分配、R1288单次到货、R1293分离短窗、R1295截面及R1297短窗都不证明稳定自动来源。R1294组合还需先满足实际施工范围、材料与供电条件，之后才能做场地Native核验。完整Foundry设备、电力、物流与精确成本计划，以及中途普通保存/重启续建去重和失效计划重规划，仍缺完整证据。当前`sourceConditionsPassed=false`、`wholeSupplyPassed=false`、`continuousCreditTicks=0`；既定≥36000-tick来源/稳定性验收和最终同SHA双候选门均未通过。阶段细节与受保护原件索引见[燃料来源方向、容量重分配与共享来源短窗](evidence/2026-10-13/iron-source-connected-r1257.md)。
+下一步在持续授权内继续核自动来源与共享供需；R1291库存重分配、R1288单次到货、R1293分离短窗、R1295截面、R1297短窗及R1299未完成的长窗都不证明稳定自动来源。R1294组合还需先满足实际施工范围、材料与供电条件，之后才能做场地Native核验。完整Foundry设备、电力、物流与精确成本计划，以及中途普通保存/重启续建去重和失效计划重规划，仍缺完整证据。当前`sourceConditionsPassed=false`、`wholeSupplyPassed=false`、`continuousCreditTicks=0`；既定≥36000-tick来源/稳定性验收和最终同SHA双候选门均未通过。R1300长窗结果待独立核验。阶段细节与受保护原件索引见[燃料来源方向、容量重分配与共享来源短窗](evidence/2026-10-13/iron-source-connected-r1257.md)。
