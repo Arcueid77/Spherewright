@@ -52,3 +52,30 @@ R1258原件独立审计 `23a9b8e84fdc42558679ca803e39b173:23`，SHA-256 `ACCD019
 R1265启动恢复与保存审计 `23a9b8e84fdc42558679ca803e39b173:46`，SHA-256 `A9FEA771435DDC0865D428AB7F2F6B9CD9997565B72E1205FCFD0E0576D6C754`，label `root-r1265-startup-save-original-terminal-full-factory-and-fresh-primary-audit`。R1266三窗来源/启动审计 `23a9b8e84fdc42558679ca803e39b173:50`，SHA-256 `958E2825974C26CC9CD474F0A4CFE9A534E067FC386FFB7E171335F5C979D90E`，label `root-r1266-original-three-native-windows-and-full221-atomic-supply-fuels-audit`。R1267旧窗完整封闭审计 `23a9b8e84fdc42558679ca803e39b173:49`，SHA-256 `08A28A6E6ABDB3FCA15361F5EE2DF01A092C9483AA72ABB4FC1B464A5E10AE1E`，label `root-r1267-independent-all20-original-acks-terminals-and-complete-factory-window-close`。R1268新固定20窗口交接审计 `23a9b8e84fdc42558679ca803e39b173:51`，SHA-256 `59E73E8AF429C2C994CD34BBDA8439F211F0C79C8438CC0002556469EBE37203`，label `root-r1268-new-fixed20-after-complete20-closure-for-bounded-shared-source-repair`。
 
 R1269消费者读取前缀审计 `23a9b8e84fdc42558679ca803e39b173:54`，SHA-256 `E061180623E6709796F262A001FF28047FAB6CFB67B8B729861EB5D4A4B4949D`，label `root-r1269-original33-successful-read-prefix-and-one-page-limit-rejection-audit`。R1270读取闭合审计 `23a9b8e84fdc42558679ca803e39b173:57`，SHA-256 `8F204AF6CE8FFA0844800D63C8177CBB07EB42F2C96FFC505309660764B920AB`，label `root-r1270-original-six-read-suffix-and-preserved33-detail-prefix-complete-audit`。R1271材料与邻接候选审计 `23a9b8e84fdc42558679ca803e39b173:61`，SHA-256 `7A271215C4F692BAECD0610B848FCA259E9DD8C1435DBC68FF9FD01819065224`，label `root-r1271-original-two-storage-collision-denials-retired-and-normal-material-positive-audit`。R1272零commit材料拒绝审计 `23a9b8e84fdc42558679ca803e39b173:64`，SHA-256 `A2C126611E661F9E2492E70C9F2159FBDCC37B4959A5E8B0FD7367ECD3F2C648`，label `root-r1272-original-zero-commit-stale-material-refusal-audit`。R1273材料保存审计 `23a9b8e84fdc42558679ca803e39b173:67`，SHA-256 `932EE1683D4164CD95E5802666DC5A2F18DA42940565AD85B75DFB6A3DBAC1B4`，label `root-r1273-original-two-circuit-two-basic-sorter-and-covering-save-audit`。
+
+
+## R1274–R1280燃料方向、候选筛选与有限备料
+
+R1274只读确认燃料方向应为`3955`自动出料→`3348`现有接收空间；截面分别读到`3955=900`、`3348=400`。这只是端点和库存核验，没有建成或资格化完整出料路线。
+
+R1275–R1278为只读候选筛选：四轮矩阵都没有保留可施工候选，未进入完整整线Native预览，`constructionApproved=false`，没有accepted。候选分别因与已观察实体包络重叠、Native点列/接缝条件或53条带携带材料上限被排除；这些是局部筛选结果，不构成完整Native路线拒绝或来源通过。
+
+R1279共核7组原始请求/响应。新仓的Native prepare因建造体积与实体`3060`重叠而返回`BUILD_LOCATION_INVALID`；`warehouseBuilt=false`，0 commit、0 intent、0 accepted、没有Save。随后本地收尾逻辑访问空的通用页面列表，遮住了主要prepare拒绝；并非Build或Save之后失败。该候选不重放。
+
+R1280的17组原始请求/响应由root独立核验，唯一完成的两项accepted为从`3955`取料和普通Save。燃料棒60件的原生终态扣料为`900→840`，玩家库存为`5→65`；`3348`不是本次取料源，原有400件保留。Save为tick `114476839`、revision `8`、durable Journal `102`，三条版本记录保留；全部当前动作已保存，无在途或未决unknown。root核定本阶段实际增量为2；调用器报出的5来自窗口计数，不按5累计。调用器数值退出码未保存，保留这一限制而不重跑。
+
+本阶段没有建成自动供料路线，也没有新施工或生产采样。仓库库存只支持有限备料，不计自动生产、来源信用或连续供给。当前窗口为opening lifetime `572`的`5/20`、lifetime `577`；整案为`178 accepted / 59`次普通Save / `30`次手工材料动作，既有`5`台分拣器、`297`条实际带、`18`段及`46`次Move不变。来源、整案和连续供给门仍分别为false、false、0。
+
+### 受保护原件索引
+
+以下SHA绑定单个受保护root审计记录；未将原始日志、存档名或运行时凭据写入仓库。
+
+| 阶段 | 受保护记录 | SHA-256 | label |
+| --- | --- | --- | --- |
+| R1274 端点与库存 | `23a9b8e84fdc42558679ca803e39b173:70` | `5CB7313D9142963CDBC2FCFF4C44B05AD970B874947A5D7310719CEB4A1C786E` | `root-r1274-original-existing-fuel-warehouse-slots-stock-and206-collider-audit` |
+| R1275 路线筛选 | `23a9b8e84fdc42558679ca803e39b173:74` | `05D456780AC491A3CB35BB8C913433071E40FD535E62FBD26EDA5584F5980D21` | `root-r1275-original-three-fuel-route-local-matrix-and-native-batch-audit` |
+| R1276 路线筛选 | `23a9b8e84fdc42558679ca803e39b173:77` | `E5ED6C9EAE63EE8D26A6405D96EA58F6211CBA5DF6A87E6CC250E32D6D1243BD` | `root-r1276-original-three-fuel-route-local-matrix-and-native-batch-audit` |
+| R1277 路线筛选 | `23a9b8e84fdc42558679ca803e39b173:80` | `1CE5B07A89C71D3438CFB147730AB0AE9034995DA04A1003AA8A445D1080801D` | `root-r1277-original-three-fuel-route-local-matrix-and-native-batch-audit` |
+| R1278 路线筛选 | `23a9b8e84fdc42558679ca803e39b173:84` | `7F70129C8F9CAE5589F5E31BC216B63AC7591E5AA60D57B58A3292C6CA48205F` | `root-r1278-original-three-fuel-route-local-matrix-and-native-batch-audit` |
+| R1279 零提交拒绝 | `23a9b8e84fdc42558679ca803e39b173:87` | `EAEC97F57D040B4CC7507C97AADB682F2FED4A5EE9940E24C6B0DFEB0A86EDEF` | `root-r1279-all14-originals-zero-commit-native3060-denial-and-local-finalizer-failure-audit` |
+| R1280 取料与保存 | `23a9b8e84fdc42558679ca803e39b173:90` | `38F290A62DFC0E3F00B7C7B5661AD155C7C7C7F5CD440AAF4CBF1C28B292D16A` | `root-r1280-original-two-accepted-finite-fuel60-kit-and-covering-save-audit` |
