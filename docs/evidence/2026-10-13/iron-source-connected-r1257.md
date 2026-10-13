@@ -154,3 +154,20 @@ R1295完成28组只读读取。独立审计核对56对原始请求/响应及两�
 | R1295 writer：共享氢/氘/燃料只读读取 | `270cb9f07409434ca09aada8ddefd5cb:57` | `884C36029010A032E6DEF6750D7EAE8307059176005269A1DB89F1B3B76605D7` | `r1295-shared-deuterium-fuel-consumer-causal-readonly` |
 | R1295 root：56对原件独立审计 | `23a9b8e84fdc42558679ca803e39b173:148` | `02557A2D78C2C35E08B92327B04785315C581052A8A570143624BDBB51A88D49` | `root-r1295-all57-original-two-cuts-consumer-causal-independent-audit` |
 | R1295 root：只读范围封闭 | `23a9b8e84fdc42558679ca803e39b173:149` | `CA5D0E04621AD0AC8CD0488F90B26D2755D81C0761019C1DFD7FF0E75B149868` | `root-r1295-independent-readonly-scope-closure` |
+
+## R1296–R1297封窗与共享供需只读复核
+
+R1296独立核销并关闭原固定20窗口：16个accepted已核销，未使用的4个槽位退役，lifetime为`588`；无当前在途或未决unknown。完整工厂普查为`6621 built / 0 prebuild`，保存tick `115498158`、revision `26`与durable Journal `102`未变。
+
+R1297完成50对只读请求/响应审计，并在600 ticks（`115741048–115741647`）内完成两个25对象同tick截面；0 accepted、0写入。氢产出/消耗`24/25`、氘`5/0`，燃料棒物品`1802`与翘曲器物品`1210`的窗口读数均为0。两个截面显示氘进入两个消费者，但仍低于批量阈值；相关电网满供。该短窗不证明自动来源、整链供给或连续生产。
+
+保存与验收边界仍为同一owned P104：Save tick `115498158`、revision `26`、Journal `102`；固定20窗口已关闭、lifetime `588`，`sourceConditionsPassed=false`、`wholeSupplyPassed=false`、`continuousCreditTicks=0`。
+
+### R1296–R1297受保护原件索引
+
+| 阶段 | 受保护记录 | SHA-256 | label |
+| --- | --- | --- | --- |
+| R1296 root：固定20窗口关闭审计 | `23a9b8e84fdc42558679ca803e39b173:153` | `41D5493469ECCF3A955E5AD4F414C205036FD5C87CEBCCB091E3BF5E7E1D01D2` | `root-r1296-independent-current16-fixed20-window-close` |
+| R1296 root：封窗持久化记录 | `23a9b8e84fdc42558679ca803e39b173:154` | `A50F92B00D3EA8872293E7B40655568C43041D816D3F0804FECAEA7BAC7966D0` | `root-r1296-fixed20-closure-persisted` |
+| R1297 root：50对原件与读数审计 | `23a9b8e84fdc42558679ca803e39b173:160` | `8C1C3397D5196FDE478A88CF7FEDD36DC4BF4F4CB79E0986B3BC4BA71937AE0D` | `root-r1297-all50-original-and-readiness-independent-audit` |
+| R1297 root：只读范围封闭 | `23a9b8e84fdc42558679ca803e39b173:161` | `9D0A1ADB6B27A777A92E6E08C4AA9523CC967AAAE25C48502837D7B8E6A6802C` | `root-r1297-readonly-scope-closure-persisted` |
