@@ -199,3 +199,13 @@ R1300完成80个有效Native 600-tick窗口，连续覆盖`36348` ticks，无gap
 | writer：连续来源窗口原件索引 | `3812cc96d903492e84456121638c395b:2969` | `89620933FA4A0C1636269365DEEF1A0F9DEB7368219EE38C66014A9BEEFC669E` | `r1300-fuel-warper-continuous-original-result` |
 | root：独立长窗审计 | `9c9fff04318249758eaed638128587b7:1` | `52635A83858A3916ADA17C291C3C9EEB4A54E8CF4CA7EBBB023C93BAC784B7A7` | `root-r1300-pre-restart-continuous-source-original-audit` |
 | root：范围封闭记录 | `9c9fff04318249758eaed638128587b7:2` | `7E8C6602D078A55066E1A607B4A3B0958E63B404BBD81A05F0AB77F8F69F17AF9` | `root-r1300-continuous-readonly-scope-closure-persisted` |
+
+## R1301 Foundry建材准备与保存
+
+R1301完成4次材料转存、6次手工制作和1次普通Save，共新增11个accepted。材料净变化为铁`-35`、建筑物品`2011 +7`、`2302 +1`、`2303 +2`。root独立核验163对原请求/响应，保存覆盖全部动作；Save位于tick `115835973`、revision `43`、durable Journal `102`，当前固定20窗口`11/20`、lifetime `599`，无在途或未决unknown。完整工厂为`6621 built / 0 prebuild`且未变化。
+
+本次只完成有限建材准备，没有执行现场Foundry Native场地检查。R1300的`36348`连续tick来源结果只证明重启前来源就绪；完整Foundry设备/供电/外部接线、整案持续供给以及最终同SHA双候选仍未通过。
+
+| 阶段 | 受保护记录 | SHA-256 | label |
+| --- | --- | --- | --- |
+| R1301 root：材料动作、保存与独立审计 | `9c9fff04318249758eaed638128587b7:8` | `3C704195A7CD0F0BE13A69E42A43704922F16392EEC37C86B2FB2A71F053B887` | `root-r1301-exact-foundry-kit-four-transfer-six-handcraft-save-audit` |
