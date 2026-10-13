@@ -1,4 +1,4 @@
-# 铁源接入、启动观察与接口核验（R1257–R1285）
+# 铁源接入、启动观察与容量重分配核验（R1257–R1291）
 
 R1257完成两台分拣器的原生建造并由普通保存覆盖。root独立审计覆盖151对原件、67页完整工厂快照及保存边界；建造后为`6618 built / 0 prebuild`，没有未核销在途或未知结果。
 
@@ -90,7 +90,7 @@ R1284中Native prepare给出允许结果，但调用器导入的Persist回调因
 
 R1285将ledger路径显式绑定，并通过17项隔离的Persist回归。随后实际建成一座新仓`6619`和一台筛选物品`1210`的分拣器`6620`，在`5331`增加一条互返连接且保留原输入`5365`。同tick观察到一次自动到货，普通Save覆盖本阶段动作。独立审计核对125组原件、67页完整工厂快照、`6620 built / 0 prebuild`、库存和拓扑；本阶段新增3个accepted，全部已保存，无在途或unknown。保存位于tick `114881508`，当前窗口`8/20`、lifetime `580`；整案为`181 accepted / 60`次普通Save / `6`台分拣器 / `297`条带 / `18`段 / `46`次Move / `30`次手工材料动作。
 
-R1285的一次到货只证明这条有限前缀有货物到达，不证明完整Foundry建造链、双source稳定或连续供给。完整Foundry设备、电力、物流与精确成本计划，以及中途普通保存/重启续建去重和失效计划重规划，仍缺完整证据。当前仍有燃料容量问题；来源门、整案门与≥36000-tick连续门均未通过，`sourceConditionsPassed=false`、`wholeSupplyPassed=false`、`continuousCreditTicks=0`。历史unknown仍保留，不重分类或重放。
+R1285的一次到货只证明这条有限前缀有货物到达，不证明完整Foundry建造链、双source稳定或连续供给。完整Foundry设备、电力、物流与精确成本计划，以及中途普通保存/重启续建去重和失效计划重规划，仍缺完整证据。R1285当时仍有燃料容量问题；来源门、整案门与≥36000-tick连续门均未通过，`sourceConditionsPassed=false`、`wholeSupplyPassed=false`、`continuousCreditTicks=0`。历史unknown仍保留，不重分类或重放。
 
 ### R1281–R1285受保护原件索引
 
@@ -101,3 +101,24 @@ R1285的一次到货只证明这条有限前缀有货物到达，不证明完整
 | R1283 燃料仓容量 | `23a9b8e84fdc42558679ca803e39b173:100` | `7FD845039823F45A2D2914A1F59E95F61439BBD8802694DBC46F0A80105AB05A` | `root-r1283-original-output-capacity-six-warehouses-four-port-details253-colliders-audit` |
 | R1284 零commit调用器路径故障 | `23a9b8e84fdc42558679ca803e39b173:104` | `174DAEC22FCDAF69283E53636523BD69F7FFF9BC6D45A93C281E5C3D3DB1E230` | `root-r1284-seven-original-reads-positive-native-prepare-local-persist-failure-zero-commit` |
 | R1285 自动到货与保存审计 | `23a9b8e84fdc42558679ca803e39b173:107` | `DCDFF678269FA9B2336723E1B27BE9DE3C97FBDF760476791665CD1521ED8D8F` | `root-r1285-one-real-warehouse-sorter-full-factory-automatic-arrival-and-save-audit` |
+
+## R1288–R1291自动到货、只读核验与容量重分配
+
+R1288原件中，建筑物品`2011`分拣器`6621`的建造与配置两项accepted，且记录一次燃料自动到货。第三项配置在Native提交前收到`STALE_STATE`，所以该有限阶段留下两个未保存成功动作；root独立核验它们没有重复提交。R1289以只读五对象截面确认29个燃料过滤格已满、输入与输出分拣器等待、融合机正在消耗燃料；不能由此推断长期供给状态。
+
+R1290进行了9个只读请求的Native容量预检，0 accepted。R1291完成六项唯一accepted并普通保存：暂停并恢复原有分拣器过滤，从仓`3074`取出210根燃料棒，经玩家库存存入仓`3348`；`3074`按23个燃料格、1个氢格、6个氘格重新配置。`3348`最终持有610根燃料棒。root独立审计确认玩家库存守恒、拓扑未变、相关电力摘要平衡、全部动作已保存；保存边界为tick `115498158`、revision `26`、durable Journal `102`，三条版本转换保留。窗口为`16/20`、lifetime `588`，当前没有在途或未决unknown，历史unknown不重分类、不重放。
+
+本阶段完成的是有限库存与过滤容量调整，不是自动补给或持续来源通过。根验收的完整Foundry设备/电力/物流/精确成本计划，以及普通保存重启后的逐对象续建去重和失效计划重规划仍缺证据。R1291只核对受影响对象，没有新做完整全厂普查；最近完整普查仍是R1285的`6620 built / 0 prebuild`，其后R1288增加分拣器`6621`。来源、整案与≥36000-tick连续来源门仍未通过。
+
+### R1288–R1291受保护原件索引
+
+| 阶段 | 受保护记录 | SHA-256 | label |
+| --- | --- | --- | --- |
+| R1288 writer：两项accepted及到货 | `7812923727eb4314ab15c323c53e8c1c:77` | `7092B1DDE21C850C7B3A63CC937A20EFE0AF9F8141531D15709C811C88BFFE73` | `r1288-original-fuel-belt-warehouse-fusion-auto-arrival-and-save` |
+| R1288 root：部分前缀与明确拒绝 | `23a9b8e84fdc42558679ca803e39b173:118` | `1F8A87829DF0DF7A766E437C1A217C4DAC0A192FA568086B87F2761E5149B04B` | `root-r1288-two-original-accepted-and-third-definitive-stale-before-action` |
+| R1289 writer：只读五对象读取 | `67430e679868479b941d4eeb9276efed:19` | `2FED01B7E60113F7645A63FDE1B11315B4F14112CC577B9F6181D9B594C59C94` | `r1289-original-current-five-object-fuel-feed-and-unsaved-health-readonly` |
+| R1289 root：容量与融合机截面 | `23a9b8e84fdc42558679ca803e39b173:123` | `12A9FD3B30425BF2F5C4EF20914EC5389DB087713842FF5187791363314689DF` | `root-r1289-full-fuel-warehouse-capacity-and-live-fusion-audit` |
+| R1290 writer：零写容量Native预检 | `1321abdf705a431194f74ca8c839a0cc:19` | `075235F7458A58FC392F75B759B65F4FFF6D273EA5689CA0BE5412F77DE97BA6` | `r1290-original-fuel-capacity-native-readonly-preflight` |
+| R1290 root：预检批准与边界 | `23a9b8e84fdc42558679ca803e39b173:125` | `0C7D0AEAEF4BB076BA863F937CB925EE9C10BDEB1439C8511CF0CC850C42177A` | `root-r1290-exact-native-zero-write-preflight-approval` |
+| R1291 writer：六项动作与普通保存 | `48ee9b6359c14f0ea8b7341979a36229:111` | `62274263874CB8D6594BAAA19109F047203548E666F09B3E83F2E4DCE8736F5C` | `r1291-original-hd-capacity-fuel-reserve-and-covering-save` |
+| R1291 root：独立保存与容量核销 | `23a9b8e84fdc42558679ca803e39b173:130` | `57E84F79C306FD5505CDC4E615A26C76715BF8F93B45DC5F4C8A1D97F8B51FA4` | `root-r1291-six-original-native-actions-save-and-capacity-independent-audit` |
