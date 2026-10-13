@@ -16,7 +16,7 @@ Spherewright 通过 MCP 把外部 AI 智能体接入《戴森球计划》。它�
 
 ### 支持范围
 
-- 《戴森球计划》`0.10.35.29088`
+- 《戴森球计划》`0.10.35.29131`
 - BepInEx `5.4.17`
 - Windows x64
 - 单人和平模式（关闭黑雾/战斗）
@@ -66,7 +66,7 @@ End users do not need the source repository or a .NET SDK.
 
 ### Supported scope
 
-- Dyson Sphere Program `0.10.35.29088`
+- Dyson Sphere Program `0.10.35.29131`
 - BepInEx `5.4.17`
 - Windows x64
 - single-player peaceful mode with Dark Fog/combat disabled
