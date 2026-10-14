@@ -195,7 +195,7 @@ try {
     $zipHash = (Get-FileHash -LiteralPath $zipPath -Algorithm SHA256).Hash.ToLowerInvariant()
     [IO.File]::WriteAllText($checksumPath, "$zipHash  $([IO.Path]::GetFileName($zipPath))`n", [Text.UTF8Encoding]::new($false))
 
-    & (Join-Path $PSScriptRoot 'test-release-package.ps1') -PackagePath $zipPath -ExpectedMinimumToolCount 1 | Out-Null
+    & (Join-Path $PSScriptRoot 'test-release-package.ps1') -PackagePath $zipPath -ExpectedMinimumToolCount 64 | Out-Null
 
     $thunderstoreArguments = @{
         Version = $Version
