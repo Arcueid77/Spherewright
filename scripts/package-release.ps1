@@ -159,7 +159,7 @@ try {
         runtime = $Runtime
         sourceCommit = $gitCommit
         sourceDirty = $sourceDirty
-        supportedDspVersion = '0.10.35.29131'
+        supportedDspVersion = '0.10.35.29145'
         supportedBepInExVersion = '5.4.17.0'
         createdAtUtc = [DateTimeOffset]::UtcNow.ToString('O')
         files = $manifestFiles

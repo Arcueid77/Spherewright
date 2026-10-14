@@ -23,6 +23,14 @@
 
 这些原件处于既有ignored `.local`证据区；表中相对索引不包含私有绝对路径。cohort-index的“未部署”限制描述的是构建时状态，后续真实安装只由下节新回执证明；原件不改写。
 
+## 后续候选打包准备
+
+菜单部署及披露的纯事实提交2f861429eac19fbdfcd22b04b0c8fd071c86a9f1已普通push且当时clean；[Windows Core CI 38626121629](https://github.com/AvaloNero/Spherewright/actions/runs/38626121629) headSha完全匹配该完整SHA、completed/success。此后核两份正式打包脚本发现`supportedDspVersion`仍为旧29131，root各只改该声明为当前候选目标29145；Thunderstore双语包内README及现有0.4开发changelog同步明确目标、已实现能力、原限定通过范围及仍开放的整体验收。没有生成/安装新候选，不改变当前07d1727运行cohort。
+
+实际pwsh7.6.5及显式启动的Windows PowerShell5.1.26100.9444分别解析两份脚本并读取唯一manifest目标声明，均exit0，0包执行/0游戏调用；说明目标一致。中途通过工具shell选择的请求仍返回7.6.5，不计为5.1证明；后续明确启动5.1子进程的真实返回才计入本结果。这只是静态语法与声明核验，不代替最终ZIP的manifest、文件哈希、完整工具/指南、安装和实机检查。
+
+原件为ignored `package-target-29145-metadata-checks.json`，SHA-256 `4B5F2D1F65567999129129E89EC85811EEC99B0D745AB34BA19E16224E1C747C`；静态入口`CheckPackageTarget29145Metadata.ps1` SHA-256 `5E3452C1BCDC128459275C378D6EF92CB2F80A703279B1DEA19CA10B56009EFF`。被检查的manual脚本SHA-256 `C72C4EBE8B8BA5785AC68B0CBB1DD8D089F825BAD1BAD34DE8D63D6593D37795`、Thunderstore脚本 `269A740986651AE1C3386C993CB59AEF79BF948D9C4EDE59706DAFB305B2718B`。这些后续文件获准指定路径单一目的提交；准确新源码/CI以维护终态为准。最终打包时须采用届时clean、已推送且CI成功的同一SHA，不把07菜单cohort或metadata验证ZIP冒充最终两包。
+
 ## 一次必要冷部署
 
 root批准有限570秒、1次正常关闭已确认的unloaded菜单、1次同批事务安装、1次既有Steam桌面broker调度及1次fresh菜单读取；无Save/Load/accepted额度。caller及传递依赖在导入前固定hash，durable CreateNew/WriteThrough/Flush(true)一次性intent阻止重跑。原退出原因未知，未用强关或另启EXE。

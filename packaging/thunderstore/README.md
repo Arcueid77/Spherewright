@@ -16,13 +16,15 @@ Spherewright 通过 MCP 把外部 AI 智能体接入《戴森球计划》。它�
 
 ### 支持范围
 
-- 《戴森球计划》`0.10.35.29131`
+- 《戴森球计划》未发布0.4候选目标 `0.10.35.29145`
 - BepInEx `5.4.17`
 - Windows x64
 - 单人和平模式（关闭黑雾/战斗）
 - 任意沙盒设置和资源倍率；它们会被报告，但不会扩大 Spherewright 的动作能力
 
 v0.3.3 已在本机分别验证：新建非沙盒 1× 世界、导入非沙盒 100× 世界、导入沙盒 1× 世界。三者均通过正常动作完成第一座建筑并保存。Spherewright 不调用沙盒工具，也不注入物品、能量或科技。黑雾/战斗、多人或 Nebula，以及广泛的第三方 Mod 兼容性暂不支持。
+
+0.4整体验收尚未完成，最终同提交手动包与Thunderstore包仍待安装、运行和恢复验证。当前29145开发cohort已完成同批菜单部署及原生v6准备；实际29131→29145迁移尚未执行。旧29131恢复和v0.3.3验证各自保留原版本范围，见[当前状态](https://github.com/AvaloNero/Spherewright/blob/main/docs/current-status.md)。
 
 ### 安装并连接 MCP
 
@@ -43,6 +45,8 @@ v0.3.3 已在本机分别验证：新建非沙盒 1× 世界、导入非沙盒 1
 ### 读取旧档继续玩
 
 在配置中同时启用 `Safety.AllowWrites=true` 与 `Safety.AllowUserSaveImport=true`，重启游戏，然后由玩家在游戏菜单中**手动载入**目标和平单人存档。让 Agent 准备导入；它会先展示无副作用预检的说明，并等待你在后续消息中明确确认。确认后，Spherewright 只会通过正常保存 API 创建 `Spherewright_Imported_*` 独立副本，原档不会被覆盖、改名、删除或成为恢复目标。Journal 从导入点开始，不补造此前的首次事件；以后玩家和 Agent 都在副本中继续。
+
+已owned主档恢复应停在空闲菜单，使用受保护票据；default要求版本相同。精确版本迁移或过期恢复须先prepare披露、再取得后续明确确认，不能手改票据或改用另一存档绕过。一次性票据在原生加载前持久消费，失败或中断后核原结果，不重放。
 
 ### 下载、证据与许可
 
@@ -66,13 +70,15 @@ End users do not need the source repository or a .NET SDK.
 
 ### Supported scope
 
-- Dyson Sphere Program `0.10.35.29131`
+- Dyson Sphere Program current unreleased 0.4 candidate target `0.10.35.29145`
 - BepInEx `5.4.17`
 - Windows x64
 - single-player peaceful mode with Dark Fog/combat disabled
 - any sandbox setting or resource multiplier; they are reported but do not expand Spherewright's action surface
 
 v0.3.3 was locally validated in a fresh non-sandbox 1× world, an imported non-sandbox 100× world, and an imported sandbox 1× world. Each used ordinary actions to construct its first building and save normally. Spherewright never calls sandbox tools or injects items, energy, or technologies. Dark Fog/combat, multiplayer or Nebula, and broad third-party Mod compatibility are not supported.
+
+Combined 0.4 acceptance remains open, including final same-commit manual and Thunderstore installation, runtime and recovery validation. The current 29145 development cohort has matching menu deployment and native v6 preparation evidence; actual 29131→29145 migration has not run. Earlier 29131 recovery and v0.3.3 results retain their original version scopes. See the [current state](https://github.com/AvaloNero/Spherewright/blob/main/docs/current-status.md).
 
 ### Install and connect MCP
 
@@ -93,6 +99,8 @@ Leave the game at its idle main menu, enable `Safety.AllowWrites`, and ask the A
 ### Continue an existing save
 
 Enable both `Safety.AllowWrites=true` and `Safety.AllowUserSaveImport=true`, restart the game, and have the player **manually load** the intended peaceful single-player save from DSP's menu. Ask the Agent to prepare an import. It must show the no-side-effect disclosure and wait for explicit confirmation in a later message. After confirmation, Spherewright uses DSP's normal save API to create a separate `Spherewright_Imported_*` copy. The original is never overwritten, renamed, deleted, or used as a recovery target. The new Journal starts at the import boundary and does not invent earlier first-time events; both player and Agent should continue in the copy.
+
+Resume an already owned primary from the idle menu with its protected credential; default resume requires matching versions. Exact version migration or expired-primary recovery requires preparation, disclosure and a later explicit confirmation. Never edit the credential or substitute another save. The single-use credential is consumed durably before native loading; reconcile failed or interrupted attempts instead of replaying them.
 
 ### Downloads, evidence, and license
 

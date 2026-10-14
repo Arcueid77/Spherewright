@@ -19,6 +19,8 @@
 
 本轮离线验证事实f51cffaa9aebe8040fef8f9fba15463e29ecbfcc的准确CI38609907158成功；原版本blocker613dcf3abc62b0a231bf25aa66588dc7bcf977d4及末次事实88326888a13417205620b34a07a1f0372946e33a的准确CI也成功。20份精确恢复政策/进度保全源码、相关测试和指南修复已单一目的提交为07d1727b76664142615f7eebce2888e3bff654ec；[Windows Core CI 38620035304](https://github.com/AvaloNero/Spherewright/actions/runs/38620035304) headSha完全匹配、completed/success。维护fresh只读确认HEAD=origin/main=实时远端main=该SHA、clean且无其他dirty。此后本页与新部署证据的纯事实编辑由root负责，维护只获准指定文件Git；它们不改变07d1727安装二进制，不因事实提交重打包/重启。准确文档提交终态以维护回执为准。
 
+上述4文件纯事实提交2f861429eac19fbdfcd22b04b0c8fd071c86a9f1已普通push，本地/远端相同且当时clean；[Windows Core CI 38626121629](https://github.com/AvaloNero/Spherewright/actions/runs/38626121629) headSha完全匹配2f861429eac19fbdfcd22b04b0c8fd071c86a9f1、completed/success。随后root发现并修正两份打包manifest仍写29131的旧目标；当前dirty归root的2份package脚本、Thunderstore README/changelog、本页和同日部署证据，共6路径。脚本只改候选目标元数据为29145；pwsh7.6.5与真实Windows PowerShell5.1.26100.9444静态语法/manifest声明检查通过、0游戏/打包执行。包内说明和0.4开发Release notes补已验证能力、历史限定门与仍开放的整体门；此为最终打包准备，不是最终候选冻结/实机通过。维护仅获准该6文件单一目的commit/push及准确CI，终态以原回执为准；安装仍07d1727。
+
 磁盘安装Bridge.Core/Contracts/Plugin与MCP均为0.4.0.0 / ProductVersion 0.4.0+07d1727b76664142615f7eebce2888e3bff654ec；从clean、已推送、绿CI源码archive构建，4个Plugin文件及224个MCP文件由root逐份核同一map。完整64工具/参数、1resource及内嵌playbook集合已校验；metadata验证没有游戏调用。fresh新进程Native菜单为0.10.35.29145/healthy/未载入；29131仍是原owned主档/票据版本。实际Assembly-CSharp SHA为B84B60DF5A24947A014801F23B9B85D1E77853F42A331918E2DC85B153E50527，旧Updates版本行或refs目录标签不作当前版本证据。root独立审计；维护仅离线/Git；唯一writer按有限阶段执行。其他执行者的ignored成果、原票据/Journal/进度与runtime-handoff保留，未reset/clean/force-push或覆盖。
 
 ## 已完成和未保存前缀
@@ -42,6 +44,7 @@ R1334北侧29带及末级实际端口11的原生正例只证明当时预检可�
 - 版本边界：default仍严格同版本；[旧安装拒绝](evidence/2026-10-15/owned-primary-29145-blocker.md)与[11项原生持久化比较](research/game-api-version-0.10.35.29145.md)保留准确范围。07d1727只增加31→45方向、v6专属披露及第四转换，旧v5/Journal连续性/一次消费不变。现已同批部署且fresh Native v6 prepare成功；complete prompt/digest已核、confirmationRequired=true/commitAllowedNow=false，原票据SHA未变。实际迁移Load和恢复后兼容仍未通过，按用户排除项及AGENTS第35行等待后续确认，不能把菜单/prepare当恢复成功。
 - 进度保全：fresh只读确认票据SHA未变、非quarantine，Journal origin28529/102条/三转换；原进度schema1、版本29131、唯一build为completed五对象6622/6624/6623/6626/6625，最后证据tick116214800，文件SHA272F16A91F2BAC347587F2CC175E3791C964D726A89EADC26C8CB749125A3587。root候选只允许同owned身份/current session、完整continuous且durable的精确31→45 Journal转换下复用全部completed旧记录，读取不改盘；下次正常durable更新保留全部原计划/对象并stamp45。未完成/unknown/损坏/不匹配仍拒绝，不清空、不手改原件或重建成功对象。离线关联store用替身，实机实体/连接须恢复后fresh核。
 - 修复回归：MCP258/258、相关Core271/271及初次失败的局部修复见[候选离线验证](evidence/2026-10-15/owned-primary-29145-candidate-validation.md)。准确07d1727 CI已success；clean archive使用SDK8.0.424完成全solution locked restore、当前5份原生refs完整Release构建（0警告/错误）及win-x64 self-contained MCP publish。228文件、产品SourceRevision、完整工具/参数/resource/playbook、真实安装/新菜单/v6准备已独立核验，见[本次部署](evidence/2026-10-15/owned-primary-29145-menu-deployment.md)。validation-only ZIP不是手动/Thunderstore最终候选，原生Load/实体连续性/最终验收仍缺。
+- 最终包准备：手动/Thunderstore manifest与两语包内README统一候选目标29145，现有0.4开发changelog已补有限执行器/升级/Governor及恢复边界。两份脚本只做离线语法/声明核验，未生成或安装新候选；其验证原件与限制见同日部署记录。最终两包必须从届时同一clean/pushed/green源码SHA生成并核实际manifest/文件哈希；当前07安装不为这些元数据/说明变化冷部署。
 - 原件按下表精确引用读取；token、真实存档名、私有路径和原始身份不写入此文件。阶段结束与暂停/压缩前继续覆盖本块，不新建任务系统。
 
 | 直接续接原件 | 引用 | SHA-256 |
