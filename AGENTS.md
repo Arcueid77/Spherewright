@@ -50,6 +50,7 @@ Spherewright 是《戴森球计划》的外部 Agent 控制层，不内置 LLM�
 
 ## 按需索引
 
+- [0.4.0 交付收尾与会话续接](docs/v0.4-delivery.md)：按需读取收尾顺序与续接要求，不新增玩法范围、验收标准或现场授权。
 - [当前快照](docs/current-status.md)：最后保存、最新观察、accepted/冻结、在途和下一硬 blocker；[当档日记](docs/gameplay-timeline.md)：真实游戏时间线；[证据目录](docs/evidence/)：阶段原索引；[经验账本](docs/experience-ledger.md) 与 [事故修复](docs/incident-fix-log.md)：复用结论和修复。先读索引/当前片段，不全文加载历史。
 - [Roadmap](ROADMAP.md)、[Agent playbook](docs/agent-playbook.md)、[架构](docs/architecture.md)、[安全](docs/safety-model.md)、[协议](docs/protocol.md)、[环境与 DLL](docs/research/environment.md)、[Foundry API](docs/research/game-api-foundry.md) 和 [Overseer API](docs/research/game-api-overseer.md) 按任务需要读取。
 - [旧根规范原文](docs/evidence/2026-09-30/AGENTS-history-through-2026-09-30.md) 与 [旧状态累积原文](docs/evidence/2026-09-30/current-status-history-through-2026-09-30.md) 保留授权演进与当时结论；旧文里的相对链接按原文件所在地的**迁移前根目录**解释。它们不是可重放的计划、实时状态或额外执行授权；有冲突时先核当前代码、现行授权和 fresh 原证据。
