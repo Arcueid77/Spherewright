@@ -1,29 +1,48 @@
 # Spherewright 当前快照
 
-更新：2026-10-14（Asia/Singapore）。
+更新：2026-10-15（Asia/Singapore）。持续收尾顺序见 [0.4 交付文档](v0.4-delivery.md)。0.4 整体验收尚未完成，历史通过、已安装与本次 fresh 核验分开记录。
 
-## 源码与运行时
+## 原验收对应表
 
-当前源码提交为 0b67f85a1b6c1bd82e39f19c277bc16f10937631，Windows Core CI 38502520017 成功；该提交只加强手动发行包的 64 工具自检，不代表候选包已构建或验收。当前游戏为 0.10.35.29131，已安装 Native cohort 仍为 6528e1f7101a714826f7364cef2b0ad75c4b6e82。最终同 SHA 手动包与 Thunderstore 包均未完成实机验收。
+| 原条款 / 准确引用 | 已有证据及适用版本 | 真实缺口 | 最小下一步 | 通过条件 |
+| --- | --- | --- | --- | --- |
+| [Overseer 四项验收](../ROADMAP.md#overseer-验收门)：诊断、正常修复、稳定非零、跨恢复窗口语义 | Roadmap 原诊断/恢复证据：三种故障、钛块12/min、healthy Save、Journal49/49，历史候选8c49bcb；不当作最终0.4包。 | 最终源码/安装cohort的相关回归与限制说明。 | 仅复跑受改动影响的诊断、安全与恢复路径。 | 保留原四项标准，不重造故障实验；保留真实carrier stall分支的既有实机限制。 |
+| [Foundry 运行模块复制与生命周期](../ROADMAP.md#foundry-验收门) | 原限定六对象模块、取消/恢复/去重及持续石墨输出保持原范围；29131的R1314→R1320五对象另已保存重启续建，R1321独立通过。 | 五对象自身不证明完整三级链。 | 保留所有成功实体和原build，把它纳入完整链计划/产出核验。 | 不重复施工或扣料；旧限定门不重开，后续只核受影响接口。 |
+| [Foundry 三级完整计划、正常施工、中途保存重启续建、失效重规划](../ROADMAP.md#foundry-验收门) | 既有1112/1127→1209→1210分段计划和施工可复用；29131 R1334北侧29带输入及末级端口11预检正例已核原SHA；旧27对象候选退役。 | 完整事前设备/外供/电力/物流/精确成本的适用覆盖；末级1209自动输入/1210输出；三级整案中途恢复覆盖仍须逐条核。 | 先核当前模块和既有事前计划，缺什么只补什么；新模块先完整有界规划，再fresh原生预检最小补片。 | 原五项全部有对应证据；不补造旧计划，不以建成后重启冒充中途续建，未来ID建成后读取。 |
+| [Governor 五项验收](../ROADMAP.md#governor-验收门) | 原锁定31→62/min、连续37128 ticks及限定升级/保存恢复保留原通过范围。 | 最终候选相关回归和适用范围说明。 | 复用原声明/证据，仅核受改动影响的接口。 | 不重锁基线、不重复两倍实验，不扩大为全厂配平。 |
+| [双自动供给、出发清单及整体保存恢复](../ROADMAP.md#跨星系准备与整体交付验收) | 既有取材、来源和施工；R1300的36348 ticks只保留历史结论，不计恢复后新session。R1320/R1321覆盖五对象保存/审计。 | 最终恢复后的燃料/翘曲器与共享来源连续窗，当前准备清单差额，同owned最终保存恢复。 | 施工/必要部署稳定后，按实际tick速度预声明一个联合有限≥36000-tick窗口；只补清单差额。 | 原最低速率、库存趋势、真实自动来源、功率/运输及无缺口同session窗口通过；缓存、搬仓、P=C不能替代来源。 |
+| [同源码SHA双候选及完整验证](v0.4-delivery.md#完成定义) | 0b67f85已加强64工具完整集合自检；交付基线b5cc822准确SHA CI成功。 | 手动/Thunderstore候选、完整构建/测试、各自安装运行恢复、校验和、Release notes。 | 离线核版本/指南/工具参数/resource；稳定后冻结干净、已推送、绿CI源码SHA生成两包。 | 两包sourceDirty=false且同SHA，全部适用检查有证据，停在所有者审核发布；后续纯事实证据引用候选SHA不无限重打包。 |
 
-## 当前拥有档与已保存边界
+## 源码、安装与 dirty 归属
 
-R1320 普通 Save 覆盖了五对象模块，保存于 tick `116215326`、revision `7`、durable Journal `102`；三条版本转换记录保持一致。R1321 已封闭 opening lifetime `588` 的固定20窗口，20个唯一动作终态均已核销、lifetime为`608`；整案累计`209 accepted / 47 Moves / 66 ordinary Saves`，无在途或unknown。R1318 的唯一 Load 恢复同一 owned 主档并自动重存于 tick `116205174`、revision `1`、Journal `102`；这不是额外普通 Save。
+开始时本地与旧origin/main同为815d8e7ec32bb747194493a728ae6d37ba45baaf，工作区干净。fresh fetch确认它是远端b5cc822c5e372239f0994b7c406e931e8fa786a7的祖先，仅新增交付文档，已安全fast-forward；该SHA的Windows Core CI 38575811624成功。AGENTS按需索引单项更新已推送7742b3c9af6ad5f4e5341c8bb3a135a279b79657，准确SHA CI 38605445392已成功，可以在安全交接采用。
 
-## R1307–R1321 Foundry进度恢复与有限模块续建
+磁盘安装Bridge.Core/Contracts/Plugin均为0.4.0.0，产品构建标识与6528e1f7101a714826f7364cef2b0ad75c4b6e82一致；游戏未运行，当前活动DSP/MCP握手尚未fresh证明，0.10.35.29131为最后原生证据版本。源码文档SHA不等于安装SHA。root负责本快照和原件独立审计；离线维护负责索引、版本/包指南及相关回归、串行Git；唯一新writer按批准有限阶段执行。各自dirty只按指定路径提交，其他执行者的ignored成果保留。未reset/clean/force-push或覆盖本地成果。
 
-旧版本 `0.10.34.28529` 的进度列出12项 build，覆盖的40个对象均已完成且0在途；其进度哈希与当前状态不兼容。R1307 的 `get_blueprint_builds` 返回 `blueprint_progress_store_unavailable` 后停止，未产生 accepted。经用户授权，R1308 保存于 tick `116183243`；正常退出后按原字节与 SHA 归档旧文件，没有编辑或重放旧计划。R1310 只启动一次桌面 broker；首次菜单读取超时，root :57 仅核实启动及关闭/归档前缀，菜单仍未证明。R1312 root :59 随后通过实际菜单与 Job 只读审计。
+## 已完成和未保存前缀
 
-R1311 的唯一 Load 恢复同一 owned 主档，并在 tick `116183275` 自动重存，revision `1`、Journal `102`；这不是额外的一次普通 Save。三条版本转换记录保留。R1313 已独立通过恢复后完整工厂审计：67页、6621 built、0 prebuild、50项详情；相对R1296封存基线的静态配置/连接差异与资源矿点差异均为0，玩家库存、持物与落地位置、Journal及3条版本记录保全。采集123请求44.69秒，root核原件未重复实机采样。
+R1314先建普通带6622与装配机6623（配方78），R1316保存两对象；R1318同owned恢复原部分进度；R1320仅续剩余索引1/3/4（实体6624/6626/6625），普通Save覆盖全部五对象。最后普通保存tick116215326、revision7、durable Journal102，三条版本转换一致。R1321为67页、6626 built/0 prebuild/55 details；除五项预期新增外，静态配置、拓扑和资源节点差异为0。opening lifetime588的fixed20窗口完整封闭、lifetime608；历史整案209 accepted/47 Moves/66 ordinary Saves。完整原件索引见[R1307–R1321](evidence/2026-10-14/foundry-progress-recovery-r1307.md)。
 
-R1314 有一项 Blueprint 被 accepted 并以 `paused` 成功终态完成前两个对象：新增普通传送带6622（物品2001）与装配机6623（物品2303、配方78），仅各扣料1件；剩余3项未提交且未扣料。调用器随后因一架无人机仍为 working（pending为0）但要求全部 idle 而停止；这是调用器条件过严，不是建造失败或 unknown。83请求、158.2秒。更早的坐标与动作哈希读取偏差也均在提交前停止、0 accepted，原失败保留；比较依据已改为实际 Native DTO 与已安装 Core 函数。
+本次发现ignored受保护账本晚于跟踪快照：R1332在独立封窗后开启新fixed20，opening lifetime608，随后1项取料accepted、lifetime609。原action 44dbfb3a-08da-41a9-b43b-6c7960d40232成功终态：物品1005从862原子扣4、玩家0→4。随后源仓多出的1件未归因，不计来源信用。R1337核原action、全背包差量和原intent，当前账本无在途/unknown，但此动作尚未普通保存，窗口仍frozen且保留保存槽位。禁止换键重取。历史整案为210 accepted/47 Moves/66 ordinary Saves。
 
-R1316 新增1笔普通 Save accepted 并覆盖上述两对象前缀；root 对10条原始记录、库存与完整 Journal 独立核验通过，确认三架无人机 idle、库存与持物保持、三条版本记录一致。R1317 独立核验完整 `6623 built / 0 prebuild` 基线。R1315 只执行一次正常退出与同 cohort 启动，保留部分进度且未归档；R1318 随后的唯一 Load 恢复同一 owned 主档并自动重存，R1319 复核恢复后 `6623 built / 0 prebuild`，原进度仍在。
+R1334北侧29带及末级实际端口11的原生正例只证明当时预检可行，29带/新输入分拣器没有建成证据。R1335调用器保留，其context/approval及当前现场仍须fresh核，不凭脚本存在称已施工。完整三级Foundry与自动供给未因此关闭。
 
-R1320 完成剩余三个 Blueprint 对象（索引1/3/4，对应实体6624/6626/6625；原索引0/2实体6622/6623保留），并普通 Save 覆盖全部五对象。R1321 完整工厂审计为67页、6626 built、0 prebuild、55项详情；相对6621基线，除这5个预期新增对象外，静态配置、拓扑和资源节点差异为0；玩家库存、Journal、三条版本记录及三处电网满供保持。root 对8条阶段原件链的20个唯一动作终态完成独立核销；票据与保存绑定、历史票据tombstone及旧档归档SHA均核对一致。当前固定20窗口已封闭，lifetime `608`，整案 `209 accepted / 47 Moves / 66 ordinary Saves`，无在途或unknown。
+## 当前交接与下一安全入口
 
-## 尚未通过的 0.4 门
+- 下一唯一目标：核健康续接边界，保全未保存取料原action；随后证明五对象模块1209自动输入和1210输出，准确复用三级整案事前计划，只补真实缺口。
+- 旧writer已停：旧root最新turn interrupted/idle；旧game writer最近R1337 turn completed/notLoaded。新writer首阶段仅核状态/保护恢复入口，root不并发游戏请求。
+- DSP：首只读阶段确认DSP进程0、Steam在，未发现旧writer；48小时匹配崩溃事件未找到，退出原因不明。已批准且只执行一次现有broker启动，原incident=27b4c8bcc8d14e878ba2a410d44390d1，dispatch=1/launchResponseObserved=true；菜单/Bridge及protected exact-primary prepare仍待核。不得重复dispatch，0 commit/Load/Save，实际恢复未通过。
+- 保存/观察：Save仍116215326/J102；R1337精确原件观察116289647、revision8/J102、healthy，仅为退出前证据。票据、恢复候选及未保存4石矿前缀须fresh核，不能用旧数值commit。
+- 实际窗口：R1332 fixed20，external1/lifetime609、frozen=true、normalSaveReserved=true、knownInFlight=0；不换键重放、不开新窗或转旧额度。剩余19槽含保存，root独立核后再批准当前片。
+- 退役：旧27对象Foundry候选、旧不兼容进度、R1327/R1328旧输出候选保持退役；五对象、已完成来源和所有成功前缀禁止重做。
+- 预算：首健康只读阶段已结束，0 Bridge/0写；新目的broker1次已消费，菜单/prepare≤40请求/240秒、0commit/Load/Save，不运行中续期。窗口剩余19槽含保存不变，候选未冻结。
+- 离线验证：复用ignored便携SDK8.0.424，locked restore、Core/Contracts/MCP Release构建与3028测试（73/2707/248，0失败/跳过）通过；95项完整工具/参数/resource/指南policy及source-MCP64工具/1resource/指南一致性通过。现有ref Plugin Release为0警告/错误，但Assembly-CSharp副本74AC…与当前安装B84B…不符，此次成绩不能算current-DLL构建；正在独立新ref目录补核，不覆盖旧ref/manifest，不重复已通过且未变化的Core全测。
+- 原件按下表精确引用读取；token、真实存档名、私有路径和原始身份不写入此文件。阶段结束与暂停/压缩前继续覆盖本块，不新建任务系统。
 
-R1300 的 36,348 tick 来源窗口发生在本次恢复之前，只证明重启前来源就绪。已完成的五对象模块不等于完整三级 Foundry：完整计划及设备、电力、物流和精确成本仍缺；模块外部`1209`供料与`1210`持久输出、恢复后的双自动供给/来源、出发准备清单及最终同 SHA 双候选包均未通过。旧27对象候选保持退役。此前已通过的限定蓝图生命周期及 Governor `31→62/min`、37,128连续tick门保持关闭，不因本次恢复重验；见[历史快照](../ROADMAP-HISTORY-2026-09-24.md)与[时间线](gameplay-timeline.md)。详见[R1307–R1321恢复事实与原件索引](evidence/2026-10-14/foundry-progress-recovery-r1307.md)及[铁源与Foundry准备阶段证据](evidence/2026-10-13/iron-source-connected-r1257.md)。
-
-0.4 整体验收仍未完成。
+| 直接续接原件 | 引用 | SHA-256 |
+| --- | --- | --- |
+| R1332独立封窗后新fixed20 | 9c9fff04318249758eaed638128587b7:125 | 5477ECE8613EF4398658C9A0299502A53465A20B3105F40484C3AAF02DF6926C |
+| R1332原writer，accepted preserved | 983c5bb4c0f14f9893fd4c534b7d3a7a:29 | B8F346CB75460B03354B4DEA811AF697EA91BB02FF2B39734255E33665BD7E16 |
+| R1337原action成功/守恒独立核销 | 9c9fff04318249758eaed638128587b7:133 | 7EEF1430B03FDDDECA60D800D4E25B0C1FC154E4E15BDE9D7442980F9710881E |
+| R1337原intent核销，窗口继续冻结 | 9c9fff04318249758eaed638128587b7:134 | B8267A5553C83F6FAA916E11CAD80ED707284F2CB88E24BF0D20E0E04C71106D |
+| R1334北侧输入/末级端口原生正例 | 9c9fff04318249758eaed638128587b7:124 | FE0EFD18A1948B7D65BDA752E13FC58CDBD8B418C210787FC0744529F776BAD4 |
