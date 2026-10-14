@@ -25,5 +25,16 @@ internal static class PluginJson
     {
         return JsonConvert.DeserializeObject<T>(json, Settings);
     }
+
+    // Durable progress copies must replace initialized collections, not append defaults
+    // to already recorded lists. Keep shared protocol settings and their defaults unchanged.
+    public static T? DeserializeReplacingCollections<T>(string json)
+    {
+        var serializer = JsonSerializer.Create(Settings);
+        serializer.ObjectCreationHandling = ObjectCreationHandling.Replace;
+        using (var input = new StringReader(json))
+        using (var reader = new JsonTextReader(input))
+            return serializer.Deserialize<T>(reader);
+    }
 }
 

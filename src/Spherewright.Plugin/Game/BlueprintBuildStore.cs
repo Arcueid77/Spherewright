@@ -3,6 +3,7 @@ using System.Text;
 using BepInEx.Logging;
 using Spherewright.Bridge.Core.Factory;
 using Spherewright.Bridge.Core.Safety;
+using Spherewright.Contracts.Journals;
 using Spherewright.Plugin.RuntimeDescriptor;
 using Spherewright.Plugin.Security;
 using Spherewright.Plugin.Transport;
@@ -19,15 +20,18 @@ internal sealed class BlueprintBuildStore
     private readonly string _gameVersion;
     private readonly GameSessionTracker _sessions;
     private readonly ManualLogSource _logger;
+    private readonly Func<GameplayJournalSnapshot?>? _journalProvider;
     private string? _sessionId;
     private string? _path;
     private BlueprintBuildDocument? _document;
     private bool _failed;
 
-    public BlueprintBuildStore(string runtimeDirectory, string gameVersion, GameSessionTracker sessions, ManualLogSource logger)
+    public BlueprintBuildStore(string runtimeDirectory, string gameVersion, GameSessionTracker sessions, ManualLogSource logger,
+        Func<GameplayJournalSnapshot?>? journalProvider = null)
     {
         _directory = Path.Combine(RuntimeDescriptorPublisher.ResolveRuntimeDirectory(runtimeDirectory), "foundry");
         _gameVersion = gameVersion; _sessions = sessions; _logger = logger;
+        _journalProvider = journalProvider;
     }
 
     public bool TryRead(out List<BlueprintBuildState> builds)
@@ -46,6 +50,9 @@ internal sealed class BlueprintBuildStore
         {
             state.Validate();
             var proposed = Clone(_document!);
+            // Attach proved the exact durable migration and retained every completed receipt.
+            // A read never rewrites the file; only the next ordinary durable update stamps the new version.
+            proposed.GameVersion = _gameVersion;
             var index = proposed.Builds.FindIndex(b => b.BuildId == state.BuildId);
             if (index >= 0)
             {
@@ -97,13 +104,20 @@ internal sealed class BlueprintBuildStore
             if (File.Exists(_path))
             {
                 if (new FileInfo(_path).Length > MaximumBytes) throw new InvalidDataException("Finite plan store size limit.");
-                _document = PluginJson.Deserialize<BlueprintBuildDocument>(File.ReadAllText(_path));
+                _document = PluginJson.DeserializeReplacingCollections<BlueprintBuildDocument>(File.ReadAllText(_path));
                 if (_document is null || _document.Version != 1 || _document.IdentityHash != identity
-                    || _document.GameVersion != _gameVersion || _document.Builds is null
+                    || _document.Builds is null
                     || _document.Builds.Count > MaximumBuilds || _document.Builds.Any(b => b is null)
                     || _document.Builds.Select(b => b.BuildId).Distinct().Count() != _document.Builds.Count)
                     throw new InvalidDataException("Finite plan store identity or bound is invalid.");
                 foreach (var state in _document.Builds) state.Validate();
+                if (_document.GameVersion != _gameVersion
+                    && (_document.GameVersion != OwnedWorldVersionCompatibilityPolicy.LatestPatchVersion
+                        || _gameVersion != OwnedWorldVersionCompatibilityPolicy.NextPatchVersion
+                        || !BlueprintProgressVersionPolicy.CanRetainCompletedHistory(_document.GameVersion, _gameVersion,
+                            _sessions.SessionId!, GameplayJournalIdentity.HashOwnedSaveIdentity(_sessions.OwnedSaveName!),
+                            _journalProvider?.Invoke(), _document.Builds)))
+                    throw new InvalidDataException("Finite progress requires its exact version or proven completed-history adoption.");
             }
             else _document = new BlueprintBuildDocument { IdentityHash = identity, GameVersion = _gameVersion };
             return true;
@@ -117,7 +131,7 @@ internal sealed class BlueprintBuildStore
     }
 
     private static BlueprintBuildDocument Clone(BlueprintBuildDocument value) =>
-        PluginJson.Deserialize<BlueprintBuildDocument>(PluginJson.Serialize(value))!;
+        PluginJson.DeserializeReplacingCollections<BlueprintBuildDocument>(PluginJson.Serialize(value))!;
     private static bool IsStorageError(Exception ex) => ex is IOException || ex is UnauthorizedAccessException
         || ex is InvalidDataException || ex is Newtonsoft.Json.JsonException || ex is ArgumentException
         || ex is ArithmeticException || ex is Win32Exception || ex is InvalidOperationException;

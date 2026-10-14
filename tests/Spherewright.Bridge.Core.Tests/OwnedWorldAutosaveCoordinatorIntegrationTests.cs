@@ -24,14 +24,18 @@ public sealed class OwnedWorldAutosaveCoordinatorIntegrationTests
     private const string ActiveMode = OwnedWorldResumeModes.ReauthorizeFixedAutosave0;
     private const string MigrationMode = OwnedWorldResumeModes.ReauthorizeVersionChangedPrimary;
 
-    [Fact]
-    public void ActivePrimaryMigrationOnlyPreparesTheV5DisclosureBeforeLaterConfirmation()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void ActivePrimaryMigrationOnlyPreparesPairSpecificDisclosureBeforeLaterConfirmation(bool latestMigration)
     {
-        using var fixture = new Fixture(MigrationMode);
+        using var fixture = new Fixture(MigrationMode, latestMigration);
         var plan = fixture.Prepare();
-        Assert.Equal(5, plan.RecoveryEvidenceVersion);
-        Assert.Equal("0.10.35.29104", plan.SourceGameVersion);
-        Assert.Equal("0.10.35.29131", plan.TargetGameVersion);
+        Assert.Equal(latestMigration ? 6 : 5, plan.RecoveryEvidenceVersion);
+        Assert.Equal(latestMigration ? "0.10.35.29131" : "0.10.35.29104", plan.SourceGameVersion);
+        Assert.Equal(latestMigration ? "0.10.35.29145" : "0.10.35.29131", plan.TargetGameVersion);
+        Assert.Contains($"from {plan.SourceGameVersion} to {plan.TargetGameVersion}", plan.ConfirmationPrompt);
+        Assert.Contains($"from {plan.SourceGameVersion} to {plan.TargetGameVersion}", plan.CompletionCondition);
         Assert.Equal(SavedTick, plan.CandidateGameTick);
         Assert.True(Spherewright.Bridge.Core.Safety.OwnedWorldPrimaryMigrationPolicy.HasMatchingEcho(plan));
         var denied = fixture.Coordinator.CommitOnMainThread(new()
@@ -41,10 +45,12 @@ public sealed class OwnedWorldAutosaveCoordinatorIntegrationTests
         Assert.Equal(0, DSPGame.LoadCalls);
     }
 
-    [Fact]
-    public void ActivePrimaryMigrationConsumesAndLocksExactPrimaryBeforeTheOneLoaderCall()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void ActivePrimaryMigrationConsumesAndLocksExactPrimaryBeforeTheOneLoaderCall(bool latestMigration)
     {
-        using var fixture = new Fixture(MigrationMode);
+        using var fixture = new Fixture(MigrationMode, latestMigration);
         var request = fixture.Confirmed(fixture.Prepare());
         DSPGame.BeforeLoad = () =>
         {
@@ -56,21 +62,27 @@ public sealed class OwnedWorldAutosaveCoordinatorIntegrationTests
         Assert.Equal(Identity, DSPGame.LoadedName);
         Assert.True(fixture.Sessions.Reauthorizing);
         Assert.False(fixture.Sessions.FixedAutosave);
-        Assert.Equal("0.10.35.29104", fixture.Sessions.SourceLease!.Prefix.GameVersion);
+        Assert.Equal(latestMigration ? "0.10.35.29131" : "0.10.35.29104", fixture.Sessions.SourceLease!.Prefix.GameVersion);
         Assert.Equal(SavedTick, fixture.Sessions.SourceLease.Prefix.GameTick);
         Assert.NotNull(fixture.Sessions.JournalLease);
         Assert.True(fixture.Coordinator.CommitOnMainThread(request).Value!.IdempotentReplay);
         Assert.Equal(1, DSPGame.LoadCalls);
+        fixture.ReopenStore();
+        Assert.False(fixture.NewCoordinator().PrepareOnMainThread(fixture.Request()).Success);
     }
 
     [Theory]
-    [InlineData("primary-file")]
-    [InlineData("journal")]
-    [InlineData("revision")]
-    [InlineData("digest")]
-    public void ActivePrimaryMigrationRejectsStaleEvidenceOrWrongConfirmationWithoutConsumption(string change)
+    [InlineData(false, "primary-file")]
+    [InlineData(false, "journal")]
+    [InlineData(false, "revision")]
+    [InlineData(false, "digest")]
+    [InlineData(true, "primary-file")]
+    [InlineData(true, "journal")]
+    [InlineData(true, "revision")]
+    [InlineData(true, "digest")]
+    public void ActivePrimaryMigrationRejectsStaleEvidenceOrWrongConfirmationWithoutConsumption(bool latestMigration, string change)
     {
-        using var fixture = new Fixture(MigrationMode);
+        using var fixture = new Fixture(MigrationMode, latestMigration);
         var request = fixture.Confirmed(fixture.Prepare());
         switch (change)
         {
@@ -82,6 +94,48 @@ public sealed class OwnedWorldAutosaveCoordinatorIntegrationTests
         Assert.False(fixture.Coordinator.CommitOnMainThread(request).Success);
         Assert.True(fixture.HasProvenance());
         Assert.Equal(0, DSPGame.LoadCalls);
+    }
+
+    [Theory]
+    [InlineData(OwnedWorldResumeModes.Default)]
+    [InlineData(OwnedWorldResumeModes.ReauthorizeExpiredPrimary)]
+    [InlineData(OwnedWorldResumeModes.ReauthorizeFixedAutosave0)]
+    public void NewActiveMigrationCannotBecomeDefaultExpiredOrAutosaveAuthority(string mode)
+    {
+        using var fixture = new Fixture(MigrationMode, latestMigration: true);
+        var request = new PrepareOwnedWorldResumeRequest { ResumeToken = fixture.Token, RecoveryMode = mode };
+        if (mode == OwnedWorldResumeModes.ReauthorizeFixedAutosave0)
+        {
+            request.MinimumRecoveryGameTick = CandidateTick - 10;
+            request.ExpectedRecoveryGameTick = CandidateTick;
+        }
+        Assert.False(fixture.Coordinator.PrepareOnMainThread(request).Success);
+        Assert.True(fixture.HasProvenance());
+        Assert.Equal(0, DSPGame.LoadCalls);
+    }
+
+    [Fact]
+    public void NewActiveMigrationNeverFallsBackWhenTheExactPrimaryIsMissing()
+    {
+        using var fixture = new Fixture(MigrationMode, latestMigration: true);
+        File.Move(fixture.PrimaryPath, GameSave.SavePath(GameSave.LastExit));
+        Assert.False(fixture.Coordinator.PrepareOnMainThread(fixture.Request()).Success);
+        Assert.True(fixture.HasProvenance());
+        Assert.Equal(0, DSPGame.LoadCalls);
+    }
+
+    [Fact]
+    public void NewActiveMigrationNativeFailureAfterConsumptionCannotReplayOrReviveTheCredential()
+    {
+        using var fixture = new Fixture(MigrationMode, latestMigration: true);
+        var request = fixture.Confirmed(fixture.Prepare());
+        DSPGame.BeforeLoad = () => throw new IOException("test-only native loader failure");
+        Assert.False(fixture.Coordinator.CommitOnMainThread(request).Success);
+        fixture.ReopenStore();
+        Assert.False(fixture.HasProvenance());
+        Assert.False(fixture.NewCoordinator().PrepareOnMainThread(fixture.Request()).Success);
+        Assert.Null(fixture.Sessions.SourceLease);
+        Assert.Null(fixture.Sessions.JournalLease);
     }
 
     [Theory]
@@ -345,16 +399,18 @@ public sealed class OwnedWorldAutosaveCoordinatorIntegrationTests
         internal string CandidatePath => GameSave.SavePath(GameSave.AutoSave0);
         internal string PrimaryPath => GameSave.SavePath(Identity);
         internal string Mode { get; }
-        private string SourceVersion => Mode == MigrationMode ? "0.10.35.29104" : Version;
+        private readonly bool _latestMigration;
+        private string SourceVersion => Mode == MigrationMode ? (_latestMigration ? "0.10.35.29131" : "0.10.35.29104") : Version;
         private string _runtimeVersion = Version;
         internal OwnedWorldResumeTicketStore Store { get; private set; } = null!;
         internal string Token { get; }
         internal GameSessionTracker Sessions { get; } = new();
         internal OwnedWorldResumeCoordinator Coordinator { get; }
 
-        internal Fixture(string mode = ExpiredMode)
+        internal Fixture(string mode = ExpiredMode, bool latestMigration = false)
         {
             Mode = mode;
+            _latestMigration = latestMigration;
             _runtimeVersion = SourceVersion;
             Directory.CreateDirectory(Runtime);
             Directory.CreateDirectory(Handoff);
@@ -385,10 +441,10 @@ public sealed class OwnedWorldAutosaveCoordinatorIntegrationTests
                 ticket.ExpiresAtUtc = expiresAt;
                 File.WriteAllText(path, PluginJson.Serialize(ticket));
             }
-            if (Mode == MigrationMode) _runtimeVersion = "0.10.35.29131";
+            if (Mode == MigrationMode) _runtimeVersion = _latestMigration ? "0.10.35.29145" : "0.10.35.29131";
             ReopenStore();
             WriteSave(CandidatePath, Identity, CandidateTick);
-            WriteSave(PrimaryPath, Identity, SavedTick, Mode == MigrationMode ? 29104 : 29088);
+            WriteSave(PrimaryPath, Identity, SavedTick, Mode == MigrationMode ? (_latestMigration ? 29131 : 29104) : 29088);
             Coordinator = NewCoordinator();
         }
 
@@ -444,7 +500,17 @@ public sealed class OwnedWorldAutosaveCoordinatorIntegrationTests
             Directory.CreateDirectory(Path.GetDirectoryName(JournalPath)!);
             File.WriteAllText(JournalPath, PluginJson.Serialize(new GameplayJournalDocument
             {
-                Version = 1, JournalId = JournalId, OwnedSaveIdentityHash = JournalId, GameVersion = SourceVersion,
+                Version = 1, JournalId = JournalId, OwnedSaveIdentityHash = JournalId,
+                GameVersion = _latestMigration ? "0.10.34.28529" : SourceVersion,
+                VersionTransitions = _latestMigration ? new()
+                {
+                    new() { FromGameVersion = "0.10.34.28529", ToGameVersion = "0.10.35.29088",
+                        AdoptedAtGameTick = SavedTick - 3, DurableThroughSequence = 2, RecordedAtUtc = "2026-09-24T00:00:00Z" },
+                    new() { FromGameVersion = "0.10.35.29088", ToGameVersion = "0.10.35.29104",
+                        AdoptedAtGameTick = SavedTick - 2, DurableThroughSequence = 2, RecordedAtUtc = "2026-09-29T00:00:00Z" },
+                    new() { FromGameVersion = "0.10.35.29104", ToGameVersion = "0.10.35.29131",
+                        AdoptedAtGameTick = SavedTick - 1, DurableThroughSequence = 2, RecordedAtUtc = "2026-10-13T00:00:00Z" },
+                } : new(),
                 TrackingMode = GameplayJournalTrackingModes.AttachedExistingSave, HistoricalCoverageComplete = false,
                 TrackingStartedAtGameTick = SavedTick, CreatedAtActualTime = creationMarker,
                 Entries = new() { new() { Sequence = 1 }, new() { Sequence = 2 } },

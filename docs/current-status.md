@@ -1,6 +1,6 @@
 # Spherewright 当前快照
 
-更新：2026-10-15（Asia/Singapore）。持续收尾顺序见 [0.4 交付文档](v0.4-delivery.md)。0.4 整体验收尚未完成，历史通过、已安装与本次 fresh 核验分开记录。
+更新：2026-10-15（Asia/Singapore），29145精确恢复候选修复阶段。持续收尾顺序见 [0.4 交付文档](v0.4-delivery.md)。0.4 整体验收尚未完成，历史通过、已安装与本次 fresh 核验分开记录。
 
 ## 原验收对应表
 
@@ -17,7 +17,7 @@
 
 开始时本地与旧origin/main同为815d8e7ec32bb747194493a728ae6d37ba45baaf，工作区干净。fresh fetch确认它是远端b5cc822c5e372239f0994b7c406e931e8fa786a7的祖先，仅新增交付文档，已安全fast-forward；该SHA的Windows Core CI 38575811624成功。AGENTS按需索引单项更新已推送7742b3c9af6ad5f4e5341c8bb3a135a279b79657，准确SHA CI 38605445392已成功，可以在安全交接采用。
 
-本轮离线验证事实f51cffaa9aebe8040fef8f9fba15463e29ecbfcc的准确CI38609907158成功；三文件版本blocker封存613dcf3abc62b0a231bf25aa66588dc7bcf977d4已推送，准确CI38611805131成功，核验时HEAD=origin/main、工作树clean。这里记录已核验基线；包含本快照最后文字覆盖的事实SHA以维护终态回执为准，不自引用自身提交或混作候选源码SHA。源码执行基线仍7742b3c，安装cohort仍6528e1f；本次最后覆盖只由root负责该页文字，无代码或游戏变动。
+本轮离线验证事实f51cffaa9aebe8040fef8f9fba15463e29ecbfcc的准确CI38609907158成功；版本blocker封存613dcf3abc62b0a231bf25aa66588dc7bcf977d4的CI38611805131成功，末次事实覆盖88326888a13417205620b34a07a1f0372946e33a的CI38612508955成功。新阶段开始时fresh fetch确认HEAD=origin/main=88326888、0/0分叉且clean。本阶段20份恢复政策/进度保全源码、相关测试、包内playbook/工具披露及本页/研究证据均由root负责；维护完成指定离线检查，获准仅该20文件单一目的commit/push并收集准确CI。本页记录提交前实施/验证事实，新的完整源码SHA、clean/remote/CI状态以维护终态原回执为准，不自引用自身提交或混作已安装SHA。新代码须相关测试和准确SHA绿CI后采用；安装cohort仍6528e1f。
 
 磁盘安装Bridge.Core/Contracts/Plugin与安装MCP均为0.4.0.0，构建标识6528e1f7101a714826f7364cef2b0ad75c4b6e82；安装MCP只做initialize/完整64工具/1resource/指南读取后退出，不触发Bridge。fresh Native菜单已确认DSP实际为0.10.35.29145，桥接healthy，游戏未载入；29131是原owned主档/票据及R1337历史版本。当前Assembly-CSharp SHA为B84B60DF5A24947A014801F23B9B85D1E77853F42A331918E2DC85B153E50527，不能用Updates/Versions.txt旧29131行代替当前Native版本。源码文档SHA不等于安装SHA。root负责本快照和原件独立审计；离线维护负责索引、版本/包指南及相关回归、串行Git；唯一新writer按批准有限阶段执行。其他执行者的ignored成果保留，未reset/clean/force-push或覆盖。
 
@@ -31,7 +31,7 @@ R1334北侧29带及末级实际端口11的原生正例只证明当时预检可�
 
 ## 当前交接与下一安全入口
 
-- 下一唯一目标：先解决29131 owned主档与fresh29145运行时的版本恢复门，保全未保存原transfer和全部成功工厂前缀；合法同owned恢复后继续五对象模块1209自动输入/1210输出与完整三级链。迁移须后续确认，本轮不载入跨版本主档。
+- 下一唯一目标：完成精确29131→29145候选恢复策略、当前DLL编译和进度保全核验，必要同批冷部署后只fresh prepare实际披露；后续明确确认前不Load跨版本主档。保全原未保存transfer和全部成功工厂前缀；合法同owned恢复后继续模块1209自动输入/1210输出与完整三级链。
 - 旧writer已停：旧root最新turn interrupted/idle，旧game writerR1337 completed/notLoaded；本轮writer已完成唯一菜单与default prepare两次只读请求后停止，0accepted/0commit/0Load/0Save。root仅核精确原件，没有并发游戏请求或在途调用。
 - DSP：首只读阶段DSP0/Steam在，原退出原因不明；现仅一次broker启动，incident27b4c8bcc8d14e878ba2a410d44390d1，原intent dispatched=true/outcomeUnknown=false，root精确核其SHA。唯一DSP PID29080，fresh菜单gameLoaded=false/29145/bridgeConnected=true/healthy/revision0、cap含owned-game.resume；0Load/Save/commit，不重启/不重发。阶段结束不关闭DSP/Steam。
 - 保存/观察：Save仍116215326/J102；R1337精确原件观察116289647、revision8/J102、healthy，仅为退出前证据。票据、恢复候选及未保存4石矿前缀须fresh核，不能用旧数值commit。
@@ -39,7 +39,9 @@ R1334北侧29带及末级实际端口11的原生正例只证明当时预检可�
 - 退役：旧27对象Foundry候选、旧不兼容进度、R1327/R1328旧输出候选保持退役；五对象、已完成来源和所有成功前缀禁止重做。
 - 预算：启动阶段已封，dispatch1/Bridge0/0写；菜单阶段1请求、default prepare阶段1请求/1.25秒均已封，0accepted。prepare明确SESSION_NOT_OWNED、result=null，未生成计划/action；通用quarantine提示不证明本档隔离。禁止换模式盲试/确认/commit。原fixed20仍1/20/lifetime609/frozen，剩19含保存不变；候选未冻结，writer已停。
 - 离线验证：复用ignored SDK8.0.424，绿CI源码7742b3c的locked restore、Core/Contracts/MCP Release构建与3028测试（73/2707/248，0失败/跳过）通过；95项工具/参数/resource/指南policy与source及安装MCP64工具/1resource/指南一致性通过。旧ref 74AC…保留；在独立干净detached checkout收集5/5当前安装refs，B84B…及manifest逐份匹配，Plugin Release为0警告/错误。此为当前DLL（fresh菜单29145）的离线编译，不能当跨版本恢复/兼容或最终候选实机通过；准确报告见[本轮离线验证](evidence/2026-10-15/delivery-build-validation.md)。
-- 版本硬边界：default票据入口要求source/current版本相等；已证29131≠29145足以拒绝。当前兼容政策仅研究到29131，MaximumDurableTransitions=3且原Journal已3条；primary migration仅支持29104→29131。无合法29131→29145路径，不能改变票据版本/expiry、跳Journal/清进度/改原档或盲增第四转换。本轮停在真实版本恢复门，完整原证据及可执行续接点见[29145 blocker](evidence/2026-10-15/owned-primary-29145-blocker.md)。
+- 版本硬边界：default入口仍要求source/current相等；原安装政策止于29131、最多3转换，故此前拒绝真实有效，见[原blocker](evidence/2026-10-15/owned-primary-29145-blocker.md)。本阶段metadata-only比较精确74AC…旧DLL与B84B…当前DLL，11项存档读写/载入接口的签名及逐条指令一致、patch仍23，见[29145研究](research/game-api-version-0.10.35.29145.md)。据此只增加31→45候选配对、v6专属披露及第四转换校验；保留旧v5、default严格匹配、一次性凭据、后续确认和Journal连续性。尚未部署/实机prepare/迁移，不以离线证据称兼容通过。
+- 进度保全：fresh只读确认票据SHA未变、非quarantine，Journal origin28529/102条/三转换；原进度schema1、版本29131、唯一build为completed五对象6622/6624/6623/6626/6625，最后证据tick116214800，文件SHA272F16A91F2BAC347587F2CC175E3791C964D726A89EADC26C8CB749125A3587。root候选只允许同owned身份/current session、完整continuous且durable的精确31→45 Journal转换下复用全部completed旧记录，读取不改盘；下次正常durable更新保留全部原计划/对象并stamp45。未完成/unknown/损坏/不匹配仍拒绝，不清空、不手改原件或重建成功对象。离线关联store用替身，实机实体/连接须恢复后fresh核。
+- 修复回归：五项目locked restore成功；MCP258/258、最后六类Core271/271（0失败/跳过/NotExecuted）通过，原全量Core2777的两项新记录比较失败所揭示默认列表追加已局部修复，其他通过用例不反复重跑。完整准确SHA CI、当前DLL完整Plugin Release与必要安装/native prepare尚未过门，不能将候选代码计作实机通过。结果、初次失败和原索引见[候选离线验证](evidence/2026-10-15/owned-primary-29145-candidate-validation.md)。
 - 原件按下表精确引用读取；token、真实存档名、私有路径和原始身份不写入此文件。阶段结束与暂停/压缩前继续覆盖本块，不新建任务系统。
 
 | 直接续接原件 | 引用 | SHA-256 |
@@ -53,3 +55,4 @@ R1334北侧29带及末级实际端口11的原生正例只证明当时预检可�
 | 本轮菜单最终摘要，0accepted | 6cdff5e096204b88968e28a422eb3b5c:1 | F67F81593C00C7B3CF2BF6782963AEB0AEE4C91E1A21D670C7AC52EFE892CF3D |
 | 本轮唯一default prepare拒绝 | dfdbe61513854c14bf2bd2ac3a172ae7:1 | 47B149D58A064FE5F390CA82B88EF84F9A9F34D1706BE690A47649911185AAD9 |
 | root版本/原窗口/原响应独立核验 | f03badcd37ef48fe85202114d5d4f5bd:1 | 3C202474AF33A15CF6584E78142B74FF3047517A6B494D944F0210A6752A4326 |
+| root原票据/完整Journal/五对象进度只读保全 | eb097306510a4fe0b5243180958e2a87:1 | 5601D56E9F729E826D1B2EBAA6D6060BA53D45982FB5AA06C7F9D27FFC49964A |

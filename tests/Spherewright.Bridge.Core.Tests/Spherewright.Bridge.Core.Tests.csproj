@@ -16,6 +16,7 @@
     <Compile Include="..\..\src\Spherewright.Plugin\Transport\PluginJson.cs" Link="PluginTransport\PluginJson.cs" />
     <Compile Include="..\..\src\Spherewright.Plugin\Game\GameplayJournalIdentity.cs" Link="PluginGame\GameplayJournalIdentity.cs" />
     <Compile Include="..\..\src\Spherewright.Plugin\Game\GameCallResult.cs" Link="PluginGame\GameCallResult.cs" />
+    <Compile Include="..\..\src\Spherewright.Plugin\Game\BlueprintBuildStore.cs" Link="PluginGame\BlueprintBuildStore.cs" />
     <Compile Include="..\..\src\Spherewright.Plugin\Game\OwnedWorldResumeCoordinator.cs" Link="PluginGame\OwnedWorldResumeCoordinator.cs" />
     <Compile Include="..\..\src\Spherewright.Plugin\RuntimeDescriptor\OwnedWorldResumeTicketStore.cs" Link="PluginRuntimeDescriptor\OwnedWorldResumeTicketStore.cs" />
   </ItemGroup>

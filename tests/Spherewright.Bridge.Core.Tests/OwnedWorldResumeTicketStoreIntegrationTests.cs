@@ -17,24 +17,29 @@ public sealed class OwnedWorldResumeTicketStoreIntegrationTests
     private const string TargetPatchGameVersion = "0.10.35.29088";
     private const string CurrentPatchGameVersion = "0.10.35.29104";
     private const string LatestPatchGameVersion = "0.10.35.29131";
+    private const string NextPatchGameVersion = "0.10.35.29145";
     private const string OwnedSaveName = "synthetic-protected-world-identity";
     private const string SessionId = "synthetic-session";
     private const int PlanetId = 104;
     private const long MinimumTick = 12345;
     private const string ConfirmationDigest = "sha256:test-confirmation";
 
-    [Fact]
-    public void ActiveVersionPrimaryUsesExactHistoryAndCannotBecomeDefaultOrAutosaveAuthority()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void ActiveVersionPrimaryUsesExactHistoryAndCannotBecomeDefaultOrAutosaveAuthority(bool latestMigration)
     {
+        var source = latestMigration ? LatestPatchGameVersion : CurrentPatchGameVersion;
+        var target = latestMigration ? NextPatchGameVersion : LatestPatchGameVersion;
         using var scenario = VersionTransitionScenario.CreateActive(
-            CurrentPatchGameVersion, GameVersion, OriginalTwoTransitions());
-        var store = scenario.OpenStore(LatestPatchGameVersion);
+            source, GameVersion, latestMigration ? OriginalThreeTransitions() : OriginalTwoTransitions());
+        var store = scenario.OpenStore(target);
         Assert.False(store.TryGetActiveTicket(scenario.Token, out _, out _));
         Assert.False(store.TryGetExpiredPrimaryProvenance(scenario.Token, out _, out _, out _));
         Assert.False(store.TryGetFixedAutosaveProvenance(scenario.Token, out _, out _, out _));
         Assert.True(store.TryGetVersionChangedPrimaryProvenance(scenario.Token,
             out var ticket, out var fingerprint, out var rejection));
-        Assert.Equal(CurrentPatchGameVersion, ticket!.GameVersion);
+        Assert.Equal(source, ticket!.GameVersion);
         Assert.Equal(string.Empty, rejection);
         Assert.False(store.TryConsumeReauthorization(scenario.Token, fingerprint,
             Guid.NewGuid().ToString(), ConfirmationDigest, requireActiveCredential: true));
@@ -42,8 +47,48 @@ public sealed class OwnedWorldResumeTicketStoreIntegrationTests
             requireActiveCredential: true, versionChangedPrimary: true)) { }
         Assert.True(store.TryConsumeReauthorization(scenario.Token, fingerprint,
             Guid.NewGuid().ToString(), ConfirmationDigest, requireActiveCredential: true, versionChangedPrimary: true));
-        Assert.False(scenario.OpenStore(LatestPatchGameVersion).TryGetVersionChangedPrimaryProvenance(
+        Assert.False(scenario.OpenStore(target).TryGetVersionChangedPrimaryProvenance(
             scenario.Token, out _, out _, out _));
+    }
+
+    [Theory]
+    [InlineData("missing-link")]
+    [InlineData("reversed-tick")]
+    [InlineData("future-sequence")]
+    [InlineData("unknown-pair")]
+    public void NewActivePrimaryRequiresTheUnbrokenOriginalThreeTransitionHistory(string fault)
+    {
+        var transitions = OriginalThreeTransitions();
+        switch (fault)
+        {
+            case "missing-link": transitions = new[] { transitions[0], transitions[2] }; break;
+            case "reversed-tick": transitions[2].AdoptedAtGameTick = transitions[1].AdoptedAtGameTick; break;
+            case "future-sequence": transitions[2].DurableThroughSequence = 3; break;
+            case "unknown-pair": transitions[1].FromGameVersion = "0.10.35.29057"; break;
+        }
+        using var scenario = VersionTransitionScenario.CreateActive(LatestPatchGameVersion, GameVersion, transitions);
+        Assert.False(scenario.OpenStore(NextPatchGameVersion).TryGetVersionChangedPrimaryProvenance(
+            scenario.Token, out _, out _, out _));
+        Assert.True(File.Exists(scenario.RuntimeTicketPath));
+        Assert.True(File.Exists(scenario.HandoffTicketPath));
+        Assert.False(File.Exists(scenario.RuntimeTombstonePath));
+    }
+
+    [Fact]
+    public void FutureNormal29145ResumeNeedsTheExactDurableFourthTransition()
+    {
+        var fourth = new GameplayJournalVersionTransition
+        {
+            FromGameVersion = LatestPatchGameVersion, ToGameVersion = NextPatchGameVersion,
+            AdoptedAtGameTick = MinimumTick, DurableThroughSequence = 2, RecordedAtUtc = "2026-10-15T00:00:00Z",
+        };
+        using var completed = VersionTransitionScenario.CreateActive(
+            NextPatchGameVersion, GameVersion, OriginalThreeTransitions().Append(fourth).ToArray());
+        Assert.True(completed.Store.TryGetActiveTicket(completed.Token, out _, out _));
+        Assert.False(completed.Store.TryGetVersionChangedPrimaryProvenance(completed.Token, out _, out _, out _));
+        using var missingFourth = VersionTransitionScenario.CreateActive(
+            NextPatchGameVersion, GameVersion, OriginalThreeTransitions());
+        Assert.False(missingFourth.Store.TryGetActiveTicket(missingFourth.Token, out _, out _));
     }
 
     [Fact]
@@ -73,6 +118,16 @@ public sealed class OwnedWorldResumeTicketStoreIntegrationTests
             AdoptedAtGameTick = MinimumTick - 2, DurableThroughSequence = 2, RecordedAtUtc = "2026-09-24T00:00:00Z" },
         new GameplayJournalVersionTransition { FromGameVersion = TargetPatchGameVersion, ToGameVersion = CurrentPatchGameVersion,
             AdoptedAtGameTick = MinimumTick - 1, DurableThroughSequence = 2, RecordedAtUtc = "2026-09-29T00:00:00Z" },
+    };
+
+    private static GameplayJournalVersionTransition[] OriginalThreeTransitions() => new[]
+    {
+        new GameplayJournalVersionTransition { FromGameVersion = GameVersion, ToGameVersion = TargetPatchGameVersion,
+            AdoptedAtGameTick = MinimumTick - 3, DurableThroughSequence = 2, RecordedAtUtc = "2026-09-24T00:00:00Z" },
+        new GameplayJournalVersionTransition { FromGameVersion = TargetPatchGameVersion, ToGameVersion = CurrentPatchGameVersion,
+            AdoptedAtGameTick = MinimumTick - 2, DurableThroughSequence = 2, RecordedAtUtc = "2026-09-29T00:00:00Z" },
+        new GameplayJournalVersionTransition { FromGameVersion = CurrentPatchGameVersion, ToGameVersion = LatestPatchGameVersion,
+            AdoptedAtGameTick = MinimumTick - 1, DurableThroughSequence = 2, RecordedAtUtc = "2026-10-13T00:00:00Z" },
     };
 
     [Fact]

@@ -17,6 +17,11 @@ public sealed class OwnedWorldVersionCompatibilityPolicyTests
         Assert.True(OwnedWorldVersionCompatibilityPolicy.IsSupportedMigration(Source, TargetPatch));
         Assert.True(OwnedWorldVersionCompatibilityPolicy.IsSupportedMigration(TargetPatch, CurrentPatch));
         Assert.True(OwnedWorldVersionCompatibilityPolicy.IsSupportedMigration(CurrentPatch, LatestPatch));
+        Assert.True(OwnedWorldVersionCompatibilityPolicy.IsSupportedMigration(LatestPatch, NextPatch));
+        Assert.False(OwnedWorldVersionCompatibilityPolicy.IsSupportedMigration(CurrentPatch, NextPatch));
+        Assert.False(OwnedWorldVersionCompatibilityPolicy.IsSupportedMigration(Source, NextPatch));
+        Assert.False(OwnedWorldVersionCompatibilityPolicy.IsSupportedMigration(NextPatch, LatestPatch));
+        Assert.False(OwnedWorldVersionCompatibilityPolicy.IsSupportedMigration(LatestPatch, "0.10.35.29146"));
         Assert.False(OwnedWorldVersionCompatibilityPolicy.IsSupportedMigration(TargetPatch, LatestPatch));
         Assert.False(OwnedWorldVersionCompatibilityPolicy.IsSupportedMigration(Source, LatestPatch));
         Assert.False(OwnedWorldVersionCompatibilityPolicy.IsSupportedMigration(LatestPatch, CurrentPatch));
@@ -38,6 +43,10 @@ public sealed class OwnedWorldVersionCompatibilityPolicyTests
     [InlineData("0.10.34.28529", "0.10.35.29057", true)]
     [InlineData("0.10.34.28529", "0.10.35.29088", true)]
     [InlineData("0.10.35.29088", "0.10.35.29104", true)]
+    [InlineData("0.10.35.29131", "0.10.35.29145", true)]
+    [InlineData("0.10.35.29145", "0.10.35.29145", true)]
+    [InlineData("0.10.35.29104", "0.10.35.29145", false)]
+    [InlineData("0.10.35.29145", "0.10.35.29131", false)]
     [InlineData("0.10.34.28529", "0.10.35.29104", false)]
     [InlineData("0.10.35.29057", "0.10.35.29104", false)]
     [InlineData("0.10.35.29104", "0.10.35.29088", false)]
@@ -53,7 +62,7 @@ public sealed class OwnedWorldVersionCompatibilityPolicyTests
         Assert.Equal(allowed, OwnedWorldVersionCompatibilityPolicy.AllowsReauthorization(source, target));
 
     [Fact]
-    public void ThirdTransitionPreservesTheExactExistingHistoryAndRejectsAFourth()
+    public void ThirdTransitionPreservesTheExactExistingHistoryAndRejectsReplay()
     {
         var first = ValidTransition(to: TargetPatch);
         var second = ValidTransition(from: TargetPatch, to: CurrentPatch, adoptedAt: AdoptedTick + 1);
@@ -68,6 +77,43 @@ public sealed class OwnedWorldVersionCompatibilityPolicyTests
             Source, new[] { first, second, third, third }, EntryCount, LatestPatch));
         Assert.False(OwnedWorldVersionCompatibilityPolicy.CanAppendTransition(
             Source, new[] { first, second, third }, EntryCount, CurrentPatch, LatestPatch, third));
+    }
+
+    [Theory]
+    [InlineData("valid", true)]
+    [InlineData("same-tick", false)]
+    [InlineData("backward-sequence", false)]
+    [InlineData("invalid-recorded-at", false)]
+    [InlineData("skipped-link", false)]
+    [InlineData("unknown-target", false)]
+    public void FourthTransitionRequiresAllThreeOriginalLinksAndTheExactNewPair(string fault, bool allowed)
+    {
+        var original = new[]
+        {
+            ValidTransition(to: TargetPatch),
+            ValidTransition(from: TargetPatch, to: CurrentPatch, adoptedAt: AdoptedTick + 1),
+            ValidTransition(from: CurrentPatch, to: LatestPatch, adoptedAt: AdoptedTick + 2),
+        };
+        var fourth = ValidTransition(from: LatestPatch, to: NextPatch, adoptedAt: AdoptedTick + 3);
+        switch (fault)
+        {
+            case "same-tick": fourth.AdoptedAtGameTick = AdoptedTick + 2; break;
+            case "backward-sequence": fourth.DurableThroughSequence = EntryCount - 1; break;
+            case "invalid-recorded-at": fourth.RecordedAtUtc = "not-a-date"; break;
+            case "skipped-link": fourth.FromGameVersion = CurrentPatch; break;
+            case "unknown-target": fourth.ToGameVersion = "0.10.35.29146"; break;
+        }
+        Assert.True(OwnedWorldVersionCompatibilityPolicy.JournalMatches(Source, original, EntryCount, LatestPatch));
+        Assert.Equal(allowed, OwnedWorldVersionCompatibilityPolicy.CanAppendTransition(
+            Source, original, EntryCount, LatestPatch, NextPatch, fourth));
+        Assert.Equal(allowed, OwnedWorldVersionCompatibilityPolicy.JournalMatches(
+            Source, original.Append(fourth).ToArray(), EntryCount, NextPatch));
+        Assert.False(OwnedWorldVersionCompatibilityPolicy.JournalMatches(
+            Source, new[] { original[0], original[2], fourth }, EntryCount, NextPatch));
+        Assert.False(OwnedWorldVersionCompatibilityPolicy.JournalMatches(
+            Source, original.Append(fourth).Append(fourth).ToArray(), EntryCount, NextPatch));
+        Assert.False(OwnedWorldVersionCompatibilityPolicy.CanAppendTransition(
+            Source, original.Append(fourth).ToArray(), EntryCount, LatestPatch, NextPatch, fourth));
     }
 
     [Fact]
@@ -225,6 +271,7 @@ public sealed class OwnedWorldVersionCompatibilityPolicyTests
     private const string TargetPatch = OwnedWorldVersionCompatibilityPolicy.TargetPatchVersion;
     private const string CurrentPatch = OwnedWorldVersionCompatibilityPolicy.CurrentPatchVersion;
     private const string LatestPatch = OwnedWorldVersionCompatibilityPolicy.LatestPatchVersion;
+    private const string NextPatch = OwnedWorldVersionCompatibilityPolicy.NextPatchVersion;
 
     private static GameplayJournalVersionTransition ValidTransition(
         string from = Source,
