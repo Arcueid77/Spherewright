@@ -1,6 +1,6 @@
 # Spherewright 当前快照
 
-更新：2026-10-15（Asia/Singapore），29145同批菜单部署及原生v6披露已独立核验；等待本次迁移的后续明确确认。持续收尾顺序见 [0.4 交付文档](v0.4-delivery.md)。0.4 整体验收尚未完成，历史通过、已安装与本次 fresh 核验分开记录。
+更新：2026-10-15（Asia/Singapore），同clean/pushed/green源码2a7a98d的两份0.4.0候选已生成，构建、逐文件及两种MCP metadata检查通过；29145菜单仍健康未载入，等待本次迁移的后续明确确认。持续收尾顺序见 [0.4 交付文档](v0.4-delivery.md)。0.4 整体验收尚未完成，完整三级链、最终联合长窗及候选实机安装/恢复仍开放。
 
 ## 原验收对应表
 
@@ -11,15 +11,15 @@
 | [Foundry 三级完整计划、正常施工、中途保存重启续建、失效重规划](../ROADMAP.md#foundry-验收门) | 既有1112/1127→1209→1210分段计划和施工可复用；29131 R1334北侧29带输入及末级端口11预检正例已核原SHA；旧27对象候选退役。 | 完整事前设备/外供/电力/物流/精确成本的适用覆盖；末级1209自动输入/1210输出；三级整案中途恢复覆盖仍须逐条核。 | 先核当前模块和既有事前计划，缺什么只补什么；新模块先完整有界规划，再fresh原生预检最小补片。 | 原五项全部有对应证据；不补造旧计划，不以建成后重启冒充中途续建，未来ID建成后读取。 |
 | [Governor 五项验收](../ROADMAP.md#governor-验收门) | 原锁定31→62/min、连续37128 ticks及限定升级/保存恢复保留原通过范围。 | 最终候选相关回归和适用范围说明。 | 复用原声明/证据，仅核受改动影响的接口。 | 不重锁基线、不重复两倍实验，不扩大为全厂配平。 |
 | [双自动供给、出发清单及整体保存恢复](../ROADMAP.md#跨星系准备与整体交付验收) | 既有取材、来源和施工；R1300的36348 ticks只保留历史结论，不计恢复后新session。R1320/R1321覆盖五对象保存/审计。 | 最终恢复后的燃料/翘曲器与共享来源连续窗，当前准备清单差额，同owned最终保存恢复。 | 施工/必要部署稳定后，按实际tick速度预声明一个联合有限≥36000-tick窗口；只补清单差额。 | 原最低速率、库存趋势、真实自动来源、功率/运输及无缺口同session窗口通过；缓存、搬仓、P=C不能替代来源。 |
-| [同源码SHA双候选及完整验证](v0.4-delivery.md#完成定义) | 0b67f85已加强64工具完整集合自检；07d1727准确SHA CI成功，当前DLL完整Release及同批228文件菜单安装/v6准备通过，见[部署记录](evidence/2026-10-15/owned-primary-29145-menu-deployment.md)。 | 最终手动/Thunderstore候选、各自适用的安装运行恢复、校验和和Release notes；菜单安装不关闭这些门。 | 保持游戏主线；代码/施工稳定后冻结干净、已推送、绿CI源码SHA生成两包。 | 两包sourceDirty=false且同SHA，全部适用检查有证据，停在所有者审核发布；后续纯事实证据引用候选SHA不无限重打包。 |
+| [同源码SHA双候选及完整验证](v0.4-delivery.md#完成定义) | 2a7a98d同clean/pushed/green源码真实手动/ThunderstoreZIP及sidecar已冻结；当前DLL完整Release、准确CI3108测试、全部文件hash/9产品版本、64完整工具/参数/1resource/guide通过，见[双候选报告](evidence/2026-10-15/delivery-candidates-2a7a98d.md)。07菜单安装另有原证据。 | 两包各自适用的安装/运行/恢复、完整游戏门和最终合格Release notes；metadata/菜单不关闭这些门。 | 保留本次ZIP，合法恢复并完成施工/必要代码后安排必要维护边界的适用包验证；内容变化才换候选。 | 两包sourceDirty=false且同SHA，全部适用检查有证据，停在所有者审核发布；后续纯事实证据引用候选SHA不无限重打包。 |
 
 ## 源码、安装与 dirty 归属
 
 开始时本地与旧origin/main同为815d8e7ec32bb747194493a728ae6d37ba45baaf，工作区干净。fresh fetch确认它是远端b5cc822c5e372239f0994b7c406e931e8fa786a7的祖先，仅新增交付文档，已安全fast-forward；该SHA的Windows Core CI 38575811624成功。AGENTS按需索引单项更新已推送7742b3c9af6ad5f4e5341c8bb3a135a279b79657，准确SHA CI 38605445392已成功，可以在安全交接采用。
 
-本轮离线验证事实f51cffaa9aebe8040fef8f9fba15463e29ecbfcc的准确CI38609907158成功；原版本blocker613dcf3abc62b0a231bf25aa66588dc7bcf977d4及末次事实88326888a13417205620b34a07a1f0372946e33a的准确CI也成功。20份精确恢复政策/进度保全源码、相关测试和指南修复已单一目的提交为07d1727b76664142615f7eebce2888e3bff654ec；[Windows Core CI 38620035304](https://github.com/AvaloNero/Spherewright/actions/runs/38620035304) headSha完全匹配、completed/success。维护fresh只读确认HEAD=origin/main=实时远端main=该SHA、clean且无其他dirty。此后本页与新部署证据的纯事实编辑由root负责，维护只获准指定文件Git；它们不改变07d1727安装二进制，不因事实提交重打包/重启。准确文档提交终态以维护回执为准。
+精确恢复政策/进度保全源码、相关测试和指南修复提交为07d1727b76664142615f7eebce2888e3bff654ec；[Windows Core CI 38620035304](https://github.com/AvaloNero/Spherewright/actions/runs/38620035304) headSha完全匹配、completed/success。该同批仍是实际安装执行cohort，完整安装及新菜单/v6披露见[部署记录](evidence/2026-10-15/owned-primary-29145-menu-deployment.md)；旧版本拒绝、原证据和相关CI均保留，不用新报告覆盖旧结果。
 
-上述4文件纯事实提交2f861429eac19fbdfcd22b04b0c8fd071c86a9f1已普通push；[Windows Core CI 38626121629](https://github.com/AvaloNero/Spherewright/actions/runs/38626121629) headSha完全匹配、completed/success。随后root修正两份打包manifest旧29131目标，连同Thunderstore README/changelog及两份证据快照共6路径，已单一目的普通push为3bc4cddc191e915fe18ca5f9cd13bc91b1b2c0f4；[Windows Core CI 38627098714](https://github.com/AvaloNero/Spherewright/actions/runs/38627098714) headSha完全匹配、completed/success。维护终态复核HEAD=实时远端main=3bc4cdd、clean，无其他dirty；这是本交接依据的最新已推送打包源码。脚本只改候选目标元数据为29145；pwsh7.6.5及真实Windows PowerShell5.1.26100.9444静态检查通过、0游戏/打包执行。包内说明及开发Release notes保留已验限定范围与开放整体门，未生成最终双候选；安装仍07d1727。本次随后仅本页收口事实由root编辑、维护仅该路径Git；后续纯事实HEAD不改变3bc4cdd打包代码或07d1727安装，不为自引用重打包，新会话仍fresh核Git/dirty。
+候选目标元数据/两语包内README/开发Release notes的6路径修正3bc4cddc191e915fe18ca5f9cd13bc91b1b2c0f4已普通push且[准确CI38627098714](https://github.com/AvaloNero/Spherewright/actions/runs/38627098714)成功。随后纯事实快照提交2a7a98d1932c404e3a7abc2c11233d9c0b8780d9已普通push；本轮打包前维护复核HEAD=origin/main=实时远端main=该完整SHA且clean，[准确CI38627772732](https://github.com/AvaloNero/Spherewright/actions/runs/38627772732) completed/success。本次真实双候选均以2a7a98d冻结，sourceDirty=false；后续本页与日期化候选报告是root的两路径纯事实编辑，由维护仅按这两路径串行commit/push和核准确CI。其最终提交SHA以维护终态为准；不改变已冻结ZIP或07d1727安装，不为事实自引用重打包/部署。其他ignored成果和成功前缀保留，新会话仍fresh核Git/dirty。
 
 磁盘安装Bridge.Core/Contracts/Plugin与MCP均为0.4.0.0 / ProductVersion 0.4.0+07d1727b76664142615f7eebce2888e3bff654ec；从clean、已推送、绿CI源码archive构建，4个Plugin文件及224个MCP文件由root逐份核同一map。完整64工具/参数、1resource及内嵌playbook集合已校验；metadata验证没有游戏调用。fresh新进程Native菜单为0.10.35.29145/healthy/未载入；29131仍是原owned主档/票据版本。实际Assembly-CSharp SHA为B84B60DF5A24947A014801F23B9B85D1E77853F42A331918E2DC85B153E50527，旧Updates版本行或refs目录标签不作当前版本证据。root独立审计；维护仅离线/Git；唯一writer按有限阶段执行。其他执行者的ignored成果、原票据/Journal/进度与runtime-handoff保留，未reset/clean/force-push或覆盖。
 
@@ -34,17 +34,18 @@ R1334北侧29带及末级实际端口11的原生正例只证明当时预检可�
 ## 当前交接与下一安全入口
 
 - 下一唯一目标：本次精确29131→29145主档候选已完成原生v6披露及root独立核验，等待披露后的明确用户迁移确认。该确认到来后，先核writer已停和fresh现场，再在单一有限阶段fresh prepare同一保存点、核新digest/prompt后只commit一次，核第四转换durable和正常Save/新票据；原披露planToken不存储、不复用。合法恢复后唯一游戏主线仍是现有模块1209自动输入/1210输出及完整三级链。
-- writer已停：旧root interrupted/idle，旧writer R1337 completed/notLoaded；当前writer已完成唯一冷部署阶段及随后2-call v6披露阶段并停止，代理状态已核completed；离线维护也已完成两次指定文件集普通push及准确绿CI。没有恢复commit意图、在途或unknown；root只读原件/安装hash，0root游戏调用。已展示本次候选保存点、版本/完整Journal与一次消费风险并提出明确迁移确认，尚未收到后续确认，不执行Load。
-- DSP：先前唯一broker启动PID29080记录保留。必要同批冷部署只正常关闭该已确认菜单一次、事务安装一次、Steam桌面调度一次，operation ac8c6cf8ab7142ef944be259950047e8；新唯一DSP PID35240 Responding，原Steam36408及启动时间保留。fresh Native菜单gameLoaded=false/owned=false/29145/bridgeConnected=true/healthy/revision0；实际游戏就绪菜单已证实，owned恢复未证实。阶段结束不Save/退出/Load，不重发任何启动intent。
+- writer已停：R1337原writer、冷部署与v6披露writer均已停止；本轮唯一writer只执行60秒/1个get_session_state的fresh菜单读，0prepare/commit/Load/Save/accepted，已完成并停止。离线维护完成正式单次打包、TS主harness及准确CI原日志收集，未访问游戏/安装；补充metadata退出码矛盾由root拒绝计入通过。没有恢复commit意图、在途或unknown；root只读原件/进程/安装与ZIP字节，0root游戏调用。迁移确认问题仍待后续明确人类回复，自动goal续接不作确认。
+- DSP：唯一冷部署operation ac8c6cf8ab7142ef944be259950047e8及旧菜单29080保留原证据，新唯一DSP PID35240 Responding，原Steam36408未改。本轮fresh Native菜单原件071544fd…:2为gameLoaded=false/owned=false/29145/bridgeConnected=true/healthy/revision0；root随后核唯一进程和原票据未变。owned恢复未证实；没有新增启动、关闭、Save或Load，不重发启动intent。
 - 保存/观察：Save仍116215326/J102；退出前R1337观察116289647/revision8/J102。原生v6候选tick=minimumTick=116215326、P104、exact embedded identity=true。该保存点早于观察和未保存4石矿动作，不能声称未保存前缀已恢复；其原action/已用额度保留，恢复后fresh核实际库存/原回执，禁止换键重取。
 - 实际窗口：R1332 fixed20，external1/lifetime609、frozen=true、normalSaveReserved=true、knownInFlight=0；不换键重放、不开新窗或转旧额度。剩余19槽含保存，root独立核后再批准当前片。
 - 退役：旧27对象Foundry候选、旧不兼容进度、R1327/R1328旧输出候选保持退役；五对象、已完成来源和所有成功前缀禁止重做。
-- 预算：原启动/default拒绝阶段保持封闭；原SESSION_NOT_OWNED结论只对应旧安装/default路径，通用quarantine提示不证明隔离。新冷部署有限570秒/1close/1install/1dispatch/1菜单读，v6披露有限180秒/1fresh菜单读/1prepare（约2.8秒）均已完成、0Load/Save/commit/accepted。原fixed20仍1/20/lifetime609/frozen、剩19含保存不变。仅执行cohort冻结为07d1727，最终双候选尚未生成；没有运行中观察窗、后台任务或可续期预算。
+- 预算：原启动/default拒绝、冷部署570秒及v6披露180秒预算均已结束；本轮fresh菜单60秒/1读约2.1秒完成、0写；离线打包原预检在0SDK/0checkout停止，修正字段后的独立900秒预算单次77.7秒完成；TS metadata有限180秒阶段已停止，不续期或再启动。原fixed20仍1/20/lifetime609/frozen、剩19含保存不变。执行cohort07d1727、候选源码2a7a98d分开；没有运行中观察窗、后台任务或可续期预算。
 - 离线验证：复用ignored SDK8.0.424，绿CI源码7742b3c的locked restore、Core/Contracts/MCP Release构建与3028测试（73/2707/248，0失败/跳过）通过；95项工具/参数/resource/指南policy与source及安装MCP64工具/1resource/指南一致性通过。旧ref 74AC…保留；在独立干净detached checkout收集5/5当前安装refs，B84B…及manifest逐份匹配，Plugin Release为0警告/错误。此为当前DLL（fresh菜单29145）的离线编译，不能当跨版本恢复/兼容或最终候选实机通过；准确报告见[本轮离线验证](evidence/2026-10-15/delivery-build-validation.md)。
 - 版本边界：default仍严格同版本；[旧安装拒绝](evidence/2026-10-15/owned-primary-29145-blocker.md)与[11项原生持久化比较](research/game-api-version-0.10.35.29145.md)保留准确范围。07d1727只增加31→45方向、v6专属披露及第四转换，旧v5/Journal连续性/一次消费不变。现已同批部署且fresh Native v6 prepare成功；complete prompt/digest已核、confirmationRequired=true/commitAllowedNow=false，原票据SHA未变。实际迁移Load和恢复后兼容仍未通过，按用户排除项及AGENTS第35行等待后续确认，不能把菜单/prepare当恢复成功。
 - 进度保全：fresh只读确认票据SHA未变、非quarantine，Journal origin28529/102条/三转换；原进度schema1、版本29131、唯一build为completed五对象6622/6624/6623/6626/6625，最后证据tick116214800，文件SHA272F16A91F2BAC347587F2CC175E3791C964D726A89EADC26C8CB749125A3587。root候选只允许同owned身份/current session、完整continuous且durable的精确31→45 Journal转换下复用全部completed旧记录，读取不改盘；下次正常durable更新保留全部原计划/对象并stamp45。未完成/unknown/损坏/不匹配仍拒绝，不清空、不手改原件或重建成功对象。离线关联store用替身，实机实体/连接须恢复后fresh核。
 - 修复回归：MCP258/258、相关Core271/271及初次失败的局部修复见[候选离线验证](evidence/2026-10-15/owned-primary-29145-candidate-validation.md)。准确07d1727 CI已success；clean archive使用SDK8.0.424完成全solution locked restore、当前5份原生refs完整Release构建（0警告/错误）及win-x64 self-contained MCP publish。228文件、产品SourceRevision、完整工具/参数/resource/playbook、真实安装/新菜单/v6准备已独立核验，见[本次部署](evidence/2026-10-15/owned-primary-29145-menu-deployment.md)。validation-only ZIP不是手动/Thunderstore最终候选，原生Load/实体连续性/最终验收仍缺。
-- 最终包准备：手动/Thunderstore manifest与两语包内README统一候选目标29145，现有0.4开发changelog已补有限执行器/升级/Governor及恢复边界。两份脚本只做离线语法/声明核验，未生成或安装新候选；其验证原件与限制见同日部署记录。最终两包必须从届时同一clean/pushed/green源码SHA生成并核实际manifest/文件哈希；当前07安装不为这些元数据/说明变化冷部署。
+- 双候选已生成：ignored `artifacts/v0.4.0-review-2a7a98d/` 的手动ZIP SHA为665FA1B30A86A4D49AC7E69CE174E08348DCA07D159A24AF766ABED89AFD79CB，Thunderstore为81D9D6ED0BAEC843AB22ADE38158102212A5487A43EFEE22769F500B7CF85D91；各有匹配sidecar。正式入口全solution locked restore/完整Release/当前5refs/两包一次完成，0警告/错误；准确源码CI3108/3108、0失败/跳过。root核全部文件map、9产品版本及两布局4Plugin/guide相同；手动目录MCP与TS实际单文件MCP的完整64工具/参数/resource/guide主harness均通过。TS验证fixture不是交付包；补充exit原件-1与JSON0不一致、不计通过。包内说明/Release notes保持开发态与原限制，详见[候选报告](evidence/2026-10-15/delivery-candidates-2a7a98d.md)。
+- 剩余包门：2a7a98d两包未实际安装、运行游戏或恢复；07菜单部署不替代。安装脚本包括PreflightOnly/StageOnly也要求DSP退出，本轮不绕过、不为了离线fixture关闭健康菜单。合法迁移后先完成唯一游戏主线，再把实际适用安装/运行/恢复衔接必要维护边界及最终联合长窗；事实提交引用冻结候选SHA，内容变化才重打包。没有正式tag/Release/Thunderstore发布。
 - 原件按下表精确引用读取；token、真实存档名、私有路径和原始身份不写入此文件。阶段结束与暂停/压缩前继续覆盖本块，不新建任务系统。
 
 | 直接续接原件 | 引用 | SHA-256 |
@@ -66,3 +67,7 @@ R1334北侧29带及末级实际端口11的原生正例只证明当时预检可�
 | fresh v6 prepare原生响应 | f8481cbf72e0443b91b80eacc6be4000:2 | 50AE1F2544F7F0B372E0E186256048DD4A9F34039D2E6E1207F9A6AD6BC4B6AC |
 | v6披露原writer，0Load/commit | f8481cbf72e0443b91b80eacc6be4000:3 | 56B0754ECE8988E88C0C1435B0E94A38ABBCD590E05F2E33FB2682D78C0535BB |
 | root v6原响应/原件保全/实际窗口独立审核 | 1b1152237fe54255baf96fd9d7f150c5:1 | 7F502E48BF7309FDC5B01FEAE043EF6D743136BC840D22915596017E10BAE0A9 |
+| 本轮fresh菜单原writer，1读0写 | 071544fd22504c2988f978e9e342df91:2 | A33A65DA5D2BFC7BD90C2D6F93606C05869FB8D97F653F2390D3DB71954C8439 |
+| root本轮菜单/原票据/窗口独立核验 | 9c37c8c5d4694257b3c2d9079ad113b5:1 | 6E1CD9447F1FEB7B6F77D8D64B266376CD1F9AE66A67CAF202837A946FD60A62 |
+| root两包源码/9产品/逐文件独立核验 | 95228048cc7544779a6601d6adc6d6f2:1 | 5CFA51FD70BD5FC20F1AB7BB107F472A98AE28FE4A33A9305B97558D29140C8D |
+| root TS实际单文件/主harness/补充exit限制 | 5449a4c92ad6405981ae0359b96d3e23:1 | 12AC1B833DC6EB3452BBBB9C8FB8992B50A4B1590E16C6DFC2AD235768BEB354 |
