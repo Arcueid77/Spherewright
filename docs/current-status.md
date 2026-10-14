@@ -17,7 +17,9 @@
 
 开始时本地与旧origin/main同为815d8e7ec32bb747194493a728ae6d37ba45baaf，工作区干净。fresh fetch确认它是远端b5cc822c5e372239f0994b7c406e931e8fa786a7的祖先，仅新增交付文档，已安全fast-forward；该SHA的Windows Core CI 38575811624成功。AGENTS按需索引单项更新已推送7742b3c9af6ad5f4e5341c8bb3a135a279b79657，准确SHA CI 38605445392已成功，可以在安全交接采用。
 
-磁盘安装Bridge.Core/Contracts/Plugin均为0.4.0.0，产品构建标识与6528e1f7101a714826f7364cef2b0ad75c4b6e82一致；游戏未运行，当前活动DSP/MCP握手尚未fresh证明，0.10.35.29131为最后原生证据版本。源码文档SHA不等于安装SHA。root负责本快照和原件独立审计；离线维护负责索引、版本/包指南及相关回归、串行Git；唯一新writer按批准有限阶段执行。各自dirty只按指定路径提交，其他执行者的ignored成果保留。未reset/clean/force-push或覆盖本地成果。
+本轮离线验证事实已推送f51cffaa9aebe8040fef8f9fba15463e29ecbfcc，准确SHA CI38609907158成功。当前仅root的本快照/版本blocker事实待提交，维护串行Git；最终提交与准确CI由维护回报，不将候选源码SHA混为事实SHA。
+
+磁盘安装Bridge.Core/Contracts/Plugin与安装MCP均为0.4.0.0，构建标识6528e1f7101a714826f7364cef2b0ad75c4b6e82；安装MCP只做initialize/完整64工具/1resource/指南读取后退出，不触发Bridge。fresh Native菜单已确认DSP实际为0.10.35.29145，桥接healthy，游戏未载入；29131是原owned主档/票据及R1337历史版本。当前Assembly-CSharp SHA为B84B60DF5A24947A014801F23B9B85D1E77853F42A331918E2DC85B153E50527，不能用Updates/Versions.txt旧29131行代替当前Native版本。源码文档SHA不等于安装SHA。root负责本快照和原件独立审计；离线维护负责索引、版本/包指南及相关回归、串行Git；唯一新writer按批准有限阶段执行。其他执行者的ignored成果保留，未reset/clean/force-push或覆盖。
 
 ## 已完成和未保存前缀
 
@@ -29,14 +31,15 @@ R1334北侧29带及末级实际端口11的原生正例只证明当时预检可�
 
 ## 当前交接与下一安全入口
 
-- 下一唯一目标：核健康续接边界，保全未保存取料原action；随后证明五对象模块1209自动输入和1210输出，准确复用三级整案事前计划，只补真实缺口。
-- 旧writer已停：旧root最新turn interrupted/idle；旧game writer最近R1337 turn completed/notLoaded。新writer首阶段仅核状态/保护恢复入口，root不并发游戏请求。
-- DSP：首只读阶段确认DSP进程0、Steam在，未发现旧writer；48小时匹配崩溃事件未找到，退出原因不明。已批准且只执行一次现有broker启动，原incident=27b4c8bcc8d14e878ba2a410d44390d1，dispatch=1/launchResponseObserved=true；菜单/Bridge及protected exact-primary prepare仍待核。不得重复dispatch，0 commit/Load/Save，实际恢复未通过。
+- 下一唯一目标：先解决29131 owned主档与fresh29145运行时的版本恢复门，保全未保存原transfer和全部成功工厂前缀；合法同owned恢复后继续五对象模块1209自动输入/1210输出与完整三级链。迁移须后续确认，本轮不载入跨版本主档。
+- 旧writer已停：旧root最新turn interrupted/idle，旧game writerR1337 completed/notLoaded；本轮writer已完成唯一菜单与default prepare两次只读请求后停止，0accepted/0commit/0Load/0Save。root仅核精确原件，没有并发游戏请求或在途调用。
+- DSP：首只读阶段DSP0/Steam在，原退出原因不明；现仅一次broker启动，incident27b4c8bcc8d14e878ba2a410d44390d1，原intent dispatched=true/outcomeUnknown=false，root精确核其SHA。唯一DSP PID29080，fresh菜单gameLoaded=false/29145/bridgeConnected=true/healthy/revision0、cap含owned-game.resume；0Load/Save/commit，不重启/不重发。阶段结束不关闭DSP/Steam。
 - 保存/观察：Save仍116215326/J102；R1337精确原件观察116289647、revision8/J102、healthy，仅为退出前证据。票据、恢复候选及未保存4石矿前缀须fresh核，不能用旧数值commit。
 - 实际窗口：R1332 fixed20，external1/lifetime609、frozen=true、normalSaveReserved=true、knownInFlight=0；不换键重放、不开新窗或转旧额度。剩余19槽含保存，root独立核后再批准当前片。
 - 退役：旧27对象Foundry候选、旧不兼容进度、R1327/R1328旧输出候选保持退役；五对象、已完成来源和所有成功前缀禁止重做。
-- 预算：首健康只读阶段已结束，0 Bridge/0写；新目的broker1次已消费，菜单/prepare≤40请求/240秒、0commit/Load/Save，不运行中续期。窗口剩余19槽含保存不变，候选未冻结。
-- 离线验证：复用ignored便携SDK8.0.424，locked restore、Core/Contracts/MCP Release构建与3028测试（73/2707/248，0失败/跳过）通过；95项完整工具/参数/resource/指南policy及source-MCP64工具/1resource/指南一致性通过。现有ref Plugin Release为0警告/错误，但Assembly-CSharp副本74AC…与当前安装B84B…不符，此次成绩不能算current-DLL构建；正在独立新ref目录补核，不覆盖旧ref/manifest，不重复已通过且未变化的Core全测。
+- 预算：启动阶段已封，dispatch1/Bridge0/0写；菜单阶段1请求、default prepare阶段1请求/1.25秒均已封，0accepted。prepare明确SESSION_NOT_OWNED、result=null，未生成计划/action；通用quarantine提示不证明本档隔离。禁止换模式盲试/确认/commit。原fixed20仍1/20/lifetime609/frozen，剩19含保存不变；候选未冻结，writer已停。
+- 离线验证：复用ignored SDK8.0.424，绿CI源码7742b3c的locked restore、Core/Contracts/MCP Release构建与3028测试（73/2707/248，0失败/跳过）通过；95项工具/参数/resource/指南policy与source及安装MCP64工具/1resource/指南一致性通过。旧ref 74AC…保留；在独立干净detached checkout收集5/5当前安装refs，B84B…及manifest逐份匹配，Plugin Release为0警告/错误。此为当前DLL（fresh菜单29145）的离线编译，不能当跨版本恢复/兼容或最终候选实机通过；准确报告见[本轮离线验证](evidence/2026-10-15/delivery-build-validation.md)。
+- 版本硬边界：default票据入口要求source/current版本相等；已证29131≠29145足以拒绝。当前兼容政策仅研究到29131，MaximumDurableTransitions=3且原Journal已3条；primary migration仅支持29104→29131。无合法29131→29145路径，不能改变票据版本/expiry、跳Journal/清进度/改原档或盲增第四转换。本轮停在真实版本恢复门，完整原证据及可执行续接点见[29145 blocker](evidence/2026-10-15/owned-primary-29145-blocker.md)。
 - 原件按下表精确引用读取；token、真实存档名、私有路径和原始身份不写入此文件。阶段结束与暂停/压缩前继续覆盖本块，不新建任务系统。
 
 | 直接续接原件 | 引用 | SHA-256 |
@@ -46,3 +49,7 @@ R1334北侧29带及末级实际端口11的原生正例只证明当时预检可�
 | R1337原action成功/守恒独立核销 | 9c9fff04318249758eaed638128587b7:133 | 7EEF1430B03FDDDECA60D800D4E25B0C1FC154E4E15BDE9D7442980F9710881E |
 | R1337原intent核销，窗口继续冻结 | 9c9fff04318249758eaed638128587b7:134 | B8267A5553C83F6FAA916E11CAD80ED707284F2CB88E24BF0D20E0E04C71106D |
 | R1334北侧输入/末级端口原生正例 | 9c9fff04318249758eaed638128587b7:124 | FE0EFD18A1948B7D65BDA752E13FC58CDBD8B418C210787FC0744529F776BAD4 |
+| 本轮唯一Native菜单，fresh29145 | 9d554a389ef44eb4922c6f37b85d8582:1 | DEA283CBFA438EF22C8A1AEFAC3BFBED4059CB7F2192902ED1FDC567C5444849 |
+| 本轮菜单最终摘要，0accepted | 6cdff5e096204b88968e28a422eb3b5c:1 | F67F81593C00C7B3CF2BF6782963AEB0AEE4C91E1A21D670C7AC52EFE892CF3D |
+| 本轮唯一default prepare拒绝 | dfdbe61513854c14bf2bd2ac3a172ae7:1 | 47B149D58A064FE5F390CA82B88EF84F9A9F34D1706BE690A47649911185AAD9 |
+| root版本/原窗口/原响应独立核验 | f03badcd37ef48fe85202114d5d4f5bd:1 | 3C202474AF33A15CF6584E78142B74FF3047517A6B494D944F0210A6752A4326 |

@@ -37,7 +37,7 @@
 
 本轮 writer 通过 healthy 菜单后的 Native `get_session_state` fresh 确认活动游戏版本为 `0.10.35.29145`，状态为未 Load。受保护回复索引为 `9d554a389ef44eb4922c6f37b85d8582:1/bridge-response-get_session_state`，回复 SHA-256 为 `DEA283CBFA438EF22C8A1AEFAC3BFBED4059CB7F2192902ED1FDC567C5444849`。本轮安装 DLL refs 与该 Native 会话属于同一交付核验轮次；这项文件可编译结果不构成历史版本映射或安装/恢复验收。
 
-`Updates/Versions.txt` 中的 `0.10.35.29131` 行不是活动版本证据。29131 的历史原生恢复证据见 [R1311/R1318 恢复记录](2026-10-14/foundry-progress-recovery-r1307.md)；最后 owned 保存和票据仍属于 29131，本轮没有跨版本 Load/迁移。R1337 保存前快照和当时边界见[状态记录](../../current-status.md)，该快照早于本节的 29145 Native 回复。
+`Updates/Versions.txt` 中的 `0.10.35.29131` 行不是活动版本证据。29131 的历史原生恢复证据见 [R1311/R1318 恢复记录](../2026-10-14/foundry-progress-recovery-r1307.md)；最后 owned 保存和票据仍属于 29131，本轮没有跨版本 Load/迁移。R1337 保存前快照和当时边界见[状态记录](../../current-status.md)，该快照早于本节的 29145 Native 回复。
 
 ## 已安装 MCP 磁盘与协议核验
 
