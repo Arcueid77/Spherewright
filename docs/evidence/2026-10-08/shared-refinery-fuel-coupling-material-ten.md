@@ -1,29 +1,5 @@
-# 共享精炼燃料耦合与物料十写封窗
+# Operational record moved to Spherewright-Lab
 
-日期：2026-10-08（Asia/Singapore）。本事件记录当前P104物料封窗、完整库存/结构核销与未执行的下一段有界候选。它只更新已完成事实，不授权后续施工，也不代表Gate 2通过。
+This product path is retained as a short redirect. The [fixed operational record](https://github.com/AvaloNero/Spherewright-Lab/blob/14478a03c64c550e644c559405c8496b647552e7/releases/v0.4.0/evidence/2026-10-08/shared-refinery-fuel-coupling-material-ten.md) belongs to the private Sample consumer repository; authorized access is required.
 
-## 当前封窗与保存覆盖
-
-Root独立审计 `5b5f5b68ecd04f1795f25bef2c064aa7:1`，SHA-256 `83119F6A7D229D5C48D6AB4BC7AE48A8EDE8FA5943067D4EAA3CCBCA26CA4253`，确认本窗口10笔unique accepted已全部闭合，覆盖R122、R124、R130、R136与R148各阶段；normal Save `100546323/R5/J100`覆盖全部十笔。当前P104/R5/J100、external `10/10 FROZEN`、lifetime `290`，无在途或unknown，owned状态健康。
-
-Save独立核销原件 `567fb377511449cea5e0e81e23647cc6:6`，SHA-256 `76506CF59118D9934180316BC0B945D87386F931159760A8BC8D512C027F6BAE`。Native全帧补核原件 `c9288acf8c5647a49d23a1777662c534:4`，SHA-256 `7B690CD63C4829E4D671971BAF37546A5AF10FC86A1AC95053CADF5993783AF9`。
-
-## 取材与制作的准确边界
-
-R145因源仓1511的Fe库存仅39、低于预检上限64，在Native prepare前停止，0 prepare/0 accepted；当时玩家Fe为0。R147新鲜读到储物仓Fe2693、距建造点69.906m（小于80m），Native预览positive后才继续。R148从仓库取Fe64，原生槽量由2698降到2634；32 tick后读到2635是自然边界变化，不改写取材终态。随后r85×8，玩家本阶段净变化为Fe `+56`、circuit `−8`、normal sorter2011 `+8`；当前相关背包量为Fe56、circuit930、sorter2011×8、belt2001×11。
-
-R148保存终态的caller封存格式曾报错，但这不表示三笔未完成。Root以R149原action/key和四次fresh读回核销并清除意图，没有重放；十笔独立审计与Save均覆盖这些终态。取材后库存由2634在32 tick边界变为2635，不能把自动变化误算进玩家动作。
-
-## Native结构与资源现状
-
-Native完整6198对象帧相对历史6197/R38仅新增历史对象6198和4450/6090声明连接。对象185与61各新增一条连接到分拣器16的声明边，旧机位/线路保持；矿机1由N0转为N1，分拣器16和电塔187的Native位置与已核位置相符。该资料是完整物料对象帧，不能称为新的完整电网姿态帧。
-
-P102当前有169个支持的物料对象、156条belt、6条完整Native路径；N1为18节点、10消费者、10发电机，full-serve、容量55000 J/t。P104的N3为224节点、555消费者、134发电机，full-serve；16个普通fuel状态可观察。物料和功率读回均按各自Native帧解释，不合并不同tick。
-
-旧铁矿1496的节点44和53已自然耗尽；Native返回 `vein_exhausted`、`remaining_resource=0`。它不能再被列作后续持续铁来源。除上述声明连接和矿机1的电网成员差异外，已核的机位、旧配置与线路未改。
-
-## 尚未执行的下一候选
-
-Root限定的下一段施工候选上限为新增不超过60条belt、8台普通sorter、0台发电机、0拆厂。拟连接G侧4223→3298（18.4327m，旧3063仍在其取料上游）和精炼侧4049→3111（36.4285m）；当前G源距玩家95.6m，大于80m施工范围，若进入该阶段须先做有界正常移动。材料估算为r5×18及r84×18消耗54 Fe、产54 belt；加现有11条为65条可用belt库存。最多施工60条，至少5条留作库存，不需因总库存65而压缩施工上限。新增sorter满载功率上界7200 J/t也是预测，不是已测负载。以上没有施工或验收。
-
-当前原油和G既有前缀保留，但diamond支路5334的实际供料、共享精炼/副产物流与旧燃料竞争仍待验证。continuous credit仍为0；连续≥36000-tick供需平衡、燃料/翘曲器双自动补给及最终同SHA双候选包均未通过，整案保持 `executable=false`。
+The [byte-exact original](https://github.com/AvaloNero/Spherewright-Lab/blob/14478a03c64c550e644c559405c8496b647552e7/archive/imported-from-spherewright/e7d5f7d8661092b7c8089710488c448f290638be/docs/evidence/2026-10-08/shared-refinery-fuel-coupling-material-ten.md) was imported from product fact commit `e7d5f7d8661092b7c8089710488c448f290638be`. Historical Git history and tags are unchanged.

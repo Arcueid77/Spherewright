@@ -1,21 +1,5 @@
-# G/R燃料接线进度与R185十写封窗
+# Operational record moved to Spherewright-Lab
 
-日期：2026-10-08（Asia/Singapore）。本事件记录封存基线6198之后的有限G/R接线施工、十写审计和当前燃料读回；不是Gate 2、持续供给或整案验收，也不授权后续施工。
+This product path is retained as a short redirect. The [fixed operational record](https://github.com/AvaloNero/Spherewright-Lab/blob/14478a03c64c550e644c559405c8496b647552e7/releases/v0.4.0/evidence/2026-10-08/fuel-coupling-ten-r185.md) belongs to the private Sample consumer repository; authorized access is required.
 
-## 十写封窗
-
-R185独立审计原件 `74ddae3f45a441129389cc8e51f412d1:1`，SHA-256 `48AD375BDEE557B7ED75D44A735218098BBD6064C4A654F43C58970BE2C5B7B2`，核销10个唯一意图：9笔成功，另1笔Move以`action_failed/stalled/position_stalled`终止，未到达目标、无recovery，也未重试同目标。无重放、unknown或在途。普通Save `100842338/R23/J100`为第10笔并覆盖全部10笔；当前external `10/10 FROZEN`、lifetime `300`，后续普通commit冻结。
-
-本窗包含两次正常手搓（r5×18、r84×18）、一次上述失败Move、G侧两段各8带与3个sorter、R侧首12带，以及最终普通Save。玩家最终Fe `2`、gear `0`、belt `37`、普通sorter `5`、fast sorter `0`、pole `0`、circuit `930`。Native材料差量为Fe `−54`、gear净`0`、belt `+26`、普通sorter `−3`；其余库存、inc/held和科研状态保持。
-
-## 工厂及燃料读回
-
-R184完整工厂快照 `099a4fd7c32b421db7a27f7a88b2b43c:75`，SHA-256 `C332D0973353EFD2D1465F0B6CA90DDAE044F35779040B047F19C3861EE40612`，记录6229 built、0 prebuild。对封存6198基线只增加28条belt和3个sorter、无删除；旧对象4205与3303各增加一条声明互惠连接，其余已核静态拓扑/配置不变。实际路径与sorter为：`6215`连接`6199→6214`、`6216`连接`6207→3303`、`6217`连接`4205→6206`，均为2011/filter1109，源端最后接入；不要按新对象ID推断带路径顺序。
-
-两条完整8-belt Native路径均观察到item `1109`。R侧首12带的有序路径为`6218,6220,6219,6221,6222,6223,6224,6225,6226,6227,6228,6229`，全空载，源端尚未加入。N3为224节点、558消费者、134发电机，full-serve；全本地电网满服务。对`3063`的同tick读回是`bufferedFuel=0`、已装载燃料item `1109`（能量1 J）、capacity/generated均为0，因此没有稳定燃烧或持续供料结论。旧燃料接口`3069–3072`保持不变。
-
-## 后续范围与未通过项
-
-保守方案上限已调整为64 belt/8 sorter；完整设计为61 belt/7 sorter。当前完成G16带/3 sorter及R12带，R侧还剩20+13共33带和4个filter1114接缝；库存37带/5 sorter足够，按该设计施工后预计剩4带/1 sorter，无需追加材料制作、电塔、发电机或拆厂。旧`G-south-two-grid-rows`候选族在两次Native拒绝后退役，不重试。
-
-待后续准确SHA绿CI和root明确重开后，才施工剩余R段并复核4个接缝；之后fresh验证共享来源、燃料竞争、副产物流和电力，再运行预声明的连续≥36000-tick观察。当前continuous credit为0，Gate 2及最终同SHA双候选包均未通过。历史已通过的有限蓝图生命周期与Governor 2×门保持通过，本事件不重新验收或扩大其范围。
+The [byte-exact original](https://github.com/AvaloNero/Spherewright-Lab/blob/14478a03c64c550e644c559405c8496b647552e7/archive/imported-from-spherewright/e7d5f7d8661092b7c8089710488c448f290638be/docs/evidence/2026-10-08/fuel-coupling-ten-r185.md) was imported from product fact commit `e7d5f7d8661092b7c8089710488c448f290638be`. Historical Git history and tags are unchanged.

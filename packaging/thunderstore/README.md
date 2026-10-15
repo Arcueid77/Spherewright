@@ -24,7 +24,7 @@ Spherewright 通过 MCP 把外部 AI 智能体接入《戴森球计划》。它�
 
 v0.3.3 已在本机分别验证：新建非沙盒 1× 世界、导入非沙盒 100× 世界、导入沙盒 1× 世界。三者均通过正常动作完成第一座建筑并保存。Spherewright 不调用沙盒工具，也不注入物品、能量或科技。黑雾/战斗、多人或 Nebula，以及广泛的第三方 Mod 兼容性暂不支持。
 
-0.4整体验收尚未完成，最终同提交手动包与Thunderstore包仍待安装、运行和恢复验证。当前29145开发cohort已完成同批菜单部署及原生v6准备；实际29131→29145迁移尚未执行。旧29131恢复和v0.3.3验证各自保留原版本范围，见[当前状态](https://github.com/AvaloNero/Spherewright/blob/main/docs/current-status.md)。
+0.4整体验收尚未完成，最终同提交手动包与Thunderstore包仍待安装、运行和恢复验证。当前29145开发cohort已完成同批菜单部署及原生v6准备；实际29131→29145迁移尚未执行。旧29131恢复和v0.3.3验证各自保留原版本范围，见[当前状态](https://github.com/AvaloNero/Spherewright-Lab/blob/14478a03c64c550e644c559405c8496b647552e7/operations/current-status.md)。
 
 ### 安装并连接 MCP
 
@@ -51,7 +51,7 @@ v0.3.3 已在本机分别验证：新建非沙盒 1× 世界、导入非沙盒 1
 ### 下载、证据与许可
 
 - [GitHub Releases：手动安装包、校验和与回滚说明](https://github.com/AvaloNero/Spherewright/releases)
-- [v0.3.2：Sol Max 与 Luna Max 双模型黑盒验收对比](https://github.com/AvaloNero/Spherewright/blob/main/docs/v0.3.2-sol-vs-luna-black-box.md)
+- [v0.3.2：Sol Max 与 Luna Max 双模型黑盒验收对比](https://github.com/AvaloNero/Spherewright-Lab/blob/14478a03c64c550e644c559405c8496b647552e7/scenarios/v0.3.2-black-box/comparison.md)
 - [源码与问题反馈](https://github.com/AvaloNero/Spherewright)
 
 Spherewright 使用 MIT License。
@@ -78,7 +78,7 @@ End users do not need the source repository or a .NET SDK.
 
 v0.3.3 was locally validated in a fresh non-sandbox 1× world, an imported non-sandbox 100× world, and an imported sandbox 1× world. Each used ordinary actions to construct its first building and save normally. Spherewright never calls sandbox tools or injects items, energy, or technologies. Dark Fog/combat, multiplayer or Nebula, and broad third-party Mod compatibility are not supported.
 
-Combined 0.4 acceptance remains open, including final same-commit manual and Thunderstore installation, runtime and recovery validation. The current 29145 development cohort has matching menu deployment and native v6 preparation evidence; actual 29131→29145 migration has not run. Earlier 29131 recovery and v0.3.3 results retain their original version scopes. See the [current state](https://github.com/AvaloNero/Spherewright/blob/main/docs/current-status.md).
+Combined 0.4 acceptance remains open, including final same-commit manual and Thunderstore installation, runtime and recovery validation. The current 29145 development cohort has matching menu deployment and native v6 preparation evidence; actual 29131→29145 migration has not run. Earlier 29131 recovery and v0.3.3 results retain their original version scopes. See the [current state](https://github.com/AvaloNero/Spherewright-Lab/blob/14478a03c64c550e644c559405c8496b647552e7/operations/current-status.md).
 
 ### Install and connect MCP
 
@@ -105,7 +105,7 @@ Resume an already owned primary from the idle menu with its protected credential
 ### Downloads, evidence, and license
 
 - [GitHub Releases: manual installer packages, checksums, and rollback instructions](https://github.com/AvaloNero/Spherewright/releases)
-- [v0.3.2 Sol Max versus Luna Max black-box comparison](https://github.com/AvaloNero/Spherewright/blob/main/docs/v0.3.2-sol-vs-luna-black-box.md)
+- [v0.3.2 Sol Max versus Luna Max black-box comparison](https://github.com/AvaloNero/Spherewright-Lab/blob/14478a03c64c550e644c559405c8496b647552e7/scenarios/v0.3.2-black-box/comparison.md)
 - [Source and issue tracker](https://github.com/AvaloNero/Spherewright)
 
 Spherewright is available under the MIT License.

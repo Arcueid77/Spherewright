@@ -1,16 +1,5 @@
-# R454 隔离空带链头回收适配
+# Operational record moved to Spherewright-Lab
 
-日期：2026-10-09（Asia/Singapore）。本记录说明新增的离线原生回收适配与此前退役的占位候选；适配尚未部署或实机执行，不构成石料来源恢复证据。
+This product path is retained as a short redirect. The [fixed operational record](https://github.com/AvaloNero/Spherewright-Lab/blob/14478a03c64c550e644c559405c8496b647552e7/releases/v0.4.0/evidence/2026-10-09/empty-belt-recovery-adapter-r454.md) belongs to the private Sample consumer repository; authorized access is required.
 
-## 已退役的占位候选
-
-- Root R453独立审计 `e0c4e74a28be423f9c2ded3c2ad23d42:1`，SHA-256 `8FDAF59433A978665A4B5A9499D43969081F60C0F41A11B83FD0C58EC32B97FC`：旧占位yaw345与对象5318、yaw135与对象3725分别发生原生碰撞拒绝。该候选族已关闭，不再旋转或微移；对象3725的既有活线保留。
-
-## 离线回收适配
-
-- Root实现封存 `7af21b87c69f4c829afcae0b360ae1d8:1`，SHA-256 `217D62E2886294F09E86B2EC2E3C934CA626F94944B7349DB2C32CB6EFC4E866`。新增能力仅支持完全隔离、空载、普通2001传送带链的链头，限16条带和512 cells；调用前fresh绑定整条路径的货物、几何、身份与入边引用，拒绝外部连接、预建筑、缓存或其他组件。回收经原生`DoDismantleObject`一次执行，并核对2001×1退款的数量与inc、存活对象、预建筑、连接和余下链状态。局部变换还需对应Native renderer/collider证据；没有直接修改游戏数组或自动重建。
-- 相关Core测试118项、MCP测试3项通过；当前完整Plugin Release构建为0错误、0警告，针对Native DLL SHA-256 `6C122E5443E6843979B4064050DFCB5E0D75577A0B64F6AE4111290238B33C12`。当前安装cohort仍为`863d35546f6cb49fcdaec5b5814869d1e13af42b`；本次代码尚未同批冷部署，也没有实际回收任何传送带。
-
-## 后续边界
-
-在本次代码的准确SHA经CI验证并按同批流程部署后，下一有限实机步骤为正常回收5325，再按序处理5324至5316。石料来源和重新接线仍须单独取得fresh Native资格；离线实现、测试和构建均不等于实机回收、来源恢复或持续供料通过。当前`continuousCredit=0`、`wholeSupplyPassed=false`保持不变。
+The [byte-exact original](https://github.com/AvaloNero/Spherewright-Lab/blob/14478a03c64c550e644c559405c8496b647552e7/archive/imported-from-spherewright/e7d5f7d8661092b7c8089710488c448f290638be/docs/evidence/2026-10-09/empty-belt-recovery-adapter-r454.md) was imported from product fact commit `e7d5f7d8661092b7c8089710488c448f290638be`. Historical Git history and tags are unchanged.

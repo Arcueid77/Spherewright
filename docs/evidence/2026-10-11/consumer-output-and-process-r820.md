@@ -1,23 +1,5 @@
-# 消费端输出与采样流程核验（R811–R820）
+# Operational record moved to Spherewright-Lab
 
-本阶段只做消费者、运输与物料状态核对，没有生产实验、构筑或 accepted 写入。执行 cohort 仍是 `369f35c0d7ea352d505ec686cc22a52294d5601a`；窗口为 14/20、lifetime 468，最后普通保存 tick 106821990、Journal 102，玩家库存与 Journal 未变。来源门仍为 `sourceConditionsPassed=false`、`wholeSupplyPassed=false`、continuous credit 0。
+This product path is retained as a short redirect. The [fixed operational record](https://github.com/AvaloNero/Spherewright-Lab/blob/14478a03c64c550e644c559405c8496b647552e7/releases/v0.4.0/evidence/2026-10-11/consumer-output-and-process-r820.md) belongs to the private Sample consumer repository; authorized access is required.
 
-## 读取范围修正
-
-首次将物料读取范围扩至 66 个对象时，第 25 项实验室 76 被现有 material-cut policy 以 `material_inventory_buffers_unavailable_or_unsupported` 拒绝。该次只完成 7 次只读请求、约 1.84 秒、0 accepted；两端保存、背包与 Journal 均未变。实验室库存不在当前 cut 支持范围内；没有改 Plugin 或放宽验收门。随后从清单移除该不支持项，沿用同一参数化入口；实际 `pwsh -File` smoke 为 0 Game 调用。修正后的 65 对象读取为 9 RO、2483.2955 ms；独立核验为 65 对象、2803.3771 ms、`passed=true`。
-
-原始审计索引：修正后的 writer `c6151ace584f4197b19c49496c2a2888:11`，SHA-256 `2B8103B5FF1C3989CA36C54B648F160EF99B4E62383805CD9ECF9BD922B2EE7D`；root 独立审计 `da550c27a143417a858bb40237ee0210:1`，SHA-256 `6DE2478F46AAB34840B6F716DDA5EDEBC96A114CE66261F8EBE93CC0CD69DBA1`；流程决策索引 `0299d7dfe49841f0b44eefb14c697743:12`，SHA-256 `80EB6D8FA2ECDF5CF82E04E25A96F0670A880C634063DA24051B39320FB064AD`。
-
-## 消费、库存与运输截面
-
-- 磁铁炉1216的 input 为铁矿2、output为磁铁100；磁铁库1217有5827件，容量6000、尚有173空位。消费者3404产物超磁环10、725产物磁线圈19、73产物磁线圈20，均为未工作且输入已备；电动机724产物10、涡轮机814产物10也满料停工。铁块炉1500 input 4/output 100且停工，铁块库存1511为3000。
-- 钛炉530 input 4/output 100；钛矿库259与钛块库531各3000。站916钛块308/max300、需求/本地订单为0、10架无人机空闲；站1657钛矿692/max600、远程需求/订单为0、货船空闲。不能单由库存上限或发货比例认定唯一运输原因；现有 Overseer 记录说明相关发货阈值会按供应库存上限夹取。
-- 奇异物质炉5326输出20、透镜炉5333输出10、曲速器炉5329输出10，曲速器库5331为3000。Rod炉3403输出20，缓存为合金2、氘40、超磁环2。当前三个本地电网均满供。
-
-R803 三次样本里，1216 input 均为3、output 均为100、末次 `isWorking=false`。分拣器6492第一个样本为 `Returning` 且未持货，后两个样本为 `Inserting` 且各持铁矿1；其周期仍为300000。30/min 磁铁观察不能单独证明输入不足，且上述满料停工的下游截面也不证明分拣器速度瓶颈。root 暂停了计划中的1234/1241升级；先核正常需求与自动运输如何传至来源，再选有界需求/预热或必要修复，不预设增加容量或第二台分拣器会解决问题。
-
-## 流程时间复盘
-
-以下为原件记录的阶段衔接间隔，不是命令执行时长：R813首次审计结束至下一次消费者读取声明为901.7697889秒；初次读取失败至修正声明为163.8953882秒；修正读取结束至root封存为40.1379304秒。单次读取与核验本身较快，但准备阶段仍约15分钟，尚未实现全流程提速。已复用单写者、固定窗口、完整静态缓存与现有参数化入口，且没有采样过程中的模型决策；事实文档与CI不阻塞同一执行 cohort 的后续只读工作。保存与独立审计仍是新写入前置门。
-
-R783 的连续来源实验仍以 `sourceConditionsPassed=false` 结束；本次现场诊断不改变其库存趋势结果，也不产生连续产量信用。完整来源、持续供需和 0.4 其他验收门保持未通过。
+The [byte-exact original](https://github.com/AvaloNero/Spherewright-Lab/blob/14478a03c64c550e644c559405c8496b647552e7/archive/imported-from-spherewright/e7d5f7d8661092b7c8089710488c448f290638be/docs/evidence/2026-10-11/consumer-output-and-process-r820.md) was imported from product fact commit `e7d5f7d8661092b7c8089710488c448f290638be`. Historical Git history and tags are unchanged.

@@ -1,9 +1,5 @@
-# R757 铁源流动与完整准备核验
+# Operational record moved to Spherewright-Lab
 
-R757 root 审计 `56c0a02e3daa433c94761800179f5008:3`（SHA-256 `611635FAD47FDEF0980E562908B7E9B9AC9EAD3210E8148A457E86BACD54A722`）核验本阶段的完整物料准备范围与有限铁源流动。核验覆盖 29 项物料池、25 个正剩余本地有限节点、远端钛 169 与本地钛 254、16 个燃料发电实体、2 座实验室及 3 个已加载工厂的供电；全部已声明来源条件通过，`sourceAdmitted=true`。本次为只读核验，当前保存为 R54 / Save 106055923 / durable Journal 102，固定窗口 external 18/20、整案 lifetime 452；没有未决动作，窗口冻结。
+This product path is retained as a short redirect. The [fixed operational record](https://github.com/AvaloNero/Spherewright-Lab/blob/14478a03c64c550e644c559405c8496b647552e7/releases/v0.4.0/evidence/2026-10-10/iron-source-flow-and-full-readiness-r757.md) belongs to the private Sample consumer repository; authorized access is required.
 
-原 R756 观察记录 `707b1882856d49958928358dc3f4c295:163`（SHA-256 `A264517082D4D7696162E8F6367CE684021A0BAFBA7F8909EE0891712B8FF51B`）结束于原声明的 160 个只读请求额度，包含 115 次 session-state 轮询。它记下三个彼此分离的 600-tick 样本，但因原预算到限，`observationCompleted=false`，没有完整结束核验。root 的 R758 零写独立复核 `c04d05e7fa344acbba009eff90d5e2fe:1`（SHA-256 `3227252374BD992D216C7C1787ADB5DC0CEB416D05AFD01D978AEF2DB6EFF58E`）核对了该边界；随后单独批准的 R759 收尾 `bc098e544a8d4881945a27bc16657977:19`（SHA-256 `6916702BCE928A2D74F203412BAEC4FB0D843F4C02E595AFFAB2E82F86A0D971`）以 16 个响应、约 6.35 秒完成独立结束读取，没有重跑原窗口或延长原声明。R757 root 审计逐份覆盖了 176 条原只读响应。
-
-新 Native path 235 在三个样本里各记录 30 个铁矿；分拣器 6492 的 held 数量依次为 1、0、1，磁铁炉 1216 配方 ID 2 的工作状态依次为 true、false、true。三个非重叠窗口分别为 106063106–106063705、106063773–106064372、106064440–106065039，窗口之间各隔 67 tick，不拼接计算持续产量。P104 全行星磁铁产量每窗各为 5、总计 15；这些数量不能全部归因于炉 1216。旧 Native path 31 的样本货物为 0，但新路线有实际入料与生产观察，不能以瞬时缓存为零否认有限流动。
-
-同期记录的有限库存为玩家 Warp 215、Rod 0，仓库 5331 的 Warp 3000、仓库 3955 的 Rod 890；这些库存只描述当时库存。R757 通过的是本次声明的有限来源/准备条件，不是连续产量证明。`wholeSupplyPassed=false`，`continuousCreditTicks=0`；Warper 与 Rod 各至少 1/min、连续 36,000 ticks、完整供需、双自动补给、整合保存恢复及最终同 SHA 双候选验收仍未通过。下一步须按原有需求与材料边界恢复有限运行，再单独预声明完整连续窗口。
+The [byte-exact original](https://github.com/AvaloNero/Spherewright-Lab/blob/14478a03c64c550e644c559405c8496b647552e7/archive/imported-from-spherewright/e7d5f7d8661092b7c8089710488c448f290638be/docs/evidence/2026-10-10/iron-source-flow-and-full-readiness-r757.md) was imported from product fact commit `e7d5f7d8661092b7c8089710488c448f290638be`. Historical Git history and tags are unchanged.

@@ -1,44 +1,5 @@
-# 仓库返航、固定窗口封存与石料来源边界（R665 / R672）
+# Operational record moved to Spherewright-Lab
 
-日期：2026-10-10（Asia/Singapore）。本页保留R665截面并追加R672保存与封窗核验。不同观察和保存截面分开记录，不将失败或只读结果改写为成功施工或持续供给。
+This product path is retained as a short redirect. The [fixed operational record](https://github.com/AvaloNero/Spherewright-Lab/blob/14478a03c64c550e644c559405c8496b647552e7/releases/v0.4.0/evidence/2026-10-10/warehouse-return-recovery-r665.md) belongs to the private Sample consumer repository; authorized access is required.
 
-## R672阶段保存与窗口封存
-
-R672独立核销后，正常保存为 `105708553`、R24、durable Journal 102。固定20窗口累计2/20、lifetime 434；整案累计35次accepted、4次移动和8次普通保存。窗口提前封存，18个未用槽位退役且不转移。R652失败移动保留为已accepted历史动作，并由本次保存覆盖；无在途、未核销unknown或quarantine。
-
-完整工厂快照为 `6475 built / 0 prebuild`、65页，静态配置与连接无变化；P104本地N1/N3/N4三个电网均满供，库存保持不变。R672确认玩家仍处于Drift，不能将其作为落地、抵达仓库或持续供给的证据。
-
-R666的40秒观察取得120个Drift读数，严格 `0.03 m/s` 局部速度门未满足，未尝试Native移动。R665恢复候选族已有1次Native拒绝，候选上限为2。R659列出的20个当前有效有限矿点有正剩余；节点36/37返回 `INVALID_ENTITY`，剩余量不可用。R668复用了完整29项物料与拓扑上下文，但没有生产tick信用；这些有限观测不改变持续来源验收结论。
-
-证据索引：R670 writer `d17760c3c4f542ab8d8bd6b147b3b0af:85`，SHA-256 `E1974601B3E0FCEE676A16767DFEB090EA680BBF7A0C56A096E4AB5A61A7D38B`；R672独立核验 `37d294a5c30242d3a0b2e2625f59ee1b:1`，SHA-256 `107B725460C558E6E75C9B37AFF9E55D414A7BFAF849100E59EB35F735C082A3`。
-
-## R673移动候选终止与新窗口状态
-
-R673的单次fresh `prepare_move` 返回Native `STALE_STATE`，0 commit、intent或accepted；该次读取记录Drift速度 `0.148135111 m/s`，但不足以证明拒绝的唯一原因。它是R665恢复候选族的第二次Native拒绝，达到上限2后停止该候选族，不再微移或重试。R666的40秒观察共120个Drift读数，严格 `0.03 m/s` 局部速度门未满足，未发出Native移动请求。
-
-R672封存的窗口为2/20、lifetime434，18个未用槽位退役。此后新固定20窗口从lifetime434开启，external为0/20。R674将规划的整案普通保存上限由8调为9，未增加accepted或移动上限；实际普通保存数仍为8，最新已核保存仍为 `105708553`、R24、durable Journal 102。当前无在途或未核销unknown。
-
-来源边界未变：R659的20个有效有限节点为正例，36/37的剩余量不可用；旧铁矿机1213的空资源列表不能证明铁源枯竭，1496仍有节点51/56。R668离线复用了完整29项物料和拓扑上下文，没有生产tick信用。R672的完整快照与窗口核销不证明落地、仓库到达或持续来源。R673 writer `22a6a425f71f491c86c1d14831b488aa:7`，SHA-256 `6577CA49C0771B67723A0FBBE44C7F1ED87406BD9C70D569739882BB5C945517`；root核验 `74d015d27ba14f89b21e61c8e76016da:1`，SHA-256 `24156649A8B21C89DDD2EF6AE4497ED53F89D40AEA19502BBBD334E3C31836C2`。
-
-## R676/R677只读漂移观察
-
-R676 writer `43f54012bee145178dd4eea8f0815057:6`，SHA-256 `CB9A90E2B5D3FE00F16701493D72F3CF4F8B124CDD0A93744F80FF5BB9B0C48A`；root核验 `eb435c2477e949fc8f303f6cd8b135fb:1`，SHA-256 `0891079474A05883D3E8883359669ABD1B322D485F54A8FE65A305BC1ABB8DC9`。5次只读请求用746ms，在相邻玩家观察中速度从 `0.162932277` 增至 `0.178838089 m/s`，位移 `0.01617379 m`，两次速度都高于Native `0.15 m/s` 门。Core canonical hash复算与原hash完全一致；除观察位置外PlayerAction绑定字段不变，能量数值变化不是hash差异原因。内部Native prepare/commit快照不可见，因此R673 `STALE_STATE` 的具体原因仍未证明。本次无写入，玩家仍处于Drift；root已请求现场正常上岸并停稳，但尚无该状态的观察证据。窗口仍external `0/20`、lifetime `434`，Save `105708553`、R24、durable Journal 102；无在途动作。
-
-## R665历史截面：动作与窗口
-
-R652的唯一accepted移动以`action_failed/position_stalled`结束；原动作已唯一核销，不重放。新固定20窗口从lifetime432开始，目前1/20、lifetime433。最后正常保存仍为tick `105510911`、durable Journal 102；本窗动作尚未由新保存覆盖，窗口冻结，无在途或未核销unknown。
-
-R657在速度0.163551718超过0.15时于prepare前停止，0 accepted。R661漂移prepare为positive，但Native在动作建立前返回`STALE_STATE`，同样0 accepted；其调用方本地未决由R664的5次只读健康核验关闭，不清计数也未保存。R665最近观察记录漂移速度0.129m/s、CoreEnergy 1.59998 GJ，仅代表该观察时点。
-
-## R665历史截面：来源与样本边界
-
-R659来源清单中20个当前有效有限节点有正剩余；节点36/37的Native查询为`INVALID_ENTITY`、剩余量不可用，不能将其记为0。旧铁矿机1213的资源列表为空，但这不足以断言铁源枯竭。铁源1496仍有节点51/56。R659来源清单保留了既有29项物料、路径和燃料覆盖；全来源与持续供给条件仍未通过。
-
-Warp仓5331有3000、Rod仓3955有817，玩家Rod库存为0；五根携带棒及正式样本消耗尚未执行。861缓冲为石料16、精炼油12、水8、硫酸78；这些是有限库存，不能证明独占来源或持续产出。
-
-整案累计34 accepted、4次移动、7次普通保存；北向路线和材料累计保持此前已核值。`wholeSupplyPassed=false`，continuous credit为0；Warper与Rod各至少1/min、连续36,000 ticks、双自动补给、完整供需、整合保存恢复和最终同 SHA 双候选包验收仍未通过。
-
-## 证据索引
-
-- R659来源清单：`15d22e6862934ba8b56787cd1d3701f3:1`，SHA-256 `36068EE5A5B4AB3005D730E185649A1928FC06179B763364053F4C312A19B01A`。
-- R665最新观察与核验：`71c52f1eb67b42e3a5a8c58f4848f23f:1`，SHA-256 `81398A53869F59A62D73C7BE1830B975C021F6B78C30539C6651196EA360B300`。
+The [byte-exact original](https://github.com/AvaloNero/Spherewright-Lab/blob/14478a03c64c550e644c559405c8496b647552e7/archive/imported-from-spherewright/e7d5f7d8661092b7c8089710488c448f290638be/docs/evidence/2026-10-10/warehouse-return-recovery-r665.md) was imported from product fact commit `e7d5f7d8661092b7c8089710488c448f290638be`. Historical Git history and tags are unchanged.

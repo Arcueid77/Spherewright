@@ -1,14 +1,5 @@
-# 磁铁供料短窗观察（R803–R807）
+# Operational record moved to Spherewright-Lab
 
-本次复用既有采样入口观察磁铁供料和关键物料，没有新增构筑或 accepted 写入。三个互不重叠的窗口分别为 106881976–106882575、106882600–106883199、106883231–106883830；窗口间存在间隙，合计覆盖 1800 tick，不能拼作连续产量验收。
+This product path is retained as a short redirect. The [fixed operational record](https://github.com/AvaloNero/Spherewright-Lab/blob/14478a03c64c550e644c559405c8496b647552e7/releases/v0.4.0/evidence/2026-10-11/magnet-feed-short-r807.md) belongs to the private Sample consumer repository; authorized access is required.
 
-三个窗口中，磁铁 1102 均为 30/min，6492 升级后的实际吞吐未见改善。铁块 1101 分别为 60/0/0，平均 20/min；铁矿为 42/min。高能石墨 1109 为 30/24/18，均值 24/min、同期消耗 26/min；原油产出 24/min、消耗 20/min。钛矿 1004、钛块 1106、奇异物质 1127、曲速器 1210、氘核燃料棒 1802 均为 0/min。五个当前铁矿节点开场和收尾都有正余量，三个本地电网满供。目标设备静态状态和 2012 分拣器的 `progressRequired=300000` 配置保持，玩家库存与 Journal 未变。
-
-R803 的三次 fresh 读取显示目标炉 1216 的 input 均为 3、output 均为 100，末次 `isWorking=false`；分拣器 6492 第一个样本为 `Returning` 且未持货，后两个样本为 `Inserting` 且各持铁矿 1；其周期仍为 300000。这表明有物料到炉，但不能据此确认输出已送达目标消费者；下一步应先核对 1233→1231 输出链、目标带与消费者。R807 的 30/min 读数不能单独证明输入不足，也不能推出增加第二台分拣器必然有效。
-
-
-writer 原件 `aaf0ad09a29449de8254e7cc9c814a92:85`，SHA-256 `64458143BC8EC9013C7181E9EF37C38C078669E2D0F74BEC32CBDBC465942779`：78 requests、91.4110675 秒、0 accepted。root 独立原件审计 `f78813a20f30466f8477739ef05ae99a:1`，SHA-256 `D041A630C64BDE90D77353A07E2D736823A7775A4ED20EDBE0FEBD62D38D1ACD`，耗时 2.2146959 秒。
-
-这次采样复用了现有只读入口，没有逐样本模型决策；约 91 秒的采样执行后，独立原件审计约 2.2 秒。事实文档提交与对应 CI 可并行，不等待无关游戏动作。此前一次审批哈希转录多出一位，导致调用方在本地校验阶段以 0 requests 停止；该调用方问题已核销并修正，不是 Native 拒绝，也不是授权缺失。
-
-R807 未通过来源条件：`sourceConditionsPassed=false`、`wholeSupplyPassed=false`、continuous credit 为 0。它只定位到磁铁产率未随周期升级改善及多项库存净消耗；下一步需检查磁铁吞吐所受的持货、传送与炉子需求限制，并处理铁、钛来源。不得将本短窗读数当作连续稳定产量或替代 R783 的失败结论。
+The [byte-exact original](https://github.com/AvaloNero/Spherewright-Lab/blob/14478a03c64c550e644c559405c8496b647552e7/archive/imported-from-spherewright/e7d5f7d8661092b7c8089710488c448f290638be/docs/evidence/2026-10-11/magnet-feed-short-r807.md) was imported from product fact commit `e7d5f7d8661092b7c8089710488c448f290638be`. Historical Git history and tags are unchanged.

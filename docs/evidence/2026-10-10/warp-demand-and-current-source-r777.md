@@ -1,21 +1,5 @@
-# Warp 需求取料与当前来源核验（R770–R777）
+# Operational record moved to Spherewright-Lab
 
-本页记录 R770 保存阶段及后续独立来源核验。它更新当前快照，不增加生产或发行通过项。
+This product path is retained as a short redirect. The [fixed operational record](https://github.com/AvaloNero/Spherewright-Lab/blob/14478a03c64c550e644c559405c8496b647552e7/releases/v0.4.0/evidence/2026-10-10/warp-demand-and-current-source-r777.md) belongs to the private Sample consumer repository; authorized access is required.
 
-## 已保存的有限取料
-
-R770 从现有仓库 5331 正常转移 Warp 100，使玩家库存由 300 增至 400，并以普通 Save `106238371` 保存；当前固定 20 窗从 lifetime 454 起，R770 后 external 为 7/20、lifetime 为 461，Journal durable 102。root R773 核验了原始记录中的唯一动作、保存覆盖及无待处理意图；无重放。整案累计为 62 accepted、6 手工材料动作、16 普通保存、15 移动，既有 173 条 belt、12 个跨度、3 个分拣器和 2 台矿机计数保持。Warp 取料是库存转移，不是生产或自动补给证据。
-
-原件索引：R773 `df23007b9d9d4e999a30a7de1cae73c7:1`，SHA-256 `9C9114D6B2EC5354CE738830E22AD06DF342A7121205A0DEFBF8B6E861F32801`。
-
-## R777 当前来源截面
-
-R777 独立核验复用完整工厂读取：6492 built/0 prebuild。与先前封存状态相比，唯一静态差异是矿机1496的 `resourceNodeIds` 从 `[51,56]` 变为 `[51]`；没有新增或移除实体、其他静态漂移或非互惠连接。当前 24 个 Native 资源节点均显示正剩余；3 座已加载工厂的网络满供且成员不变。N3 的实际容量读数从 2,022,000 变为 1,986,000，按读数记录，不推断为固定容量。Warp 全池相对本次转移前的 3,071 仍有 93 个需求缺口。背包为 Warp 400、Rod 5；Stone 6 的来源仍未归因，不记为 Agent 生产或供给信用。
-
-原件索引：R777 `57adc11ac5164577be8785e40d41a0dc:1`，SHA-256 `AEFFA5EEF8ACCD20724C7E313B36A5987C639F8EE9084FAC23C0CEFED1F376F2`。
-
-## 尚未通过的门
-
-批准的只读完整来源实验目标为 36,000 游戏 tick、至多 120 个样本，原 29 项库存、当前来源点、燃料、实验室和电力覆盖及速率/库存阈值均保持。批准原件为 R780 `e60e974cb9974cb18acde3d206f0f2cb:1`，SHA-256 `84CDD3939237B269B1684ADEE1ECFCE1412B3D67A6876E56F12DFA489EBEBB65`。R778 调用方在采样启动前因请求 4,200 秒、超过既有入口 3,600 秒上限而停止；该实验未启动，没有样本或最终审计结论。不得拼接有缺口的窗口或据此宣称来源条件通过。
-
-`wholeSupplyPassed=false`，continuous credit 为 0。Warper、Rod 各至少 1/min 的持续供给、36,000-tick 连续门、双自动补给、整合保存/恢复及最终同 SHA 双候选包门仍未通过。先前 R441 的来源窗口失败保留。R508 双包只是较旧源码提交上的离线预检，不能作为最终候选、真实 Mod Manager 安装或实机运行证据。
+The [byte-exact original](https://github.com/AvaloNero/Spherewright-Lab/blob/14478a03c64c550e644c559405c8496b647552e7/archive/imported-from-spherewright/e7d5f7d8661092b7c8089710488c448f290638be/docs/evidence/2026-10-10/warp-demand-and-current-source-r777.md) was imported from product fact commit `e7d5f7d8661092b7c8089710488c448f290638be`. Historical Git history and tags are unchanged.

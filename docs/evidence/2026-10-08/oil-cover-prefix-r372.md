@@ -1,13 +1,5 @@
-# 油路绕行覆盖前缀与 R372 阶段核销
+# Operational record moved to Spherewright-Lab
 
-R366 原件 `133d873b394c4d0888acd533fd7a66ae:132`（SHA-256 `3109284FA526CD82805CFA7111D38642FAA22E2A48BE2A90116884F30366BC46`）记录两笔 Native 建造：第一段14条带，第二段以 source `6288`覆盖19条带。第二笔已接受，但原 caller 在120秒等待界限内未观察到终态并以 exit 1 退出；该退出不是 Native 几何拒绝，阶段当时也未保存。没有延长原预算或重放。
+This product path is retained as a short redirect. The [fixed operational record](https://github.com/AvaloNero/Spherewright-Lab/blob/14478a03c64c550e644c559405c8496b647552e7/releases/v0.4.0/evidence/2026-10-08/oil-cover-prefix-r372.md) belongs to the private Sample consumer repository; authorized access is required.
 
-R368 只读检查同一第二笔原动作 `6e578ab1201944a0b32924a33e730e84:8`（SHA-256 `0B9C7E8BDB14480FDEBC6B410E026D5E10735647E2DF24DD6E709E961D8221D2`），核实其33个实际Native带点、32条互惠路径均为空货，旧16个相关实体的静态状态、电力和J102守恒。Root 的 R369 独立审计 `18d10e4242a44edd8c37e210dd05e15f:1`（SHA-256 `E912E51F412B1961BD50EA50A6C5B9658D5F78031555ED80436AD2B15B51514B`）核销原动作后才清除在途标记；accepted记录保留且未重放。
-
-R370 随后正常保存，原件 `9b244f1860a149a6b3983e2ec12a1b61:15`（SHA-256 `D66A52F46149432F070C26DCF626E2FF0377DA26436DE2634F5BEB2938C34A0C`）：9个请求，Save `102448091`。Root 的 R372 审计 `fb3993fc588744b7b612fdc77e24a258:1`（SHA-256 `2A40D3AF17150272988C849653C257251C7F9392F1EF43DD09CDE3F75354D1FD`）独立核对原建造终态、保存覆盖、全库存和手持增量剂、实际移动、两处仓库即时扣款及自然流量边界、10个相关静态实体及互惠连接、本地供电、Save与J102。审计没有产生新的游戏写入。
-
-当前为R79、Save `102448091`、durable J102、external `12/20`、lifetime `371`，无在途或unknown并冻结。玩家库存为belt `2001×39`、basic sorter `2011×2`、fast sorter `2012×3`。本阶段33条新带已由Save覆盖，未建分拣器。
-
-R361结构修复接受动作上限由21增至22，只增加一笔正常Save的余量；最多新建40条belt和2个sorter的结构上限不变。此前前缀6笔、R364的9笔、R366的2笔建造和R370的1笔Save共18笔，尚余4笔：source cover的7条带、接入旧消费者 `2804` 的basic sorter（filter `1007`）、从旧 `6063` 接入新带头的fast sorter（filter `1007`），以及最终Save。旧R355的19/20窗口已单独闭合，不结转余额。此前R359的三段空路径和单端cover预览仍不代表这条完整路线可执行；新接缝、实际到下游 `707` 的物流均须施工后fresh验证。
-
-本阶段未形成持续供给信用。R323/R324来源条件失败及R344诊断保持原结论；`wholeSupplyPassed=false`，整案仍为`executable=false`。连续36,000 ticks、双自动补给、整合保存恢复和最终同SHA双候选包均未通过。
+The [byte-exact original](https://github.com/AvaloNero/Spherewright-Lab/blob/14478a03c64c550e644c559405c8496b647552e7/archive/imported-from-spherewright/e7d5f7d8661092b7c8089710488c448f290638be/docs/evidence/2026-10-08/oil-cover-prefix-r372.md) was imported from product fact commit `e7d5f7d8661092b7c8089710488c448f290638be`. Historical Git history and tags are unchanged.

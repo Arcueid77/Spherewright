@@ -1,27 +1,5 @@
-# 被动漂移恢复与状态绑定核验（R605）
+# Operational record moved to Spherewright-Lab
 
-日期：2026-10-10（Asia/Singapore）。本事件记录同批部署、健康恢复核销及 Move 被动漂移约束；它不表示供料或最终 0.4 验收通过。
+This product path is retained as a short redirect. The [fixed operational record](https://github.com/AvaloNero/Spherewright-Lab/blob/14478a03c64c550e644c559405c8496b647552e7/releases/v0.4.0/evidence/2026-10-10/passive-drift-maintenance-r605.md) belongs to the private Sample consumer repository; authorized access is required.
 
-## 同 SHA 部署与恢复
-
-源码提交 `369f35c0d7ea352d505ec686cc22a52294d5601a` 的 Windows Core CI `37992232537` 为 success；对应 cohort 有 2,762 项测试、228 个部署文件、64 个 MCP tools 和 1 个 resource。R609 核实正常关闭保留 Steam、同批事务安装及唯一桌面 broker 启动；R602 独立检查安装后的菜单状态；随后 R611 对原健康 primary 执行一次 default exact-primary 恢复。R605 独立核对原动作、恢复状态及保存覆盖。
-
-恢复后的状态为 owned P104/R1、J102，正常主档保存 tick `105305314`，来源主档最低 tick `105305282`。固定 20 写窗口从 lifetime 418 开始；本阶段增加 2 笔外部 accepted（普通保存和健康恢复），累计 lifetime 420。全案累计为 21 accepted、6 次普通保存、3 次移动、53 条带材、6 个跨度、1 个分拣器、1 台矿机和 2 次手工制作。整案上限仍为 34 accepted、5 次移动、7 次普通保存、200 条带材、11 个跨度、2 个分拣器、1 台矿机、2 台风机、2 座电塔和 4 次手工制作；旧 R556 scope 已退役，不借用其未用额度。
-
-R605 核验时玩家恢复了保存的 Drift 状态；当时速度为 0.0687 m/s、核心能量为 375.55 MJ。它是该次观察读数，不代表当前实时值，也不构成落地或建造完成。下一项固定落点 Native 资格核验尚未批准实际 Move/Build。
-
-## Move 状态绑定修复与证据边界
-
-R592 对旧 R587/R591 记录复算后确认：公开完整 `PlayerAction` 哈希按 Q0.01 m 量化位置；只将关闭读回的位置替换为原检查位置时，前后哈希相同。prepare 内部快照未返回，因此不能臆测其精确位置。当前被动漂移修复只对显式 opt-in 的 `prepare_move` 生效，默认关闭：绑定最近一次外部不可变玩家检查，要求速度 ≤0.15 m/s、总位移 ≤0.05 m、检查年龄 ≤2 秒，并继续精确核对原哈希的全部非位置字段、容量、订单、锻造与无人机条件。其他动作、默认哈希和 Native 移动规则未改。
-
-恢复后的核验复用了 R598 封存的 6,366 built/0 prebuild 工厂快照作为基线；本次读回核 Journal、材料和位置，并非新的全厂快照。49 条新带材前缀与 57 个空载接收成员保留；矿机 5325 仍未接电或获准作为来源。R508 只完成双候选包离线预检，不等于实际 Mod Manager 安装或最终发行验收。`sourceAdmitted=false`、`wholeSupplyPassed=false`、continuous credit 为 0；Warper/Rod 产率与连续 36,000 ticks、双自动补给、完整供需、整合保存恢复及最终同 SHA 双候选包等门仍未通过。
-
-R599 文件名大小写错误与 R603 缺少历史 operationId 均在发出 RPC 前停止（零 RPC）；R606 发出 3 次只读 RPC 后因普通关闭前的 speed 门停止，0 accepted、0 close/install/launch/load。它们是调用方停止，不是 Native 拒绝；成功前缀和原始记录继续保留。
-
-## 原证据索引
-
-- R598 保存与全厂基线：`ea791b7fa1fc4ce3a3e0f545c5fe18c4:1`，SHA-256 `12CB418B86C17836962B8C491F0BE89360DD330B2A251F6489C41955D8C183D3`。
-- R609 同批正常关闭、安装和桌面启动：`d518ec8f7dfe40ff817ca288f347cb4d:6`，SHA-256 `8ECAE1911E79355DBA22799DCFC0A008C20B1EC1A2EF475DD6D26AB3012437A4`。
-- R602 独立安装菜单检查：`0098ca403690402f958ad567e207b8a5:1`，SHA-256 `B9D36672EBA573A24479DEE18B9A456A6B96CA57A9CF201DB14AB4BE0B7913AC`。
-- R605 恢复动作、保存覆盖与独立核验：`dc51447564c14dd4b5c4996fba8cfc0d:1`，SHA-256 `565770DE987195EF0E69146E860635377B99363F38BF1DC1E0B2D6FBB470098F`。
-- R592 哈希复算：`268d248ddb084308bc4217cc8ad324aa:1`，SHA-256 `3208AAEBD1396AB16758A82484D1F6A75133FEEA5B8314150308756511B82CBC`。
+The [byte-exact original](https://github.com/AvaloNero/Spherewright-Lab/blob/14478a03c64c550e644c559405c8496b647552e7/archive/imported-from-spherewright/e7d5f7d8661092b7c8089710488c448f290638be/docs/evidence/2026-10-10/passive-drift-maintenance-r605.md) was imported from product fact commit `e7d5f7d8661092b7c8089710488c448f290638be`. Historical Git history and tags are unchanged.

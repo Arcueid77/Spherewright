@@ -1,47 +1,5 @@
-# 紫糖阶段：终端需求门与原石缺口
+# Operational record moved to Spherewright-Lab
 
-日期：2026-10-01（Asia/Singapore）。本阶段仅核查 `1402 → 4743 → 6004 → Lab84 → 2104`，不扩展燃料、翘曲器或其他科研链。结果为**未完成，不开始施工或持续实验**：2104 已完成、Lab84 无科研目标，指定消费门不成立；生产链另有明确的原石输入缺口。
+This product path is retained as a short redirect. The [fixed operational record](https://github.com/AvaloNero/Spherewright-Lab/blob/14478a03c64c550e644c559405c8496b647552e7/releases/v0.4.0/evidence/2026-10-01/purple-demand-gate-and-stone-shortfall.md) belongs to the private Sample consumer repository; authorized access is required.
 
-## 现场与原回执
-
-Pinned main：`8c52d5424ae25009853c40de5581df52b7a0a459`。安装沿用 `6bf35b7b81a2e50c8e9f42feebbc1f15552096de` / DSP `0.10.35.29104`，本批未部署；root 核对两 HEAD 的 `src`、`tests` 无差异，不冒充重新核安装文件哈希。
-
-只读 run `b5c8fa136e314a68a0fad0095100931f`：opening session 1、Journal 2、runtime catalog 3、progression 4；实体 84/4743/2255/3050/869/861/95/3051 分别为 5–12；production 13、power 14、closing session 15；额外 Journal 16、player 17。实际 **17** 个成功响应，超过批准的 15 次预算两次，不能沿用执行者最初的“16 次”摘要。无 prepare、commit、Move、库存转移、施工或保存，external accepted **8/10 OPEN，新增 0**；writer 已停止，无在途、unknown 或未核销写入。
-
-Opening `84484576`，closing `84484806 / R7`；最后正常保存仍为 `84232813`。Journal ord2/16 均 J97 durable、无 pending/error，逐条与正常保存原 run `e5569b4535294f129769a083cac4b02e` 的保存后 Journal 相同；J16 与 session15 不是同 tick 采集。额外 player17 tick `84484827`，Walk/speed0。无本批写入需要保存，未验证实际 restart/resume。
-
-root 独立核验 17 个原响应及保存 Journal，proof `eba70a6406af42fd92d1571571aebfff` / SHA-256 `A66E34AADD908AD15C1C32C36CDFE8E0002068855FDC2E197DB3B4CA0A5F7ACB`；root 审计零 Game 调用。完整原文保留在受保护证据库。
-
-## 一次性源—路—端结论
-
-Runtime catalog 与实际 buffer 共同确认：1402 **粒子宽带**，1303 **处理器**，6004 **信息矩阵**，1005 **石矿**，1108 **石材**。下表五种配方均 unlocked，设备均 stopped、network3 / serve ratio1，产物 buffer 都为0。
-
-| 源/端实体 | 配方 | 现场输入与直接阻塞 |
-|---|---|---|
-| 861 | 24：1114×6 + 1005×8 + 1000×4 → 1116×4 | 精炼油12、水8；原石5/8，不足一轮硫酸 |
-| 869 | 31：1109×3 + 1116×1 → 1123×2 | 石墨6；硫酸0/1 |
-| 3050 | 33：1123×3 + 1106×1 → 1124×2 | 钛块2；石墨烯2/3 |
-| 2255 | 36：1124×2 + 1113×2 + 1115×1 → 1402×1 | 晶格硅4、塑料2；碳纳米管0/2 |
-| 4743 | 55：1303×2 + 1402×1 → 6004×1 | 处理器6；粒子宽带0/1，native finding confirmed |
-| Lab84 | 科研模式 | 停机、currentTechId0；紫糖缓存36000 research_matrix_points，即10件，不是36000件 |
-
-95 中原石1005为0、石材1108为2198，二者不能替换；3051紫糖1092，出口仍指向5315，输入仍来自5113。原生600-tick窗口 `84484192–84484791`：1005、1402、6004均 **0 produced / 0 consumed**，1005 directProducerCount0。其它中间产物没有本批独立速率窗口，不推算其速率。net3 required/served115556、capacity1894000；net4 required/served1800、capacity10000；本次两个 serve ratio 均1，不是连续供电证明。
-
-复用完整不可变场景 `da57094d67b04849a313ce89176800cb`（54页、5315 built、tick82811613）：95→861→869→3050→2255→4743→3051→84 各物品定向路径分别为42/19/66/60/66/17/116对象，逐边 reciprocal。1402 路线上的分拣器5009/4983/5000与紫糖下游过滤匹配；本批 fresh 源端/设备连接与该定位一致。**未重新核全部路径货物、分支抢料或每个中间端口**；缓存拓扑不是 fresh native preflight。没有证据支持再建紫糖带、分拣器、仓储或旁路。
-
-| 施工条件 | 本批结论 |
-|---|---|
-| 源 | 不成立：2255缺碳纳米管，链上已证明原石供给不足；未证明另有可分配1402库存 |
-| 路 | 缓存定向连接成立；未签新token，未来施工接口仍需现场fresh原生预检 |
-| 端 | 不成立：2104已经4/4、300000/300000、unlockTick83027891，未排队，科研队列空 |
-| 验收 | 指定2104不能继续增加进度；不改选科技，不运行A/B/C，不用历史库存解锁冒充新生产 |
-
-最小物理首因仍是原石供应不足，而不是已完成的紫糖运输。即使补齐原石，也不能核销指定科研目标，因此本批停止，未盲试旧矿机负例、删除成功对象或提交新的生产方案。
-
-## 效率与未证明项
-
-17份原响应跨度 **4153.6038 ms**；没有业务prepare→commit→terminal、模拟等待或生产实验耗时。writer发生两次超预算只读（Journal、摘要中的player），并少报一次调用；root离线核索引时有三次入口/字段错误（player ordinal、仅支持action回执的索引入口、player tick字段），均复用原文件修正、零追加Game调用。Native拒绝0，新增accepted0。provider/root+Luna调用及缓存/非缓存输入、输出用量未知；不把Bridge次数当模型调用，不声称提速比例。
-
-本阶段最多一份证据/快照提交，无代码修复、逐对象提交、全量重构或无关全套本地构建。只重用既有caller、durable Journal helper、storage count helper及不可变拓扑；首个业务prepare、完整委派墙钟、文档/Git/CI耗时不由上述响应跨度推算。
-
-未证明项仅为：指定科研消费门缺失；原石供给的合法修复与新1402/6004产出；完整链的多窗、36000-tick连续产出及实际保存恢复。本批到此停止，不扩大阶段目标。
+The [byte-exact original](https://github.com/AvaloNero/Spherewright-Lab/blob/14478a03c64c550e644c559405c8496b647552e7/archive/imported-from-spherewright/e7d5f7d8661092b7c8089710488c448f290638be/docs/evidence/2026-10-01/purple-demand-gate-and-stone-shortfall.md) was imported from product fact commit `e7d5f7d8661092b7c8089710488c448f290638be`. Historical Git history and tags are unchanged.

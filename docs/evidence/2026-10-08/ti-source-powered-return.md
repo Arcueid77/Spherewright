@@ -1,21 +1,5 @@
-# P102 Ti 源端接通与 P104 短期返程
+# Operational record moved to Spherewright-Lab
 
-日期：2026-10-08（Asia/Singapore）。本事件记录Ti源端分拣器/电塔、跨星返回及独立读回。已看到短期Ti需求与运输活动，但没有连续供给信用，也没有通过Gate 2。
+This product path is retained as a short redirect. The [fixed operational record](https://github.com/AvaloNero/Spherewright-Lab/blob/14478a03c64c550e644c559405c8496b647552e7/releases/v0.4.0/evidence/2026-10-08/ti-source-powered-return.md) belongs to the private Sample consumer repository; authorized access is required.
 
-## 原生接通、保存与返程
-
-R122原件 `e4d3246b07da4f7d8d556e5d8389cee0:47`，SHA-256 `EF6A2BCE14C3AACC0BC89265CB04F9F36C162A93193F33BB37B806069918FB6B`：新分拣器16配置为 `2012/filter1004`，从belt185取货并插入既有belt61；新电塔187供电。消耗仅 `2012×1` 与 `2201×1`，185→16→61双向连接成立，矿机1与分拣器16位于N1并显示full-serve。
-
-root R123独立读回 `fe9624c4b7324776994fb4a637e2fa17:15`，SHA-256 `B2EB488889E2185802C62D134FA46A173BE8FCFB98A194540C615BA371C9E044`：93个对象、3条完整Native路径，核验Ti货物、来源几何与供电；此短窗的连续验收credit为0。
-
-R124 writer原件 `f47ea0e5f1db4ae191a10a6122e59312:119`，SHA-256 `9EA748736DF11BEADAF448C9B366D47A5CF79A396CC8AE39603660D9D744E3E1`：正常保存 `100335320` 后，以同星路线从102飞至104，再普通保存 `100342332`。本段105个请求/165.533秒，3笔accepted；当前P104/R36/J100，external `5/10`、lifetime `285`。健康状态、无unknown/在途，以及玩家完整库存/inc/held保持一致；旧飞行checkpoint已退役。
-
-root R127独立复核 `55bed3e8e821483fafc86a4f6df1b72d:8`，SHA-256 `CEA66B92D5A32D92E783758FA9E24DD3BAF53899D3C913968F3DC4350DAE79F0`：6次只读请求核对三项原生动作的prepare/intent/ACK/计数和终态唯一闭合、J100完整；两项新建由源端Save覆盖，飞行由目的端Save覆盖。9个支持对象、2条完整Native货物流路径及station1657同tick库存锚点读回一致。当前external `5/10`阶段已结束并冻结，normal Save槽仍保留。
-
-R126两个只读调用方因敏感字段脱敏比对与station1657不在material cut支持列表而停止；没有写入或Native拒绝，相关partial cut未用于库存结论。R127使用独立fresh终态核对和station1657锚点库存，不拼接异tick库存。P104短期读回显示Ti需求站1657有1艘工作运输船、remoteOrder `200`、槽内数量 `113`，工厂530当时为working。这是近期物流活动，不是持续到货证明。
-
-## 持续验收边界
-
-R118的P102被动供给包络仍是条件模型：2台矿机、7台分拣器、station44闲置与充电负载合计估算 `19800 J/t`，低于 `55000 J/t`容量；它不证明P104运输或长时间稳定供电。`597300 J/t`全负荷理论需求仍超过容量，Foundry全负荷基线为false。连续信用仍为0。下一步由root核查完整H/D/G、副产物和旧燃料竞争，必要时批准有限修复，再预声明完整≥36000-tick窗口；不把单点运输与货物读回当作长窗验收。
-
-安装仍是commit `f6694ee11e17a5b32c52c8499c495cbf2a97d301`的同源4+224 cohort（228个哈希、64 tools/1 resource），本阶段没有重新部署或打包。整合保存恢复、燃料/翘曲器双自动补给、持续配平和最终同SHA双候选包仍未通过，整案保持 `executable=false`。
+The [byte-exact original](https://github.com/AvaloNero/Spherewright-Lab/blob/14478a03c64c550e644c559405c8496b647552e7/archive/imported-from-spherewright/e7d5f7d8661092b7c8089710488c448f290638be/docs/evidence/2026-10-08/ti-source-powered-return.md) was imported from product fact commit `e7d5f7d8661092b7c8089710488c448f290638be`. Historical Git history and tags are unchanged.

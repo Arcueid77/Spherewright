@@ -1,9 +1,5 @@
-# R573 上坡动作核销与余段预算
+# Operational record moved to Spherewright-Lab
 
-本事件记录原上坡动作的终态核销和剩余有限阶段预算。上坡已建成但尚未接入整个来源路径，也未由新保存覆盖；本事件不证明持续供料。
+This product path is retained as a short redirect. The [fixed operational record](https://github.com/AvaloNero/Spherewright-Lab/blob/14478a03c64c550e644c559405c8496b647552e7/releases/v0.4.0/evidence/2026-10-10/stone-uphill-prefix-r573.md) belongs to the private Sample consumer repository; authorized access is required.
 
-R569原件 `73522365a4a44efb8b944fd63bdcea00:97`（SHA-256 `80EFE8C14887CE324F9BEC0DE011E179B3979287A3EFFFDE50947C3C035B0910`）记录上坡动作已accepted。原调用者在420秒预算耗尽后停止，不据此判定Native失败或重放。R572 `f6f83e11ec74448bbe7ee9d0df22b2c2:9`（SHA-256 `BDA41C6A1EA9D4F55E8603DF18E422D4FB33A7243085E44607E591AA9B0697F3`）只读查询同一原动作，确认completed/succeeded；上坡新增20条带材、背包带材183→163，三架无人机闲置且无预建筑。正常Save仍为 `105130853`，Journal为J102；本动作及此前施工均未被该Save覆盖。
-
-root R573 `832878103f654c568fd67807280913d6:1`（SHA-256 `C14C32CB9654822E58FE0694B2BC000B65A7AE69278BEDDFFCC71713833F0094`）独立核验原动作、材料差量、无人机与预建筑状态及保存边界。当前P104/R24健康、external7/20、lifetime415、opening lifetime408，无在途或unknown，普通写入冻结。
-
-石料整案累计消耗为16笔accepted、37条带材、5个跨度和2次移动。外层scope上限16笔/1100请求/2400秒，现已用3笔/307请求/742438.8117毫秒，余13笔/793请求/1657秒；当前routing子片上限8笔/620请求/1500秒，现已用1笔/99请求/425184.5847毫秒，余7笔/521请求/1074秒。剩余高端Native双接缝、5段北向连接、移动、过滤分拣器、风机/电塔及唯一末尾Save均未验证；整体source admission及持续供给仍未通过。
+The [byte-exact original](https://github.com/AvaloNero/Spherewright-Lab/blob/14478a03c64c550e644c559405c8496b647552e7/archive/imported-from-spherewright/e7d5f7d8661092b7c8089710488c448f290638be/docs/evidence/2026-10-10/stone-uphill-prefix-r573.md) was imported from product fact commit `e7d5f7d8661092b7c8089710488c448f290638be`. Historical Git history and tags are unchanged.

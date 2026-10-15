@@ -1,7 +1,5 @@
-# R440：Ti需求、Warper取料与保存核销
+# Operational record moved to Spherewright-Lab
 
-R440独立审计 `e09dc2358c944036954ff0c90ebbd8a7:1`（SHA-256 `6862A72C261D0EEC5038091A127E50C8ADB35BADDC85F8DF4AC6E66E21C45FC1`）通过，核销80条受保护记录，统计为61次请求、4笔accepted Native写入。writer原件 `86d27f14cf2843a7bce18d2b9e4f07c8:80`（SHA-256 `421A7FCF64B02E5D390895C392B241A9C5CD841CF485BEBCCC7E6B62AF5541F0`）记录本阶段正常Save与玩家库存终态。当前为R109、普通Save `102781516`、durable J102、external `15/20`、lifetime `390`；没有在途或unknown，普通写入冻结。
+This product path is retained as a short redirect. The [fixed operational record](https://github.com/AvaloNero/Spherewright-Lab/blob/14478a03c64c550e644c559405c8496b647552e7/releases/v0.4.0/evidence/2026-10-09/ti-warp-demand-save-r440.md) belongs to the private Sample consumer repository; authorized access is required.
 
-此前R437正常转出Warper `85`件到玩家，原有仓外`71`件不抵减本次`85`件库存门；当前玩家Warp较阶段前增加85，其余库存项目不变。此前成功的普通移动已核销，不重做。P104需求站1657的TiOre上限调整为600，916的TiIngot上限调整为300；旧配置与物理拓扑保持。R430观察到旧200运输订单已清理，仓储/需求读数用于确定这两个有限上限，不构成产能证明。
-
-R425已完成全量物料和接口资格核验，但产量与持续来源仍需单独验收。R438同进程只读观察正在进行，600-tick样本、3600-tick产量窗口、每个600-tick样本的三厂电力读取、生产实体每四个样本读取及开场与收尾完整物料采集均维持原声明。R389先前连续36,000-tick观察因33-tick间隙失败，未拼接或延长；R438尚无终态。当前continuous credit为0，`wholeSupplyPassed=false`，整案仍为`executable=false`。双自动补给、完整持续供需、整合保存恢复和最终同SHA双候选包仍未通过；已关闭的H侧候选不重开。
+The [byte-exact original](https://github.com/AvaloNero/Spherewright-Lab/blob/14478a03c64c550e644c559405c8496b647552e7/archive/imported-from-spherewright/e7d5f7d8661092b7c8089710488c448f290638be/docs/evidence/2026-10-09/ti-warp-demand-save-r440.md) was imported from product fact commit `e7d5f7d8661092b7c8089710488c448f290638be`. Historical Git history and tags are unchanged.

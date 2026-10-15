@@ -1,13 +1,5 @@
-# R585 石料路由前缀保存与固定窗口封存
+# Operational record moved to Spherewright-Lab
 
-本页记录固定20写窗口的实际封存结果和保存覆盖，不把施工或瞬时拓扑核验当作持续供料通过。
+This product path is retained as a short redirect. The [fixed operational record](https://github.com/AvaloNero/Spherewright-Lab/blob/14478a03c64c550e644c559405c8496b647552e7/releases/v0.4.0/evidence/2026-10-10/stone-route-prefix-save-r585.md) belongs to the private Sample consumer repository; authorized access is required.
 
-R584原件 `f470c5415c2a4806803e51414377f146:74`（SHA-256 `805DAE3A3548E66966D4434717AF86653C64F1D92374EF322759E5E529FCBA29`）与R585独立审计 `efeee59759dc4af49df4aa51ce5fcbd5:1`（SHA-256 `0A99E57EC6D8A4C22FFECF7ED82431DD566F52314F88D4FE13AD65A6508EB2DE`）共同核销本固定窗口10笔唯一accepted动作的原生终态、唯一性、库存变化和保存覆盖。窗口opening lifetime为408、closing lifetime为418；未凑满20笔，不把累计计数归零，也未开启新窗口。当前无在途或unknown，普通写入冻结。
-
-当前owned状态为健康P104/R29，正常Save `105244881`覆盖该窗口全部10笔，Journal为J102。R578的Move原动作Native成功，但玩家仍持续漂移、未达到稳定落地条件，因此没有实施原计划的五段北接；R581独立核销该原动作（`2929b21f3c0b473d802421839c584f72:1`，SHA-256 `A09CF54E87A0D8BEEDF56DD4421F605700BB7A3B5136DB9F52A7156EE027A9D4`），未重放。R582 Save调用者在Native终态后的本地轮询因要求接口未返回的`planetId`而停止；后续只读检查确认原Save完成，未重复保存或重放。
-
-R585独立审计 `efeee59759dc4af49df4aa51ce5fcbd5:1`（SHA-256 `0A99E57EC6D8A4C22FFECF7ED82431DD566F52314F88D4FE13AD65A6508EB2DE`）确认全厂快照为6366 built/0 prebuild。相对封存基线增加49条带材；旧5323的Native锚点旋转，slot 1接入6330；无对象删除、无非互惠边。57成员接收路径仍开放且空载。矿机5325为network 0、服务比率不可用（`null`）、缓冲为空，尚未接电或作为已admitted来源。
-
-石料整案累计为19笔accepted、53条带材、6个跨度和3次移动，另有1个分拣器、1台矿机、2次手工制作及5次Save；未建风机或电塔。R556原scope上限16笔/1100请求/2400秒，实际使用6笔、698请求和1329032.8576毫秒后退役；余下10笔、402请求和1070秒未转移。较早的R577高端双接缝施工已包含在本阶段完整拓扑差异中，不作为新的独立累计。
-
-来源仍未接电或获准开采，`sourceAdmitted=false`、`wholeSupplyPassed=false`、continuous credit 0。Warper/Rod产率各至少1/min且连续≥36000 ticks、双自动补给、整合保存恢复和最终同SHA双候选包仍未通过。R585只封存当前阶段，不改变原有验收门。
+The [byte-exact original](https://github.com/AvaloNero/Spherewright-Lab/blob/14478a03c64c550e644c559405c8496b647552e7/archive/imported-from-spherewright/e7d5f7d8661092b7c8089710488c448f290638be/docs/evidence/2026-10-10/stone-route-prefix-save-r585.md) was imported from product fact commit `e7d5f7d8661092b7c8089710488c448f290638be`. Historical Git history and tags are unchanged.

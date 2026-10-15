@@ -1,22 +1,5 @@
-# 紫糖西侧九带施工与十写独立审计
+# Operational record moved to Spherewright-Lab
 
-日期：2026-10-01（Asia/Singapore）。由 root 对受保护本地原始证据独立核验；本事件不重采游戏数据。关键证明 run `38d3d9998c424db496024882e7dd1078`，ord1 `purple-ramp-window-root-audit`，证明文件 SHA-256 `DD8B6A1CF1D6B0F7C3EBDCAC4893F502E42EF0F9A3DA4FA37FDD0923067102D7`。
+This product path is retained as a short redirect. The [fixed operational record](https://github.com/AvaloNero/Spherewright-Lab/blob/14478a03c64c550e644c559405c8496b647552e7/releases/v0.4.0/evidence/2026-10-01/purple-west-ramp-ten-write-audit.md) belongs to the private Sample consumer repository; authorized access is required.
 
-## 施工与状态
-
-第十个 accepted 写 `d83b4a3ca6f94ff397a7256de299c250` 成功新增西侧九个带实体 `5219–5227`；背包 `2001` 从 352 降至 343。这九个实体当前两端均为 free，源端尚未接入；该施工没有被后续正常保存覆盖。最终观察为 tick 81734184/R18/healthy，Journal J96 durable；最近正常保存仍是 81634733。因此不能把当前观察或 Journal 读数当作西侧施工已经落盘/重启恢复的证明。
-
-## 独立快照差异审计
-
-完整快照 run `a4e1a2f337d143908ad30d7844e11ac8` 与基线 `6207d5a744894c11b60f654163aee38b` 比较：built 对象总数由 5205 增至 5227（新增 22、删除 0）；这表示对象数量变化，不表示形成了 `5205→5227` 连通路径。快照中的 10186 条有向连接全部互返。除以下两项外，旧静态差异均已逐字段核销：
-
-- `5198` 新增了指向已批准 sorter `5218` 的入边。
-- 对象 `106` 的 `resourceNodeIds` 从 `[312,325]` 变为 `[312]`。只读补证 `77ecff752e1643048feb330de0ebf544` 表明 node325 当前不存在、node312 仍是煤且计数3225；没有证据说明 node325 消失的原因或时间。
-
-玩家背包相对基线仅有 `1301 −6`、`2001 −21`、`2011 +5`，各物品增量未变化。J96 的96条记录均未变。功率采样在采样点正常，但这不是持续产量实验或配平通过证明。
-
-## 写门与执行计时边界
-
-外部窗口为 **10/10 accepted**，94 条证据索引记录；十项均有终态，0 重放、0 在途。当前 **FROZEN**：不得自行开始下一次游戏 commit；需保留十写门，待 root 在审计、文档提交及 CI 绿后明确交接，才可开新窗口。
-
-单次有界自由端带段施工薄入口有6项离线 fixture 通过，默认 smoke 为0游戏调用。入口至首个 prepare 为 786 ms，完整 wrapper 为 17.09 秒；本次计时不含保存，也不包含委派、独立验收、文档或 CI 总耗时。此入口复用既有原语，没有更改 Plugin 或 MCP surface。
+The [byte-exact original](https://github.com/AvaloNero/Spherewright-Lab/blob/14478a03c64c550e644c559405c8496b647552e7/archive/imported-from-spherewright/e7d5f7d8661092b7c8089710488c448f290638be/docs/evidence/2026-10-01/purple-west-ramp-ten-write-audit.md) was imported from product fact commit `e7d5f7d8661092b7c8089710488c448f290638be`. Historical Git history and tags are unchanged.

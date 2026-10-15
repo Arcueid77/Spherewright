@@ -1,25 +1,5 @@
-# 北向路线读回与未供电来源（R626）
+# Operational record moved to Spherewright-Lab
 
-日期：2026-10-10（Asia/Singapore）。本页记录 R624 已完成的有限施工和 R626 的独立局部核验。它不构成新全厂快照或持续供料验收。
+This product path is retained as a short redirect. The [fixed operational record](https://github.com/AvaloNero/Spherewright-Lab/blob/14478a03c64c550e644c559405c8496b647552e7/releases/v0.4.0/evidence/2026-10-10/stationary-north-route-r626.md) belongs to the private Sample consumer repository; authorized access is required.
 
-## 保存与窗口边界
-
-R626 核验时为 P104/R13、J102，最后正常主档 tick `105305314`。固定20窗为9/20，lifetime 427；没有在途动作或 unknown。此前两次燃料转入以及 R624 的五笔施工尚未被该保存覆盖，正常保存槽仍预留，普通写入冻结。本案累计28 accepted、158条新带材、11个跨度、3次移动、1个分拣器、1台矿机、0台风机、0座电塔和6次普通保存。
-
-## 施工与路线核验
-
-R624 原件记录5笔 accepted、105条新带材及161次 RPC（608,504.1197 ms）；5个 Native 建造点均对应唯一实际对象并完成读回。R626 对接收端路径进行局部核验：162条带材、237格、3,379 cells，Native 路径当前为空载；199对象切面显示源6317至新头6471的间距为2.5157985 m。没有移动。
-
-R626 没有取得新的完整工厂快照。6,366 built/0 prebuild 是 R598 的封存基线，不能据此声称全厂已达到6,471 built。旧网络成员关系保持满供；来源矿机5325仍为 network 0、服务比例不可用（`null`）、缓冲为空，因此路径连通和接收端资格均不能当作源已接电或已供料。
-
-R627 的接缝与固定风机/电塔阶段仍在进行，尚无终态；不记录为已建或已通过。正常保存覆盖、来源 admission、持续供给及 whole-supply 验收仍未完成，continuous credit 为0。
-
-## R623 请求数更正
-
-R623 对实体6350的北向接收端资格请求总数为8，其中7次只读、1次 Native prepare；原事件页已按原始 R622 回执更正。该资格不代表移动或施工。
-
-## 原证据索引
-
-- R622 原始资格请求：`061ff8beeb824298bb3be95d03520811:9`，SHA-256 `3FA67077D32B7DE5FD95EFCD864413E226EAE9306B8DD86CF37CD3027E1E9F79`。
-- R624 施工原件：`0152a09abcf04a6c8a539a6e11b9324b:184`，SHA-256 `ADBE8F22BCAD825BC8FCE8001D4BB9CCD1837C8B1522AA1CEED9FA1ADA503390`。
-- R626 独立核验：`10caacc497fb492eae71d765634e9fd0:1`，SHA-256 `45CA059F3DFE9BAA482D01259743123649BA6EF5A103D38F406C13820DE5E9F4`。
+The [byte-exact original](https://github.com/AvaloNero/Spherewright-Lab/blob/14478a03c64c550e644c559405c8496b647552e7/archive/imported-from-spherewright/e7d5f7d8661092b7c8089710488c448f290638be/docs/evidence/2026-10-10/stationary-north-route-r626.md) was imported from product fact commit `e7d5f7d8661092b7c8089710488c448f290638be`. Historical Git history and tags are unchanged.

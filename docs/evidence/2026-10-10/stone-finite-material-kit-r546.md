@@ -1,13 +1,5 @@
-# R546 石料有限备料与保存核销
+# Operational record moved to Spherewright-Lab
 
-本事件记录R544有限取材、递归手搓和正常保存，并核销先前Move caller中断。它不代表石料来源接通或持续供给通过。
+This product path is retained as a short redirect. The [fixed operational record](https://github.com/AvaloNero/Spherewright-Lab/blob/14478a03c64c550e644c559405c8496b647552e7/releases/v0.4.0/evidence/2026-10-10/stone-finite-material-kit-r546.md) belongs to the private Sample consumer repository; authorized access is required.
 
-R541原件 `f95304795a51436087e1eff591bc0752:63`（SHA-256 `B5D5C539C71B07FCB43942410A194B48CB37756D8D816FDECCD8E7418F0E8DDC`）记录Move accepted后，caller在材料prepare前因本地Hashtable的`Count`键遮蔽集合计数而停止。root R543 `abcc86040cf949abad5cb054ea73d94f:1`（SHA-256 `911BED33B5A673E0C947536B01AF4871760002E6AA41B56FB1A0AAE0A8B6FFD4`）只读核销同一原Move；没有重放。修正caller后仅续接原预算剩余动作。
-
-R544原件 `27f53c4fa1aa40029d6811b415bf297e:254`（SHA-256 `6716C6B52E48A369AC3E447223124BDC30BF996BEF36F09722719F529C1D80CD`）共238次请求、316.600秒、3笔accepted。与R541成功Move前缀合计294次请求、407.724秒、4笔accepted。阶段内正常Move到取材点，从仓库1511取出铁块1101×165；随后r84×55递归制作带材165。直接Native账单为铁块1101×110与齿轮1201×55输入、带材2001×165输出；实际净消耗铁块165，齿轮为递归手搓的中间产物。玩家带材31→196、铁块与齿轮归零，其他物品count/inc/held保持。最后一笔正常Save `105130853`覆盖本阶段全部四笔原动作。
-
-root R546 `b5485cb8f1be4451a8f476afa25b4ab0:1`（SHA-256 `72629F517AFDA454EC599B1C8A23B7EAD939D7183DB4C4208EA62016F7EC82B8`）独立核对原始动作链、库存、保存与工厂状态。当前P104/R18健康、J102，external 4/20、lifetime 412；固定20窗口阶段末冻结，四笔写入已保存核销，没有在途或未决动作。之前R536封闭的窗口和累计计数保持，不重置或转移。
-
-完整工厂仍为6317 built/0 prebuild；静态配置和互惠连接未变。矿机5325仍network 0，Native服务比率不可用（`null`）；出口86→6317空载。本阶段未接电、未开采、未增加电力对象。R538仅取得来源单体资格及两处风机正向资格，杆候选仍有Native碰撞负例；R540取得侧向杆几何正向资格，均不是已建造、通电或生产证明。
-
-R497总预算累计13/30 accepted、4/200条带、1/2个分拣器、1/1台矿机、2/4次移动、2/4份材料处理、4/5次保存、2/10段带材；风机与杆为0。下一已授权有限阶段先核验空接收端向来源延伸，再在原预算内处理运输、过滤连接和供电，逐步执行。整体持续来源仍为`wholeSupplyPassed=false`、continuous credit 0；29项物料、Warper/Rod最低产量与连续36,000-tick、双自动补给、整合恢复和最终同SHA双候选包均未通过。
+The [byte-exact original](https://github.com/AvaloNero/Spherewright-Lab/blob/14478a03c64c550e644c559405c8496b647552e7/archive/imported-from-spherewright/e7d5f7d8661092b7c8089710488c448f290638be/docs/evidence/2026-10-10/stone-finite-material-kit-r546.md) was imported from product fact commit `e7d5f7d8661092b7c8089710488c448f290638be`. Historical Git history and tags are unchanged.

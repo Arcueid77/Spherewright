@@ -1,22 +1,5 @@
-# R1019–R1027：裙边路线前缀与保存
+# Operational record moved to Spherewright-Lab
 
-本有限目的在新的固定 20 窗口中完成两次成功移动和一次普通保存。第三段 Native prepare 虽返回 prepared/allowed，但 fresh 精确路线策略发现 5 个岸线风险样本，拒绝 commit；没有第三次移动，也没有将该准备计为 accepted。原目的未执行的 3 项预算退役，不重放前缀或转移额度。
+This product path is retained as a short redirect. The [fixed operational record](https://github.com/AvaloNero/Spherewright-Lab/blob/14478a03c64c550e644c559405c8496b647552e7/releases/v0.4.0/evidence/2026-10-11/row-skirt-prefix-r1027.md) belongs to the private Sample consumer repository; authorized access is required.
 
-| 证据 | 受保护索引 | SHA-256 |
-|---|---|---|
-| 移动前缀原件 | `17caf2a7779442ae8066b2b875a4090f:59` | `5DA854C28D49349ECDCB6DEB2885781DBE31A7CEE1BB9E5BF381BC41611C2FBC` |
-| 保存原件 | `592a47baf2014e2aa327320b291f09d1:21` | `F0DC61BBF5DD1910AC716F31564E8CB212342A4F70BB785359846F91DC81FEF0` |
-| 原件独立保存核验 | `0299d7dfe49841f0b44eefb14c697743:177` | `05282C355947757EC5F9D531D263410CEC23E0C9205596A29FD6C80E604E9B31` |
-| 新场景与保存授权索引 | `0299d7dfe49841f0b44eefb14c697743:175` / `:176` | `EBB80C0B298154DE4846900A42102E6AD7AA8F92288D68A62CD3D333116BC3AF` / `FE6D76EB79D9849C64D03941AC35AC9312350E484E596772830CCA91082D27DB` |
-
-保存为 tick `109463292`、revision `151`、durable Journal `102`。窗口以 lifetime `519` 开始，当前 `3/20`、lifetime `522`，仍开放但冻结；本目的已结束，全部当前动作均已保存覆盖，无在途或未知动作。整案累计 `123` accepted、`38` 次 Move、`35` 次普通保存、`22` 次手工材料动作。玩家持有 Warp `300`、Ti `500`、Rod `5`，占用 `27/40` 格，核心能量 `1.6 GJ`。Rod `400` 尚未取用。
-
-本地保存核验保留了已核完整工厂 `6492 built / 0 prebuild` 的 R1013 静态帧复用，本阶段未重采完整工厂。P104 本地电网本阶段 fresh 满供；另外两座工厂的电网最近仅在 R1013 fresh 核验。保管记录仍为 Oil `261`、原石 `6`、石料仓 `2932`。这些截面不证明持续供料。
-
-准备返工也有明确边界：首个纸面路线约 `31 m`，超过固定 `30 m` smoke 余量，在游戏调用前被拦截；随后保存场景副本残留旧 basis 引用，也在任何游戏调用、once 或 intent 前停止。修正坐标并改为最小当前场景、加入委派前引用与计数检查后，才执行本次已批准阶段。成熟游戏 caller 未改。
-
-本次成功移动前缀为 `25` 请求、约 `13.204 s`，首次 prepare 约 `1.284 s`；覆盖保存为 `15` 请求、约 `3.556 s`。root 前缀与保存独立核验分别约 `0.821 s` 和 `0.394 s`。前缀停止到覆盖保存约 `8.770 min`，R1013 对应样本约 `11.31 min`、R997 成功前缀样本约 `6.36 min`；场景与异常处理不同，不能直接推断端到端提速。此次保存核验入口已参数化计数和索引，并绑定 15 个原生记录及保存 intent；这不替代整段协同耗时。
-
-作为不同阶段的流程背景，R1000 声明到 R1013 独立封窗间隔约 `42.974 min`（`2578.417 s`）；其中调用者累计约 `49.067 s`，本地完整审计约 `49.399 s`。这只能说明该阶段的大部分间隔不在调用者或审计程序计时内，不能把余量全部归给模型，也不能与本次不同场景样本合并成端到端速度结论。
-
-`sourceConditionsPassed=false`、`wholeSupplyPassed=false`、continuous credit `0`。来源、完整供需长窗、双补给、整合保存恢复及最终同 SHA 双候选仍未通过。
+The [byte-exact original](https://github.com/AvaloNero/Spherewright-Lab/blob/14478a03c64c550e644c559405c8496b647552e7/archive/imported-from-spherewright/e7d5f7d8661092b7c8089710488c448f290638be/docs/evidence/2026-10-11/row-skirt-prefix-r1027.md) was imported from product fact commit `e7d5f7d8661092b7c8089710488c448f290638be`. Historical Git history and tags are unchanged.

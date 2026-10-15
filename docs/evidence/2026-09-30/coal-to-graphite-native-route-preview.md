@@ -1,18 +1,5 @@
-# 煤矿机到石墨链的有界原生预检与提交器复用
+# Operational record moved to Spherewright-Lab
 
-日期：2026-09-30（Asia/Singapore）。上一十写审计 `8959780` 已推送且 Windows Core CI 通过；同一 `owned-world-001` 主档仍为 tick `79867177 / R36`，本次仅只读和 `prepare_build`，**零游戏 commit**、无新存档。玩家背包 fresh 核得传送带 `2001×393`、普通分拣器 `2011×3`、熔炉 `2302×1`、电塔 `2201×1`。
+This product path is retained as a short redirect. The [fixed operational record](https://github.com/AvaloNero/Spherewright-Lab/blob/14478a03c64c550e644c559405c8496b647552e7/releases/v0.4.0/evidence/2026-09-30/coal-to-graphite-native-route-preview.md) belongs to the private Sample consumer repository; authorized access is required.
 
-完整工厂快照离线有向追踪显示，矿机 `5171` 以南的旧带 `3373` 经现有带/分拣器实际连到磁环制造台 `3404`，另有支路到火电厂 `3062/3060`。fresh 读得磁环输入分拣器 `3436` 的过滤为高能石墨 `1109`、端点 `3428→3436→3404` 互反；磁环石墨输入 `0`，旧带 `3373` 此刻无货。这证明旧线物理上连到石墨需求，**不**证明可以把新煤直接并入、也不证明该线持续供货。
-
-在新矿机精确 `endpointStateHash`、玩家 fresh `stateHash` 下做有限原生预检：
-
-| 候选 | 受保护 run | 原生结果 |
-|---|---|---|
-| 朝磁环约 5 m 的矿机出料带 | `a29c35afafc147b2a4aa4748bb17eb94` | `BUILD_LOCATION_INVALID`：第 6 个新带点与旧带 `3373` 重叠；零 commit，不以省略源绑定绕过。 |
-| 背离障碍向东约 5 m 的矿机出料带 | `74323f59b5834d3fa180947b9664083f` | `native_device_port`、完整原生 stage1、8 条新带、材料预算8、零 blocker；只是短段候选。 |
-| 向东约 14 m 的矿机出料带 | `2a13d3d3c3644be1b53fc7d462f1bce4` | `native_device_port`、完整原生 stage1、15 条新带、预算15、零 blocker；末点约 `(-164.607681,-11.31501,-113.385712)`，仍需未来真实分拣器端点。 |
-| 东侧一座普通熔炉 | `79c6960239244468a6256c296c6c00dd` | 原生站位通过，吸附中心 `(-163.169876,-11.31501,-115.445213)`、预算 `2302×1`、零 blocker；尚无配方/供电/输入输出施工证明。 |
-
-矿机至熔炉端点约 2 m 的几何只是候选；熔炉建成后须 fresh 验证真正端点、正常配方 `17`、供电，以及从熔炉到石墨旧带的合法出料方案。不能把本页的 prepare-only token 留作之后 commit；每次施工都须 fresh 重备、逐字段核同一完整路径、原生源绑定、预算和现场，再唯一 commit/terminal/读回。已通过的短段 8 带只是比较，不先孤立施工；下一执行选择 15 带和熔炉这个有界前缀，成功部分不重做。
-
-以往每批为“prepare 后核精确路径再 commit”手写提交包装，耗时远大于动作本身且容易出字段错误。本批给已有 `Invoke-SpherewrightNormalAction` 增加可选 `ValidatePrepared`：回调必须明确返回唯一 `true`，`false`/抛错/更换 token 均在 commit 前停止；通过后仍沿同一既有客户端完成唯一幂等提交和同 action 终态，不改 Plugin/MCP、原生规则或无回调时的行为。`scripts/test-action-client.ps1` 离线 `67` 项通过、`gameCalls=0`，包含三种拒绝零 commit 和通过时唯一提交；Windows Core CI 此后也直接运行这份零游戏测试。该脚本改动是离线能力，直到下一次真实执行前不称实机验证。
+The [byte-exact original](https://github.com/AvaloNero/Spherewright-Lab/blob/14478a03c64c550e644c559405c8496b647552e7/archive/imported-from-spherewright/e7d5f7d8661092b7c8089710488c448f290638be/docs/evidence/2026-09-30/coal-to-graphite-native-route-preview.md) was imported from product fact commit `e7d5f7d8661092b7c8089710488c448f290638be`. Historical Git history and tags are unchanged.

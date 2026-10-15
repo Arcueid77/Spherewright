@@ -1,11 +1,5 @@
-# 磁环附近独立煤源：只读候选与省去的取料移动
+# Operational record moved to Spherewright-Lab
 
-日期：2026-09-30（Asia/Singapore）。同一 owned/healthy 母星 `104`，现有第十写审计已提交、推送且 CI 通过，新外部 accepted 窗口从 `0` 起算。本记录全部为只读检查和 `prepare_move`，没有游戏 commit、施工、取料、保存或换档。
+This product path is retained as a short redirect. The [fixed operational record](https://github.com/AvaloNero/Spherewright-Lab/blob/14478a03c64c550e644c559405c8496b647552e7/releases/v0.4.0/evidence/2026-09-30/local-coal-graphite-candidate.md) belongs to the private Sample consumer repository; authorized access is required.
 
-先复用 [第十写审计](normal-save-ten-write-fastpath-audit.md) 的同一不可变工厂快照 `f1e3667ca3ae41a585ebe85996812716`。磁环厂 `3404` 的现有石墨路径只回溯到四台氢输出已满的 X 射线裂解厂，不含独立煤石墨源。对独立石墨仓 `114` 的有向物流遍历若**错误地穿过生产设备**，会虚假发现距磁环仅 `5 m` 的带；限定继续传播的节点为 belt/inserter/storage 后，纯物流可达对象只有 `21` 个，最近带仍距磁环约 `223.5 m`。生产转换不能当作原物料的可通行物流边。
-
-受保护 live 资源快照 `2416e61214154b6e8a41eb723551d305/0002–0004` 在 tick `79389609` 完整分页读取本星球 `220` 个煤节点。磁环 `3404` 附近的煤矿组 `32` 有 `20` 个节点（`512–531`），合计剩余 `825909`，当前各节点 `minerCount=0`；最近节点 `525` 与磁环的球面弧距约 `34.5 m`。但复用上述工厂快照做静态占位比对后，**全部 20 个矿点距最近既有建筑中心不超过 `3.14 m`**；部分直接贴着火电厂、仓库或传送带。未证明有可用矿机站位，不能因矿点近就宣布本地采矿更省事。下一步只可有限筛选边缘站位并由当前游戏原生预检裁决；若拒绝，转向其它已建煤/石墨供给，不盲试或拆除既有设施。
-
-路径准备同时查明：玩家当前稳定 `Walk/0`、核心约 `800 MJ`；独立石墨仓 `114` 距玩家球面约 `61.34 m`，仓内 `3000` 石墨，背包无石墨。当前原生仓储 transfer 的距离门是 `player.mecha.buildArea`，玩家读数为约 `80 m`，故**先走到仓前取料没有必要**。一条朝该仓的首次调用方 `prepare_move` 因 `INVALID_REQUEST` 零写拒绝（受保护 `97a38c31f63544e883ec26a8775efcd1/0004`）；同一数值坐标在主会话精确发出后可正常取得地表预览（`2046b00fbaeb44f5a16d25635f5d6257/0003`）。原失败请求的在途数值未独立证明，因此不能归咎于 Plugin 的半径判定。直线路径又与风机 `2717` 中心约 `1.04 m` 擦过。另一条只读候选 `9c0b5045ce944f92b653d90932cd15fc/0003` 有完整 `26.22 m` 地表采样、零 unknown、末端约 `5 m` 连续高于水面，但这些仍不是碰撞或业务必要性证明。主会话在发现仓 `114` 已处交互范围后及时撤销 Luna 的移动任务；Luna 确认首个 Bridge 请求都未发出，零 accepted/零在途，没有重复失败目标或擅自取料。
-
-后续受保护只读批次 `3587b6322ef24846a15f0fd71d04ab80/0002–0006` 证实玩家背包有基础带 `393`、基础分拣器 `3`、电塔 `1`、风机 `2`、电弧熔炉 `1`，但矿机 `0`，其四类直接制造组件也均为 `0`；因此不能直接提交矿机施工。磁环 `3404` 仍由电网 `3` 满额供电，该网容量 `570000 J/t`、当前需求 `88300 J/t`，额外矿机/熔炉标称工作合计 `13000 J/t` 低于容量余量；这只说明总容量，不证明候选落点被电塔覆盖。该批最后一次 `list_factory_entities(limit=200)` 被接口上限 `100` 零写拒绝，已停止，既有完整快照没有重采。剩余是矿机材料、边缘原生站位、供电覆盖、煤→石墨熔炉和完整端口/路线预算；进入施工范围的路线另行真实预检。不能把资源余量、图上距离或 dry `prepare_move` 当作施工许可，也不能以一次手动石墨转移冒充持续供给。完成独立石墨输入后还必须分别核磁环、氘棒、氢背压和紫糖的连续窗口及保存恢复。
+The [byte-exact original](https://github.com/AvaloNero/Spherewright-Lab/blob/14478a03c64c550e644c559405c8496b647552e7/archive/imported-from-spherewright/e7d5f7d8661092b7c8089710488c448f290638be/docs/evidence/2026-09-30/local-coal-graphite-candidate.md) was imported from product fact commit `e7d5f7d8661092b7c8089710488c448f290638be`. Historical Git history and tags are unchanged.

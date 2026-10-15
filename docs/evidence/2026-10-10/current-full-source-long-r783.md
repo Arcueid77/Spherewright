@@ -1,30 +1,5 @@
-# 完整来源连续观察及审计（R778–R783）
+# Operational record moved to Spherewright-Lab
 
-本页记录一次完整来源长窗及其独立审计。长窗没有写入游戏；生产来源条件未通过。
+This product path is retained as a short redirect. The [fixed operational record](https://github.com/AvaloNero/Spherewright-Lab/blob/14478a03c64c550e644c559405c8496b647552e7/releases/v0.4.0/evidence/2026-10-10/current-full-source-long-r783.md) belongs to the private Sample consumer repository; authorized access is required.
 
-## 固定窗口与覆盖
-
-R778 执行原声明的 tick 区间 `106254705–106290704`。共取得 108 个样本，观察区间连续 36,087 ticks，reset 为 0；总计 2,644 次只读请求、3,372.129 秒、0 writes。未延额、拼接或重跑该声明。Root 对原件的 R783 审计确认：29 项物料、当前 24 个正剩余 Native 资源节点、16 个燃料发电对象、2 个实验室及 3 座已加载工厂的电力覆盖均完整；三座工厂满供，连接氢变化 `+3` 满足该项条件。
-
-速率下界方面，Warp 为 `4.5/min`、Rod 为 `1.8/min`，两项通过；P102 的 Ti Ore（1004）与 P104 的 Ti Ingot（1106）均为 `0/min`，来源条件不通过。库存容差比较另有六项失败：
-
-| 物料 ID | 开始 | 结束 | 变化 | 单批容差 | 结果 |
-|---:|---:|---:|---:|---:|---|
-| 1109 | 3452 | 3404 | −48 | 3 | 超限 |
-| 1101 | 9205 | 9039 | −166 | 3 | 超限 |
-| 1102 | 3263 | 3238 | −25 | 3 | 超限 |
-| 1106 | 683 | 675 | −8 | 4 | 超限 |
-| 1007 | 814 | 811 | −3 | 2 | 超限 |
-| 1127 | 106 | 73 | −33 | 1 | 超限 |
-
-R783 给出的结论为 `auditCompleted=true`、`sourceConditionsPassed=false`、continuous credit `0`。Warp/Rod 速率通过并不排除这些有限库存依赖，也不抵消钛来源速率失败。
-
-## 原件索引与边界
-
-- R778 内部样本包：`0e2484612c6b423eaa8ab7627a007149:2760`，SHA-256 `55B511033BC9D94DA906220745D6AA779EAAC7960BF64A7BF2E8AA35554ADDCC`。
-- R778 外部收尾记录：`0e2484612c6b423eaa8ab7627a007149:2761`，SHA-256 `9654A31EBF4AFB33D61AE9A215D8BC7A1C4D8DB8CC728194EC0211D5BE26A9D8`。
-- Root 独立审计 R783：`6f1af96174f04742a0bd1e2afda7e4a4:3`，SHA-256 `96222FAE3657F91A78622BFB7D3E7CA3633677513745349A2662E42A04A9A649`。
-
-窗口后已核验保存仍为 R770 的普通 Save `106238371`，durable Journal 102；external `7/20`、lifetime `461`，无在途或未知动作。执行 cohort 仍为 `369f35c0d7ea352d505ec686cc22a52294d5601a`。R785 只是缺件预算，不是取材执行或完整准备通过。
-
-下一步由 Root 根据封存截面诊断六项库存亏损及钛源/运输，再进行一个有界 fresh source-route-sink 读取。`wholeSupplyPassed=false`，continuous credit 为 0；双自动补给、整合保存恢复和最终同 SHA 双候选包等其他门保持未通过。上述文档与 CI 结果均不改变游戏状态或执行 cohort。
+The [byte-exact original](https://github.com/AvaloNero/Spherewright-Lab/blob/14478a03c64c550e644c559405c8496b647552e7/archive/imported-from-spherewright/e7d5f7d8661092b7c8089710488c448f290638be/docs/evidence/2026-10-10/current-full-source-long-r783.md) was imported from product fact commit `e7d5f7d8661092b7c8089710488c448f290638be`. Historical Git history and tags are unchanged.

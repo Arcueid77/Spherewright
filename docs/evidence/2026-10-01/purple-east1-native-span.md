@@ -1,17 +1,5 @@
-# 紫糖 East1 首段原生带段
+# Operational record moved to Spherewright-Lab
 
-日期：2026-10-01（Asia/Singapore）。本事件记录 East1 的19带 L1→L1 原生施工及局部审计；不表示与西侧转角、源端或消费者整线连通，也不代表保存恢复或生产验收。
+This product path is retained as a short redirect. The [fixed operational record](https://github.com/AvaloNero/Spherewright-Lab/blob/14478a03c64c550e644c559405c8496b647552e7/releases/v0.4.0/evidence/2026-10-01/purple-east1-native-span.md) belongs to the private Sample consumer repository; authorized access is required.
 
-## 预检、施工与局部读回
-
-前置只读预检 `cc600c…` ord5 以 `full_path_stage1` 验证自由端 L1→L1、NEW19预算；计划 token 已丢弃。施工 run `c7dea08185a843f1ab4141e2888973e8`：ord7 prepare、ord9 commit、ord61 terminal；ord62–80 为19个新实体，按带序为 `5257, 5256, 5253, 5251, 5249, 5248, 5250, 5252, 5254, 5255, 5258, 5259, 5260, 5261, 5262, 5263, 5264, 5265, 5266`。
-
-root 独立审计 protected run `5dbbc170de1447a4b8c835f4b75bf7d9` ord1，SHA-256 `4C1C4588B97730F69F48CF4CE84D3D17DEB4B74AF4C32942FF229BFF14C07E05`，核对全部19个实际点位/目标集合、36条互返有向连接及 ord81–84 的4个旧对象静态保全。该审计是本段局部证据，不是全厂 census。玩家 `2001` 从324降至305，其他物品数量与增量保持不变。
-
-## 当前保存边界与后续接口
-
-本施工后外部 accepted **8/10 OPEN**，无在途。最新观察 tick 82239386/R31/healthy、同一 identity；J96精确条目 durable，无 pending/error。最近正常保存仍为 **82109940**；此前11带转角与本次19带 East1 首段均尚未由正常保存覆盖，不得写成已保存、恢复或物料流通过。
-
-候选接口 `5247→5257` 的只读预检 `61654f…` ord6 已通过 `2011` / filter `6004`、`exact_slots -1`、offset0，0写入。它只是后续独立有限施工的预检，不属于本次施工结论。源尾 `5227` 到转角段起点仍未连接；紫糖供料、持续生产及真实重启均未证明，已成功前缀不重做。
-
-复用有界参数化施工入口；AST 与实际 `pwsh -File` smoke 已核、game calls=0。本文只整理 root 已核回执，不改公开代码或扩展验收范围。
+The [byte-exact original](https://github.com/AvaloNero/Spherewright-Lab/blob/14478a03c64c550e644c559405c8496b647552e7/archive/imported-from-spherewright/e7d5f7d8661092b7c8089710488c448f290638be/docs/evidence/2026-10-01/purple-east1-native-span.md) was imported from product fact commit `e7d5f7d8661092b7c8089710488c448f290638be`. Historical Git history and tags are unchanged.

@@ -1,23 +1,5 @@
-# 煤矿两端短带、正常保存与阶段审计
+# Operational record moved to Spherewright-Lab
 
-日期：2026-09-28（Asia/Singapore）
+This product path is retained as a short redirect. The [fixed operational record](https://github.com/AvaloNero/Spherewright-Lab/blob/14478a03c64c550e644c559405c8496b647552e7/releases/v0.4.0/evidence/2026-09-28/coal-short-ends-save-audit.md) belongs to the private Sample consumer repository; authorized access is required.
 
-## 范围
-
-在既有电塔 `5161` 和九点煤矿机 `5162` 的已保存 `R82 / save76968435 / J91` 后，只施工两条短带末端并正常保存至 `R87 / save77337734 / J91 / accepted6`。新增 `5163…5169` 都是 `2001` 传送带；没有分拣器、物流站、配方或旧实体配置变更。
-
-已核的精确新连接只有两条彼此未接通的链：`5162 → 5164 → 5163`，以及 `5169 → 5168 → 5167 → 5166 → 5165`（每对都有反向互返记录，共 12 条有向边）。因此这不是完整煤路、交付、吞吐、石墨供给或持续产出证明。
-
-施工/保存原件前缀为 `action-0bfe20e0e71743dc9416654567fb5656-`：ordinals `0020`、`0068`、`0104` 是三个成功 terminal，`0108-coal-short-ends-saved.json` 的 SHA-256 为 `871D8C90E818383E0EF0FDA21F321146094DBBCE517017543B454FF92CDDEAE2`。该前缀的完整背包比较 `0002 → 0107` 已确证只有基础传送带 `2001` 从 `400` 到 `393`，inc 不变，其他背包项不变。
-
-## 一次阶段审计
-
-- 参数化审计器以预先声明的 9 个新增 ID/item/位置和 12 条有向边运行一次；保护证明为 `action-f46733271ab542658da53c078e4ab6a1-0060-coal-short-ends-save-audit.json`，SHA-256 `6D20E2B486A1C57C4C8E9B7C6636564D6C230248D32FA4858C9D69CFFA74185F`。
-- 52 页实体快照（ordinals `0002…0053`）固定在同一快照、tick `77347854`，合计 `5169` 实体；随后独立 prebuild 检查为 `0`。收尾 session 是较后的 tick `77349943`，两者不混作同 tick。
-- 密封的 `5160` 个旧实体静态配置及原 `10062` 条互返有向边逐项保持；仅允许 `5161…5169`，总边数为 `10074`。没有 pending prebuild。
-- 矿机 `5162` 仍为 `2301/miner`，精确覆盖 `[311,313,314,315,316,317,319,323,328]`，network `3`、serve ratio `1`；其唯一新运输端是声明的 `5162:0 → 5164:1`。
-- Journal 仍为 durable `J91`，无 pending/error；收尾 owned session healthy，仍绑定 `R87 / save77337734`。普通保存不等于实际重启或恢复验收。
-
-## 未证明项
-
-两条短带末端未彼此连接，也未接入旧煤线、仓、炉、分拣器或站体。本阶段不证明煤已送达、煤/石墨吞吐、持续生产、全厂功率余量或重启恢复；此前单跨占位阻断的范围也不因此扩大或消失。
+The [byte-exact original](https://github.com/AvaloNero/Spherewright-Lab/blob/14478a03c64c550e644c559405c8496b647552e7/archive/imported-from-spherewright/e7d5f7d8661092b7c8089710488c448f290638be/docs/evidence/2026-09-28/coal-short-ends-save-audit.md) was imported from product fact commit `e7d5f7d8661092b7c8089710488c448f290638be`. Historical Git history and tags are unchanged.

@@ -1,31 +1,5 @@
-# 紫糖供料十写审计与持续产出诊断
+# Operational record moved to Spherewright-Lab
 
-日期：2026-10-01。此事件记录已完成的供料路线审计和三段彼此间隔的只读产出窗口。路线连通、单点 working 或科研点变化都不等于持续供料/研究通过；未进行实际重启。
+This product path is retained as a short redirect. The [fixed operational record](https://github.com/AvaloNero/Spherewright-Lab/blob/14478a03c64c550e644c559405c8496b647552e7/releases/v0.4.0/evidence/2026-10-01/purple-supply-ten-write-audit-and-output-diagnostic.md) belongs to the private Sample consumer repository; authorized access is required.
 
-## 十写审计与保存
-
-root 独立审计 proof `f68de4c28dac4210b7d97c37933a72e3` ordinal 1，SHA-256 `937556D62276E5C6BE09F407AF8B251E59759401D4731D5621D04C84ED3B6AD3`。对照基线快照 `679a95640dea47a2a648c78560e3dca8`（5,267 built），完整 fresh 快照 run `da57094d67b04849a313ce89176800cb`（54 页、5,315 built、69 条实体详情、零 prebuild、无在途）。新增48实体（45带、1电塔、2分拣器），无删除；10,366条有向边均互返。3051→5315→5202→…→5199→Lab84 的完整定向连通路径已核实。全比较有六处已逐项核销的旧端点连接增量；5227、5230、5243 的原生 rotation 变化有精确 before/after 证据，不作为通用忽略规则。未解释静态异常为0，另有212项动态变化单独分类。
-
-背包变化为带 `2001` −45、分拣器 `2011` −2、电塔 `2201` −1；其余物品数量和增量保持不变。J96 的96条记录精确一致且 durable、无 pending/error；同一 owned identity 健康、和平、非沙盒、1×。单快照工厂 tick **82811613**；closing **82812633 / R50**。
-
-第十项正常保存来自 run `ef4f4376a4594c17af91140fac5b6d00`，action `c3fdb046-51c4-42aa-bae3-f1632d918138`，saved tick **82810176**，J96 durable。`resumeAvailable=true` 不代表实际重启。十个 unique accepted 动作及144条原 same-action polls 均有成功 terminal；审计无在途或未核销结果。accepted **10/10 FROZEN**：本提交对应 CI 通过并经 root 明确交接前，不开新窗口、不重置计数。
-
-## 三个间隔的产出窗口
-
-root 独立核验 proof `c05692d8d40942638d95bb302afdb818` ordinal 1，SHA-256 `460A6A5B7597B53453331777A3017281EEBA31672B8221B30658403EA07035BB`；只读采样原 run `140487c80c40431d9492c252776418c6`。既有 catalog ordinal 4 显示配方55为 `1303×2 + 1402×1 → 6004×1`。原生 `1402` 输入 buffer 为0，结合诊断已确认4743缺少该输入；下一待核是其上游原因，不是是否缺料，也不能误判为缺 `1302/1303`。
-
-三个独立窗口各600 game ticks，彼此有间隔，不可拼成连续36,000 ticks：
-
-| 窗口 | 游戏 tick | Lab84 `research_matrix_points` |
-|---|---:|---:|
-| 1 | 82800315–82800914 | 37110 |
-| 2 | 82801161–82801760 | 39228 |
-| 3 | 82801990–82802589 | 37860 |
-
-每窗星球104的原生统计为 `6004` production/consumption 0/1，即0产、约6耗/分钟；4743自身读回 processor 6、broadband 0、purple output 0、`isWorking=false`、power 1。3051库存序列为1470→1469→1467；5197读到 `6004×2`，5199在第二窗 working。Lab84科研点不是物品件数；这些跨窗变化不单独证明物流因果、研究新增量或稳态产出。
-
-采样实际49次读取（41 sampler + 8 outer），总计约53秒；sampler部分约49秒，其中读取约3.35秒、计划等待约45秒。这不是委派/整段工作总耗时，也不据此声称模型或 token 节省。
-
-## 边界与下一项
-
-完整连接并保存不等于持续生产。当前已由原生输入 buffer=0 和诊断确认4743缺少配方输入 `1402`；三段600-tick窗口没有证明持续供料、持续研究、Governor长周期基线或真实重启。下一阶段须核查该缺料的上游原因并有界验证补给；本事件不预记后续结果。
+The [byte-exact original](https://github.com/AvaloNero/Spherewright-Lab/blob/14478a03c64c550e644c559405c8496b647552e7/archive/imported-from-spherewright/e7d5f7d8661092b7c8089710488c448f290638be/docs/evidence/2026-10-01/purple-supply-ten-write-audit-and-output-diagnostic.md) was imported from product fact commit `e7d5f7d8661092b7c8089710488c448f290638be`. Historical Git history and tags are unchanged.

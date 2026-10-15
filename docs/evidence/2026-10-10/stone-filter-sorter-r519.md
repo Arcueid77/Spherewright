@@ -1,11 +1,5 @@
-# R519 石料过滤分拣器与保存核销
+# Operational record moved to Spherewright-Lab
 
-本事件记录在固定20写窗口内完成的一次有限分拣器升级和正常保存。阶段结束后仍冻结；不代表持续来源或0.4总体供给验收通过。
+This product path is retained as a short redirect. The [fixed operational record](https://github.com/AvaloNero/Spherewright-Lab/blob/14478a03c64c550e644c559405c8496b647552e7/releases/v0.4.0/evidence/2026-10-10/stone-filter-sorter-r519.md) belongs to the private Sample consumer repository; authorized access is required.
 
-R515受保护记录 `d9ca51761476447990570ed2cc6dedad:104`（SHA-256 `808AAE27DA8EB29F1B64C77B1381A9A3E51861D144580DCB387D13FFB6D551EE`）包含94次请求、50.308秒及2笔accepted写入。root R516批准固定2 accepted、最多120请求、300秒。R519独立核验 `ce857620e3ca4655a87785d614466850:1`（SHA-256 `B3AA91F92FDA0C32B253FB3FDA638639EAB45C39D105658CB5B3AEE13EE23BF9`），确认两笔Native action均完成，原材料和终态读回与保存覆盖一致。
-
-新分拣器5324使用filter `1005`，连接旧带5316与87。全厂完整读回为6314 built、0 prebuild；相对前一快照仅新增5324及5316/87之间的声明连接，没有删除、其他静态漂移或非互惠连接。5条完整Native货物路径及153格空载回程路径保持原成员、几何与拓扑。新增分拣器消耗2011×1（4→3），2001库存保持33；玩家位置及背包count/inc/held均与阶段前一致。新增消费者的电网点读满供。
-
-正常主档Save `105012378`覆盖本阶段两笔写入；当前P104/R4健康、Journal durable 102、external 4/20、lifetime 403，无当前在途或未决动作，窗口仍冻结、未关闭，也未开启新窗口。历史R498的 `outcome_unknown` 保持原判定。
-
-下一候选为对不同group 19矿点277进行fresh Native矿机选择器只读资格并正常保存；该步骤尚未批准执行。矿源建设、自动供料和持续来源验收均未完成。持续来源仍为 `wholeSupplyPassed=false`、continuous credit 0；Warper/Rod最低产量与连续36,000-tick门、双自动补给、整合保存恢复和最终同SHA双候选包门均未通过。R508只是同SHA离线双包预检，不是实际Mod Manager安装或最终发行验收。
+The [byte-exact original](https://github.com/AvaloNero/Spherewright-Lab/blob/14478a03c64c550e644c559405c8496b647552e7/archive/imported-from-spherewright/e7d5f7d8661092b7c8089710488c448f290638be/docs/evidence/2026-10-10/stone-filter-sorter-r519.md) was imported from product fact commit `e7d5f7d8661092b7c8089710488c448f290638be`. Historical Git history and tags are unchanged.

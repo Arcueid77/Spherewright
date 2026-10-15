@@ -1,18 +1,5 @@
-# 煤区夹缝探路、回撤保存与十写审计
+# Operational record moved to Spherewright-Lab
 
-日期：2026-09-30（Asia/Singapore）。沿用同一 owned 世界、母星 `104`、已安装的 DSP `0.10.35.29104` Plugin/MCP；没有冷部署、建筑/物料写入或改档。上一阶段的外部 accepted 为 `6`，本阶段只新增 `#7–#10`；accepted 是外部审计窗口，不是游戏 revision。
+This product path is retained as a short redirect. The [fixed operational record](https://github.com/AvaloNero/Spherewright-Lab/blob/14478a03c64c550e644c559405c8496b647552e7/releases/v0.4.0/evidence/2026-09-30/coal-corridor-probe-and-ten-write-audit.md) belongs to the private Sample consumer repository; authorized access is required.
 
-| 序号 | 唯一动作和实机结果 | 证据边界 |
-|---|---|---|
-| `#7` | 沿主会话筛出的约 5 m 干地夹缝短移，action `9d8d84a4-aa67-4570-acb4-57b6ad71e6d0` 于 tick `78244361` `completed`；实际到 `(-92.55194,-69.73348,-163.2738)`，距目标 `0.91415 m`，后读 `Walk/0`、核心约 `799.75 MJ`。 | 共用 `Wait-SpherewrightPlayerSettled` 首次实机使用，首次复读即站稳；受保护终态证明 SHA-256 `5251ED0228CD38ED66F37A21817BFEB796D88BD2ECB68794C2451CAC33AC6C2D`。本动作调用方墙钟 `3.26 s`，仅证明这一小段通行。 |
-| `#8` | 向另一个干地绕点 `(-94.41104,-72.48897,-160.99335)` 的唯一 Move `436feed9-3d07-48bb-affb-e0263d8ec0cf`，6/6 地表样本、0 unknown、原生 prepare 允许；实际移动约 `1.73 m` 后于 tick `78284066` `action_failed/position_stalled`，181 停滞 tick，剩余 `2.30125 m`，`doNotRetrySameTarget=true`。 | 原 prepare/终态 SHA-256 分别为 `1B77288D0AAF79455A5E6900BFF20448F15FA4973C904A7B8468C0F61602CE6B` / `D6F964A69B18CAF83021073587DE23463D6F7BBB17D55FD7C4E9EC8A3766B225`；主会话独立复核原终态。候选 B 和当批保存均未提交。调用方墙钟 `5.38 s`。 |
-| `#9` | 主会话不再做相似前进试探；从 fresh `(-93.375206,-70.9021149,-162.298981)` 回到 `#7` 的已走通位置，约 `1.728 m` 干地反向原路、`0.75 m` 容差。唯一 Move `0a8ad1aa-91a3-4244-ac54-58d71420df03` 于 tick `78310947` `completed`，站稳位置 `(-92.5545654,-69.74421,-163.267731)`，距原落点约 `0.0126 m`。 | fresh 预检 `allowed`、0 blockers、3/3 干地；终态 SHA-256 `1C42F6BC2A7B1CB560AF1E1DFD0A4B658B5D5F7ACCF6600BAB3B5381E7E70CCC`。未重放 `#8`。 |
-| `#10` | 仅在回撤成功、`Walk/0` 且健康后正常保存；action `2baf9688-dc03-4996-b605-9f2a36fdc75d` 于 tick `78311012` `completed`，同一 owned 主档保存到该 tick、revision `17`、J91 durable，健康恢复票据可用。 | 终态 SHA-256 `853BDE81A47964DB47585760804F62FD2BB9FF44D1C6AD7BCFB3707F5A86149F`。`#9–#10` 共用调用方墙钟 `3.59 s`；没有第 11 笔。 |
-
-旧密集厂区快照在 `#8` 停点附近显示 sorter `815` 中心约 `0.8 m`、数根旧带约 `0.5–1.3 m`，仓 `727` 约 `2.17 m`、制造台 `814` 约 `2.37 m`；这说明单看仓和制造台中心会漏掉密集局部结构，**不证明哪一件的 collider 实际挡路**。`prepare_move.surfacePreview` 只验证地表采样，不验证通路碰撞。下一次须从已保存的稳定点重设计绕开整片密集结构的路线，不能把 B 当作已测试可行路线，也不重放 `#8` 或此前两个失败目标。
-
-第十笔后冻结写入。主会话直接使用既有受保护只读 Bridge 客户端完成 52 页同一 snapshot 的严格审计：tick `78341965` 时 `5170` 个唯一 built、`10078` 条双向可核连接、独立 prebuild `0`；相对上一封存快照逐对象静态配置差异 `0`，背包和原 91 条 Journal entries 均未变。收尾 session tick `78343687`（不是工厂 snapshot 的同一 tick）保持同一 owned/健康/和平/非沙盒/1×、保存 `78311012`、revision `17`、无写 blocker/checkpoint；玩家 `Walk/0`、核心充足、无手搓/施工待办，Journal `91/91` durable 且无 pending/error。两张电网满供，煤矿机 `5162` 与目标基础分拣器 `5170` 均受电；`5170` 仍过滤煤 `1006`，煤矿机仍覆盖原九个节点。受保护根审计 SHA-256 `31E0AB0F5AD96820353A4DA939CBE9F65B29BA3AFB274EBEEB1516FA1F7CD7EF`，脚本 exit `0`，审计零游戏写。`#1–#6` 的终态见[前一阶段](coal-approach-stall-and-save.md)，本阶段 `#7–#10` 各唯一终态；合计 7 次成功、3 次明确 `position_stalled`，均无结果未知、隔离或重复提交。
-
-本次也暴露出非游戏耗时：旧私有审计 caller 写死旧 `R2`/保存 tick。交给 Luna 的固定只读审计任务在约五分钟准备边界仍为 `0` Bridge 请求、`0` 在途动作；主会话按规则接手，直接复用现有受保护只读入口完成上述审计，没有新增一份阶段专属脚本。后续固定审计若发现入口硬编码已过期，应立即切换到通用受保护只读采集，而非继续搜旧 caller 或以准备等待代替游戏进展。短移/保存的秒级执行与多分钟准备应分别统计，不能把后者藏入游戏动作耗时。
-
-本阶段没有升级 `5170`、接通新煤/石墨线路或证明持续产量；十写审计、正常保存和恢复票据也不等于后续 protected resume 已实测。原始回执、真实存档名、token 和私有路径不进入仓库。
+The [byte-exact original](https://github.com/AvaloNero/Spherewright-Lab/blob/14478a03c64c550e644c559405c8496b647552e7/archive/imported-from-spherewright/e7d5f7d8661092b7c8089710488c448f290638be/docs/evidence/2026-09-30/coal-corridor-probe-and-ten-write-audit.md) was imported from product fact commit `e7d5f7d8661092b7c8089710488c448f290638be`. Historical Git history and tags are unchanged.

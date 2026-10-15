@@ -1,44 +1,5 @@
-# 最终联合供给与封窗验收
+# Operational record moved to Spherewright-Lab
 
-**结果：本次 29145 same-session 联合供给与覆盖保存验收通过。** 证据适用于源码冻结候选 `2a7a98d1932c404e3a7abc2c11233d9c0b8780d9` 的本地 owned、单人和平、非沙盒、资源倍率 1× 世界；它不授权正式发行，也不外推到其他档案、版本或安装配置。
+This product path is retained as a short redirect. The [fixed operational record](https://github.com/AvaloNero/Spherewright-Lab/blob/14478a03c64c550e644c559405c8496b647552e7/releases/v0.4.0/evidence/2026-10-15/final-joint-supply-36060.md) belongs to the private Sample consumer repository; authorized access is required.
 
-## 联合窗口、来源与功率
-
-按原事前批准 SHA `D811FFEC2E9845842A4EDA072425C8FBA665E9A70B17D6A941EC595770047C96`，最终窗口取样结束于 Native-valid union `116316166→116352225`，共 `36,060` game ticks。79 个有效样本（原批准样本计划上限为 90）；原始数据包含 1,822 对请求/响应与 22 个库存 cut，无 gap、reset 或 accepted 写入。覆盖范围达到预先要求的 `≥36,000` ticks，未续期、未拼接另一长窗。原始 Data、来源/整案独立审核和固定窗口封闭记录均列于文末索引。
-
-真实来源与供给条件通过。item `1210` 在 Native 窗口产出 12–15 件，保守速率至少 `1.198003/min`；另一个独立书签窗口中，新输出仓 `6657` 从 6 增至 18，跨 `36,182` ticks（`116316047→116352229`），对应 `1.193964/min`。两项证据分开计算，没有合并成一个速率。燃料棒 item `1802` 在 Native 窗口产出 18–20 件、消耗 11–17 件，保守产率至少 `1.797005/min`。翘曲器目标 `≥1/min`；燃料 `≥1/min` 是最终联合长窗的事前最低速率，不是 readiness 门槛。
-
-22 个实际物理库存 cut 来自覆盖 239 个相关对象的完整 Native 路径读取；它们是被测实体库存，不代表全世界库存。读数如有小幅周期或在制变化，按原值列出，不将其描述成每种物料都净增长：
-
-| 物品 | 起点→终点 | 说明 |
-| --- | ---: | --- |
-| 氢 `1120` | `11,286→11,301` | 增加 15 |
-| 重氢 `1121` | `20→20` | 不变 |
-| 燃料棒 `1802` | `1,806→1,812` | 增加 6 |
-| 石墨 `1109` | `314→354` | 增加 40 |
-| 铁 `1101` | `115→115` | 不变 |
-| 容器 `1206` | `290→290` | 最低 289 |
-| 超级磁性环 `1205` | `12→12` | 不变 |
-| 钛合金 `1107` | `13→13` | 不变 |
-| 金刚石 `1112` | `117→116` | 小幅周期/在制变化；保守 Native 产率 `≥4.392679/min`，高于计划 `4/min` |
-| 奇异物质 `1127` | `1→0` | 小幅周期/在制变化；保守 Native 产率 `≥1.198003/min`，高于计划 `1/min` |
-
-新链的来源已独立核实；旧末级 R78 装配机 `5329` 不计作本链来源，旧仓 `5331` 在 22 个 cut 中保持 659。来源 `5943` 的物品过滤改为 `1210` 后待机，已有持货仍依原连接交付至 `5329`。79 个实际电网样本（上限 90）均有非空网络、正需求且 `required=served`、网络比率为 1；所需功率为 `217,784–641,995 J/tick`，16 台发电机均有原生证据。热量仅按 Joules 计量，不把热量缓存或瞬时 `P=C` 当作来源证明。关键氢、重氢和燃料端点位于普通批次相位相同的读取点，三者实物库存均未减少；未以 WIP 或 loaded-heat 物品计信用。独立读取的 lab256 是不同时间的 20 次 idle 观察，不并入上述 22 个实际 cut。
-
-## 覆盖保存与固定窗口封闭
-
-数据审核后只执行了一次获准覆盖 Save：80 请求、33.913 秒、1 个 accepted。最终保存 tick 为 `116353747`；后续观察 tick `116353967` / revision `2`，Journal `J102` 的 102 条记录及四次历史版本转换完整保留。全厂为 `6,660 built / 0 prebuild`，静态差异 0、双边连接差异 0，九项出发 kit 均保全。出发物资中 item `1210` 库存为 900、目标为 30；item `1802` 库存为 65、目标为 65。旧未保存的 4 件石矿（物品 `1005`）仅属历史 accepted 记录，不计当前恢复或保存信用，也不重取。
-
-原 fixed-20 窗口以 opening lifetime `624` 开始，本次共核实 10 个唯一 action/key 的 ACK 与 terminal，封在 `lifetime 634 / whole 235`。20 槽上限未扩展，未用的 10 槽作废，没有开启新窗口。累计外部普通 Save 为 72、Move 为 47；Native 内部正常重存 4 次另行计数，不混作外部 Save。R1300 对新 session 的连续信用为 0。
-
-## 证据索引与限制
-
-| 证据 | 受保护原件引用 | SHA-256 |
-| --- | --- | --- |
-| 最终长窗原始 Data：1,822 对、79 个有效样本（上限 90）、22 cut | `ed14b0b3c4564a70a88cd2d8dc582a67:1` | `00F3BADC19FF85212D89A792767A7027B421F4925C5E1C5292F985A6E16687BF` |
-| 覆盖 Save 原 writer：80 请求、1 accepted | `0527eaed5eed43eb99ffec9b28d0f2d4:162` | `2173F0EE14497D0952158B403A27609D8FAA5DC44B49DF5A50DCE6430E0B573B` |
-| 覆盖 Save 独立审核 | `a3e2d9a88a204a0aaa9669ef13d18ad6:1` | `E094472A27347FB6513BFC4E125245C1C865E31C509710F0BAC1CFA26D02E46E` |
-| 来源与整案独立审核：条件通过 | `35389bf22f4c4e229ee4444ccf7a4c22:1` | `F5C077BAA64A38C4231224FD7E6DBF490897BB82DE5B0427D414E5652A6411AE` |
-| fixed-20 封窗独立核验 | `fcaf3f36119c4b7e9ffc7be30bc75789:1` | `8CE13D5EFCE49EAE56604A108D35C6E3DE73F7AFC9CF480B05A54DEDBC7C6F29` |
-
-这关闭的是本次 Native 29145 同 session 联合供给、覆盖保存和原窗口封闭范围。它不验证 Thunderstore Mod Manager/profile、跨电脑运行、安装事务崩溃恢复，或 Overseer carrier 静止 600 ticks 后恢复的 live 分支；也不替代所有者对冻结候选的发行审核。未创建正式 tag、GitHub Release 或 Thunderstore 发布。此前完整 kit 的 same-version 恢复和“输入段已保存、输出段未施工”时的中途恢复分别见[整案恢复报告](final-whole-preparation-recovery.md)与[中途恢复记录](manual-candidate-install-resume.md)。
+The [byte-exact original](https://github.com/AvaloNero/Spherewright-Lab/blob/14478a03c64c550e644c559405c8496b647552e7/archive/imported-from-spherewright/e7d5f7d8661092b7c8089710488c448f290638be/docs/evidence/2026-10-15/final-joint-supply-36060.md) was imported from product fact commit `e7d5f7d8661092b7c8089710488c448f290638be`. Historical Git history and tags are unchanged.

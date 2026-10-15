@@ -1,14 +1,14 @@
 # Spherewright 0.3–1.0 Roadmap
 
-本文定义 Spherewright 从当前 Post-M0 开发基线走向 `1.0.0` 的公开能力路线、版本验收门和发行规则。它描述目标，不替代 [AGENTS.md](./AGENTS.md) 的当前阶段授权与安全约束。
+本文定义 Spherewright 从当前 Post-M0 开发基线走向 `1.0.0` 的公开能力路线、版本验收门和发行规则。它描述目标，不替代 [AGENTS.md](https://github.com/AvaloNero/Spherewright-Lab/blob/14478a03c64c550e644c559405c8496b647552e7/operations/agent-rules-imported.md) 的当前阶段授权与安全约束。
 
 ## 版本锚点
 
-2026-09-26 当前重入门：上次成功保存点的恢复票据已过期，fresh 精确主档预检已通过，用户随后已明确确认恢复；尚未把这次确认记为加载成功。实时边界集中于[当前状态](docs/current-status.md)，以下带日期段落保留历史语义。
+2026-09-26 当前重入门：上次成功保存点的恢复票据已过期，fresh 精确主档预检已通过，用户随后已明确确认恢复；尚未把这次确认记为加载成功。实时边界集中于[当前状态](https://github.com/AvaloNero/Spherewright-Lab/blob/14478a03c64c550e644c559405c8496b647552e7/operations/current-status.md)，以下带日期段落保留历史语义。
 
 2026-09-24 升级后的原档恢复已完成一次受限 live `0.10.34.28529 → 0.10.35.29088` 迁移和正常保存，保持日记历史；当前恢复后阻塞为 fresh 工厂审计。仅支持29057/29088两个从28529直达的精确版本对，不核销持续产量、施工、第二次恢复或0.4最终门，见IFX-171及当档最新日记。
 
-2026-09-24 IFX-170 的 expired-primary 重新授权已在上述精确29088迁移中窄核销：保留原身份与 Journal，未延长旧票据或导入副本。当前待 fresh 工厂审计；第二次恢复及后续0.4生产验收仍未核销，版本/安装证据见IFX-171和[当档日记](docs/gameplay-timeline.md)。游戏执行模型按用户要求改为 `gpt-6-luna / max`。
+2026-09-24 IFX-170 的 expired-primary 重新授权已在上述精确29088迁移中窄核销：保留原身份与 Journal，未延长旧票据或导入副本。当前待 fresh 工厂审计；第二次恢复及后续0.4生产验收仍未核销，版本/安装证据见IFX-171和[当档日记](https://github.com/AvaloNero/Spherewright-Lab/blob/14478a03c64c550e644c559405c8496b647552e7/operations/gameplay-timeline.md)。游戏执行模型按用户要求改为 `gpt-6-luna / max`。
 
 - `0.1` 能力锚点：M0 First Red Matrix，完成安全 Bridge、MCP 基础原语和首条红色矩阵自动产线。
 - `0.2` 能力锚点：Post-M0 产线扩展，完成黄糖自动化、同星系检查点飞行，以及恢复票据、日记和写入证明的硬化。这是历史开发基线，不补造未曾发布的 tag 或 Release。
@@ -30,7 +30,7 @@
 ## 开发与发行规则
 
 - 直接在 `main` 开发，以可审阅、可回滚的单一目的提交推进，不使用长期发布分支。推送服从当次用户授权；2026-09-06 用户最新恢复验证后小步commit/push，先提交九个功能切片，原第十项打包/CI暂留本地。未验收的实机门如实保留，tag/发布仍待单独审核。
-- 每个 `0.x.0` 开工前，先用独立提交把 [AGENTS.md](./AGENTS.md) 的“当前阶段”更新到该版本范围，明确新增允许的写入族和仍然保留的禁令。AGENTS 未更新前不得开工；Roadmap 本身不构成写入授权。
+- 每个 `0.x.0` 开工前，先用独立提交把 [AGENTS.md](https://github.com/AvaloNero/Spherewright-Lab/blob/14478a03c64c550e644c559405c8496b647552e7/operations/agent-rules-imported.md) 的“当前阶段”更新到该版本范围，明确新增允许的写入族和仍然保留的禁令。AGENTS 未更新前不得开工；Roadmap 本身不构成写入授权。
 - 每次新增 DSP 字段、方法或调用路径，必须以本机当前 `Assembly-CSharp.dll` 为准，并把签名、哈希、采用理由和复读不变量记录到 `docs/research/`。
 - 所有游戏写入继续执行 Unity 主线程、`inspect → prepare → commit → readback`、短期计划、幂等、资源守恒和不确定结果隔离；不得因为版本目标放宽正常游戏规则。
 - 每个完整版本必须提供不要求源码或 .NET SDK 的自包含安装工件。`0.3` 起最低形态为版本化 zip、manifest、安装说明或脚本；校验和、变更日志、升级与回滚在后续版本持续完善。
@@ -100,7 +100,7 @@
 
 状态：**released**（2026-09-04 发布，2026-09-05 从 prerelease 提升为正式 Release；tag `v0.3.2`，commit `da11e44`）。
 
-这是不扩展玩法动作域的修复版：区分 Agent 新档和用户授权导入副本的命名，保持旧 `Spherewright_M0_*` 精确恢复兼容，并把落地基座/局部障碍的有界移动恢复整理为包内文档和 MCP 资源。项目所有者已另行授权以 Team `Arcueid_77` 生成同版本 Thunderstore 包；GitHub 手动安装包与 Thunderstore 包来自同一 tag。两次相互隔离的发行包黑盒新档验收都完成自动蓝矩阵并正常保存，[对比记录](./docs/v0.3.2-sol-vs-luna-black-box.md)保留两种外部 Agent 的路径、耗时和 API 等价成本。项目所有者于 2026-09-05 将 GitHub 条目标记为正式 Release。
+这是不扩展玩法动作域的修复版：区分 Agent 新档和用户授权导入副本的命名，保持旧 `Spherewright_M0_*` 精确恢复兼容，并把落地基座/局部障碍的有界移动恢复整理为包内文档和 MCP 资源。项目所有者已另行授权以 Team `Arcueid_77` 生成同版本 Thunderstore 包；GitHub 手动安装包与 Thunderstore 包来自同一 tag。两次相互隔离的发行包黑盒新档验收都完成自动蓝矩阵并正常保存，[对比记录](https://github.com/AvaloNero/Spherewright-Lab/blob/14478a03c64c550e644c559405c8496b647552e7/scenarios/v0.3.2-black-box/comparison.md)保留两种外部 Agent 的路径、耗时和 API 等价成本。项目所有者于 2026-09-05 将 GitHub 条目标记为正式 Release。
 
 ## 0.3.3 — Gameplay Mode Compatibility
 
@@ -112,9 +112,9 @@
 
 ## 0.4.0 — Overseer, Foundry & Governor
 
-当前执行状态与代码/安装/正式版边界见 [current status](docs/current-status.md)。已通过的限定蓝图复制/取消/重启续建/持续产出和 Governor 2× 观察门不重复施工；三级链、持续供给、远征准备和最终同提交双包仍按以下验收门完成。
+当前执行状态与代码/安装/正式版边界见 [current status](https://github.com/AvaloNero/Spherewright-Lab/blob/14478a03c64c550e644c559405c8496b647552e7/operations/current-status.md)。已通过的限定蓝图复制/取消/重启续建/持续产出和 Governor 2× 观察门不重复施工；三级链、持续供给、远征准备和最终同提交双包仍按以下验收门完成。
 
-此前逐阶段施工与验证流水完整保存在 [历史快照](ROADMAP-HISTORY-2026-09-24.md)，其中的下一步、旧 token 和待验状态只代表当时截面，不是当前执行授权。后续一阶段一主证据，遵守 [证据记录规则](docs/evidence/README.md)。下列目标、范围和验收门未缩减；夹在验收门内的带日期旧说明同样为历史上下文。
+此前逐阶段施工与验证流水完整保存在 [历史快照](https://github.com/AvaloNero/Spherewright-Lab/blob/14478a03c64c550e644c559405c8496b647552e7/archive/roadmap-history/ROADMAP-HISTORY-2026-09-24.md)，其中的下一步、旧 token 和待验状态只代表当时截面，不是当前执行授权。后续一阶段一主证据，遵守 [证据记录规则](https://github.com/AvaloNero/Spherewright-Lab/blob/14478a03c64c550e644c559405c8496b647552e7/releases/v0.4.0/evidence/README.md)。下列目标、范围和验收门未缩减；夹在验收门内的带日期旧说明同样为历史上下文。
 
 ### 目标
 

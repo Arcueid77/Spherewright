@@ -1,13 +1,5 @@
-# R568 石料下坡接入与关键接口复核
+# Operational record moved to Spherewright-Lab
 
-本事件记录同一有限阶段内的下坡与地面接缝施工、原动作核销及接口审计。施工已保存覆盖的范围和仍待覆盖的写入分别列明；本事件不证明矿源供料或持续供给。
+This product path is retained as a short redirect. The [fixed operational record](https://github.com/AvaloNero/Spherewright-Lab/blob/14478a03c64c550e644c559405c8496b647552e7/releases/v0.4.0/evidence/2026-10-10/stone-overpass-critical-interface-r568.md) belongs to the private Sample consumer repository; authorized access is required.
 
-R558原件 `21f606f70329431aba8e39df8aa49d4e:130`（SHA-256 `85F04BE3D1B80D213FB72DD91A380ED9707E39ABBE93C2EF6DEC354436733B38`）记录一次accepted的下坡动作。调用者240秒超时，不能把摘要中的预建筑/扣料字段当作未执行证明。R562 `cdc4c61a83a649ac92f2ab8eba177d83:9`（SHA-256 `D392547CA3C2AFD3F9957E23406F9ECF85D4558C20E617184BF25FE3DC0E115A`）只读查询同一原动作，返回Native `completed`；R563 `8ec63d8a61254f078089879f94cb161d:1`（SHA-256 `9866C7BF90A6B13F2F2E96354EEFCD4A18D3A1F1E435F2B6F3BF1E1FACECB81F`）独立核验Native点与实体ID对应、旧48对象静态/电力及空载路径。未重放该动作。
-
-R564原件 `8266c9bc73294c1a997c6f57e1809e67:74`（SHA-256 `9C847BBA87D3ADCD7875B606F8A71BE439CCC9381A25BC31586410613C0F615E`）记录已完成的地面接缝动作：带材185→183，Native新实体6329、6330。动作terminal成功后，调用者继续41次无人机返航观察，耗尽该片剩余的请求预算；累计68请求、67877.8207毫秒不构成Native拒绝或在途动作。R566只读核验 `d0c85f3b0fa9451486e5401dc33b233d:1`（SHA-256 `BF055E6FF62BC9A8D73763F878CC046A5876713FC119FE8919496B9E585BBD45`）；R567 `81f5bac164d7469e874784d340c8dbdc:9`（SHA-256 `3CBA92A175FCCC2FAA10746C95DD01CC2863CC81A225757F4BE876309A0FC029`）读回三架无人机空闲且无预建筑。
-
-root R568 `76a87a686b4b4c8fa0e97e450236e6cd:1`（SHA-256 `CE68629AE850760D011D9B42CA5160746AAF8021375E474138D44F2191F78791`）独立审计61对象切片。13条新带材（下坡11条、接缝2条）接入旧5316–5323，构成Native path 235、444格的完整空载路径；路径从新段经旧头5323延伸至5316。旧头5323只新增6330输入slot 1，源端6328只新增6329输出slot 0；两处Native锚点旋转有证据。其余旧48个对象静态字段、N3/N4电网成员及满供状态保持。矿机5325仍network 0、服务比率不可用（`null`）、缓冲为空。R568与R567是不同读回，未把动态结果跨tick拼接。
-
-当前P104/R22，正常Save `105130853`、J102完整durable；固定20窗口external 6/20、lifetime 414、opening lifetime 408，无当前在途或unknown。该Save覆盖前四笔材料动作，但未覆盖这两笔施工动作；普通写入冻结，阶段仍待余段。原阶段预算16笔accepted/1100请求/2400秒，目前2/208/317254.227毫秒，余14/892/2082秒。总方案累计15笔accepted、17条带材、4个跨度；R557将本段跨度上限10调整到11，整体200条带材/30笔accepted/5次保存不变。R498的历史`outcome_unknown`保留，不重放。
-
-下一余段需验证上坡、高端Native双接缝、5段北向延伸、一次移动、过滤分拣器、2风机、至多2电塔及唯一末尾Save。来源尚未接入：`sourceAdmitted=false`、`wholeSupplyPassed=false`、continuous credit为0。29项物料、Warper与Rod各至少1/min且连续≥36,000 ticks、双自动补给、整合保存恢复和最终同SHA双候选包均未通过。
+The [byte-exact original](https://github.com/AvaloNero/Spherewright-Lab/blob/14478a03c64c550e644c559405c8496b647552e7/archive/imported-from-spherewright/e7d5f7d8661092b7c8089710488c448f290638be/docs/evidence/2026-10-10/stone-overpass-critical-interface-r568.md) was imported from product fact commit `e7d5f7d8661092b7c8089710488c448f290638be`. Historical Git history and tags are unchanged.

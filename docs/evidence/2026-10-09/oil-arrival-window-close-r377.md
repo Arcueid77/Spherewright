@@ -1,9 +1,5 @@
-# 油路到料与窗口提前封闭 — R377
+# Operational record moved to Spherewright-Lab
 
-R377 独立审计原件 `495b7e1cb01143249d06abc1b1456502:1`（SHA-256 `2852F8644744EF7B41C042AF4DD90F862C4939666BED6928E08F705388FBF97E`）核销该固定20写窗口的16笔unique Native动作、保存覆盖和完整库存。R373施工终态及R366跨run原动作均按原记录核对；R366的caller等待超时不作为Native拒绝，也未重放。普通Save为`102506542/R86/J102`，lifetime `375`未清零；窗口在16/20提前闭合，未用4笔不结转，新窗口未开，无在途或unknown。
+This product path is retained as a short redirect. The [fixed operational record](https://github.com/AvaloNero/Spherewright-Lab/blob/14478a03c64c550e644c559405c8496b647552e7/releases/v0.4.0/evidence/2026-10-09/oil-arrival-window-close-r377.md) belongs to the private Sample consumer repository; authorized access is required.
 
-R376完整捕获 `b1736276cb9347c9803460691d395db9:74`（SHA-256 `E9D5CFDB34EAD52DA7F60418638E55ACCE058848D8610FDFC47AD9E009ECBD5C`）为72个只读请求、32.08秒、0写。新快照为6316 built/0 prebuild、64页；相对6274基线新增42个原生对象，无删除或不互惠边，旧`6063`与`2804`各有一处声明的物理端口变化。91个同tick物料对象与3项loaded电力读回分别按各自采样范围核验。R377确认完整有向路径：`5949→6063→6316→40条新带→6315→2804→707`。
-
-707的前次读回tick `102506582`中，原油输入、精炼油输出与进度均为0；tick `102531072`读回原油输入2、`working=true`、进度270000、精炼油输出1、power 1。该同tick状态证实原油到达707并开始推进精炼油加工，不构成持续产率证明。R377按原16笔动作核销口径确认全库存净差为belt `2001 +2`、basic sorter `2011 0`、fast sorter `2012 +1`、circuit `1301 −3`；这些是净差，不替代当前库存读回。
-
-R373施工与R375结构审计的细节见[路线完成记录](oil-route-completion-r375.md)。R377没有新增continuous credit；R323/R324来源条件失败、R344诊断以及`wholeSupplyPassed=false`保持不变，整案仍为`executable=false`。双自动补给、连续至少36,000 ticks、整合保存恢复和最终同SHA双候选包仍未通过。
+The [byte-exact original](https://github.com/AvaloNero/Spherewright-Lab/blob/14478a03c64c550e644c559405c8496b647552e7/archive/imported-from-spherewright/e7d5f7d8661092b7c8089710488c448f290638be/docs/evidence/2026-10-09/oil-arrival-window-close-r377.md) was imported from product fact commit `e7d5f7d8661092b7c8089710488c448f290638be`. Historical Git history and tags are unchanged.

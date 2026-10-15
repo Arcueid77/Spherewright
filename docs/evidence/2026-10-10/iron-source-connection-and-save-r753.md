@@ -1,11 +1,5 @@
-# 铁矿来源接入与保存：R753
+# Operational record moved to Spherewright-Lab
 
-R753完成矿机6476到既有铁路的有限接入，并由正常主档保存覆盖本阶段动作。铁矿来源仍未被认定为持续供给，0.4验收门不变。
+This product path is retained as a short redirect. The [fixed operational record](https://github.com/AvaloNero/Spherewright-Lab/blob/14478a03c64c550e644c559405c8496b647552e7/releases/v0.4.0/evidence/2026-10-10/iron-source-connection-and-save-r753.md) belongs to the private Sample consumer repository; authorized access is required.
 
-- R746的15带施工动作曾被调用方等待限时停止，但该原动作此前已accepted。R750只读检查看到3个预建筑和3架工作无人机；R751继续查询并核销同一action/key，确认原带路动作完成，没有重放该动作或扩展预算。
-- R751随后完成预留的普通分拣器施工和Save。R753独立审计将本阶段3笔accepted（原15带、分拣器、Save）逐一绑定到原始准备、提交、终态和读回；本固定20窗口18笔唯一accepted均已被Save覆盖，整案lifetime为452，无在途或unknown。
-- 新矿机6476经15条新带接入既有铁路线。Native带路顺序为6491→6490→6489→6488→6487→6486→6485→6484→6483→6482→6481→6480→6479→6478→6477；普通分拣器6492（2011，初始filter1001）接入旧带1220。旧路径保留，未新增电杆，N3满供。
-- 保存后的完整工厂为6492 built、0 prebuild。该审计确认`sourceConnected=true`，但`sourceAdmitted=false`；连接与建成不等于实际到料、持续产量或供给验收。
-- 当前保存边界为P104/R54、Save tick 106055923、durable Journal 102。整案累计53笔accepted；`wholeSupplyPassed=false`，continuous credit为0。Warper和Rod各至少1/min、连续36000 ticks、双自动补给、完整来源/材料供需、整合保存恢复及最终同SHA双候选门仍未通过。
-
-原件索引：R751 writer `b24fd2b3661445c0bf605b6f32d87208:154`，SHA-256 `EEFED2E4366F8CF38EF817730040D98F448B040E6378009E025187C175665468`；R753独立审计 `36e6aecc48ad482dbc23b2e28c3f4d36:1`，SHA-256 `E57C41351BDFBE4996820503CC9D25FBE7D6F5914EE22D2881F9B2722E0E6CC4`。
+The [byte-exact original](https://github.com/AvaloNero/Spherewright-Lab/blob/14478a03c64c550e644c559405c8496b647552e7/archive/imported-from-spherewright/e7d5f7d8661092b7c8089710488c448f290638be/docs/evidence/2026-10-10/iron-source-connection-and-save-r753.md) was imported from product fact commit `e7d5f7d8661092b7c8089710488c448f290638be`. Historical Git history and tags are unchanged.

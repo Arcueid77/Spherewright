@@ -1,30 +1,5 @@
-# 矿机材料取用、调用方接手与第十写审计
+# Operational record moved to Spherewright-Lab
 
-日期：2026-09-30（Asia/Singapore）。同一个 Spherewright-owned、健康的普通世界，母星 `104`；未导入、换档、施工、手搓矿机或改动工厂配置。本窗口先前四笔是科技 `1104` 选择/保存和科技 `1607` 选择/保存，分别见[两项科研记录](technology-1104-selection-and-save.md)与[调用方记录](technology-1607-selection-save-caller-delay.md)。
+This product path is retained as a short redirect. The [fixed operational record](https://github.com/AvaloNero/Spherewright-Lab/blob/14478a03c64c550e644c559405c8496b647552e7/releases/v0.4.0/evidence/2026-09-30/coal-miner-materials-ten-write-audit.md) belongs to the private Sample consumer repository; authorized access is required.
 
-## 本次已接受动作 `#5–#10`
-
-| # | 正常动作 | 原始回执与终态 | 实际读回 |
-|---|---|---|---|
-| 5 | 约15米短 Move | `adf45e4f01b84a9695a4d995e28f7f45/0010`，`35111135-8d48-4299-a588-21e3d95b89ee` completed/succeeded | `0012`：Walk、速度0、能量约799.13 MJ；没有复用失败目标 |
-| 6 | 仓26→玩家，电路板 `1301 ×2` | `ea30a4e678e844dabf319504842420e3/0007`，`c67d01cb-67c3-4330-b1fd-a853b8b76af2` completed/succeeded | 仓3600→3598，玩家0→2 |
-| 7 | 仓26→玩家，磁铁 `1102 ×2` | `683ffa1fca0d4360991ef1a5f16427b3/0007`，`c1492528-8ac4-48e7-82e0-16055b97f402` completed/succeeded | 仓2000→1998，玩家0→2 |
-| 8 | 仓26→玩家，铜块 `1104 ×1` | 同 run `/0015`，`fdf295bd-2cb8-415c-8cd9-2cba3182ba7c` completed/succeeded | 仓100→99，玩家0→1 |
-| 9 | 仓28→玩家，铁块 `1101 ×6` | 同 run `/0023`，`9475dd6c-ed4f-4f95-95ae-877fb558911e` completed/succeeded | 仓3000→2994，玩家0→6 |
-| 10 | 正常保存 | `f6098eb099a0441abb23d98d19bc42c4/0008`，`6397bdd3-5cb1-41b4-b4d7-c4c54e726610` completed/succeeded | 主档 tick `79700601 / R18`，healthy、protected resume available；Journal `95/95` durable、无 pending |
-
-配方来自当前游戏运行时目录：齿轮配方5各用铁1，磁线圈配方6用磁铁2+铜1产出2，矿机配方48用铁4+电路板2+磁线圈2+齿轮2。因此本次仅取**一台矿机的直接与前置手搓材料**；背包材料本身不证明附近有可放置的煤矿机，也不证明已有氢/石墨循环已修好。每笔正常转移均使用 fresh player/storage hash、独立 prepare/commit/idempotency key、同 action 终态和读回；没有整批重放或假定事务性。
-
-## 对话慢于动作的具体故障
-
-Luna 首次领取四笔材料包后，在任何游戏预检前用未初始化的 `$beforeOrdinal` 执行 catch，覆盖了本地原错误，并误报“已发只读请求/已落受保护回执”。随后更正 runId 未知、**零 Bridge 请求、零 accepted、零在途**。主会话按超过60秒无首请求的规则中断该委派；fresh 读得 revision `13`、玩家电路板0、同一健康世界，然后改用仓库现有 `Invoke-SpherewrightNormalAction` 完成上述取材。这个本地脚本失败不计为原生游戏拒绝，也没有重做先前成功的 Move。不能把此处准备和交接的数分钟算进游戏动作的秒级耗时之外，再宣称整段流程很快。
-
-可复核的动作客户端墙钟：Move 首请求至终态/站稳读回约 `6.289s`；第6笔转移含 fresh 读回约 `1.784s`，第7–9笔连续约 `3.514s`，保存含读回约 `1.823s`。这些不含主会话筛查、失败委派、交接和文档时间；瓶颈仍在调用方/对话层。对应规范已明确：无 runId/ordinal 不声称发过请求，首请求前调用方错误立即交回，已验证普通入口不另写捕获包装。
-
-## 第十笔后只读审计
-
-第十笔后立即停止写入。受保护 run `0eb2b30d3f794b309e54014e8db46abd` 先核同一 owned、healthy、已保存 tick `79700601`；玩家背包仍为电路板2、磁铁2、铜块1、铁块6，Journal J95 durable。两张供电网 `3/4` 的 consumer ratio 均为 `1.0`。同一不可变 factory snapshot tick `79704920` 的52页共有 `5170` 个唯一 built、`10078` 条有向连接、反向端点错误 `0`；单独 prebuild 读为 `0`。收尾 tick `79706294 / R18` 保持同一主档保存点、健康。快照采集和逐边核验约 `24.902s`。
-
-离线对比前次受保护完整快照 `f1e3667ca3ae41a585ebe85996812716` 与本次快照的全部5170对象：object/item、位置、旋转、配方、连接、过滤器、仓库配置及 sorter 端点 ID 等静态字段变化 `0`（约 `9.271s`）；动态库存/产量/矿脉余量**不**在此零差异结论内。审计证明本窗口的正常移动、取材和保存未改工厂静态拓扑，不证明煤矿机落点、氢去路或任何持续吞吐。没有第十一笔；只有在本证据提交推送、CI 通过并由主会话封窗后，才开始下一 accepted 窗口。
-
-下一唯一业务条件：矿机材料已齐，但先要在附近煤脉取得**一个**经原生 `prepare_build` 实际通过的放置点，并核供电、出矿口和后续独立石墨输送。上次资源快照显示近处煤脉与现有建筑拥挤；不能将静态筛查当成原生许可，也不能为同类原生拒绝反复小挪点。
+The [byte-exact original](https://github.com/AvaloNero/Spherewright-Lab/blob/14478a03c64c550e644c559405c8496b647552e7/archive/imported-from-spherewright/e7d5f7d8661092b7c8089710488c448f290638be/docs/evidence/2026-09-30/coal-miner-materials-ten-write-audit.md) was imported from product fact commit `e7d5f7d8661092b7c8089710488c448f290638be`. Historical Git history and tags are unchanged.

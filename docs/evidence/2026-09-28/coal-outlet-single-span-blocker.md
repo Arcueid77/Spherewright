@@ -1,13 +1,5 @@
-# 煤矿机出口单跨候选的原生占位阻断
+# Operational record moved to Spherewright-Lab
 
-日期：2026-09-28（Asia/Singapore）
+This product path is retained as a short redirect. The [fixed operational record](https://github.com/AvaloNero/Spherewright-Lab/blob/14478a03c64c550e644c559405c8496b647552e7/releases/v0.4.0/evidence/2026-09-28/coal-outlet-single-span-blocker.md) belongs to the private Sample consumer repository; authorized access is required.
 
-## 已检查的单一候选
-
-在 `R82 / save76968435 / J91 / accepted3` 边界内，只做了 4 次原生读取/预检、0 commit。给定矿机 `5162` 到尾点 `(17.5,-125.7,-154.57)` 的单跨 belt 候选被 `BUILD_LOCATION_INVALID` 拒绝：NEW point `15` 与旧对象 `251` 重叠，中心距必须严格大于 `0.25 m`。原错误回执 SHA-256 为 `31F5B7FA2E08016EDEF8DE012423A8BC4A15FE5F75B6B5CDEACA2B4BC4ABBC63`；原生明确没有创建对象，也不应在同一站点重试或删掉绑定端点绕过占位检查。
-
-## 既有结构与结论边界
-
-- 该 `251` 属于既有 `tank165 → belt205…255 → sorter258` 路径，这条连通带共 71 段，并非 `106 → 107` 煤线；另有 `1657 → 1783…1713` 的旧带约在 `x=19…20`。这些既有对象不改动。
-- 有界纸面筛查没有找到第二个合格单跨候选，但这只否决指定的 `5162 → (17.5,-125.7,-154.57)` 路径，不证明所有地面路线、任何多段路线或现有原语都不可行。
-- 保存仍为 `76968435 / R82 / J91`，accepted 仍为 `3`，没有新对象、出口、物流、吞吐、持续产出或恢复证明。下一步仅由 Sol 在既有原语内重新规划，不将此 blocker 当作施工授权。
+The [byte-exact original](https://github.com/AvaloNero/Spherewright-Lab/blob/14478a03c64c550e644c559405c8496b647552e7/archive/imported-from-spherewright/e7d5f7d8661092b7c8089710488c448f290638be/docs/evidence/2026-09-28/coal-outlet-single-span-blocker.md) was imported from product fact commit `e7d5f7d8661092b7c8089710488c448f290638be`. Historical Git history and tags are unchanged.

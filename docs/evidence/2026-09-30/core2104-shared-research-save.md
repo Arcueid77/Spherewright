@@ -1,22 +1,5 @@
-# 机甲核心2104：共享科研入口与正常保存
+# Operational record moved to Spherewright-Lab
 
-## 范围与原回执
+This product path is retained as a short redirect. The [fixed operational record](https://github.com/AvaloNero/Spherewright-Lab/blob/14478a03c64c550e644c559405c8496b647552e7/releases/v0.4.0/evidence/2026-09-30/core2104-shared-research-save.md) belongs to the private Sample consumer repository; authorized access is required.
 
-同一`owned-world-001`、母星104、DSP`0.10.35.29104`。主会话批准目标与精确预算，Luna Max为唯一游戏writer；没有施工、加载、部署、物品/科技注入或重新选择存档。共享模板复用普通prepare/唯一commit/同action终态，不重写执行器。
-
-原run `394acad94a1f4c748cc7b3979d0e0c79`：0001–0004 fresh session/player/progression/Journal；0005科研原生预检；0006/0007科研意图/accepted；0008科研终态；0009队列读回；0010 fresh revision；0011保存原生预检；0012/0013保存意图/accepted；0014保存终态；0015 session；0016 Journal；0017派生计时摘要。主会话直接核这些原回执，未重采。
-
-| accepted | 动作 | 原终态 |
-|---|---|---|
-| 5 | 科研选择`72065c44-0afc-4bcc-8eec-6cb727d28bfb` | 0008 terminal/succeeded，tick80226568 |
-| 6 | 普通保存`2af3af05-65db-46a1-b91c-01bde91c9a83` | 0014 terminal/succeeded，tick80226601 |
-
-两次均非幂等回放；本窗**6/10**，无在途写入。预检预算精确为6001/6002/6003/6004各500、`research-consumption`，是未来科研消耗，不要求即时背包扣料。0009确认`currentTechId=2104`、队列`[2104]`、`unlocked=false/hashUploaded=0`；**排队成功不是解锁**。0015为tick80226604/R25、owned/saved/healthy，正常保存水位80226601、protected resume advertised；0016为tick80226606、J96 durable、无pending/error，新首次升级选择2104记录于80226569。未验证此次保存的重启恢复。
-
-## 已区分的实际阻塞与效率边界
-
-先前只读run `bfe827045d7c43a18ccd669378eaaa81` 的0013/0014及0005原生finding证明黄糖774输出10/10、778存6000，并非单凭零产量即可认定黄糖缺原料；磁环3404同样满输出。后续run `68c32777be594d72af88c1b773ffae84` 的0004–0008核到：重氢实际源3073为recipe40粒子对撞机，氢输入7/重氢输出0、满供电；3075把氢从3074送入3073；779从774向778携黄糖1；2104原生四种矩阵各500，2904依赖它且需前三种各2000。两个私有调用方错误（保存字段聚合、bundle候选索引）均发生在已保留的只读结果之后，未accepted、不是游戏拒绝；停止同类尝试，直接用已有共享科研入口。该后续只读run没有最终session/J，不能冒充完整生产审计。
-
-共享入口0017计时：entry→首prepare **1833.722ms**，总计 **4969.523ms**；科研/保存动作caller分别444.769/474.445ms，原生起止同tick。真实14请求，原transport保留全部回执；`dispatchToFirstPrepare=null`，不伪造模型派发用时。先前8次只读首末相距2125.093ms，不是整个工序耗时。没有可比总模型调用/token或完整委派前后成本，不把这5秒外推为所有施工提速。
-
-下一核科研消费者实际消耗及重氢上游氢供料。科技完成、持续黄糖/燃料补充、保存恢复、三级链与最终双包仍待；不重做5193–5196或本次已成功动作。
+The [byte-exact original](https://github.com/AvaloNero/Spherewright-Lab/blob/14478a03c64c550e644c559405c8496b647552e7/archive/imported-from-spherewright/e7d5f7d8661092b7c8089710488c448f290638be/docs/evidence/2026-09-30/core2104-shared-research-save.md) was imported from product fact commit `e7d5f7d8661092b7c8089710488c448f290638be`. Historical Git history and tags are unchanged.

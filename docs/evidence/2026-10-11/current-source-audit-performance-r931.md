@@ -1,25 +1,5 @@
-# R925–R932：当前铁源核验与审计效率
+# Operational record moved to Spherewright-Lab
 
-## 阶段边界
+This product path is retained as a short redirect. The [fixed operational record](https://github.com/AvaloNero/Spherewright-Lab/blob/14478a03c64c550e644c559405c8496b647552e7/releases/v0.4.0/evidence/2026-10-11/current-source-audit-performance-r931.md) belongs to the private Sample consumer repository; authorized access is required.
 
-R931 为只读核验，没有游戏写入。最近保存仍为 tick `108283100`、revision `125`、durable Journal `102`；fixed-20 窗口从 lifetime `489` 开始，当前 `13/20`、lifetime `502`，窗口开放并冻结，无在途或未知动作。整案累计 `103` accepted、`30` 次 Move、`28` 次普通保存和 `17` 次手工材料动作。执行 cohort 与 Native DLL 未变。
-
-来源读取批次的原件索引：R925 `5a21c7ab83664a6ea24c65b4a2c967d3:27` / SHA-256 `B5DBB339F57714B83531ADE39D940AEA1A4BD7E98ABEA18E683993420BC85E32`，13请求、`6529.7271 ms`；R927 `1d0b2360890742c0a1c3c6de73f15111:11` / SHA-256 `45F33B82E410C8B7E4523D720AD2CE9CB435D10552760464649DE5BA89C68FFE`，5请求、`1202.3209 ms`，已确认零写入/零accepted，Native 对旧点51返回 `INVALID_ENTITY`；R929 `2f56651e777c4805be2034187af2dbdc:77` / SHA-256 `F3BB42E7DA4556812C909FE4E57AFE30F41266B63052C8626AF54F97602467B1`，38请求、`5760.3798 ms`。
-
-## 当前源与物料状态
-
-root独立源成员审计 R930：`0299d7dfe49841f0b44eefb14c697743:107` / SHA-256 `4CD545D4AAE85FF71D76027814C49907FB26D01D6BFE2C119D11A5FCC5987DC1`。核得当前23个正余量资源节点、7台活跃矿机，原有8个矿机对象仍保留；旧点51的 Native 实体已缺失，矿机1496当前绑定与输出为空，此前已准入铁源6476仍保留。缺失的准确tick和回溯产量不可观察；现象与自然耗尽一致，但不能断言具体耗尽时刻、过去产量或全局唯一根因。source acceptance仍未通过。
-
-root独立物料核验 R926：`0299d7dfe49841f0b44eefb14c697743:108` / SHA-256 `F32875BC7E43F3C7E8ACD5A08900D7F789A98ABFE8CCCF72002CD5371F6CD12E`。完整四组切片覆盖29种物品，三个已加载工厂电网满供。Ti完整池为4133，其中仓储531有3000、外部1133；本地Ti池254、远端源池169。原895池不含仓储531，先前据此得到的负差不能作为当前完整池或动作依据。Rod整组1286（仓储900、外部386），Warp整组3071（仓储3000、外部71）。这些是库存截面，不是持续产率。
-
-沿用完整工厂6492 built / 0 prebuild不可变帧，本次未重新请求完整工厂列表；封闭当前fixed-20窗口仍必须fresh完整扫描。
-
-## 审计实现与耗时
-
-精确逐条读取路径已用于R927/R929；R931 parity审计索引 `0299d7dfe49841f0b44eefb14c697743:109` / SHA-256 `A1D10C1E5B7346E5E36E56911AE19E70784AA595577D014D9CB1166DE62C2AAB` 对13份原始Native结果DTO做全属性比较，5种变异（实体ID、子项缺失、切片字符串类型、数组顺序等）均被拒绝。R932随后把常用R926审计模板接入按批准原件精确名称读取的JsonNode完整属性比较，并退役Root Records-R31枚举入口；零Game的真实`pwsh -File` smoke通过。R932本地复核复用已解析的13份原件，不重复加载大DTO，Native JSON冷解析计入完整审计。单条读取上限 `8388608` 字节，读取与比较同一份有界原始字节。
-
-R932应用与复核索引 `0299d7dfe49841f0b44eefb14c697743:110` / SHA-256 `5AA5E8ADB84C754052C9A1AF0D09FC40E306D0B26F48FB93B4CE40C730CE5AA5`。R932用同一批13份已封存回执重跑完整本地审计，耗时 `18112.3251 ms`，此前R926对应审计为 `32272.0965 ms`。R932原始回执/保存边界部分为 `569.6822 ms`（旧测量 `19603.5195 ms`），静态路径与物料部分 `17526.0893 ms`；完整物料、拓扑、库存、功率和保存边界检查均保留。此为同一原件批次的本地审计复核，不是新现场观察，不说明整个业务阶段或游戏物理等待提速。此前单个完整工厂聚合 `9903492` 字节超过 `8 MiB` 上限，后续完整采集仍需保存逐页原件与小型清单；本次未执行新封窗全扫描。新模板复用不可变原件缓存，不再枚举旧Root Records-R31运行号，也不重复加载同一大型DTO对象。
-
-## 验收状态与下一步
-
-`sourceConditionsPassed=false`、`wholeSupplyPassed=false`、continuous credit `0`。旧点缺失尚无精确移除tick或回溯产量，当前剩余点正值不等于持续供料。先完成当前已保存窗口的封存，再另行开展有界正常需求与连续来源实验；固定至少36000 ticks及原有速率、库存趋势、电力门槛不变。最终准备清单与整合恢复门也未完成。
+The [byte-exact original](https://github.com/AvaloNero/Spherewright-Lab/blob/14478a03c64c550e644c559405c8496b647552e7/archive/imported-from-spherewright/e7d5f7d8661092b7c8089710488c448f290638be/docs/evidence/2026-10-11/current-source-audit-performance-r931.md) was imported from product fact commit `e7d5f7d8661092b7c8089710488c448f290638be`. Historical Git history and tags are unchanged.

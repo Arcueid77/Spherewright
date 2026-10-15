@@ -1,19 +1,5 @@
-# 石墨出口追加两带与第十写严格审计
+# Operational record moved to Spherewright-Lab
 
-日期：2026-09-30（Asia/Singapore）。同一 owned-world-001、母星104、原生 DSP 0.10.35.29104；主档此前保存 tick 79986033 / J95。上一阶段 commit `a303322` 已推送，Windows Core CI `36663830670` 成功，才开始本次唯一游戏写入。本报告只列脱敏证据索引；原回执保留在本机受保护目录。
+This product path is retained as a short redirect. The [fixed operational record](https://github.com/AvaloNero/Spherewright-Lab/blob/14478a03c64c550e644c559405c8496b647552e7/releases/v0.4.0/evidence/2026-09-30/graphite-outlet-extension-ten-audit.md) belongs to the private Sample consumer repository; authorized access is required.
 
-## 重设计与唯一第十写
-
-上次新带5192→旧带3365分拣器 `no_finite_projection`，不是距离不足或材料拒绝。主会话以当前 DLL 的**目标后源**投影次序和现场两带的逐段姿态重设计：只从自由尾5192继续沿已有东西向原生网格**追加**两带，使新点分别对齐旧直线带3365/3363的经度。零写预检 run `16dcb19ea0704b0095ad87d9de0de0a1` 给出 `full_path_stage1 / native_grid / non_removing_belt_cover`，source cover5192完整原生旋转保持、newObjectCount2、预算2001×2、零blocker；新点 `(-165.88829,-13.8258171,-111.220314)`、`(-166.583817,-13.8258171,-110.175819)`。这仅证明追加带合法，**不预先证明**未来分拣器合法。
-
-Luna fresh 重取、同计划唯一 `commit_build` action `7a8e4e21-9ae8-49d4-aad8-24f530d20d3c`，受保护 run `a30f086a528f44ec802988aa79457dd5`：commit ordinal109 accepted=true/replay=false，terminal ordinal136 于 tick **79993390** succeeded。新实体5193/5194各一个；5191↔5192原边、5192↔5193↔5194新边两侧互返，原尾5192身份/位置保留。玩家带374→372，准确消耗2；未提交分拣器、未拆带、未保存追加段。此为前次恢复后第10个 accepted，立即冻结第11写。
-
-## 原始终态和当前世界
-
-本窗口的10个互异 accepted action 均有受保护原始 commit 和 terminal，全部 succeeded、无 idempotentReplay；顺序为：精确主档恢复；5171矿机出料15带；熔炉5187；保存79921801；煤过滤分拣器5188；炉配方17；保存79954353；出炉短带5189–5192；保存79986033；本次追加5193–5194。恢复 terminal 在 `resume-c3d4de024d874a1ab219374e21f3edcd` ordinal23；早期15带 terminal 在 `action-55a527ecf2b5487abf555473406c2664` ordinal2；其余原 action 回执在对应施工 run，最后一次如上。旧 action 不依赖当前进程内保留期重新查询，也没有重放。
-
-严格只读工厂快照 run `8a060d67b80944bf8315f1ff8871e969` 为**同一个** snapshot ID、同 tick **79995323**、52页、**5194 built**。前一封存基线5171个实体，新增恰好5172–5194共23个：15条矿机带、1炉、1输入分拣器、4条初版出炉带、2条本次追加带。原5171对象的静态物品/组件/位置/姿态/配方/过滤/有向连接对照中只有矿机5171的预期出料边改变，未见其它旧实体静态改写。当前总有向连接 **10122** 条，逐边反向核查 **0** 错；先前基线为10078，增量44条符合这批对象与附件。第一次审计展示错误地把5171+23算作5193，已在完整快照受保护落盘后就地停止；离线按原52页纠正为5194，没有重采整厂或追加游戏写入。
-
-随后只读 run `b646d49be5ab4f9dbed5783cac9df29b` 复核会话、玩家、Journal、电力、预建筑和15个受影响/消费端实体：owned、非受限、`confirmed_peaceful`、沙盒禁用、资源倍率1×、healthy/零blocker、可 protected resume、无在途 flight checkpoint；当前 tick79998308/R16、主档仍 **79986033**。Journal durableThroughSequence95、pending=false/error=null，0 prebuild。玩家 Walk/速度0、能量800MJ、手搓队列0，施工无人机3架全 idle；两张电网 consumer ratio均1。玩家背包相对本窗口起点唯一变化是带393→372（−21=15+4+2）、普通分拣器3→2（−1）、熔炉1→0（−1），无其它背包正增量。新短带完整独立 path197、所读两端货物0；旧石墨带3362/3365同属原 path92且所读货物0，没有串煤。煤带5172和5186各读到煤1006×2。新炉5187配方17、满电但输出石墨1109已满100、`isWorking=false`；磁环3404石墨输入0/输出环0，仍未恢复。
-
-审计结论只覆盖唯一施工及当前只读状态。**第十写追加的两带尚未保存**，最新主档仍是79986033；不能称恢复后已验或石墨持续供给。审计通过后仍冻结，必须更新经验/日记、单独提交推送并等绿CI、主会话明确交接，再优先正常保存这段追加带，随后用 fresh native 预检核5193/5194→旧直线带3365/3363。任何新接口仍可能被原生拒绝，不能把纸面经度对齐冒充可施工。
+The [byte-exact original](https://github.com/AvaloNero/Spherewright-Lab/blob/14478a03c64c550e644c559405c8496b647552e7/archive/imported-from-spherewright/e7d5f7d8661092b7c8089710488c448f290638be/docs/evidence/2026-09-30/graphite-outlet-extension-ten-audit.md) was imported from product fact commit `e7d5f7d8661092b7c8089710488c448f290638be`. Historical Git history and tags are unchanged.

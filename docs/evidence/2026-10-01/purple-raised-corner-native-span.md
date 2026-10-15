@@ -1,19 +1,5 @@
-# 紫糖主干原生转角带段
+# Operational record moved to Spherewright-Lab
 
-日期：2026-10-01（Asia/Singapore）。本事件记录已核验的11带自由端原生转角施工，不代表源头、下游端点或全链已连接，也不代表保存恢复或生产验收。
+This product path is retained as a short redirect. The [fixed operational record](https://github.com/AvaloNero/Spherewright-Lab/blob/14478a03c64c550e644c559405c8496b647552e7/releases/v0.4.0/evidence/2026-10-01/purple-raised-corner-native-span.md) belongs to the private Sample consumer repository; authorized access is required.
 
-## 施工与局部审计
-
-施工 run `30dfd2b5106548cda16763ba94c50543`：ord7 prepare、ord9 commit、ord32 terminal；ord33–43 为11个新实体，按实际带序为 `5243→5242→5240→5239→5238→5237→5241→5244→5245→5246→5247`。此段为 L1 自由端 `full_path_stage1`，由原生无人机普通建设完成；内部转角的原生顺序为先 `φ−` 再 `lat+`。20条有向连接均互返。ord44–47 的4个旧对象配置与连接保持原样。
-
-玩家库存：`2001` 从335降至324，其他物品数量与增量不变。root 独立审计 protected run `5fdcdb6982404f4684358568a63f2566` ord1 `raised-corner-root-audit`，SHA-256 `D9E3398B5D393AA10ED92F2D40D1E42974946A9049D05450B03FC93627E30779`；审计复用本施工原回执，不是新的全厂采集或全厂 census。
-
-跨度超过30m的只读候选 `0df4…` 被拒且0 accepted；11点预检 `1c1acd…` 通过且0 accepted。它们是前置候选，不扩大本事件的施工结论。
-
-## 当前状态与接口边界
-
-本施工窗口 accepted 从6增至 **7/10 OPEN**，无在途。最新 session 观察 tick 82215168/R29/healthy、同一 identity；J96 精确条目集 durable，无 pending/error。最近正常保存仍为 **82109940**，早于这11条新带；新带段尚未由正常保存覆盖，不能由 `resumeAvailable` 或 J96 推断已保存或已恢复。
-
-下一接口 `5247→未来 East1 新头` 尚未原生验证；源端尾 `5227` 与本转角段起点也未连接。紫糖供料/到货、持续生产及真实重启均未证明。成功的11带前缀不重做。
-
-复用参数化施工入口；AST 与实际 `pwsh -File` smoke 已核、game calls=0。本事件只记录原回执及其审计，不改公开代码，也未重跑无关全套测试。
+The [byte-exact original](https://github.com/AvaloNero/Spherewright-Lab/blob/14478a03c64c550e644c559405c8496b647552e7/archive/imported-from-spherewright/e7d5f7d8661092b7c8089710488c448f290638be/docs/evidence/2026-10-01/purple-raised-corner-native-span.md) was imported from product fact commit `e7d5f7d8661092b7c8089710488c448f290638be`. Historical Git history and tags are unchanged.

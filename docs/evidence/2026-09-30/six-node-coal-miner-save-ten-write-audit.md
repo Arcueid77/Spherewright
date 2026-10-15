@@ -1,26 +1,5 @@
-# 六点煤矿机施工、保存与十写审计
+# Operational record moved to Spherewright-Lab
 
-日期：2026-09-30（Asia/Singapore）。沿用 `owned-world-001`，母星 `104`、和平、非沙盒、1× 资源；未加载别的存档、未改写既有建筑。上一阶段已在 tick `79763037 / R25` 正常保存了一台手搓矿机。本次先到原档中确实走通过的 Walk 落点，再做原生场地预检、一次施工、一次正常保存。所有游戏写入均属同一外部十写窗口。
+This product path is retained as a short redirect. The [fixed operational record](https://github.com/AvaloNero/Spherewright-Lab/blob/14478a03c64c550e644c559405c8496b647552e7/releases/v0.4.0/evidence/2026-09-30/six-node-coal-miner-save-ten-write-audit.md) belongs to the private Sample consumer repository; authorized access is required.
 
-## 原生候选与已接受动作
-
-目标煤组 32 的矿点 `527` 首次原生 `prepare_build` 因与既有对象 `4195` 碰撞而被拒绝；**零 commit**。候选 `531` 原生通过、覆盖四点，候选 `530` 原生通过、覆盖六点。最终只批准 `530`：计划中心约 `(-172.0451,-11.31501,-101.747185)`、朝向 `330°`，预期精确节点 `513/517/521/523/526/530`，预算为一台背包矿机。邻近电塔 `3067` 约 `5.17 m`，电网 3 预检时供需余量充足；这些只是施工前证据，实际供电仍须建成读回。
-
-| 窗口序号 | 原生动作 | 已核结果 |
-|---|---|---|
-| 1–4 | 齿轮、磁线圈、矿机手搓及保存 | [前阶段证据](coal-miner-kit-craft-and-caller-timing.md)：各自 terminal；保存 `79763037 / R25`。 |
-| 5–8 | 四段已知落点的正常 Move | `24f9690c-0af8-4976-99e7-3d8cca9f8c9d`、`5712a149-f92b-43b7-a655-221260d6400f`、`b383da3a-f970-4bca-b210-c7e2c5fbf53b`、`462ba71d-75cb-4b03-8d26-660a1551efa7` 均 terminal/succeeded；最终 Walk/低速度、能量充足。无卡停目标重放。 |
-| 9 | 矿机 `2301` 正常建造 | 受保护 run `ad35ceacd6d142e6b2599cef651ac715`，action `fabe7519-7563-4fa9-b356-e6530e75ddde` 在 tick `79856075` terminal/succeeded；唯一实体 `5171`，六节点精确读回，网络 3、serve ratio `1`、`isWorking=true`、煤缓冲首次读到 `3`，背包矿机 `1→0`。首请求至读回约 `17.34 s`。 |
-| 10 | 正常保存 | run `811d381e0b88403985ebfb861ed7e918`，action `c09c136f-b056-49b7-bab6-1fdefb2e49b4` 在 tick `79867177` terminal/succeeded；主档 `R36`、owned/healthy、受保护恢复可用。 |
-
-施工前两处地面/水路目标只读采样显示末端仍有较深水，均**未**提交 Move。去矿点的实际四段动作采用旧成功路径；前两段先到煤区附近，后来发现到施工范围的直连仍穿过旧熔炉/制造台，于是沿已走过的段回撤，再取另一旧成功落点。四段动作约 `5.6 + 18.2 + 18.5 + 28.7 s`，其中回撤约 `18.5 s` 本可由更早的全路径障碍筛查避免。此处既不把静态路线当作碰撞许可，也不把业务已在范围内的附加 Move 当成必要步骤。
-
-## 第十写后的严格只读核验
-
-下一次游戏 commit 已冻结。原 Plugin 对早期 action 的 `get_action_result` 不再保留，首次审计读取明确返回 `ACTION_NOT_FOUND`；未据此重放任何写动作或把成功改判失败。改从各自受保护的**原始** `get_action_result` 回执核对 10 个互异 action ID、顺序 tick、terminal/succeeded，且没有 `recoveryRequired` 或 outcome-unknown 重判。所有原回执均在动作时持久记录，审计 run `0eefce1c6f0c4a069f3a48fa76f0484e` 仅调用只读 API。
-
-该 run 复核：同一 owned/healthy，和平、非沙盒、1×、无 write blocker/checkpoint；玩家 `Walk/0`、核心 `800 MJ`、手搓队列空、背包矿机为 0；Journal `95/95` durable、无 pending/error；两张电网 consumer ratio 均为 `1`。唯一矿机 `5171` 仍覆盖上述六节点、网络 3 满供电且无外接边，矿机煤输出缓冲已达 `50`。同一不可变快照的 52 页共有 `5171` 个唯一 built、`10078` 条互返有向连接；与上次完整基线的原有 `5170` 对象逐项比较位置、方向、配方、连接、过滤、仓储配置和分拣器端点，静态变化 `0`；`0` prebuild。只读收尾为 tick `79893621 / R36`，最后保存点仍 `79867177`。
-
-**结论边界：**煤矿机正常建成、采煤和保存成立，未连出矿口；缓冲达到 50 不证明持续外运，更不证明石墨、磁环、氢去路或黄/紫矩阵已恢复。下一唯一业务条件是读矿机真实出矿口，并设计至现有石墨需求的完整、有供电与材料预算的输送/熔炼链；每步 fresh 原生预检，成功部分不重做。十写窗口须在本证据提交、推送、绿 CI 后才解除。
-
-**流程耗时边界：**原生四段 Move 约 71 秒、施工约 17 秒、保存约 2 秒；只读整厂审计另约 30 秒。候选筛查、调用方修正、对话、文档/Git/CI 另计，不能以动作秒数声称总流程已同样快。本次审计的第一个旧 action fresh 查询和最初固定 52 页断言分别发生零写拒绝：前者提示 action 有保留期限，后者因基线另有一页空 prebuild 查询。后续应先读受保护终态和基线页类型，避免每窗重写并调试审计 caller。
+The [byte-exact original](https://github.com/AvaloNero/Spherewright-Lab/blob/14478a03c64c550e644c559405c8496b647552e7/archive/imported-from-spherewright/e7d5f7d8661092b7c8089710488c448f290638be/docs/evidence/2026-09-30/six-node-coal-miner-save-ten-write-audit.md) was imported from product fact commit `e7d5f7d8661092b7c8089710488c448f290638be`. Historical Git history and tags are unchanged.

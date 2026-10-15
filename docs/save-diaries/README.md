@@ -1,37 +1,5 @@
-# Spherewright 存档日记索引
+# Operational record moved to Spherewright-Lab
 
-更新时间：2026-09-05（Asia/Singapore）
+This product path is retained as a short redirect. The [fixed operational record](https://github.com/AvaloNero/Spherewright-Lab/blob/14478a03c64c550e644c559405c8496b647552e7/operations/save-diaries/README.md) belongs to the private Sample consumer repository; authorized access is required.
 
-每个由 Spherewright 创建并登记的 owned save 都必须有且只有一份仓库内的
-人类可读存档日记。日记使用公开别名，不记录真实存档名、恢复 token 或本机
-私密路径。
-
-## 三类记录的边界
-
-1. **运行时 Journal**：Plugin 为每个 owned save 分别维护的机器可读原始事件流，
-   自动记录第一次手搓、第一次流水线产出、第一次选择科技和第一次选择升级，
-   包含实际时间、game tick 与本局时间，并公开 durability 状态。它是证据源，
-   不是仓库文档。
-2. **存档日记**：一档一份的人类可读时间线，整理该档的 Journal、运行态读回、
-   关键决策、事故、保存点与 Git 里程碑。Journal 上线前无法恢复的历史必须明确
-   标为上界或未知，不能补造精确时间。
-3. **工程记录**：[incident-fix-log.md](../incident-fix-log.md) 跨存档汇总第一次遇到的
-   问题、根因、代码/协议修复和验证；[experience-ledger.md](../experience-ledger.md)
-   则保存当前仍适用的操作规则、适用范围与复验条件。
-
-同一事故可以在当次存档日记保留现场经过，同时在工程记录中提炼可复用修复；
-两者互相链接，但不互相替代。
-
-## 日记登记
-
-| 公开存档 ID | 创建来源 | 日记 | 状态 |
-|---|---|---|---|
-| `owned-world-001` | Spherewright 在本机从普通和平、1×、非沙盒新世界创建 | [存档日记 001](../gameplay-timeline.md) | active；v0.3 发布验收世界，继续用于 v0.4 诊断/建厂/扩产及跨星系准备（验收状态见 Roadmap） |
-
-## 新档规则
-
-- 成功创建 owned save 的同一批次就登记下一个单调递增公开 ID，并创建日记；
-- 日记从落地开始，持续追加决策、科技/升级、两类首次产出、事故和恢复边界；
-- 新档不得复用前一档的 Journal 首次计数、日记或身份；
-- 存档退役时保留日记并标记最终 tick、最后正常保存和退役原因，不删除历史；
-- Journal 持久化失败时，日记只能标记为 pending/unknown，不能把内存事件写成已落盘事实。
+The [byte-exact original](https://github.com/AvaloNero/Spherewright-Lab/blob/14478a03c64c550e644c559405c8496b647552e7/archive/imported-from-spherewright/e7d5f7d8661092b7c8089710488c448f290638be/docs/save-diaries/README.md) was imported from product fact commit `e7d5f7d8661092b7c8089710488c448f290638be`. Historical Git history and tags are unchanged.

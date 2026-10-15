@@ -1,30 +1,5 @@
-# R1072–R1075：库存转存、Warp 需求与来源短窗
+# Operational record moved to Spherewright-Lab
 
-## 保存后的边界
+This product path is retained as a short redirect. The [fixed operational record](https://github.com/AvaloNero/Spherewright-Lab/blob/14478a03c64c550e644c559405c8496b647552e7/releases/v0.4.0/evidence/2026-10-11/owned-stock-warp-demand-save-r1075.md) belongs to the private Sample consumer repository; authorized access is required.
 
-R1072 在既有 20 写窗口中完成两次普通仓库转账及一次普通保存，没有执行 Move 或工厂改造。400 根 Rod 转入仓 3348，背包从 405 降到 5；600 个 Warp 从仓 5331 转入背包，背包从 300 增到 900、仓库终态为 2400。仓库即时回读 2401 与转账扣款分开记录为自然补货观察。既有氢过滤出口 3349 的配置保持不变。持有准备物品总量仍有 Rod 405 根，背包占用从 40 格降至 33 格。
-
-R1072 普通保存后的状态为 tick 109934423、revision 168、durable Journal 102。固定 20 窗口从 lifetime 519 开始，当前 16/20、lifetime 535；本目的已独立结束，窗口仍开放并冻结。整案累计 136 accepted、43 次 Move、40 次普通保存和 25 次手工材料动作。所有本阶段动作都被保存覆盖，无在途或未知动作。
-
-## R1075 来源读数
-
-单个 600 tick 窗口（109950103–109950702）观察到 Warp 1210 产出 1 件，即 6/min；Rod 1802、Ti Ore 1004、Ti Ingot 1106 的产出均为 0/min。Rod 生产端输出为 0，但没有确认发现或唯一根因；Ti Ore 与 Ti Ingot 的目标生产端当时满载。三座已加载工厂电网在这次读数中均满供。该有限观察不代表 36000-tick 来源验收或持续来源通过。
-
-本次只读来源检查复用 R1013 封存的完整工厂帧：6492 个已建对象、0 个预建对象、65 页；R1075 没有重采完整工厂。保管信息最近由 R1068 独立核验，R1075 没有刷新完整保管切面。
-
-下一步是对 Rod 的氘源、路线和消费者做定向 fresh 核验，并以有限操作打开仍满载的钛消费者。若必要动作超过当前窗口剩余 4 个写槽，先封闭当前窗口，再开新的固定 20 窗；不补额度、不拼接窗口。
-
-## 流程用时
-
-R1072 writer 用时 7.1118 秒、28 个请求；root 对保存独立核验用时 2.3536 秒、68 个原件；从 writer 封存到独立保存证明间隔 66.9300 秒。R1076 对八份已封存原件的流程复盘还显示：R1062 保存到 R1065 来源审计为 782.0145 秒，R1065 审计到 R1068 仓库核验为 755.1803 秒，R1068 到 R1069 库存阶段上下文为 832.7102 秒，约为 13.0、12.6 和 13.9 分钟；这些阶段包含必要来源/仓库资格、薄适配与审计准备，不能都称作空等。R1069 授权到 R1072 独立保存证明为 136.9692 秒，R1073 来源授权到 R1075 独立读数审计为 234.3326 秒；R1062 保存到 R1072 保存合计 2507.1745 秒（约 41.79 分钟）。R1072 内的 1.634 秒从执行开始计，不是委派到首次 prepare 的测量；该委派间隔没有单独记录。
-
-流程优化仍在使用：单写者、相邻转账合批后统一保存、固定 20 写窗口、复用完整工厂帧和事实 CI 并行。与此同时，阶段准备与交接仍有分钟级开销，参数/入口复用和完整交接计时尚未完全收敛。上述区间包含不同动作和核验范围，没有同口径基线，不能据此宣称整体变慢或提速。
-
-## 证据索引
-
-- R1072 原始业务与保存覆盖核验：`0299d7dfe49841f0b44eefb14c697743:212`，SHA-256 `51CCD8BFBE28D7EE152EB4B01913F1F358EC82A53A40C8613E7009C5D2DB521F`。
-- R1075 独立来源读取核验：`0299d7dfe49841f0b44eefb14c697743:215`，SHA-256 `E52672EFA9E04EE2E36C2D0BDA39EA481F43A657F95D1D25C8DC921E44F7D6D7`。
-- 本阶段仓库转账上下文与授权：`0299d7dfe49841f0b44eefb14c697743:210–211`，分别为 SHA-256 `613504CEFCE1C136B84DE255D617A0F949FA62B0DFA1C6F61D6ADA9B8D20DC30` 和 `1CD5A2400EFB4A3B74FB9C714C1CD0E806FFB536E3EE8A1872F6E585395DA8CC`。
-- 保管与配置的最近独立来源核验：`0299d7dfe49841f0b44eefb14c697743:209`，SHA-256 `F9348710B596B6744E0C6E1172D91A8096B52A4F7D5319B21D6A844903E0BA81`。
-- 被复用的 R1013 完整工厂帧核验：`0299d7dfe49841f0b44eefb14c697743:165`，SHA-256 `FE71CB8DFE7A147317565C0724F2A7D9323BD382B44CF810D6FF0CE616A25822`。
-- R1076 独立流程间隔审计：`0299d7dfe49841f0b44eefb14c697743:216`，SHA-256 `7E359E76C3F4044EB988B159542970556441438EE51B697271FFBB7F37C96389`。
+The [byte-exact original](https://github.com/AvaloNero/Spherewright-Lab/blob/14478a03c64c550e644c559405c8496b647552e7/archive/imported-from-spherewright/e7d5f7d8661092b7c8089710488c448f290638be/docs/evidence/2026-10-11/owned-stock-warp-demand-save-r1075.md) was imported from product fact commit `e7d5f7d8661092b7c8089710488c448f290638be`. Historical Git history and tags are unchanged.

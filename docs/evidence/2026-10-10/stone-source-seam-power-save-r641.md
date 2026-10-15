@@ -1,38 +1,5 @@
-# 石料源端接缝、供电与保存（R641）
+# Operational record moved to Spherewright-Lab
 
-日期：2026-10-10（Asia/Singapore）。本页记录已完成的有限北向接缝阶段、其保存覆盖和独立结构核验；不把设备接线或满供当作实际供料证明。
+This product path is retained as a short redirect. The [fixed operational record](https://github.com/AvaloNero/Spherewright-Lab/blob/14478a03c64c550e644c559405c8496b647552e7/releases/v0.4.0/evidence/2026-10-10/stone-source-seam-power-save-r641.md) belongs to the private Sample consumer repository; authorized access is required.
 
-## 窗口与保存
-
-R641 核对原窗口14笔唯一 accepted，均有原终态且由正常主档保存覆盖；当前 P104/R22、Save tick `105510911`、durable J102。固定20窗为14/20，lifetime432，无在途动作或 unknown，窗口冻结，剩余6槽不转移。旧 accepted 累计不清零。
-
-本案累计33 accepted、158条新带材、11个跨度、3次移动、2个分拣器、1台矿机、2台风机、1座电塔、2次普通手工制作、7次普通保存和2次普通燃料转入。玩家氘核燃料棒1802库存为0；携带清单需补回5根。此前两次燃料转入和本阶段施工已由R641保存覆盖。
-
-## 完整结构与供电差异
-
-完整工厂快照包含65页、6,475 built、0 prebuild。对比6,366 built封存基线，新增105条北向带材和4个源端对象，无删除对象、连接不互惠或其他旧静态变化。允许的旧实体差异仅为6350旋转/连接、6317新增连至6472，以及矿机5325由network 0接入实际N1；其余旧静态保全。
-
-源端分拣器6472的过滤器为石料1005，路径为6317→6472→6471；风机6473和6474、电塔6475为新增源端对象。N1包含3个节点、2个发电机、2个消费者，容量10,000 J/t；源端最大工作需求7,300 J/t，两个源端消费者均满供。旧N3/N4的成员和满供状态未变。
-
-R641记录的是电气连接与当时供电；该阶段本身没有确认石料到达。随后 R643 观察到分拣器5324中暂存的石料在tick `105526078` 后于 `105526436` 释放并送达87，因此有限送达已证，`sourceAdmitted=true`。这不证明酸861已到料、稳定产率或整条化工链通过。
-
-R645 对旧节点36的 Native 查询返回 `INVALID_ENTITY`；保存矿机1213的 `resourceNodeIds` 为空。该检查没有accepted，不能将不可用节点当成剩余资源为0，也不能写成资源引用已修复。R646 随后的44次只读采样耗时19,394.4116 ms，0 accepted；R647 独立审计通过了原件。29类库存按各自own-tick核对，另有Connected H、远端169项与本地Ti 254项、16个燃料发电机、2个实验室及3座电网；对象静态保全，三座电网均满供。
-
-声明的22个矿点中20个为正例；36与37均返回 `INVALID_ENTITY`，剩余量不可用，因此 `allDeclaredFiniteNodesPositive=false`。旧矿机1213当前资源为空，但这不足以断言煤源枯竭。Warp仓5331存有3000、Rod仓3955存有817，玩家Rod库存为0；所需五根携带棒与正式样本消耗尚未执行。861缓冲为石料16、精炼油12、水8、硫酸78，这些有限现货不证明独占石料来源或连续产出。生产门仍为 `wholeSupplyPassed=false`、continuous credit 0；下一次正式连续声明前，需明确失效矿点、有效来源和实际输出需求。
-
-完整材料竞争、连续供给与整体验收仍未通过，continuous credit为0。
-
-## 调用方读回更正
-
-R631期间 material cut 不包含电力字段，后续原终态、独立只读及物理核验补齐了观察依据。R636期间 pole DTO 不提供 networkId，后续依据原回执、实际唯一三节点电网及几何核对。两次均为调用方读回能力不足，不是 Native 拒绝；成功前缀未重做。
-
-## 原证据索引
-
-- R631 原件：`aa6cfd68ea504c76bad805b7b331526c:40`，SHA-256 `D12E38E6E1F978CABD8CF2E5061837B83BA3E5340B97402E63B30842EED0F526`。
-- R636 原件：`9f52d54d2bf14e95ad03e1953c73a4c9:46`，SHA-256 `2DB43F5C8E2AC4C90251DF8BB350DF44840D06F120C03EE4CB8AA48CE3847C86`。
-- R641 保存原件：`0317098107a34ce88477a49bd16acdaa:97`，SHA-256 `48605982E41FAE67867AB10C025EE8ED5B4D888ECC1ED91A4BB6E1766000FBD5`。
-- R641 独立核验：`1f5b6aeb10394f9eb5cd55114830f7c6:1`，SHA-256 `FAD2EB683FC1FC053F4161733E3F20FA47AAA638F516B86F4C282CA53D26ECD1`。
-- R643 石料暂存释放与到料观察：`0d46d3ded3884040a51d872502293f98:1`，SHA-256 `41F60D513FC9E680C3713E59A66FCB954341DD0BA7164CF43A36CB8D138CB00A`。
-- R645 节点36查询与保存矿机引用检查：`3502d8180e744f8f9c2c019bd1f04d28:1`，SHA-256 `21A2BF05DC21D50202613CA2AAB49E0E394806C35F58EAAFED7B99D875F899A8`。
-- R646 完整来源采样：`323d1a2278e3481b9c1f28c3aaaa2271:47`，SHA-256 `36C2BC884B7569CD959E871F3A069C69A1135D5A6396CD0A7035DFC09E9462A8`。
-- R647 独立审计：`e15a38137efe42f3a0b8f4ba4a61be78:2`，SHA-256 `1C87854EA4F7DF64F82FE6E4F6A4AB5C60D6111A821C1AD19C73E3EB0447741F`。
+The [byte-exact original](https://github.com/AvaloNero/Spherewright-Lab/blob/14478a03c64c550e644c559405c8496b647552e7/archive/imported-from-spherewright/e7d5f7d8661092b7c8089710488c448f290638be/docs/evidence/2026-10-10/stone-source-seam-power-save-r641.md) was imported from product fact commit `e7d5f7d8661092b7c8089710488c448f290638be`. Historical Git history and tags are unchanged.

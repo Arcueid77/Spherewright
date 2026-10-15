@@ -1,11 +1,5 @@
-# R536 石料矿机出口与封窗核销
+# Operational record moved to Spherewright-Lab
 
-本事件记录矿机5325及空载出口带建设、原Move终态核销与固定窗口封存。未证明石料开采、自动送料或持续来源。
+This product path is retained as a short redirect. The [fixed operational record](https://github.com/AvaloNero/Spherewright-Lab/blob/14478a03c64c550e644c559405c8496b647552e7/releases/v0.4.0/evidence/2026-10-10/stone-native-source-outlet-r536.md) belongs to the private Sample consumer repository; authorized access is required.
 
-R529原件 `f79c02d918d44e2daced6e8106c68e96:29`（SHA-256 `8D92715DCDA590389C737BB3C859F162D941DC1FF39FCBA122EC38B6C25EB523`）包含一次accepted矿机建设。首个caller读回断言要求未接网矿机的服务比率为0；实际Native值是network 0、比率不可用（`null`），因此caller停止。R532 `79a6b5b6099d43a0b6876141367b0e4f:14`（SHA-256 `0EEFD6E5CE3E21D91D07B8F66CA529793E74F84F7E620A1798CE04C28505575A`）与R533 `a82413283c1c4b559d26ac87db9d0714:1`（SHA-256 `4E8042E830BDD1170159F425A50D11DE9FF1C748926CEACEE9A14B3C7B7C4E19`）只读核销原action与建造前缀，无重放；该caller断言问题不等于Native拒绝。
-
-R534原件 `6ce911feaeb14101b3f815d37e965822:111`（SHA-256 `DDD35B8E2EACEAEEA1B5689363975A2933421B384C09ECA87424AEDE672F2291`）记录2笔accepted：Native建成两个出口带对象86、6317，随后正常Save；共101次请求、34.639秒。root R536 `677fbb4a597b4e2da13a83bf6818cf0f:1`（SHA-256 `926EF93FDBB67FEA48338E69A22C567E67C1894C211D0BD6E7C280B50E564F8E`）独立核实窗口9笔原始动作、工厂、材料与保存。
-
-封存状态为P104/R12，Save `105093150`/J102，external 9/20、lifetime 408；9笔唯一动作均已核销并由Save覆盖，固定20窗口提前关闭，剩余额度不转移，未开新窗口。当前无在途或未决动作。完整工厂为6317 built/0 prebuild；相对R519只新增5325、86、6317，无旧对象静态变化、非互惠连接或其他新增/移除。唯一新链为 `5325:0→86:1` 与 `86:0→6317:1`；尾端6317空闲，Native货物路径为空载。group 19候选节点262、264、267、271、273、277均有正余量，但矿机尚未开采且未接电，服务比率为不可用（`null`），不能写成零产量测量或供料通过。
-
-背包矿机由2件减至1件、带材2001净减2且当前31件，其他库存及inc/held、玩家位置保持；本阶段没有增加电力对象或移动。持续来源仍为 `wholeSupplyPassed=false`、continuous credit 0；29项物料、Warper/Rod最低产量与连续36,000-tick门、双自动补给、整合保存恢复及最终同SHA双候选包仍未通过。下一项已授权的有限工作为原整体预算内取材、制作及运输供电，具体动作逐阶段绑定。
+The [byte-exact original](https://github.com/AvaloNero/Spherewright-Lab/blob/14478a03c64c550e644c559405c8496b647552e7/archive/imported-from-spherewright/e7d5f7d8661092b7c8089710488c448f290638be/docs/evidence/2026-10-10/stone-native-source-outlet-r536.md) was imported from product fact commit `e7d5f7d8661092b7c8089710488c448f290638be`. Historical Git history and tags are unchanged.

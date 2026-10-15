@@ -1,13 +1,5 @@
-# ILS准备与十写审计（R303）
+# Operational record moved to Spherewright-Lab
 
-日期：2026-10-08（Asia/Singapore）。本页记录本窗口封存事实，不复制私有回执。
+This product path is retained as a short redirect. The [fixed operational record](https://github.com/AvaloNero/Spherewright-Lab/blob/14478a03c64c550e644c559405c8496b647552e7/releases/v0.4.0/evidence/2026-10-08/departure-ils-ten-r303.md) belongs to the private Sample consumer repository; authorized access is required.
 
-R303独立十写审计通过：`50a28d54f0d548cbb44096abb7995f2a:1`，SHA-256 `DEB6F794051CAAA0AC6A8FFAC675699A09A1BC924FB020A0100E85FA75764F11`。十笔Native终态均成功闭合、无在途或unknown，并由normal Save `101323617`覆盖；当前R14/J102、external `10/10 FROZEN`、lifetime `330`。J100原记录完整保留，J101首次手工制作PLS `2103`，J102首次手工制作ILS `2104`；ILS `2104×1`已备齐，但其余便携套件未完成。
-
-本窗实际执行为五次合法仓储取材（钛合金、粒子容器、处理器、钛块、钢材各40件）、两段有界正常步行、一次正常递归配方95合成，以及两次普通保存。合成实际消耗上述五种材料各40件，窗口背包净增仅一座ILS，增产剂及手持物守恒。未建新工厂或改动配方、过滤和连接。原仓723缺铁和直线步行岸边风险均在零accepted预检阶段保留；随后改用有界绕行，铁料收集留待下一窗口。
-
-完整快照引用`56c41569f4564b2cb0aa2aa1650f500c:82`，SHA-256 `2265CD4BD76E5C98FEE27C9763B24AA5F1B4C10140BA972A0D06D6DDAA1B0F01`，帧tick `101336168`。工厂为`6274 built / 0 prebuild`，与前一封存帧相比无新增、删除或静态变化；核对了remote source对象169、Ti对象254。物料观测覆盖4组、29种物料、147条Native路径和16台燃料机，电网点读224节点/563消费者/134发电机且full-serve；各组保留自己的采样tick，不跨tick汇总。
-
-R299调用方因固定J100断言报告`passed=false`；R301只读核对原回执的自然追加并关闭原Save intent。R299原失败继续保留，不改写为业务失败或新成功。当前H/D/Fe自动共享来源、剩余便携套件、整合保存恢复、持续至少36,000 ticks及最终同SHA双候选包仍未验收；continuous credit为`0`，`wholeSupplyPassed=false`。既有蓝图生命周期与Governor 2×门保持先前通过范围，不重开或扩大。
-
-选定准备清单剩余采矿机1台、电塔2座、风机2台、普通传送带21件和普通分拣器2件；现有船1艘与带9件保留。运行时配方所需后续基本材料为铁47、磁铁10、铜5和已有电路板4；这些数量是后续有限备料预算，不是已取库存。下一步完成本窗单一目的文档提交、准确SHA绿CI及root重开，再推进剩余套件和完整自动补给核验。
+The [byte-exact original](https://github.com/AvaloNero/Spherewright-Lab/blob/14478a03c64c550e644c559405c8496b647552e7/archive/imported-from-spherewright/e7d5f7d8661092b7c8089710488c448f290638be/docs/evidence/2026-10-08/departure-ils-ten-r303.md) was imported from product fact commit `e7d5f7d8661092b7c8089710488c448f290638be`. Historical Git history and tags are unchanged.

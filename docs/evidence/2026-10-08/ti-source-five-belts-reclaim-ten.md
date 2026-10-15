@@ -1,21 +1,5 @@
-# P102 Ti 源端五带、回收与十写封窗
+# Operational record moved to Spherewright-Lab
 
-日期：2026-10-08（Asia/Singapore）。本事件记录Ti矿机源端短带及旧空分拣器回收；它没有完成通向既有供给链的分拣器，也没有恢复Ti运输或通过Gate 2。
+This product path is retained as a short redirect. The [fixed operational record](https://github.com/AvaloNero/Spherewright-Lab/blob/14478a03c64c550e644c559405c8496b647552e7/releases/v0.4.0/evidence/2026-10-08/ti-source-five-belts-reclaim-ten.md) belongs to the private Sample consumer repository; authorized access is required.
 
-## 施工、回收与审计
-
-R107原件 `5e682054c5d44b57992d32e3151fa2b6:29`，SHA-256 `2D5AB5BD7CC7D853C5DDD466F0486593182D813652DB43FC2EB65FDFCFF88F6E`，有3带源段accepted；将旧7接入时，Native prepare因中心重叠117拒绝，未commit、未重放。后续结构不同的R112 `267a45cec5c84e6a90987f36f0fe9464:27`，SHA-256 `309960D42AA0FE4DA6624834F269B3C27A88480517386E3D4AD1A9D87DE88085`，成功新增2带，末端ID为186和185。另一个far-side自由格候选族在R110/R114出现两次Native拒绝后退役，未再微移重试。
-
-R114 root独立原件 `5f6c534d49d84bd2ae20c98cdb8bb311:9`，SHA-256 `4CD115673350B72D931DDD9EFC2B451514B2C22FF181C1E5CD06F3118E6F15BD`，核销R112转角；其后另一个Native自由端候选在 `:13` 因point9撞对象116拒绝（SHA-256 `898BC774489BFE6DC64D20C214C7A9AA298FDA9F40BB2BC9F9EA796027010B49`）。R115 `4fffa0028a8f4e958d56f1a8f3a21af3:11`，SHA-256 `010C298CC374C1264BE35E202DA4E4E53935FD619114CF6C0FCD2F59062BBEBD`，fresh Native核对两带姿态、既有61→…→110→44 Ti路径及旧空分拣器回收条件。该证据只支持有界后续候选；185→61的直接分拣器尚未Native施工。
-
-R116原件 `90520736e1c0415eaedd552207fe528b:27`，SHA-256 `94590D8ED2E5D3833A6DFA1E3642FA0953EEFB52E3DFA0F700B1AD0F855DD4FD`，完成旧空分拣器16的Native拆除/返还及普通Save10。十项写入依序包括制作电塔、移动与采煤200、两次补充煤燃料、返回、建源端3带、建转角2带、回收16和保存；材料净差为Fe矿石1001−2、磁线圈1202−1、电塔2201+1、煤1006净0、belt2001−5、分拣器2012+1。末态背包相应为belt11、电塔1、分拣器1。未改动其他配置。
-
-root独立十写审计 `d7c67ad29bb946749233efe69e8e7b8b:16`，SHA-256 `80EB28343E9E4557EC1A882BD0D1795F5A9CAD9514979D32D4A5C5A9DAF11F97`，核销10笔unique accepted均已完成、无重放或unknown，普通Save `100241992`覆盖全部10笔。当前P102、R27、J100，external `10/10 FROZEN`、lifetime `280`；无在途或未核销动作。
-
-## 读回与未通过项
-
-root R119完整读回为185 built/0 prebuild；相对181实体基线新增五条belt 182–186、回收空分拣器16。仅矿机1的connection与`insertTargetObjectId`改指182，以及旧分拣器14、15移除指向16的连接；其他旧静态配置不变，互惠连接完整。来源方向为 `1→182→184→183→186→185`，185仍是自由端。167个支持库存对象、6条完整Native货物流路径和156条唯一belt同tick读回显示Ti物流货物与储存为空；新矿机1仍是network0、无库存，覆盖9个Ti节点，仅有182这一条feed。N1仍full-serve、容量55000 J/t；新矿机未供电。
-
-下一候选是在准确SHA CI成功且root明确重开后，用一台 `2012/filter1004` 分拣器直接接185→既有Ti带61，然后另行fresh规划最后一座2201电塔供给矿机与分拣器。R118离线被动供给模型估算2台矿机、7台分拣器、station44闲置负载和充电器合计19800 J/t，低于N1容量；这是条件模型，不是实测长窗或远端运输验收。全负荷理论需求597300 J/t仍超过当前容量55000 J/t，Foundry全负荷基线仍为false。未来长窗须在P104实际运输条件下单独证明持续供电与Ti送达；P104远端factory当前未加载，读数未知。
-
-既有原油线与已证明的G前缀保留；diamond支路供料、Ti自动补给、共享物料/功率平衡、连续≥36000-tick验证、保存恢复整合和最终同SHA双候选包仍未通过，整案保持 `executable=false`。
+The [byte-exact original](https://github.com/AvaloNero/Spherewright-Lab/blob/14478a03c64c550e644c559405c8496b647552e7/archive/imported-from-spherewright/e7d5f7d8661092b7c8089710488c448f290638be/docs/evidence/2026-10-08/ti-source-five-belts-reclaim-ten.md) was imported from product fact commit `e7d5f7d8661092b7c8089710488c448f290638be`. Historical Git history and tags are unchanged.

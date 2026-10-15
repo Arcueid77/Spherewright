@@ -1,21 +1,5 @@
-# 紫糖 East 接口电塔施工
+# Operational record moved to Spherewright-Lab
 
-日期：2026-10-01。本事件记录一座电塔的已核证施工，不等于分拣器供电、上游供料或产线恢复。
+This product path is retained as a short redirect. The [fixed operational record](https://github.com/AvaloNero/Spherewright-Lab/blob/14478a03c64c550e644c559405c8496b647552e7/releases/v0.4.0/evidence/2026-10-01/purple-east-interface-power-tower.md) belongs to the private Sample consumer repository; authorized access is required.
 
-## 场地候选与施工
-
-此前风机候选 `a309…` 在 prepare ordinal 4 与旧 `2000` 原生碰撞；南侧 Tesla 候选 `114859d558e44026968889ddd094243a` 在 prepare ordinal 6 返回 `NeedGround`。两者均零 accepted，未重试。最终改用陆地方向；只读预检 run `0fa39ba780bf4f489c5e41f28959a47b` ordinal 6 / site 5 通过后，施工 run `96dc177f372e4048b85658c784cab502` 的 prepare ordinal 10、commit ordinal 12、terminal ordinal 20 完成。唯一 action `31cd4adf-550a-4acb-8fdf-cf856855e0be` 于 tick **82631551** 完成。
-
-新增 entity `5313`，item `2201`，位于固定原生位置 `(-131.350662, -25.091713, -148.988083)`。玩家 `2201` 从1减至0，其他库存数量与增量相同；旧对象 `1499`、`5128`、`5266`、`5284` 的静态配置与旧连接保留。Journal ordinal 6 与29均读回精确96条；fresh state ordinal 30 为 **R43**。root proof `534653938b684fe2a76a925a4f727243` ordinal 1，SHA-256 `5463CC0A5CA39254E1378C772E8958B377EF0CD8094E026F3BDDD2E605B00D4B`，独立核验该施工截面。
-
-## 电力读数的证据边界
-
-之后只读的 `get_foundry_plan` `old28` 是对 `5266` 同径向 plug 上假想 `2302` 铁炉（6000/t）的电力建议：无 planned nodes，当前 native context 指向既有 network 3，显示 all-covered / full-base-budget、无边界不确定性、剩余306700。该结果是覆盖/预算建议，不是铁炉场地原生许可；该假设铁炉尚未通过原生场地检查、与 `1992` 冲突，未 prepare 或建造。它也不是本次 `5313` 的真实负载读回，更不证明未来 sorter 获得供电或持续燃料。
-
-离线维护已核 fixture：6项 tower plan、6项 sorter plan 与实际 `pwsh -File` smoke 均为0游戏调用/写入。私有薄入口/参数变化不在本事件提交范围；无 Plugin、公开 tool 或安装态变更。
-
-## 当前保存与待验证项
-
-最新观察 **82631628 / R43**；最近正常保存仍为 **82523330 / J96**，早于本次电塔施工，因此 `5313` 尚未由正常保存覆盖。外部窗口 accepted **5/10 OPEN**；此电塔 action 已终态。后续批准的 `2011` 分拣器与保存另行执行，本事件不预报其结果。
-
-`5266→5284` 的 `2011` 连接仍须真实读回电力；`2201` 至旧 pole `1499` 的覆盖短0.359m，首个 `2203` 风机候选与旧 `2000` 原生碰撞后已停止，不重试。仓库 `3051` 出口未连接；紫糖到货、科研推进、持续产量、新塔保存及实际重启均未证明。
+The [byte-exact original](https://github.com/AvaloNero/Spherewright-Lab/blob/14478a03c64c550e644c559405c8496b647552e7/archive/imported-from-spherewright/e7d5f7d8661092b7c8089710488c448f290638be/docs/evidence/2026-10-01/purple-east-interface-power-tower.md) was imported from product fact commit `e7d5f7d8661092b7c8089710488c448f290638be`. Historical Git history and tags are unchanged.

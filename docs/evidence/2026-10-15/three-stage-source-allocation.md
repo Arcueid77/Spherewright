@@ -1,21 +1,5 @@
-# 三级来源分配诊断与最小调整
+# Operational record moved to Spherewright-Lab
 
-本记录限定于当前 Native 0.10.35.29145 的三级共享来源诊断与一次已完成的最小配置调整。它补充[三级输入检查点](three-stage-input-checkpoint.md)和[输出短接缝记录](three-stage-output-prefix.md)；整体进度见[当前状态](../../current-status.md)。
+This product path is retained as a short redirect. The [fixed operational record](https://github.com/AvaloNero/Spherewright-Lab/blob/14478a03c64c550e644c559405c8496b647552e7/releases/v0.4.0/evidence/2026-10-15/three-stage-source-allocation.md) belongs to the private Sample consumer repository; authorized access is required.
 
-## 只读来源诊断
-
-三个彼此独立的 600-tick 观察窗相隔 606 tick，共发出 137 个只读请求，耗时 278.741 秒，写入数为 0。对 43 个对象的配置切片静态差异为 0，network ratio 为 1。旧输出仓 5331 的库存依次为 656、657、657；新输出仓 6657 在三个观察点均为 0。已有实体 5943 的过滤器为 1209，来源端为 5942、去向为 5329。这些离散快照只说明观察时新分支没有库存；不能据此断言分配公平或永久饥饿，也不构成持续吞吐证明。
-
-此前批准的有限调整只将 5943 的过滤器从 1209 改为 1210，使其进入待机，仅改变未来取料；已有持货继续送往原来的 5329，不移除实体、连接或货物。随后配置与普通保存共 87 个请求、2 次 accepted；完整工厂读回为 6660 built、0 prebuild。唯一静态变化是过滤器，背包完整保全，非互反连接为 0。保存位于 tick 116298925、revision 15、Journal 102，四次历史转换均保留。窗口账目为 fixed-20 external 15、lifetime 623、whole 224、47 次 Moves 和 70 次外部普通保存。
-
-这关闭的是最小分配配置施工。它没有关闭实际供给、末端供给速率或最终至少 36,000-tick 验收；上面的三个短观察窗不能替代这些门槛。
-
-## 原件索引
-
-| 证据 | 保护引用 | SHA-256 |
-| --- | --- | --- |
-| 三个独立观察窗的 writer 原件 | `ec6818286aa549a999e00da946162ca0:280` | `C35C10A697D7A5E5AA8BFD6C1C745756953BE5AA1129EEC5B6D651FB9858270F` |
-| 三窗诊断的独立核验 | `06c8490f17304089b98851eddc78c011:1` | `B86A0F9C1FFED499CF557FD8497D94111A517D2244B0C3BFAAA675E75FF12627` |
-| 最小调整的预先批准 | `a0c61fc246d245a1b5815345d9bd0327:1` | `6D9C81336AA0FD9F0754384A44B4D4761643771FA5A100180FE31A1E9A2D36C6` |
-| 最小调整、保存与完整工厂读回的独立核验 | `77b57b52b6de45cbb71f90ae4afd1233:1` | `7961F1CC5BA657FFA2DA21AE38265AFF187B3E9A91CF12EAAF850AD660C9B371` |
-| 过滤器调整与保存的 writer 原件 | `7448673fbf1e4ccba715206bdb9cdb50:177` | `59CC12308DDEF72502368E61A6B47A8A93350949A69708E2855E9839FB1E1511` |
+The [byte-exact original](https://github.com/AvaloNero/Spherewright-Lab/blob/14478a03c64c550e644c559405c8496b647552e7/archive/imported-from-spherewright/e7d5f7d8661092b7c8089710488c448f290638be/docs/evidence/2026-10-15/three-stage-source-allocation.md) was imported from product fact commit `e7d5f7d8661092b7c8089710488c448f290638be`. Historical Git history and tags are unchanged.

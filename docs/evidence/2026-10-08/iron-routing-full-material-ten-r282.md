@@ -1,13 +1,5 @@
-# 铁源路线与全物料十写封窗（R282）
+# Operational record moved to Spherewright-Lab
 
-日期：2026-10-08（Asia/Singapore）。本记录仅汇总本阶段已核事实，不复制私有收据。
+This product path is retained as a short redirect. The [fixed operational record](https://github.com/AvaloNero/Spherewright-Lab/blob/14478a03c64c550e644c559405c8496b647552e7/releases/v0.4.0/evidence/2026-10-08/iron-routing-full-material-ten-r282.md) belongs to the private Sample consumer repository; authorized access is required.
 
-R282独立十写审计通过：`607fb94bf159473b9a38f94c4473d82c:1`，SHA-256 `87056F8785D4F8F50DD37AC1E490151A2122EE6F2A3505FF7834D57B24B46403`。十笔唯一动作均Native成功闭合，无重放、在途或unknown。`101069500`覆盖前八笔业务及第九笔Save；第十笔是健康 exact-primary Resume，随后正常自动保存至`101069532`（R1/J100）。当前external `10/10 FROZEN`、lifetime `320`，普通写入仍冻结。
-
-R279复合采样引用`55c973661ecd49d99ed5b917686ea6c2:16`，SHA-256 `13F6ADD48166B3F0F42C8531CF685394F5C573F4139E6DC395FC276D9F39A315`。完整工厂帧位于tick `101095800`，63页、`6274 built / 0 prebuild`；相对基线新增7条belt和1个sorter，8个旧对象共15项允许静态字段变化，0条非互惠边。实际接缝为新belt `6273 → sorter6274/filter1001 → 旧belt1507`。铁源主路配置为`1511 slot6 → 5635 (2011/filter1101) → 1534 → 1533 → 1531`，专用路为`1511 slot0 → 1535 (2012/filter1101) → 5593 → 5592`；这些短窗拓扑和配置不证明持续产量。
-
-玩家库存读回：ore `0`、Fe `0`、belt `9`、fast belt `6`、sorter `0`，inc/held守恒。复合采样覆盖4组、29种物料、147条Native路径、source对象169和16台燃料机；每组保留自己的采样tick，不跨不同tick相加。三个600-tick启动窗口合计Warper `2件`、Rod `2件`，氘产`20/min`对耗`60/min`、铁产`30/min`对耗`54/min`，这不是持续验收。Ti缺口仍在：须核实P102来源经原料需求站`1657`、smelter `530`与本地供需`918/916`进入合金链的完整运输及平衡。
-
-R220与R250的原生终态成功、调用方随后本地失败均保留；R273、R274、R280的本地审计失败也不改写为Native拒绝或成功。R279是R274之后单独声明的有限尾部预算，不回填或延长R274原预算。便携kit仍是历史计划，尚未备齐或执行。
-
-本次十写审计不代表整体持续供需通过：`wholeSupplyPassed=false`、continuous credit `0`。持续至少36,000 ticks、双补给、完整Ti来源与最终同SHA候选包仍未通过。既有蓝图生命周期和Governor 2×门保持先前已验证范围，不因本窗重验或扩张。
+The [byte-exact original](https://github.com/AvaloNero/Spherewright-Lab/blob/14478a03c64c550e644c559405c8496b647552e7/archive/imported-from-spherewright/e7d5f7d8661092b7c8089710488c448f290638be/docs/evidence/2026-10-08/iron-routing-full-material-ten-r282.md) was imported from product fact commit `e7d5f7d8661092b7c8089710488c448f290638be`. Historical Git history and tags are unchanged.

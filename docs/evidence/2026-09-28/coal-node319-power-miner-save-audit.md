@@ -1,28 +1,5 @@
-# 煤簇九点矿机、正常保存与阶段审计
+# Operational record moved to Spherewright-Lab
 
-日期：2026-09-28（Asia/Singapore）
+This product path is retained as a short redirect. The [fixed operational record](https://github.com/AvaloNero/Spherewright-Lab/blob/14478a03c64c550e644c559405c8496b647552e7/releases/v0.4.0/evidence/2026-09-28/coal-node319-power-miner-save-audit.md) belongs to the private Sample consumer repository; authorized access is required.
 
-## 范围
-
-本阶段只保留已成功的电力感应塔前缀，再施工一台九点煤矿机并正常保存。没有铺带、分拣器、物流站、矿物转运或配置；不把矿机存在写成煤/石墨吞吐、持续供给、重启恢复或后续线路通过。已安装 cohort 为 `034300e`、DSP 为 `0.10.35.29088`；本批没有 Plugin/MCP 产品二进制改动。文档基线 `6677e64` 只标识源码/文档截面，不能当作已安装版本或实机二进制证据。
-
-## 原生动作与保存
-
-| 动作 | 已核终态 | 边界 |
-| --- | --- | --- |
-| 电力感应塔 `5161` | `495e4e71-cf3c-4e13-a81f-171e59763f9f` 于 `76923347` 成功，`2201` 仅减 1；终态 SHA-256 `EB5201F127FFE2815FC784F845010F2B733493B8A09F42647FEBD62F2C46BB87` | 这是保留的成功前缀，未重放。纯 power-node 的网络字段可为空，不伪填网络号。 |
-| 煤矿机 `5162` | `f7e7beff-9561-4b8f-a6ec-b4ba70d35089` 于 `76967674` 成功，`2301` 仅减 1；终态 SHA-256 `40246975E4F7C8D022348DF599FE5DC0F18E20FF4EE73AB647331397C56C35C7` | fresh readback 为 `2301/miner`，精确节点 `[311,313,314,315,316,317,319,323,328]`，无运输连接，network `3`、serve ratio `1`。 |
-| 正常保存 | `ed0da77b-ab36-4326-998b-ef86d2bd7c92` 于 `76968435` 成功；终态 SHA-256 `E1B4578061360883F8C02CAE8A635FE9D3DE11F39119E96A3B35DE9724B928C3` | 保存后为 `R82 / save76968435 / J91`。本阶段外部 accepted 为 `3`，保留而非归零；此前十写封账是独立历史窗口。 |
-
-前缀 `180187…` 的完整 17 项背包读回已核电塔只使 `2201` 从 `2` 到 `1`，inc 与物品 ID 集合不变。后缀 `46fc…` 的全库存差量守卫核矿机 `2301=-1` 且 inc 不变；本阶段审计虽读取玩家状态，但不是一份新的前后全背包比较，不能冒称它独立证明全部背包不变。
-
-## 一次阶段审计
-
-- 只运行一次参数化既有审计器，保护证明 SHA-256 `B277257DAEE63DEADEB175B61C3959B3F6868EEB051E1B8E8AD1B0A89B21830D`。
-- 52 页工厂快照固定在 tick `76997307`；审计末尾 session 读回是较后的 tick `76999450`。两者不是同一 tick，前者的分页 snapshot ID 在整批内保持一致。
-- 密封基线 `5160` 个旧实体逐项静态配置保持，当前总数 `5162`，且唯一允许的新增为 `5161/5162`；旧运输拓扑仍为 `10062` 条互返有向边，新两对象均无运输连接，预建筑为 `0`。
-- Journal 仍为 durable `J91`、无 pending/error；末尾 session 仍为 owned/healthy、`R82 / save76968435`。这不是普通保存后的重启验证。
-
-## 未证明项
-
-矿机尚无出口、带、分拣器或站体连接；没有采出量、煤/石墨路线吞吐、持续产出、全厂功率余量或重启恢复结论。历史长路的 surface preview 限制也没有因为本阶段建造而变成无水或无风险证明。
+The [byte-exact original](https://github.com/AvaloNero/Spherewright-Lab/blob/14478a03c64c550e644c559405c8496b647552e7/archive/imported-from-spherewright/e7d5f7d8661092b7c8089710488c448f290638be/docs/evidence/2026-09-28/coal-node319-power-miner-save-audit.md) was imported from product fact commit `e7d5f7d8661092b7c8089710488c448f290638be`. Historical Git history and tags are unchanged.

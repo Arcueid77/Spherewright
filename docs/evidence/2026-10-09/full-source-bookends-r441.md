@@ -1,20 +1,5 @@
-# R438 完整来源书挡与 R443 出发清单核对
+# Operational record moved to Spherewright-Lab
 
-日期：2026-10-09（Asia/Singapore）。本文件记录封存只读观察和有限准备清单；不扩大施工授权，也不替代完整供需验收。
+This product path is retained as a short redirect. The [fixed operational record](https://github.com/AvaloNero/Spherewright-Lab/blob/14478a03c64c550e644c559405c8496b647552e7/releases/v0.4.0/evidence/2026-10-09/full-source-bookends-r441.md) belongs to the private Sample consumer repository; authorized access is required.
 
-## 长窗与独立核验
-
-- R437 的已核前缀为80条受保护记录、61次请求、4笔accepted Native写入。R438原始writer记录为 `86d27f14cf2843a7bce18d2b9e4f07c8:2798`，SHA-256 `B5E1E9311D18AFEA242CAC260889F46C10C8157954FB792ED9C5D67A158F5546`；108个采样、连续36090个game ticks、无缺口，原采样范围与门槛未改。
-- Root独立核验 `6acbefcb0c33472b81cec5efc60ba782:3`，SHA-256 `A81E94C71DC84917DD3135D29707761CF93AEA251B9DA924126D36B8BE15E33B`，审计完成但 `sourceConditionsPassed=false`。采样计数下界为：Warper 1210 ≥4.5/min、Rod 1802 ≥1.6/min、P102 TiOre 1004 ≥36.3/min、P104 TiIngot 1106 ≥13.1/min。三厂采样均为满供电；连通氢库存净增4。
-- 物料库存约束未通过：高能石墨1109为736→665（下降71，容差3）；Warper1210为3071→3032（下降39，容差1）；磁铁1102为6869→6845（下降24，容差3）；石料1005为2855→2743（下降112，容差8）；奇异物质1127为127→94（下降33，容差1）。因此该连续样本不构成来源条件或整体Gate通过。原R389因33-tick间隙失败的声明仍保留，未与本窗口拼接。
-
-## R443有限出发清单
-
-- Root独立核对 `c78c15f06d8248bda55bfb0164fd87ca:1`，SHA-256 `A4A36AD9E36E692313A212CA0747320762A6E84E6AE2B6EC39BDE7E47920BBDA`：有限启动制作/取料与已保存Native背包读回满足清单：ILS2104×1、运输船5002×1、矿机2301×1、电塔2201×2、风机2203×2、传送带2001×30、分拣器2011×2、Warper1210×30、Rod1802×5。运输船是既有库存；这些记录不证明新船生产或持续物料来源。
-- 清单中的手搓依据为此前有限批次原件。R303审计 `50a28d54f0d548cbb44096abb7995f2a:1` / `DEB6F794051CAAA0AC6A8FFAC675699A09A1BC924FB020A0100E85FA75764F11` 核对原始run `426a589ceb3142a4a9ace57b6263d822:1–112` / 末记录SHA-256 `8F47E2B922D506C87620DF7E7445B2E6BA3387A2A4960A5452EB8D5D0FE8F2DB`。recipe95的直接账单为2103×1、1107×40、1206×20→2104×1；Native在101321527–101323527完成1件ILS（2000 ticks），递归终态物料差为1103−40、1106−40、1107−40、1206−40、1303−40、2104+1。此前五笔仓库到玩家的有限转移各40件：1107、1206、1303、1106、1103；转移回执不是产量。
-- R312审计 `d2fe95a81be0442d9f53a51ef3584824:13` / `31CBEA275783AB89537DF023DE534021DA0978DD58304C719675FBB6C21ABDB8` 核对writer `cb3957b1c14945acb8b4e31d15f35cae:149` / SHA-256 `27C9B9293479D1537F8F732892A863E38BC672C6919B55D1F30876299D4B3523`；运行时配方资格记录为 `1632a03205c4495cb9e155a16011f0f8:17` / SHA-256 `2706329D8AB164E4092712CF772472B1BC90E67C545EC27634A1B8D1224D503C`。直接配方为recipe48：1101×4+1301×2+1202×2+1201×2→2301；recipe7：1101×6+1201×1+1202×3→2203；recipe8：1101×2+1202×1→2201；recipe84：1101×2+1201×1→2001×3；recipe85：1101×1+1301×1→2011。五笔实际有限手搓为recipe48×1→矿机1（240 ticks）、recipe7×2→风机2（520）、recipe8×2→电塔2（120）、recipe84×7→传送带21（560）、recipe85×2→分拣器2（80）；以各自Native `startedAtGameTick` 到 `completedAtGameTick` 计算，分别为1/240、2/520、2/120、21/560、2/80件/tick。按3600 ticks归一仅是这些批次的算术比率，不是持续生产率或自动补给证据。recipe84的21条加上原有9条组成清单30条。
-- R312另有有限仓库转移：铁块1101×47、磁铁1102×10、铜块1104×5、Warper1210×30。转移完成tick分别为101470225、101470301、101470385、101470447；不是制作或产出速率。此准备批次四类材料净消耗为1101×47、1102×10、1104×5、1301×4，产出为矿机1、风机2、电塔2、传送带21、分拣器2。
-
-## 当前边界
-
-当前保存边界为R109 / Save `102781516` / J102，external `15/20`、lifetime `390`，无在途或unknown，普通写入冻结。R443清单仅说明有限启动物资已齐。连续计数通过不抵消五项库存容差失败；`continuousCredit=0`、`wholeSupplyPassed=false`、整案仍为`executable=false`。root下一步在同一封存观察上诊断下降来源并选择最小修复或新预声明实验；本事件未批准新施工。完整来源、双自动补给、整合保存恢复及最终同SHA双候选包仍未验收。
+The [byte-exact original](https://github.com/AvaloNero/Spherewright-Lab/blob/14478a03c64c550e644c559405c8496b647552e7/archive/imported-from-spherewright/e7d5f7d8661092b7c8089710488c448f290638be/docs/evidence/2026-10-09/full-source-bookends-r441.md) was imported from product fact commit `e7d5f7d8661092b7c8089710488c448f290638be`. Historical Git history and tags are unchanged.

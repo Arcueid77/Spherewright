@@ -1,17 +1,5 @@
-# 联合来源缺口与 R391 前缀诊断
+# Operational record moved to Spherewright-Lab
 
-R389 原件 `cebe6d77725e4a9ab1eaf0529196ee77:914`（SHA-256 `7B7E75369F94C13649A252E69838C840601EF9D1B1BA5AC437900F481794C5A1`）记录829次只读请求、607.406秒、0 accepted。sample63只覆盖一段连续32,295 ticks；sample64前有33 ticks缺口，原定36,000-tick连续声明自动失败并停止。没有拼接不连续区间或延长该声明。writer报告的warper 4.1/min、rod 1.6/min下界不构成通过。
+This product path is retained as a short redirect. The [fixed operational record](https://github.com/AvaloNero/Spherewright-Lab/blob/14478a03c64c550e644c559405c8496b647552e7/releases/v0.4.0/evidence/2026-10-09/joint-source-gap-and-prefix-r391.md) belongs to the private Sample consumer repository; authorized access is required.
 
-Root 的 R391 独立核验 `263e14e8aaae4417bacf88082a3b646b:18`（SHA-256 `E0648D229A2EAB403134B96B4E5E307B194A8D58729C8EAF423B9B2CB8943455`）不产生游戏写入，并逐份核对17组原始cuts：29类物理库存、远端source169、本地Ti254与9条路径、16个燃料发电机、两座实验室和三厂电力。末组是计划内sample，没有closing cut或closing nodes，因此不构成全窗末态库存核销。
-
-诊断前缀中的库存变化超过声明容差：1109高能石墨为761→732（−29，容差3）；1102磁铁为7009→6986（−23，容差3）；1127奇异物质为131→101（−30，容差1）；连通氢1120净差−2。此差异指向需要查明的来源、分流或堵塞问题，但尚未证明唯一根因。
-
-32,295-tick前缀的Native计数仅作定位：warper 1210 `[39,40]`、rod 1802 `[16,16]`、P102钛矿石1004 `[0,0]`、P104钛锭1106 `[24,47]`。Ti源实物库存382→382；本地钛矿石3662→3582、钛锭3713→3745。不能由这些截面推断矿竭或长期供给状态，continuous credit为0。
-
-R392在首个Native请求前因调用方函数引用错误停止（0 Native responses/0 intent/0 accepted）；R394随后完成16次只读请求、用时6.517秒、0 Game写入，原件 `0c496a92e99c4057b31e92520908535f:18` / SHA-256 `3ACC54A1949B56B3B46B7ABAE0A12BA779FFDF7AAEFD782FED7C03F9800FA3C3`。R395停止记录保留。R397发现矿工86的resourceNode 203返回Native `INVALID_ENTITY`，仅该节点从`resourceNodeIds`移除并按自然耗尽处理，其他16个来源节点均有正证据；R398 whole-current资格核验通过，审计原件 `17067fcf1f2a4e91b4981bdec9097e72:2` / SHA-256 `C828EF97301E85BB7D4BEC9CBAD61769AC7699544B0CD47791BAFFFFDF6F1BD5`。这只是精确校正后的当前资格，不改变R389连续声明失败或whole supply未通过。
-
-R398当前cut的高能石墨1109为708、磁铁1102为6950、奇异物质1127为87、连通氢1120为136、钛锭1106为495；全局氢4845不等于连通氢，legacy4419排除。R391前缀的历史差异仍保留用于定位，不据此推断矿竭或唯一根因。
-
-R407以正常移动到既有1233附近、升级既有1233与1223两只2011分拣器为2012并正常保存，新增accepted4。writer原件 `0506229be23b4192bbe9ac15ad393ee7:125` / SHA-256 `C077D4124B03A496B118B5C621607C51A2918692B8FCC030DF5ED861E62B74D5`；root R409独立核对 `e235841341a24b9d8bbdeb99623dd7f0:1` / SHA-256 `35C50AF0B193FBD106C7D136825CA7179E1BEB9B1E8605230E31E9C9592BD6F2`。库存净差2011 `+2`、2012 `−2`，过滤、货物、互返边、15项静态字段、本地供电、Journal与Save覆盖均核实；三格运输周期的progressRequired由600000降至300000，仅为名义容量变化，未测持续生产改善。当前Save tick102710336、revision96、durable J102，external `7/20`、lifetime `382`，无在途或unknown。
-
-R404因caller漏掉物理belt1222基线，在Native prepare前停止且0 accepted；R406关闭并保留原once，之后以精确15项基线重新声明，没有重放原动作。后续设计中的H3345→3074与3074→3073两条普通分拣器尚未批准施工；既有3083已接入3073，石墨5196/5581已有名义能力，不据此宣称供需通过。双自动补给、至少36,000 ticks连续供需、整合保存恢复及最终同SHA双候选包仍未通过。
+The [byte-exact original](https://github.com/AvaloNero/Spherewright-Lab/blob/14478a03c64c550e644c559405c8496b647552e7/archive/imported-from-spherewright/e7d5f7d8661092b7c8089710488c448f290638be/docs/evidence/2026-10-09/joint-source-gap-and-prefix-r391.md) was imported from product fact commit `e7d5f7d8661092b7c8089710488c448f290638be`. Historical Git history and tags are unchanged.

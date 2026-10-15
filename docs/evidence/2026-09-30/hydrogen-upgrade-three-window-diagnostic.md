@@ -1,23 +1,5 @@
-# 分拣器升级后三窗只读诊断
+# Operational record moved to Spherewright-Lab
 
-日期：2026-09-30（Asia/Singapore）。只读 run `aa454891493d4e11b2ce6a24c88bf7f3`；root 独立核对原始生产、样本、功率、机器/库存及最终 session/Journal 回执。无写入；本诊断不改动保存状态。
+This product path is retained as a short redirect. The [fixed operational record](https://github.com/AvaloNero/Spherewright-Lab/blob/14478a03c64c550e644c559405c8496b647552e7/releases/v0.4.0/evidence/2026-09-30/hydrogen-upgrade-three-window-diagnostic.md) belongs to the private Sample consumer repository; authorized access is required.
 
-## 三个独立窗口
-
-每窗600 game ticks，窗口之间有间隔，不能拼接成连续窗口。每组列出 power / production / sample 原回执序号：
-
-| 窗口与 ticks | 原回执 ord | 1121 产量 | 1802 燃料产量 | H1120 P/C | 油1114 P/C | 3064 H | 3074 H | 3073 H/状态 | 3403 D |
-|---|---|---:|---:|---:|---:|---:|---:|---|---:|
-| 1：80280872–80281471 | 28 / 29 / 30 | 5（30/min） | 0 | 27 / 28 | 6 / 8 | 589 | 1 | 9 / idle | 0 |
-| 2：80281506–80282105 | 50 / 51 / 52 | 5（30/min） | 0 | 26 / 29 | 10 / 7 | 587 | 1 | 9 / idle | 5 |
-| 3：80282147–80282746 | 72 / 73 / 74 | 5（30/min） | 2 | 29 / 29 | 10 / 8 | 587 | 0 | 0 / working | 10 |
-
-原功率回执28/50/72均为 `energyServed=energyRequired`；network3与4的 `consumerRatio=1`，记录容量1832000。这只证明三个采样点的功率状态，不证明窗口之间或全线持续供电。实体3413实际是2001传送带，不是仓储；该选中段 `cargo=0` 只描述此段，不能推出全链无货或燃料总库存为0。
-
-## 结论边界与最新状态
-
-三个窗口内1121产量均为5（30/min），1802燃料产量为0/0/2；3064的氢库存为589/587/587，已不是600满仓，但产量没有变化到足以证明整条氢链持续修复。3073前两窗有氢9且 idle，第三窗 working 时氢为0；3403的D为0/5/10，不能记作持续燃料供应。不要据此盲目再升级或重复同类观察。
-
-采样器共65个请求，记录约126.18秒，得到3个有效诊断窗；这个时长不是模型总耗时，也不证明token或成本节省。最终 session ord75 为tick80282748/R28，`lastSaved=80273796`；Journal ord77 为tick80282749、durableThroughSequence96、无pending/错误。命令23857 exit0；新增accepted为0、累计仍8/10，无在途动作。
-
-下一硬接口是科研消费者端：lab84紫糖科研点为0；储仓3051有紫糖2288，输入为5113且无输出。阻塞是紫糖未实际连到lab84，不是紫糖没有生产。优先做最小消费者端口原生预检，再决定是否需要上游；不重造紫糖/黄糖流水线。
+The [byte-exact original](https://github.com/AvaloNero/Spherewright-Lab/blob/14478a03c64c550e644c559405c8496b647552e7/archive/imported-from-spherewright/e7d5f7d8661092b7c8089710488c448f290638be/docs/evidence/2026-09-30/hydrogen-upgrade-three-window-diagnostic.md) was imported from product fact commit `e7d5f7d8661092b7c8089710488c448f290638be`. Historical Git history and tags are unchanged.

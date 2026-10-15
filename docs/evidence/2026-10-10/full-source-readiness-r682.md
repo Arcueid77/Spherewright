@@ -1,21 +1,5 @@
-# 全来源只读核验与铁源差异（R681 / R682）
+# Operational record moved to Spherewright-Lab
 
-本记录汇总R681只读观察及R682独立核验。它确认了当前来源与库存观测范围，不构成生产、连续供料或整案验收通过，也不授权新施工。
+This product path is retained as a short redirect. The [fixed operational record](https://github.com/AvaloNero/Spherewright-Lab/blob/14478a03c64c550e644c559405c8496b647552e7/releases/v0.4.0/evidence/2026-10-10/full-source-readiness-r682.md) belongs to the private Sample consumer repository; authorized access is required.
 
-R681 writer原件 `0851023941e3469cb8df22045e0eb888:45`，SHA-256 `A9F2C2879F758FCA41CEC5F3269587BFFDF67B200EA2CE6A504664B47C4E1E3C`，共42次只读请求、17,332.1582 ms、0 accepted。root R682独立核验 `35854510d4f7467e8eb399403562a3da:2`，SHA-256 `FE1A073F82B90AE2022A9706EFC9B27F41753833F18AA4C46F6BF3E53A868984`。
-
-R682覆盖完整29项库存、20个当前有限矿点（均为Native正剩余）、钛源169与本地钛254、16个燃料发电实体、2座实验室，以及3座已加载工厂的满供状态；未见预建筑。R681的两个相互重叠的600-tick观测窗均记录磁铁新产出0，未求和或拼接。Native核对对象22和1216当前缺少铁矿；所选对象1216的铁矿输入和磁铁输出均为0。旧矿机1213资源列表为空，但不能据此判定铁源枯竭；1496仍工作，节点51/56有正剩余。现有证据没有锁定唯一竞争根因。
-
-当前Warp仓5331为3000且满仓，全Warp池3071；Rod仓3955为851，全Rod池1210。与R647各自own-tick读回对照，石料927→2759、磁铁4014→3629（减少385）。这些不同截面的库存差只用于定位后续诊断，不能换算为产率或连续窗口成败。
-
-当前状态为P104 / R24，最后正常保存tick `105708553`、durable Journal 102，external `0/20`、lifetime `434`，无在途或unknown。最新玩家观察tick `105792647`的Drift速度为 `0.162043333 m/s`，尚无人工正常上岸并停稳的现场证据。既有Native移动候选族已达到两次拒绝上限并停止，不重试旧候选。
-
-`wholeSupplyPassed=false`，continuous credit为0。Warper与Rod各至少1/min且连续36,000 ticks、双自动补给、完整来源竞争/材料供需、整合保存恢复及最终同SHA双候选包仍未通过。下一步先根据不可变证据查清铁矿来源与分流，再由root决定有界修复；本次读核不代表已批准施工。
-
-## R683：所选磁铁炉的铁矿路径追踪
-
-root R683本地独立核验 `51a3aec23a6746329751e0247816b90b:1`，SHA-256 `230E17C6438B13CE7F64DD57453565241EC1A9D04743056D59F621971FAA77BB`，0 Game调用、0写入、0 accepted。R681 Native选区明确矿机1213资源节点列表为空且不工作但满供；磁铁炉1216的配方ID为2（磁铁），铁矿输入与磁铁输出均为0，也不工作但满供；完整Native路径31为空。所选旧路由为1213→1218→1219→1220→1221→1222→1223→1216。
-
-将已保存的6475实体拓扑与R681 fresh选区作有界双向追踪，当前仍工作的铁源1496（节点51/56有正剩余）沿1496→6270→6269→6267→6268→6271→6272→6273→6274→1507→1508→1509→1500连至铁块炉1500（配方ID为1）。此路径的部分内部对象来自R672已保存快照，不是本次fresh Native选区对整条路线的完整覆盖。证据只表明所选磁铁炉缺料及其旧上游路径为空；不能据此认定全局唯一根因、矿脉已枯竭或修复已获批。
-
-下一步按R683定位的路径缺口，在玩家正常落地停稳后，对已定位的1216缺铁接口开展最小铁矿→磁铁改接候选的fresh来源、路径、消费者、Native接口和容量预检，之后再决定是否批准有限修复及固定36,000-tick验收。R682所列全案验收门不变。
+The [byte-exact original](https://github.com/AvaloNero/Spherewright-Lab/blob/14478a03c64c550e644c559405c8496b647552e7/archive/imported-from-spherewright/e7d5f7d8661092b7c8089710488c448f290638be/docs/evidence/2026-10-10/full-source-readiness-r682.md) was imported from product fact commit `e7d5f7d8661092b7c8089710488c448f290638be`. Historical Git history and tags are unchanged.

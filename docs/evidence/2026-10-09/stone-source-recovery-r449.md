@@ -1,20 +1,5 @@
-# R449 石料来源检查与 R451 封窗
+# Operational record moved to Spherewright-Lab
 
-日期：2026-10-09（Asia/Singapore）。本记录汇总石料节点核验、已耗尽矿机回收、碰撞拒绝及后续封窗；没有证明新石料来源或持续供给。
+This product path is retained as a short redirect. The [fixed operational record](https://github.com/AvaloNero/Spherewright-Lab/blob/14478a03c64c550e644c559405c8496b647552e7/releases/v0.4.0/evidence/2026-10-09/stone-source-recovery-r449.md) belongs to the private Sample consumer repository; authorized access is required.
 
-## 石料节点与已耗尽矿机
-
-- R445 writer 原件 `b6d5e3d11d1543ef9c2065011fed7b7c:23`，SHA-256 `69963FD0449F9EE802FB46E2F91A232525B31DBB905F5C950A1F8579FDE079E6`；root R446 独立核验 `1b4c60ef98c94d1db2b518c0a1e73b7b:1`，SHA-256 `F50C61452AD14F31F351EB9C92E300B87ADF8CFAE582B3D96B06E42F6FE305BB`。Fresh完整116个石料矿点读回显示，现有15台矿机没有覆盖石料矿点；物品1005为石料。此结论限于该次覆盖核验，不代表所有可能位置都无矿。
-- R447原件 `89eebc2a722e448d97d0275da5487dc0:32`，SHA-256 `1BE61D865D91DC760AB28E02490746C6FFD5C4964D9FF271A401721DD35F8F04`：两笔accepted分别回收已耗尽、空载的矿机86（返还矿机2301×1、货物0）和正常保存，共22 requests、4.838秒。旧九带路径206保持空载；唯一移除的是旧连接86→5324，没有清理旧库存。
-- 后续新矿机候选位于节点198、yaw345，原生返回 `BUILD_LOCATION_INVALID`，碰撞对象5318；0次建造提交，候选未重试。R449 root独立核验 `14ab37a660f749f18df01a8a6ad570a7:1`，SHA-256 `2FB3340E0D603EEF5E809BC52FED406585C1278AB0276118E6EF3EAA5BACAD0B`，核对了回收、原动作、保存、材料及相关供电状态。碰撞拒绝不是来源恢复成功。
-
-## R450/R451完整封窗核验
-
-- R450 writer完整快照 `b881ce501e5743f88563f0a5f2a76a9e:73`，SHA-256 `BA3D9A1988B9266D1A41A7F3FFBE4D3613414CF45451D62781619604529FCED7`：6315 built、64页、0 prebuild；38个受影响对象同tick完整货物读回，三厂供电均满服务。没有新增对象，移除对象只有86。静态差异限于1223/1233从2011升级为2012、站点1657与916的slot0容量分别由300→600和100→300、5324移除86的旧输入边；其他静态保留，非互惠边为0。消费者只在104的network3减少1。玩家背包净差为1210+185、2011+2、2012−2、2301+1。
-- Root R451独立核验 `fb70002df2454f6993984193c9ff5e7d:1`，SHA-256 `F41614C37A71025B8C8FE4A756B0768C71D1377EA73DC6984FE00B71EAAAC06B`，`passed=true`、`wholeWindowClosed=true`：核销原17笔唯一动作，包括最终失败但已accepted的Move；正常保存`102844177`/R112/J102覆盖全部17笔。累计accepted保持392；剩余3额度不转移，新20窗口未开启。无在途或unknown，写入仍冻结。
-
-## 当前封窗边界
-
-保存为R112 / `102844177` / J102；external `17/20`、lifetime `392`。R451已确认窗口在17笔处完整关闭，剩余3额度不转移，新20窗口未开启；没有未决或unknown，普通写入冻结。R438/R441的来源库存条件失败保持不变，continuous credit为0，`wholeSupplyPassed=false`。
-
-R452正在进行第二个旧占位yaw135的最后一次Native预检，结果待独立核验；若拒绝则封闭该候选族。本事件不记录其结果，也不代表石料来源已恢复。后续补源布局仍须依据Native障碍和现有接口能力设计；若需额外代码，须另做相关测试并经同批实机核验。当前没有批准新的施工。
+The [byte-exact original](https://github.com/AvaloNero/Spherewright-Lab/blob/14478a03c64c550e644c559405c8496b647552e7/archive/imported-from-spherewright/e7d5f7d8661092b7c8089710488c448f290638be/docs/evidence/2026-10-09/stone-source-recovery-r449.md) was imported from product fact commit `e7d5f7d8661092b7c8089710488c448f290638be`. Historical Git history and tags are unchanged.

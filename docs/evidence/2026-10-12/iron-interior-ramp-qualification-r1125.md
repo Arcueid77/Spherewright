@@ -1,27 +1,5 @@
-# R1123–R1125 铁源内部坡道资格与流程时长波动
+# Operational record moved to Spherewright-Lab
 
-更新：2026-10-12（Asia/Singapore）。本页记录正常接近与保存、内部坡道端点资格及近期流程计时；资格结果不代表建成、供料或持续来源通过。
+This product path is retained as a short redirect. The [fixed operational record](https://github.com/AvaloNero/Spherewright-Lab/blob/14478a03c64c550e644c559405c8496b647552e7/releases/v0.4.0/evidence/2026-10-12/iron-interior-ramp-qualification-r1125.md) belongs to the private Sample consumer repository; authorized access is required.
 
-## 保存与计数
-
-R1123完成一次8m正常接近Move及普通保存。保存为tick `110924907`、revision `181`、durable Journal `102`；物理到达误差 `0.1546m`，没有材料差量。固定20窗口以lifetime `535` 开始，目前 `9/20`、lifetime `544`，写入冻结；整案为 `145` accepted、`46` 次Move、`44` 次普通保存和 `27` 次手工材料动作。原动作已由独立核验确认保存覆盖，当前无在途或未知动作。背包带材 `177`、铁块 `50`、Rod `5`、Warp `900`、Ti `500`，占用 `34/40` 格。
-
-## 内部铁源坡道端点资格
-
-R1125对source端 `6480` 与destination端 `1501` 分别执行了Native端点检查，两端结果均为 `Ok`，跨度均为 `2`；计划分别是 `13` 和 `11` 段新带。该切面覆盖 `217` 个对象、`5` 条完整Native路径和 `3` 张本地电网；三张网络均满供。新source端保留既有前后连接 `6479/6481`，磁铁分拣器和硅矿路径保持。资格限定于两端当前预览，不包含未来实际抬升接缝或新建实体；没有施工批准，也没有供料或持续来源通过。此前 `6477` 侧向接入候选族仍停止。
-
-下一项提案是在 `6480` source端与 `1501` destination端分别建立坡道并保存，预计需要 `24` 段新带；总体额外预算上限为 `9` accepted，其中Move与保存已用 `2`，剩余拟议上限 `7`。该提案尚未获准施工。建成后需先重新核验实际新实体接缝，再考虑连接带或启用分拣器。
-
-## 流程计时
-
-R1123正常Move与保存的调用器用时为 `7.355` 秒，root独立审计 `0.920` 秒；R1125坡道只读调用器用时 `5.861` 秒，首次完整原件审计 `43,320.7444` 毫秒。之后在相同审计器代码、审批、writer原件及全部28份请求/响应文件上进行受控重读，没有新的Game调用，root审计耗时 `1,779.6693` 毫秒。重读前清理了 `3,571` 个旧临时变量，私有内存由 `5,906.4` MB降至 `2,128.3` MB，托管内存由 `5,652.6` MB降至 `1,411.5` MB；这与本次审计缩短相符，但不是唯一因果的证明，也不是新鲜Game资格或整体端到端流程恢复的证明。单写者、相邻动作与覆盖保存、固定20窗口、完整帧复用、预先准备独立root审计和事实CI并行仍在使用，root准备和交接仍有开销。
-
-## 受保护索引
-
-- R1123正常接近与覆盖保存独立核验：`0299d7dfe49841f0b44eefb14c697743:267` / `EECA7B1F34585464F168389CAEDF112875EB47F816374272AFBCE3575482139E`。
-- R1125内部source/destination坡道端点独立资格核验：`0299d7dfe49841f0b44eefb14c697743:269` / `0213590C3998FC567C9CBACF1AB2AD087EC2568CE1254FB1C5A339B0B58EC599`。
-- 同28份原件的R1128重复审计核验：`0299d7dfe49841f0b44eefb14c697743:270` / `67822830110F03DB65F6836BE2C1057F4707BD7DE47FB46D4F27ADDCB76088B0`；该只读重测未产生新的Game证据。
-
-## 未通过的验收门
-
-`sourceConditionsPassed=false`、`wholeSupplyPassed=false`、连续来源信用 `0`。两端预览不等于施工完成或源、路线、汇端接通；未来接缝、持续供需窗口、双自动补给、整合保存恢复与最终同 SHA 双候选仍未通过。
+The [byte-exact original](https://github.com/AvaloNero/Spherewright-Lab/blob/14478a03c64c550e644c559405c8496b647552e7/archive/imported-from-spherewright/e7d5f7d8661092b7c8089710488c448f290638be/docs/evidence/2026-10-12/iron-interior-ramp-qualification-r1125.md) was imported from product fact commit `e7d5f7d8661092b7c8089710488c448f290638be`. Historical Git history and tags are unchanged.

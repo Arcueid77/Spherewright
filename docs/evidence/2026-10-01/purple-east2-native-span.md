@@ -1,21 +1,5 @@
-# 紫糖 East2 原生带段
+# Operational record moved to Spherewright-Lab
 
-日期：2026-10-01。本事件记录 East2 的已核证施工截面，不代表紫糖供料或科研闭环。
+This product path is retained as a short redirect. The [fixed operational record](https://github.com/AvaloNero/Spherewright-Lab/blob/14478a03c64c550e644c559405c8496b647552e7/releases/v0.4.0/evidence/2026-10-01/purple-east2-native-span.md) belongs to the private Sample consumer repository; authorized access is required.
 
-## 施工与有限独立审计
-
-原施工 run `b5bc96be900e459c884972f4d93f9554`：prepare ordinal 7、commit ordinal 9、terminal ordinal 79。唯一 action `15788d78-957a-4537-a6fc-ab1a39ea0b3b` 以 `completed` / `succeeded=true` 结束，game tick **82483417**。该阶段完成后观察为 **82483605 / R38 / healthy**，本窗口 accepted 从 `1/10` 增至 **`2/10 OPEN`**，无在途动作。
-
-原生建成23条带，新增 ID 按原生顺序为 `[5284, 5286, 5285, 5287..5306]`。玩家库存 `2001` 从289减至266；其他物品数量与增量保持。新结构有44条有向互返边；守卫对象 `5266`、`5265`、`5230`、`5232` 与批准值一致。
-
-root 的独立审计 run `8ebab3665b524361a34cdbe7d13c0575` ordinal 1，SHA-256 `6C9EBF1BCFCC7E5541FE0DE08BCABB7A58F12D718D71D5731B1E91EF0E0223EB`，复核了23个新对象、四个守卫、玩家差量和 Journal。J96 的96条精确条目 durable、无错误。该对象集审计不是整厂 census。施工约143.9秒，其中约139.8秒是终态观察时间；不能据此推断模型延迟或纯物理等待。
-
-## 原语边界与未完成接口
-
-较早针对 `5306→5230` 的只读尝试 `76f804…` 使用了 sorter `2011/filter6004` 原语，得到 `TooSkew`（bestFacing 22.251，门槛<11）、`nativeChecks=0`、零 accepted。它没有测试所需的 `2001` 原生双覆盖，不能当作该批准原语不可行的证据，也不应借此重设计或重放已完成的整段。
-
-随后用正确的 `2001 native_grid` 原语进行只读预检 `f78af68d1c7a4e6c9a4058e6d8711118`，`full_path_stage1`、两端 `non_removing_belt_cover`、`NEW6`、预算 `2001×6` 均获准；该预检零 commit，token 已丢弃。它只证明原生计划获准，不证明这六带已经施工或保存。后续接口动作与正常保存由另行回执核实，不在本文预记结果。
-
-## 保存与生产边界
-
-最近正常保存仍为 **82280505**，早于本次 North 和 East2 施工；本段尚未由正常保存覆盖。当前观察 tick **82483605 / R38**，J96 durable、无 pending/error。未证明 `5306→5230` 接口已完成、源仓 `3051` 供料、紫糖到货、科研推进、持续产量或真实重启恢复。
+The [byte-exact original](https://github.com/AvaloNero/Spherewright-Lab/blob/14478a03c64c550e644c559405c8496b647552e7/archive/imported-from-spherewright/e7d5f7d8661092b7c8089710488c448f290638be/docs/evidence/2026-10-01/purple-east2-native-span.md) was imported from product fact commit `e7d5f7d8661092b7c8089710488c448f290638be`. Historical Git history and tags are unchanged.
