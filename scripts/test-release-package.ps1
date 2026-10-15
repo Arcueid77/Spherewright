@@ -3,7 +3,8 @@ param(
     [Parameter(Mandatory)]
     [string]$PackagePath,
     [ValidateRange(1, 1000)]
-    [int]$ExpectedMinimumToolCount = 1
+    [int]$ExpectedMinimumToolCount = 1,
+    [switch]$RequireBilingualGuides
 )
 
 Set-StrictMode -Version Latest
@@ -42,6 +43,31 @@ try {
     $packageRoot = $topLevel[0].FullName
     $manifestPath = Join-Path $packageRoot 'manifest.json'
     $manifest = Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-Json
+    if ($RequireBilingualGuides) {
+        foreach ($guide in @('release-installation.zh-CN.md', 'installation-recovery.zh-CN.md', 'agent-playbook.zh-CN.md', 'LICENSE.zh-CN.md')) {
+            $guidePath = Join-Path $packageRoot $guide
+            if (-not (Test-Path -LiteralPath $guidePath -PathType Leaf) -or
+                [IO.File]::ReadAllText($guidePath) -notmatch '[\p{IsCJKUnifiedIdeographs}]' -or
+                @($manifest.files | Where-Object { $_.path -ceq $guide }).Count -ne 1) {
+                throw "A required complete Chinese guide or its integrity entry is missing: $guide"
+            }
+        }
+        foreach ($markdown in Get-ChildItem -LiteralPath $packageRoot -File -Filter '*.md') {
+            $fence = $false
+            foreach ($line in ([IO.File]::ReadAllText($markdown.FullName) -split '\r?\n')) {
+                if ($line -match '^\s*(?:```|~~~)') { $fence = -not $fence; continue }
+                if ($fence) { continue }
+                foreach ($link in [regex]::Matches($line, '\]\(([^)\r\n]+)\)')) {
+                    $href = $link.Groups[1].Value.Trim().Trim('<','>')
+                    if ($href -match '^(?:[A-Za-z][A-Za-z0-9+.-]*:|#)') { continue }
+                    $relative = [Uri]::UnescapeDataString(($href -split '[#?]',2)[0])
+                    $target = [IO.Path]::GetFullPath((Join-Path $packageRoot $relative))
+                    if (-not $target.StartsWith($packageRoot.TrimEnd([IO.Path]::DirectorySeparatorChar)+[IO.Path]::DirectorySeparatorChar,[StringComparison]::OrdinalIgnoreCase) -or
+                        -not (Test-Path -LiteralPath $target)) { throw "Broken or escaping packaged documentation link in $($markdown.Name)." }
+                }
+            }
+        }
+    }
     if (-not [string]::Equals([string]$manifest.productVersion, [string]$manifest.version, [StringComparison]::Ordinal)) {
         throw 'The release manifest product version does not match its package version.'
     }

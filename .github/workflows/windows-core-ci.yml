@@ -55,3 +55,7 @@ jobs:
       - name: Check package surface policy without game dependencies
         shell: pwsh
         run: ./scripts/test-package-surface-policy.ps1
+
+      - name: Verify complete bilingual documentation and links
+        shell: pwsh
+        run: ./scripts/verify-documentation.ps1

@@ -18,6 +18,33 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
 $repoRoot = [IO.Path]::GetFullPath((Split-Path -Parent $PSScriptRoot))
+function Convert-PackagedGuideLinks {
+    param([string]$Text, [string]$SourcePath)
+    $aliases = @{
+        'docs/release-installation.md' = 'INSTALL.md'
+        'docs/installation-recovery.md' = 'RECOVERY.md'
+        'docs/agent-playbook.md' = 'AGENT-PLAYBOOK.md'
+        'docs/release-installation.zh-CN.md' = 'release-installation.zh-CN.md'
+        'docs/installation-recovery.zh-CN.md' = 'installation-recovery.zh-CN.md'
+        'docs/agent-playbook.zh-CN.md' = 'agent-playbook.zh-CN.md'
+        'LICENSE' = 'LICENSE'
+        'LICENSE.zh-CN.md' = 'LICENSE.zh-CN.md'
+    }
+    return [regex]::Replace($Text, '(?<=\]\()(?<href>[^)\r\n]+)(?=\))', [Text.RegularExpressions.MatchEvaluator]{
+        param($match)
+        $href = $match.Groups['href'].Value
+        if ($href -match '^(?:[A-Za-z][A-Za-z0-9+.-]*:|#)') { return $href }
+        $parts = [regex]::Match($href, '^(?<path>[^#?]*)(?<suffix>.*)$')
+        $sourceDirectory = Split-Path -Parent (Join-Path $repoRoot $SourcePath)
+        $resolved = [IO.Path]::GetFullPath((Join-Path $sourceDirectory ([Uri]::UnescapeDataString($parts.Groups['path'].Value))))
+        $relative = [IO.Path]::GetRelativePath($repoRoot, $resolved).Replace('\', '/')
+        if ($relative.StartsWith('../') -or -not (Test-Path -LiteralPath $resolved)) { throw 'A guide link escapes or is missing from the source repository.' }
+        $suffix = $parts.Groups['suffix'].Value
+        if ($aliases.ContainsKey($relative)) { return $aliases[$relative] + $suffix }
+        $encoded = (($relative -split '/') | ForEach-Object { [Uri]::EscapeDataString($_) }) -join '/'
+        return "https://github.com/AvaloNero/Spherewright/blob/$gitCommit/$encoded$suffix"
+    })
+}
 if (-not $OutputDirectory) {
     $OutputDirectory = Join-Path $repoRoot 'artifacts'
 }
@@ -134,10 +161,20 @@ try {
     Copy-Item -LiteralPath (Join-Path $repoRoot 'scripts\Test-SpherewrightStagedMcp.ps1') -Destination (Join-Path $packageRoot 'Test-SpherewrightStagedMcp.ps1')
     Copy-Item -LiteralPath (Join-Path $repoRoot 'scripts\SpherewrightInstallTransaction.ps1') -Destination (Join-Path $packageRoot 'SpherewrightInstallTransaction.ps1')
     Copy-Item -LiteralPath (Join-Path $repoRoot 'scripts\SpherewrightInstallRecovery.ps1') -Destination (Join-Path $packageRoot 'SpherewrightInstallRecovery.ps1')
-    Copy-Item -LiteralPath (Join-Path $repoRoot 'docs\release-installation.md') -Destination (Join-Path $packageRoot 'INSTALL.md')
-    Copy-Item -LiteralPath (Join-Path $repoRoot 'docs\installation-recovery.md') -Destination (Join-Path $packageRoot 'RECOVERY.md')
+    foreach ($guide in @(
+        @{source='docs/release-installation.md';target='INSTALL.md'},
+        @{source='docs/installation-recovery.md';target='RECOVERY.md'},
+        @{source='docs/release-installation.zh-CN.md';target='release-installation.zh-CN.md'},
+        @{source='docs/installation-recovery.zh-CN.md';target='installation-recovery.zh-CN.md'},
+        @{source='docs/agent-playbook.zh-CN.md';target='agent-playbook.zh-CN.md'}
+    )) {
+        $text = [IO.File]::ReadAllText((Join-Path $repoRoot $guide.source))
+        $packagedText = Convert-PackagedGuideLinks -Text $text -SourcePath $guide.source
+        [IO.File]::WriteAllText((Join-Path $packageRoot $guide.target), $packagedText, [Text.UTF8Encoding]::new($false))
+    }
     Copy-Item -LiteralPath (Join-Path $repoRoot 'docs\agent-playbook.md') -Destination (Join-Path $packageRoot 'AGENT-PLAYBOOK.md')
     Copy-Item -LiteralPath (Join-Path $repoRoot 'LICENSE') -Destination (Join-Path $packageRoot 'LICENSE')
+    Copy-Item -LiteralPath (Join-Path $repoRoot 'LICENSE.zh-CN.md') -Destination (Join-Path $packageRoot 'LICENSE.zh-CN.md')
 
     $manifestFiles = @(
         Get-ChildItem -LiteralPath $packageRoot -File -Recurse |

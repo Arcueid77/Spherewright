@@ -95,7 +95,9 @@ foreach ($file in @($iconPath, $readmeTemplatePath, $changelogPath)) {
 
 $sourceLicensePath = Join-Path $resolvedSourceRoot 'LICENSE'
 $sourcePlaybookPath = Join-Path $resolvedSourceRoot 'docs\agent-playbook.md'
-foreach ($file in @($sourceLicensePath, $sourcePlaybookPath)) {
+$sourceChineseLicensePath = Join-Path $resolvedSourceRoot 'LICENSE.zh-CN.md'
+$sourceChinesePlaybookPath = Join-Path $resolvedSourceRoot 'docs\agent-playbook.zh-CN.md'
+foreach ($file in @($sourceLicensePath, $sourcePlaybookPath, $sourceChineseLicensePath, $sourceChinesePlaybookPath)) {
     if (-not (Test-Path -LiteralPath $file -PathType Leaf)) {
         throw "Required source release file was not found: $file"
     }
@@ -119,6 +121,8 @@ try {
     Copy-Item -LiteralPath $changelogPath -Destination (Join-Path $stagingRoot 'CHANGELOG.md')
     Copy-Item -LiteralPath $sourceLicensePath -Destination (Join-Path $stagingRoot 'LICENSE')
     Copy-Item -LiteralPath $sourcePlaybookPath -Destination (Join-Path $stagingRoot 'AGENT-PLAYBOOK.md')
+    Copy-Item -LiteralPath $sourceChinesePlaybookPath -Destination (Join-Path $stagingRoot 'agent-playbook.zh-CN.md')
+    Copy-Item -LiteralPath $sourceChineseLicensePath -Destination (Join-Path $stagingRoot 'LICENSE.zh-CN.md')
 
     $readme = [IO.File]::ReadAllText($readmeTemplatePath)
     $readme = $readme.Replace('{{VERSION}}', $Version).Replace('{{TEAM_NAME}}', $TeamName)

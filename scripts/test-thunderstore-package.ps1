@@ -8,7 +8,8 @@ param(
     [ValidatePattern('^[A-Za-z0-9_]+$')]
     [string]$TeamName = 'Arcueid_77',
     [string]$PackageName = 'Spherewright',
-    [string]$ExpectedSourceCommit
+    [string]$ExpectedSourceCommit,
+    [switch]$RequireBilingualGuides
 )
 
 Set-StrictMode -Version Latest
@@ -101,6 +102,31 @@ try {
         throw 'Spherewright integrity manifest is missing.'
     }
     $sourceManifest = Get-Content -LiteralPath $sourceManifestPath -Raw | ConvertFrom-Json
+    if ($RequireBilingualGuides) {
+        foreach ($guide in @('agent-playbook.zh-CN.md', 'LICENSE.zh-CN.md')) {
+            $guidePath = Join-Path $smokeRoot $guide
+            if (-not (Test-Path -LiteralPath $guidePath -PathType Leaf) -or
+                [IO.File]::ReadAllText($guidePath) -notmatch '[\p{IsCJKUnifiedIdeographs}]' -or
+                @($sourceManifest.files | Where-Object { $_.path -ceq $guide }).Count -ne 1) {
+                throw "A required complete Chinese guide or its integrity entry is missing: $guide"
+            }
+        }
+        foreach ($markdown in Get-ChildItem -LiteralPath $smokeRoot -File -Filter '*.md') {
+            $fence = $false
+            foreach ($line in ([IO.File]::ReadAllText($markdown.FullName) -split '\r?\n')) {
+                if ($line -match '^\s*(?:```|~~~)') { $fence = -not $fence; continue }
+                if ($fence) { continue }
+                foreach ($link in [regex]::Matches($line, '\]\(([^)\r\n]+)\)')) {
+                    $href = $link.Groups[1].Value.Trim().Trim('<','>')
+                    if ($href -match '^(?:[A-Za-z][A-Za-z0-9+.-]*:|#)') { continue }
+                    $relative = [Uri]::UnescapeDataString(($href -split '[#?]',2)[0])
+                    $target = [IO.Path]::GetFullPath((Join-Path $smokeRoot $relative))
+                    if (-not $target.StartsWith($smokeRoot.TrimEnd([IO.Path]::DirectorySeparatorChar)+[IO.Path]::DirectorySeparatorChar,[StringComparison]::OrdinalIgnoreCase) -or
+                        -not (Test-Path -LiteralPath $target)) { throw "Broken or escaping packaged documentation link in $($markdown.Name)." }
+                }
+            }
+        }
+    }
     if (-not [string]::Equals([string]$sourceManifest.version, $ExpectedVersion, [StringComparison]::Ordinal)) {
         throw "Unexpected Spherewright integrity-manifest version: $($sourceManifest.version)"
     }
