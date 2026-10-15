@@ -58,9 +58,10 @@ Prepare 不接受确认。展示具体披露并获得之后明确回复，再 co
 - 直连 Bridge 脚本在同一受保护调用上下文保留 prepare/commit，不能打印、持久化 `planToken` 用于跨进程。普通 MCP prepare/commit 可按协议传递计划。只有证明零接受、零进行中操作，才能丢弃孤儿计划；可能接受就必须对账原 action。
 - 使用正确哈希域。研究采用 `selectionStateHash` 的 `expectedSelectionStateHash`，不是通用 progression `stateHash`。Sorter-filter 使用根 `configurationStateHash`，storage-capacity 使用完整 `stateHash`。诊断过期前先检查实际 payload 和哈希来源。
 - 现有 Lab 调用器如 `Invoke-SpherewrightNormalAction` 必须同时绑定 commit 的 `sessionId`、`planetId`，不能临时手写新 payload。同阶段两次拒绝 commit 要停止调用器诊断；格式错误、响应丢失不证明拒绝。
-- 轮询原 action 至终态：**Host 超时不等于完成**。核对 terminal/succeeded、身份、真实 ID、材料与增产点、双向边。可能接受后的丢响应、观察错误、格式断言、超时都冻结新写，不能换 key 重放。
+- 每次 `spherewright_commit_*` 后，用 `spherewright_get_action_result` 轮询返回的每个原 `actionId`，直到 `terminal=true`。接受 commit 或 Host 超时均不等于完成。同步 commit 没有 `actionId` 时使用其规定终态再新读。核对 terminal/succeeded、身份、真实 ID、材料与增产点、双向边。可能接受后的丢响应、观察错误、格式断言、超时都冻结新写，不能换 key 重放。
 - 普通 configure 计划的 `targetObjectId` 可选，返回绑定不是请求哈希回显。保留明确的模式专用检查。分拣器配置返回请求绑定的 `expectedStateHash`；`plannedSorterFilterItemId`、可空 target 不是配置必需字段，配置终态 `targetObjectIds` 可为空。独立验证时复用当前 Core 规范哈希，不编造回显，也不因调用器断言失败重放接受操作。
 - 一个游戏写入者持有当前有限声明。交接要求原写入者停止、无尚未终态的操作或未对账结果及明确单写者交接。保留完整受保护意图、回执覆盖，包括未匹配 commit 意图。
+- 格式化可选观察前，先保留 `actionId` 及其终态。普通动作回执可按已配置保留窗从观察到完成时起过期；活动、未知/恢复证据及检查点绑定飞行受保护。保留证据达到容量时，在接受前拒绝新的普通 commit，不能驱逐旧证据腾位。缺少旧回执不证明未执行。不能假定全部 DTO 都有 `capturedAtGameTick` 或编造字段；报告/脚本错误不是动作失败，应对账而不重放。保存后新查 `lastOwnedSaveGameTick`、`ownedSaveState`、`writeHealth` 和受保护恢复可用性。
 - 执行前固定结果、范围、成功前缀、请求、时间、写预算、完成和停止条件。新 Lab 窗口按配置默认 20，既有十写声明保留上限和计数。所需正常保存在同预算内预留。到限冻结 commit、独立对账审计后明确重开。两次相似原生失败停止候选家族，做结构重设计。
 - `wholePlanExecutable=false` 的只读结果不可执行。既有有限授权可覆盖另行批准的必要工作，但每操作仍需原生 prepare 和精确预算；不授权未批准恢复、另一个世界或正式发布。
 - 采样保留原游戏 tick 截止、墙时截止及请求上限。之后零产出窗不证明此前无产出。保留失败窗、缺口、调用器时间和原证据，不自动扩预算、重启或追认通过。
@@ -75,6 +76,8 @@ Prepare 不接受确认。展示具体披露并获得之后明确回复，再 co
 保留 `mechaResearchItemBuffer`、`autoManageResearchItems` 和前后 progression。每物品 **3600 点** 不是额外背包栈。正常管理可退回整件，余点不能向上取整；这不允许接受任意库存增加。数量、触发、操作边界不明就停止新写。
 
 研究完成前采集 `completionItemRewards`（最多 32 条）。它不是交付回执；null 或缺失是未知，空列表是已观察无奖励。保留顺序和重复条目，对账 `unlockTick`、完整库存与增产点、缓冲和容量。交付未知、溢出或多个可能来源使增量未解决。绝不重放完成操作。奖励不是手工或生产，不得创建、补记首次生产 Journal 事件。
+
+所需施工科技排在无关研究之后时，先检查完整原生队列与前置条件。公布支持时，`prepare_select_research(prioritizeQueued=true)` 可经原生队列业务路径，把已排队、前置完成且不在队首的指定科技移至前端。其余顺序、已上传进度和库存保持；暂停、重复或不合格队列拒绝。只 commit 一次，轮询原 action 到终态，保留即时 `researchQueueReadback`，再新读研究及材料要求。重排不完成研究、不供应物品，不能清队列或写科技字段绕过阻塞。
 
 核对运行时物品身份：请求 `itemId`、返回 `itemName`、`get_recipe_catalog` 输入输出必须一致；否则丢弃诊断，不能为错误物料 commit 供给修改。
 
@@ -123,6 +126,10 @@ Prepare 不接受确认。展示具体披露并获得之后明确回复，再 co
 <a id="construction-and-production-lines"></a>
 ## 建造与产线
 
+安装的 `prepare_build` 公布 `initialSorterFilterItemId` 时，在新普通 2011/2012 分拣器连接混料源**之前**设置它。要求 `plannedSorterFilterItemId` 精确等于请求的非零过滤；缺失或不符不是获准计划，应安装匹配 Plugin/MCP 后新 prepare，不能 commit。零明确表示无过滤。原生预建造在第一次拾取前已携带过滤，完成时验证过滤/标记及两端。后配置不能撤销已送入的污染。旧服务没有该参数时，必须在独立过滤动作完成期间证明源为空或隔离；不能假定能赢过活跃混料带的时序。过滤也不能消除上游其他物品的队首阻塞，应诊断或建设真实专用供应后测下游交付。
+
+合法仓储位置不是完整模块方案。优先完整有限模块原生预检；普通增量施工也须在消耗建筑前声明进出路线、过滤、电力和完整材料预算。新端点一旦可读取，就验证剩余连接。路线失败时先对账、复用已建对象，再提另一仓；不能隐藏对象、清库存或把更多模块当作吞吐。
+
 建造终态成功与无人机空闲是不同事实。Working 计所有存活非空闲无人机。先核对返回对象、材料、连接；下一步需空闲时使用有界读取，例如最多 20 次、间隔 500 ms。仅以新哈希继续未提交部分，不能重放完成路线或模块。拆除后 ID 可复用，必须重查物品、姿态、端点。
 
 不能对每次普通建造或保存都强加所有无人机空闲。已有成功终态读回、玩家静止健康且待建、待修目标为零时，返航中能否 commit 仍由原生校验决定。保留初始空闲边界与独立阶段就绪审计。这不允许操作重叠、未知结果或省略哈希。
@@ -141,7 +148,7 @@ Prepare 不接受确认。展示具体披露并获得之后明确回复，再 co
 
 `tankFluidCount` 显式零证明空，null、缺失是未知，空 `buffers` 本身不是零。液体缓冲和标量是同份库存；单次排空不是持续氢汇证明。
 
-Storage-capacity 绑定完整状态：`set-bans` 禁尾部输入，`lock-occupied` 保留已占格，`filter-empty-or-matching` 保留真空或同物品格，`clear-filters` 清保留而非物品。Filter0 不等于空，lock-occupied 不保留空格；公共缓冲不是原生格号。保留精确数量、增产点、拓扑、投影过滤。
+Storage-capacity 绑定完整状态：`set-bans` 禁尾部输入，`lock-occupied` 保留已占格，`filter-empty-or-matching` 保留真空或同物品格，`clear-filters` 清预留而非物品。混合输入开供前先预留容量：filter0 不证明格子为空，lock-occupied 不预留空格。两次成功配置之间的到货可占据预期空间；`storage_configuration_unchanged` 不证明目标预留已存在。新查投影过滤，不能重放相同请求或改用仅配置哈希。公共缓冲不是原生格号，保留精确数量、增产点、拓扑、投影过滤。
 
 若批准有限容量调整，声明移动精确物品数及要恢复的原 bans。Bans 不是全局冻结：TakeItem 向前搜索，全部禁格仍可被普通分拣器取出。转移后重查，若声明恰一保留输出格就证明恰一个匹配投影过滤，保留其他格，仅规划未完成步骤。不能反复移库存或加有限仓储假装持续需求。
 
@@ -175,32 +182,46 @@ Foundry 机器电力采用吸附 `site.machines[].position`，不是 `site.origi
 <a id="bounded-blueprints-and-upgrades-development-subset"></a>
 ## 有限蓝图与升级（开发子集）
 
+当前服务公布 `spherewright_get_foundry_plan` 时，用它检查目标速率、共用上游需求及机器规模。读取 `phase`、`executable`、`remainingChecks`：材料草案不批准选址，也不是可执行施工计划。电力/成本排除运输与供电设施，有限库存不证明持续外供。`planHash` 不能作写 token，材料哈希未变化也不能跳过新 prepare。
+
+工具公布可选 `site` 时，只选一个明确地表原点和有界网格（最多 32 台机器），读取全部吸附位置、原生放置条件、计划内重叠及全案库存缺口。`machine_previews_clear` 只是一 tick 的机器评估，不是已有物流供电的工厂。`assessmentHash` 不能当状态哈希或 commit token。玩家介入、重启后重新评估，每次普通施工新 prepare；不能囤 token 或无界轮询替代网格。
+
+Foundry 或蓝图预检返回 `site.power` 时，读取覆盖、分量预算及全部 blocker。它保留现有完整工作/待机/当前基础需求、充电、新覆盖但无电的消费者及外送，并计计划负载；新增发电仅给原生风机信用。`unavailable` 或边界/歧义是未知，不是剩余电力。独立捕获哈希及 `base_load_budget_ready_at_capture` 仅供判断，不是施工 token 或持续燃料/输出证明；仍须原生检查及建成对象的实际电力读回。
+
+`get_blueprint_builds` 不给 buildId 时仅返回简短汇总。续建前指定一个精确 buildId，取得新世界对账与 stateHash。普通保存/重启丢失旧 plan token；使用 `prepare_blueprint_build(resumeBuildId=...)` 和新进度/玩家哈希，不替换代码或选址。完成对象绝不重提；实体、连接、回执变化或缺失，游戏 tick 过旧或提交结果未知均阻塞续建。不能重放整张蓝图，也不能从外观相似推断安全。
+
 蓝图检查、导出仅为数据，`executable=false`。导出最多 64 个、64 m 内明确完成对象；检查限代码 256 KiB、压缩 128 KiB、负载 1 MiB、64 对象、8 区域。未知内容、设置拒绝，元数据不可信。复制 storageConfiguration，不复制货物。检查 `inputEndpointFacingDot/outputEndpointFacingDot`，负值表示背向，不允许绕过 `TooSkew`。
 
 可选选址最多 32 显式对象、闭合内部端、无环依赖，检查完整原生成本、解锁、范围、地形、碰撞、电力。原生 `SnapTropic` 可调整跨回归线网格，返回逐对象姿态需重新批准，对齐不豁免检查。不能重放完成对象，也不能连续循环附近锚点应对重复拒绝。
 
-有限 `prepare_blueprint_build` 绑定代码、选址、评估或精确 `resumeBuildId`、新进度、新玩家哈希和最多 32 提交。每 tick 最多一个就绪对象，正常材料、无人机。读逐对象状态、回执，批次暂停不是全完成。取消只停未来提交。受保护预写进度在恢复前对账身份、材料、配置、双向和自由端拓扑，重启不恢复 token、不重放模块。未知隔离写入。
+有限 `prepare_blueprint_build` 绑定完全相同的代码、选址、评估或精确 `resumeBuildId`、新进度、新玩家哈希，以及显式 1..32 的 `maximumObjectsToSubmit`。使用一个 UUID 键及时 commit，轮询原 `actionId` 至终态，保留 `buildId` 和逐对象回执。每 tick 最多提交一个依赖已就绪对象，使用正常材料、无人机。批次暂停不是全完成；只续建未完成部分，绝不能重放整张蓝图。取消只停未来提交。受保护预写进度在恢复前对账身份、材料、配置、双向和自由端拓扑；重启不恢复 token，也不允许重提完成对象。未知隔离写入。
 
-Foundry 材料读取不可执行。机器网格通过不含物流、电力设施和持续供应。显式蓝图组合绑定原 foundryIntent、精确阶段数、全成本依赖、逐物品流、自由边界、独立原生电力和额定运输。`transportCapacityVerified` 仍 false，阻塞分配可低于需求。基础 2011/2012 跨度额定不是实测吞吐，堆叠 2013 阻塞此组合。相同代码、选址、意图、哈希用于既有有限 prepare/commit；恢复不能替意图，剩余电力不重复计完成对象。
+Foundry 材料读取不可执行。机器网格通过不含物流、电力设施和持续供应。显式蓝图组合绑定原 `foundryIntent`、其带物品/方向/对象索引/原生槽的 `boundaryPorts`、精确阶段数、全成本依赖、逐物品流和自由边界。读取 `construction.canPrepare`、全部 blocker、`blueprintSite.power` 中的独立原生电力及额定 `transportBudget`。`transportCapacityVerified` 仍 false，阻塞分配可低于需求。基础 2011/2012 跨度额定不是实测吞吐，堆叠 2013 阻塞此组合。将相同代码、选址、`blueprintSite.assessmentHash`、意图，以及作为 `expectedFoundryPlanHash` 的 `construction.planHash` 用于既有有限 prepare/commit；完整图、成本、电力、运输规则重新检查。恢复只提供 `resumeBuildId` 与新的进度/玩家哈希，不能替换代码、选址或意图，剩余电力不重复计完成对象。
 
 升级仅公布的制造台更高档或普通 2011→2012，需一整台目标设备和返还空间。分拣器两条真实连接必须双向，不能只看缓存目标。原生 STT 不是游戏 tick：`max(10000,inserterSttRaw*span)`；基础理想周期 `max(4,ceil(2*STT/10000))` 是额定，不是实测。制造台进度重置，分拣器比例缩放。保留即时 `upgradeReadback` 和物品 delta，新读取实际结果 ID、产线、电力、流量。不能重放成功建造修调用器断言。
+
+分拣器时序按档位区分：`inserter` 的 `progressRequired` 是原生 STT，**不是已过游戏 tick**。与同物品目录的 `inserterSttRaw`、`inserterGrade` 对照；支持跨度 1–3 的原生 STT 为 `max(10000, inserterSttRaw * span)`。已验证目录中，普通 2011 基础值 200000、跨度 3 得 600000；高速 2012 基础值 100000、跨度 3 得 300000。不能把高速枚举套普通分拣器，也不能仅以此值诊断停滞。基本单物品档满电理想周期为 `max(4, ceil(2 * STT / 10000))` 游戏 tick（普通跨度 3 为 120），不是实测吞吐。缺料、输出阻塞、电力均可降低实际速率；仍须核对原生终态、材料、精确双向端点、过滤、实际功率和流量。调用器后检在原生成功后失败时，保留原 action 并唯一读回完成对象；**绝不能重放成功建造**来修复断言。
 
 拆除仅公布子集。空默认 2101 要全部 30 原生格为空、默认，无堆叠、连接、预建造、缓存引用，不自动重建。空 2001 链头最多 16 带、512 格，完整空独立路且无外部引用。先正常断开外部分拣器，不能移中段或相连尾。原生返还、幸存对象证明仍必需。
 
 <a id="governor-measurement-and-acceptance"></a>
 ## Governor 测量与验收
 
-只读 Governor 对明确来源比较实测需求、缺口和成本排除项。星球速率要求相关生产者完整归属。采样前选定周期：默认 600 或 3600、原生六 tick 对齐计数；要求匹配回显和三个不同独立窗口。源、会话、观察物品范围、周期变化清历史。
+只读 `spherewright_get_governor_plan` 对 1–32 个明确的新读来源对象比较实测需求、缺口和成本排除项。星球速率要求相关生产者完整归属。采样前选定周期：默认 600 或 3600、原生六 tick 对齐计数；要求匹配回显及三个不同、独立且非零的窗口。验收要求稳定非零实测基线、预声明目标/容差及至少十游戏分钟（≥36000 合格游戏 tick）；仅返回提案不验收该长窗。源、会话、观察物品范围、周期变化清历史。
 
 仅规划目标变化可请求实测两倍。锁前只重新定价目标速率保留不变来源历史，但须重编译、新核对新 proposalHash，在任何扩建写入前锁定。基线不稳定仍不稳定，不扩大容差或重试至好看样本。已锁目标、容差、规模不可改，原目标、容差、规模保持不可变。
 
-写入前要求持久服务端 `validationBaselineProposalHash`，同源、同 revision、3600 tick 内。禁止客户历史速率或编辑归档。可选并行蓝图以目标减就绪非零实测基线，使用相同 Foundry 意图、哈希，不计外部源汇设施。
+写入前要求持久服务端 `validationBaselineProposalHash`，同源、同 revision、3600 tick 内。禁止客户历史速率或编辑归档。
 
-执行、采样保留同一锁。只有健康计划受保护恢复、相同受管身份、版本、Journal、原 ticket 下限覆盖锁才可恢复。观察从零重启；存储缺失、损坏或锁前证据是阻塞，不允许扩建后重新锁。
+Governor 公布可选 `parallelExpansionBlueprint` 时，提供一个明确蓝图代码、选址与自由边界端口，以比较新增产线。仅就绪非零基线可比较：速率为**目标减实测基线**，绝不是目标减缺料瞬时速率。读取 `parallelExpansion.intent`、完整 Foundry `plan`、所有施工/电力/运输 blocker 及各方案 `costScope`。全部显式模块对象均计成本；未规划外部供给/输出连接及额外发电仍排除在成本外，并非免费。就绪比较仍只读：扩建前锁 Governor 声明，再用相同代码、选址、返回意图与施工哈希走既有新鲜 `prepare_blueprint_build`。部分完成、取消、重启保留同一有限 buildId，不重放模块。扩建后吞吐观察省略可选布局，保留锁定声明哈希，新读完整扩建来源；重启清空全部观察信用，持久锁定声明只能经覆盖它的受保护计划恢复来恢复。
+
+执行、采样保留同一锁。只有健康计划受保护恢复、相同受管身份、版本、Journal、原 ticket 下限覆盖锁才可恢复。重启总将连续观察清零；`durable=false` 描述采样，不否定持久声明。存储缺失、损坏或锁前证据是阻塞，不允许扩建后重新锁。
 
 计锁定原生窗口连续并集，重复、墙时不加信用。缺口、无效速率、源变更、采样健康未知清进度。Governor throughputValidation.resetReason 是上次重置历史，不是当前失败标志。一起读当前速率、区间、容差、归属、健康、连续 tick；重复文本不是不同独立失败窗口。采样缺口不能恢复旧信用。
 
-`currentWindow` 与库存变化区间不同。长周期改善分辨率，不允许放松 10%、改进行中实验或重解释失败。连续 ≥36000 合格 tick，加要求时精确两倍、≤10%，仅为吞吐证据，不是整体平衡或逐 tick 健康。保留失败窗，源守恒、自动供给、真实运输、保存恢复另证。
+`targetChainFindings` 具备目标诊断、所选对象或上游路径证据；`unattributedPlanetFindingCount` 保留其他星球发现，不能假装它们已解释选定产线，也不能丢弃警告或声称矿已修好。目标链发现及真实供给速率缺口仍须诊断。`currentWindow` 是生产区间，所选缓冲变化有独立库存观察区间，不能改称生产窗。600 tick 计数每物品对应每分钟 6，3600 tick 对应每分钟 1。诊断仍按原 600 tick 保持新鲜，实测电力、目标链发现、归属与写健康仍是验收门。
+
+长周期改善分辨率，不允许放松 10%、改进行中实验或重解释失败。连续 ≥36000 合格 tick，加要求时精确两倍、≤10%，仅为吞吐证据，不是整体平衡或逐 tick 健康。保留失败窗，源守恒、自动供给、真实运输、保存恢复另证。
 
 `output_blocked` 的 `output_buffer_capacity` 是下一批准入阈值，不是物理仓储容量：`101-q`、`9*q+1`、`19*q+1`。短窗例外要求停止、满电；速率、电力、容量未知不合格，其他情形仍需完整周期。无诊断不证明持续供应，不能清库存抹诊断。
 
@@ -210,6 +231,10 @@ Foundry 材料读取不可执行。机器网格通过不含物流、电力设施
 ### 原生自由地面传送带选择
 
 默认 `native_grid` 适合网格对齐直线末段。显式 `beltPathMode=native_geodesic` 选择一个原生地面路径，不是自动寻路。要求 `plannedBeltPath.routingMode` 和完整原生路径检查，不修改玩家命令。本身不启用已有带覆盖，不证明两个分拣器连接。不能省端点 ID 绕 `belt_path_existing_overlap`，原生覆盖复用不自动修既有世界。
+
+DSP **经度网格间距随纬度变化**。固定赤道行列公式不是权威 `native_grid` 路径；原生吸附、转折、去重会改变点位及数量。将有界纸面候选与完整新鲜 `plannedPath` 和 NEW 预算对照；不匹配必须拒绝，不能忽略意外点。占用拒绝不证明完整原生放置检查已执行。`OutOfReach` 需要单独检查的短距离接近和新建造 prepare，不能扩大距离或重用 token。即使 `shoreRisk=not_detected` 仍可含浅水样本；选择步行目标前核实际地面/水面证据。合法带路或纸面三格间隙均不证明最终分拣器连接。
+
+**自由端点在路径生成前先吸附，包括 `native_geodesic`。** 请求坐标的无碰撞球面插值不是原生路径。纸面占用、点数、材料、连接估算前先考虑两端吸附，再核完整新鲜 `plannedPath` 与预算。被拒 prepare 没有返回路径时，不能编造吸附坐标或假定报错点索引对应纸面点。退役被拒候选；不能重试未变化目标、移除端点绑定或改已有产线绕过占用。
 
 仅源覆盖的原生 2001–2003 子集要求同档、零倾角、自由输出、开放路径、最多一条输入带、新 ID 与哈希、唯一中心、有界旧货物证明及至少两 NEW。零成本、不移除锚点留在原生检查、创建中。此仅源路径拒绝终点覆盖、占用输入合并、替换或升级锚点、高架及闭路。创建须同帧保留完整旧货物、路径，只允许原自由输出变为与新预建造双向边。地面 2001 空终点复用另需不同完整空开路、自由输入、精确 `destinationBindingMode=non_removing_belt_cover` 和 `empty_open_path_native_geometry_v1` 回显；两完整旧路、所有旧边仍绑定。无人机完成后有序成员必须恰为源 + NEW + 终点，无额外实体或旧边丢失。唯一带供源例外是单独证明无电空钛矿机，不允许泛化带供给、带货拼接。源保留要求整路原生旋转和碰撞体证明，不是任意四元数容忍。证明未知隔离写入，绝不允许重放。
 
@@ -222,7 +247,7 @@ Foundry 材料读取不可执行。机器网格通过不含物流、电力设施
 <a id="frozen-geometry-and-whole-route-read-only-qualification"></a>
 ### 冻结几何与整路只读资格
 
-以完整 factoryGeometryHash 冻结最多 256 带符号对象、64 地形点，纳入预建造、扩展边界。已建带需 `native_runtime_belt_collider_world_bounds`。可选最多 16 原生段、每段 64 点、总 1024 点，给精确完整网格、高架点，不查占用、原生条件。要求有序无 token 回显，不能以估算 geodesic 替代。
+使用 `inspect_factory_entity.geometry` 冻结最多 256 个明确有符号对象/64 地形点，绑定完整 `factoryGeometryHash`，包含预建造及扩张包围。建成带要求 `native_runtime_belt_collider_world_bounds`。可选 `geometry.nativeBeltSegments` 接收最多 16 个明确自由端到自由端的原生网格/高架跨度，长 1.5–30m、显式层级 0..3，每段最多 64 点/共 1024 点。要求完整有序端点/段回显、`read_only_native_belt_segment_points_v1`、`nativeConditionsChecked=false` 与 `executable=false`。这些无 token 读取不检查占用或原生放置；生成失败不能返回部分点，旧组件缺少回显也不允许用估算测地线替代。
 
 端点预览绑定一 NEW2001 跨度、最多两真实端点、普通 2011/2012、过滤、quarter-turn。`plannedBeltQuarterTurns` 是向外槽位姿态：source 朝已有源反向，destination 朝已有终点。适配器已将终点转 180°，不能再转一次。预建造与完成带参考系不同，不能复制 quarter-turn 数；仍必须新查原生角度、跨度、占用、材料。
 
