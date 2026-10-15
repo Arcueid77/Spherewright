@@ -1,68 +1,35 @@
-# Deferred architecture — LAN game validation host
+# Deferred LAN validation-host design
 
-Status: **deferred until the local release workflow is complete and repeatable**.
+[English](remote-validation.md) · [简体中文](remote-validation.zh-CN.md)
 
-Spherewright currently uses the same Windows computer for development, build, DSP runtime, and in-game validation. This keeps current release work focused on ordinary-game observation and action correctness.
+**Status: deferred; no remote host or deployment workflow is implemented or validated by this document.** Local 0.4 acceptance is recorded separately in [validation](validation/v0.4.0.md). It does not establish another-computer use.
 
-## Future topology
-
-```text
-Development computer
-  source / build / automated tests
-        | authenticated SSH + SCP or SMB deployment
-        v
-LAN game-validation computer
-  DSP + BepInEx + Spherewright.Plugin
-  Spherewright.Mcp
-        | local authenticated Named Pipe
-        v
-  Spherewright.Plugin / DSP main thread
-
-Structured test results and sanitized logs
-        ^
-        | authenticated SSH file/result collection
-```
-
-The Named Pipe remains local to the game computer. It must not be exposed over TCP or shared through SMB. `Spherewright.Mcp` runs on the game computer, discovers the runtime descriptor locally, and transports only MCP stdio over the authenticated remote command channel. The bridge token and runtime descriptor stay on the game computer.
-
-## Intended workflow
-
-1. Verify the game computer's DSP version, BepInEx version, and required assembly hashes.
-2. Build against the exact verified game version.
-3. Refuse deployment while DSP is running; never kill the game or overwrite a loaded Plugin.
-4. Copy only Spherewright Plugin/MCP artifacts to a versioned staging location, then install the intended files.
-5. Start DSP in an already logged-in interactive Windows session and wait at the main menu.
-6. Run the same structured release validation suite used locally; do not use Computer Use, visual recognition, or keyboard/mouse macros.
-7. Retrieve only structured results and sanitized Spherewright/BepInEx logs. Do not enumerate, copy, or read save files.
-8. Restore `Safety.AllowWrites=false` after the run.
-
-## Security boundary
-
-- Prefer Windows OpenSSH with key authentication; never place a password, bridge token, or authorization code in scripts or chat.
-- Restrict the firewall rule and remote account to the development computer and required commands.
-- Do not add HTTP/SSE/Streamable HTTP to the Plugin for this purpose.
-- Do not share `%LOCALAPPDATA%\Spherewright\runtime` over the network.
-- Continue accepting only Spherewright-created test sessions and ordinary peaceful 1x non-sandbox worlds.
-- Keep deployment and result collection separate from any save directory.
-
-## Deferred scripts
-
-These are design placeholders only and must not be created until the user resumes this work:
+## Intended topology
 
 ```text
-scripts/remote/prepare-game-host.ps1
-scripts/remote/deploy-game-host.ps1
-scripts/remote/run-validation.ps1
-scripts/remote/collect-evidence.ps1
+Development computer: source, build, automated tests
+    -> authenticated SSH + SCP/SMB artifact deployment
+Game computer: interactive DSP + BepInEx + Plugin + MCP
+    -> local authenticated Named Pipe -> Plugin main-thread executor
+    -> sanitized structured results returned over authenticated SSH
 ```
 
-Before implementation, choose the exact remote transport and interactive-session launch method for the game computer. Remote GUI launch from an SSH service session is not assumed to work; a logged-in user session or an explicitly configured on-demand scheduled task may be required.
+The pipe stays local to the game computer, never TCP/SMB exposed. MCP runs there, discovers its descriptor locally and carries only MCP stdio through the authenticated command channel. Tokens and descriptors remain on that computer.
+
+## Prospective workflow
+
+1. Verify exact DSP/BepInEx versions and native assembly hashes; build against that cohort.
+2. Refuse deployment while DSP is running; never kill it or replace loaded DLLs.
+3. Stage only matching Plugin/MCP artifacts and install the intended version.
+4. Start DSP in an explicitly authorized, already logged-in interactive Windows session and wait at the menu. An SSH service session is not assumed to launch a usable GUI.
+5. Run a separately approved structured validation suite with fresh native/ownership gates, one writer and finite budgets. Use published MCP/Plugin interfaces, not UI recognition or input macros.
+6. Collect only structured results and sanitized logs, separately from save directories. Do not enumerate/copy/read game saves.
+7. Return to observation-only `Safety.AllowWrites=false` under the approved configuration lifecycle.
+
+Use key-authenticated OpenSSH and narrowly scoped account/firewall access. Do not add HTTP/SSE/Streamable HTTP to the Plugin, share `%LOCALAPPDATA%/Spherewright/runtime`, or put credentials in scripts/chat. Any future supported imported copy must first satisfy the same explicit import/owned-primary rules as local use; a path/name is never ownership. The reference acceptance scope remains peaceful, non-sandbox, 1× unless another scope is separately declared.
 
 ## Activation gate
 
-Do not begin this deferred architecture until all of the following are true:
+Future names such as `scripts/remote/prepare-game-host.ps1`, `deploy-game-host.ps1`, `run-validation.ps1` and `collect-evidence.ps1` are design placeholders, not shipped tools.
 
-- The local structured observation and ordinary-action baseline is complete.
-- The complete local release acceptance run is repeatable from a fresh ordinary world.
-- Local evidence collection contains no save reads, secrets, Computer Use, sandbox actions, or unexplained item deltas.
-- The user explicitly asks to resume LAN validation-host work.
+Begin implementation only after the local release workflow is complete/repeatable, a fresh ordinary-world baseline and safe evidence collection are established, the exact transport/interactive-launch method is chosen, and the owner explicitly resumes this separate work. Local evidence must exclude secrets, save-file access, UI macros, sandbox calls and unexplained item changes. This repository maintenance grants no remote deployment or game authority.

@@ -1,83 +1,44 @@
 # Recover an interrupted manual installation
 
-This entry point restores the **captured original payloads**, not the newest
-release. It does not open or repair game saves, choose an installation for you,
-or prove that the captured old installation was healthy. Keep DSP and the MCP
-host stopped. It is separate from protected game-save resume.
+[English](installation-recovery.md) · [简体中文](installation-recovery.zh-CN.md)
 
-Preserve the pending marker, both operation directories, their progress records
-and backups. Do not remove the marker to bypass the startup refusal. Use the
-explicit operation ID and Plugin/MCP destinations from the failed installation;
-do not choose a directory merely because its timestamp is newest.
+This explicit operation restores the **captured original installation payloads**. It does not select a newer release, handle game saves or prove the old installation was healthy. Stop DSP and the MCP host first. Game-save protected resume is a separate interface.
 
-The manual package's `recover-install.ps1` defaults to a read-only preview:
+Preserve the pending marker, both exact operation directories, progress records and original backups. Use the failed installation's explicit operation ID and destinations; a newest timestamp is not target selection.
+
+## Preview, then explicitly restore
+
+The packaged `recover-install.ps1` defaults to read-only preview:
 
 ```powershell
-./recover-install.ps1 -PluginDestination '<BepInEx/plugins/Spherewright>' `
-  -McpDestination '<the exact MCP installation directory>' `
-  -OperationId '<the failed installation operation ID>'
+./recover-install.ps1 -PluginDestination '<exact Plugin destination>' `
+  -McpDestination '<exact MCP destination>' `
+  -OperationId '<failed installation operation ID>'
 ```
 
-Replace the placeholders with the exact failed operation's local values. If
-preview passes, inspect its operation ID and `evidenceHash`. Explicit restoration
-requires that hash:
+Replace placeholders locally with that exact operation's values. Inspect the returned ID and fresh `evidenceHash`. Explicit restoration binds that evidence:
 
 ```powershell
-./recover-install.ps1 -PluginDestination '<BepInEx/plugins/Spherewright>' `
-  -McpDestination '<the exact MCP installation directory>' `
-  -OperationId '<the same failed operation ID>' `
-  -RestoreOriginal -ExpectedEvidenceHash '<the fresh preview evidence hash>'
+./recover-install.ps1 -PluginDestination '<same Plugin destination>' `
+  -McpDestination '<same MCP destination>' `
+  -OperationId '<same operation ID>' `
+  -RestoreOriginal -ExpectedEvidenceHash '<fresh preview evidence hash>'
 ```
 
-Each call acquires both target locks and checks the exact marker-bound stage or
-archive on each side. It requires matching immutable records, complete original
-backups, recognized live file hashes, unchanged `runtime-handoff`, and no reparse
-points or unexpected payload files. Different progress phases can be a normal
-consequence of interruption between sequential record writes; different
-identities or original snapshots are not. The preview hash binds both actual
-record files and the current evidence. A changed hash requires a new preview,
-not forced reuse of the earlier command.
+Each call acquires both target locks and checks the marker-bound stage/archive, matching immutable records, complete backups, recognized live hashes and unchanged `runtime-handoff`. Reparse points and unexpected payload files are refused. Sequential progress records can differ by an interruption phase; different identities or original snapshots are not acceptable.
 
-Restoration first withholds any live main Plugin DLL, including an older binary
-without a startup guard. It restores other Plugin files and MCP, verifies those
-original payloads, then restores the main DLL last. It only removes its own
-pending marker after both terminal records and the final original payloads have
-been verified. Previously absent files remain absent. Displaced files and old
-backups remain as evidence; newly created empty ancestor directories may remain.
+The preview hash binds both actual records and current evidence. If evidence changes, obtain a fresh preview; never force reuse of an old hash.
 
-A failed restoration preserves the marker/evidence and attempts to withhold the
-main DLL again. If that withholding also fails, the error reports it. Do not
-blindly replay a previous restore command; inspect the failure and obtain fresh
-evidence. The tool does not automatically retry, scan other backups, repair
-malformed records or overwrite files with unknown hashes. Truncated records,
-incomplete backups or unexplained file changes require separate investigation.
+## Restoration and failure handling
 
-## Compatibility and validation boundary
+Restoration withholds the live main Plugin DLL, restores and verifies other Plugin files and MCP, then restores the main DLL last. Only verified final original payloads and both terminal records permit removal of this operation's pending marker. Previously absent files remain absent. Displaced files/backups remain evidence; newly created empty ancestor directories may remain.
 
-Only the manual package's supported target layout is covered, not arbitrary Mod
-Manager layouts. Explicit recovery may acquire an abandoned installation mutex
-and then revalidate everything; ordinary installation and Plugin startup still
-refuse an abandoned lock. Recovery is an explicit operation, not an automatic
-startup behavior.
+Failure retains the marker/evidence and attempts to withhold the main DLL again, reporting any withholding failure. Do not blindly replay a failed restore. Investigate and obtain fresh evidence. The tool does not automatically retry, scan unrelated backups, repair malformed records or overwrite unknown hashes. Truncation, incomplete backups and unexplained file changes require investigation.
 
-The new Plugin's pending-marker gate does not exist in old binaries. Moving an
-old main DLL out of the scan tree cannot stop one that was already loaded.
-There is no claim of atomic cross-volume upgrades, protection from all hardware
-failures, or universal recovery of partially written evidence. Local synthetic
-tests, source builds, cold deployment and real-package validation are separate
-evidence levels; consult the repository's `docs/current-status.md` before
-treating an implementation as live-validated.
+## Scope and path budget
 
-The installer and recovery preview budget the complete future paths, including
-stage/archive roots, backups and per-attempt recovery evidence, before writes.
-For compatibility across supported PowerShell hosts they conservatively require
-file paths of at most 259 UTF-16 code units and directory paths of at most 247.
-These are product compatibility limits, not a claim that all Windows APIs share
-the same limit; see [Microsoft's path-length documentation](https://learn.microsoft.com/en-us/windows/win32/fileio/maximum-file-path-limitation).
-Shortening only the live destination may not be sufficient: a path-budget rejection identifies
-the generated path that exceeds the budget. For a new installation, choose a
-shorter supported target and rerun preflight. For an already interrupted
-installation, keep the exact targets, marker and evidence unchanged and seek
-review; do not move its evidence tree or edit recorded paths to bypass refusal.
-The tool does not enable system long-path settings or rewrite paths to extended
-namespace syntax. Compact evidence names alone are not proof of safe recovery.
+Only the supported manual-package target layout is covered. Explicit recovery may acquire an abandoned installation mutex and then revalidate; ordinary install and Plugin startup still refuse an abandoned lock. A new startup gate cannot stop an older Plugin already loaded in memory.
+
+The complete future stage/archive, backup and per-attempt evidence paths are budgeted before writes. File paths are limited to 259 UTF-16 code units and directories to 247 for supported PowerShell compatibility. These are product limits, not universal Windows limits. New installations can choose shorter destinations and rerun preflight. For interrupted installs, preserve exact targets/marker/evidence and seek review; do not move evidence, edit recorded paths or enable extended-path syntax to bypass refusal.
+
+Atomic cross-volume upgrades, universal hardware-failure protection and partially written-record recovery are not claimed. Synthetic tests, source builds, package checks and live deployment are different evidence levels; [validation](validation/v0.4.0.md) states what was actually accepted. Real installation transaction-crash recovery remains unvalidated.

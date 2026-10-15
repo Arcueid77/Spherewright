@@ -1,39 +1,27 @@
-# Installation startup guard — runtime boundary
+# Installation startup guard research
 
-2026-09-27; source-level and offline verification, not a cold-deployed result.
+[English](installation-startup-guard.md) | [简体中文](installation-startup-guard.zh-CN.md)
 
-The current reference `BepInEx.dll` has assembly version `5.4.17.0` and SHA-256
-`DC1CB6B58B962BDA5AAA1D6B5F9AE14EC174F61836A1A1F96C1A040C7E8381F7`.
-Read-only inspection of `BepInEx.Paths` confirms the public static
-`BepInExRootPath` getter. `SetExecutablePath` derives that root from its explicit
-override or the game's `BepInEx` child, and derives `PluginPath` from its
-`plugins` child. The guard uses that runtime root rather than guessing a Steam
-installation or user directory. No DSP gameplay API or save format changes.
+## Scope and provenance
 
-The target identity is the directory containing the actual
-`typeof(SpherewrightPlugin).Assembly.Location`. The mutex key matches the manual
-installer: `Local\SpherewrightInstallTarget-` followed by uppercase SHA-256 hex
-of UTF-8 encoding of the canonical target path's invariant uppercase form.
-The path must be an existing ordinary directory, including its ancestors.
+This note maintains the runtime/installer exclusion contract implemented by `InstallationStartupGuard`, `SpherewrightPlugin.Awake` and `StopHost`. The [original 2026-09-27 research](https://github.com/AvaloNero/Spherewright/blob/2a7a98d1932c404e3a7abc2c11233d9c0b8780d9/docs/research/installation-startup-guard.md) is historical source/offline evidence; its then-pending deployment text is not the current candidate status. See [final validation](../validation/v0.4.0.md) for accepted local package/runtime evidence and retained limits. No DSP gameplay API or save format is changed by this guard.
 
-`Awake` acquires the target lease before loading configuration or constructing
-`SpherewrightBridgeHost`. While holding it, any pending marker at
-`BepInExRootPath/.spherewright-install-pending.json`, or inability to establish
-its absence, refuses startup. Marker contents cannot self-authorize startup.
-The lease outlives pipe/descriptor cleanup and is released on the Unity main
-thread. This prevents a guard-aware Bridge and cooperating installer from
-owning the same target concurrently; it does not prevent CLR assembly loading.
-An abandoned mutex grants ownership even though `WaitOne` throws, so both
-implementations must release that ownership while refusing the operation.
+## Native/runtime input
 
-Offline tests cover marker refusal, busy and abandoned mutexes, lease lifetime,
-canonical naming, and actual Windows PowerShell/PowerShell 7 child-process
-contention with the .NET 8 linked guard. The full `net472` Plugin builds against
-the current references. Unity Mono interoperability, real loader paths and
-`Awake`/`OnDestroy` behavior still require cold-deployed validation.
+The researched `BepInEx.dll` is version `5.4.17.0`, SHA-256 `DC1CB6B58B962BDA5AAA1D6B5F9AE14EC174F61836A1A1F96C1A040C7E8381F7`. Metadata inspection confirms the public static `BepInEx.Paths.BepInExRootPath` getter. `SetExecutablePath` derives that root from its override or the game's `BepInEx` child and `PluginPath` from `plugins`. The guard uses that runtime root rather than guessing a Steam/user path.
 
-Older Plugin binaries do not contain this gate. Best-effort withholding of the
-live main DLL on unresolved caught failures reduces that exposure but cannot
-retrofit a lock into an already loaded old Plugin or guarantee safety during a
-process kill or a failed withholding operation. No legacy-wide atomic-upgrade,
-automatic crash recovery, or Mod Manager compatibility claim is made.
+## Mutual exclusion and refusal rules
+
+- The installation target is the directory of the actual `typeof(SpherewrightPlugin).Assembly.Location`. Target and BepInEx root, including ancestors, must be existing ordinary directories without reparse points.
+- `GetTargetMutexName` matches the manual installer's `Get-SpherewrightInstallMutexName`: `Local\SpherewrightInstallTarget-` plus uppercase SHA-256 hex of the UTF-8 canonical target path after invariant uppercasing. Canonicalization removes a trailing separator except for a filesystem root.
+- `Awake` acquires the lease before configuration and `SpherewrightBridgeHost` creation. A busy target refuses startup. An abandoned mutex also refuses: `WaitOne` grants ownership even when it throws, so failure cleanup must release that ownership.
+- While holding the lease, any `.spherewright-install-pending.json` at `BepInExRootPath`, including a directory/link or inaccessible/indeterminate result, blocks startup. Only proven absence permits it; marker contents cannot grant authority.
+- `StopHost` disposes the pipe/descriptor host before releasing the guard, including startup failure and `OnDestroy`. Acquisition and disposal run on the same Unity thread because Windows mutex ownership is thread-affine.
+
+This excludes concurrent ownership by a guard-aware Bridge and a cooperating installer. It does not prevent CLR assembly loading before `Awake`, retrofit old Plugin binaries, or authorize automatic repair.
+
+## Validation and remaining limits
+
+`InstallationStartupGuardTests` covers canonical naming, marker refusal, busy/abandoned mutexes, lease lifetime and Windows PowerShell/PowerShell 7 child-process contention with the linked .NET guard. Full `net472` Plugin compilation and real package/runtime checks are distinct from those offline tests.
+
+Best-effort withholding of the main DLL after unresolved caught installer failures reduces old-loader exposure, but cannot guarantee safety after a process kill or withholding failure. The accepted candidate does not establish installation transaction-crash recovery, legacy-wide atomic upgrades, Mod Manager/r2modman interoperability or every Unity Mono loader-path/lifecycle branch. Preserve recovery evidence and require an independently authorized recovery path instead of treating a marker or test result as permission to start.

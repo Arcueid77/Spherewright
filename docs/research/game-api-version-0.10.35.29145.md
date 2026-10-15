@@ -1,18 +1,25 @@
 # DSP 0.10.35.29145 exact-pair persistence research
 
-## Evidence and scope (2026-10-15)
+[English](game-api-version-0.10.35.29145.md) | [简体中文](game-api-version-0.10.35.29145.zh-CN.md)
 
-The fresh native menu reports `0.10.35.29145`, with no world loaded and healthy Bridge connectivity. The protected, unconsumed primary credential records `0.10.35.29131`, saved tick `116215326`, planet `104`, and durable Journal sequence `102`. Its Journal already contains the three original directional transitions. A single default prepare refused with `SESSION_NOT_OWNED`; it produced no plan, action, consumption, Load, Save or commit. The version mismatch is a sufficient default-path refusal; the generic recovery hint does not prove quarantine. See the [original blocker and protected references](https://github.com/AvaloNero/Spherewright-Lab/blob/14478a03c64c550e644c559405c8496b647552e7/releases/v0.4.0/evidence/2026-10-15/owned-primary-29145-blocker.md).
+## Research scope and later acceptance
 
-This research supports a candidate implementation for only **`0.10.35.29131 → 0.10.35.29145`**. It grants no loading permission, downgrade, wildcard, skipped transition, alternate save, LastExit/autosave substitution or retry after consumption. Migration still requires the user's subsequent explicit confirmation of a fresh native prepared disclosure.
+The 2026-10-15 research supports only `0.10.35.29131 → 0.10.35.29145`, preserving exact owned-primary and Journal provenance. The [complete immutable original](https://github.com/AvaloNero/Spherewright/blob/2a7a98d1932c404e3a7abc2c11233d9c0b8780d9/docs/research/game-api-version-0.10.35.29145.md) retains initial default-path refusal, metadata reports, protected references and the then-pending implementation/deployment boundaries. The [Lab blocker record](https://github.com/AvaloNero/Spherewright-Lab/blob/14478a03c64c550e644c559405c8496b647552e7/releases/v0.4.0/evidence/2026-10-15/owned-primary-29145-blocker.md) preserves that historical stage. A generic `SESSION_NOT_OWNED` hint did not itself prove quarantine.
 
-## Native comparison
+Later [final validation](../validation/v0.4.0.md) accepts source `2a7a98d1932c404e3a7abc2c11233d9c0b8780d9` locally on Windows x64 / DSP `0.10.35.29145` / BepInEx `5.4.17.0`, with its indexed native, package and recovery evidence. Do not present the original “candidate not deployed” wording as current status, or promote metadata equality alone into live proof. Frozen candidate archives are unchanged; this documentation pass grants no loading, installation or publication authority.
 
-The retained 29131 `Assembly-CSharp.dll` is SHA-256 `74AC6162CEF8394A6021C8475132CAE4DF4F840871A99E63CC7D2C8297661BC0`; the actual installed 29145 DLL is `B84B60DF5A24947A014801F23B9B85D1E77853F42A331918E2DC85B153E50527`. The old version attribution comes from the exact R1217 capture; the new attribution comes from the native menu, not the stale `Updates/Versions.txt` line.
+## Exact native comparison
 
-Both assemblies were read as metadata with Mono.Cecil. No native game method was executed, no Bridge request was sent, and no ticket, save or progress file was changed. For all eleven methods, the full signature, body byte length, instruction count and per-instruction opcode/operand text are identical:
+| Input | Assembly-CSharp.dll SHA-256 |
+| --- | --- |
+| Retained `0.10.35.29131` reference | `74AC6162CEF8394A6021C8475132CAE4DF4F840871A99E63CC7D2C8297661BC0` |
+| Installed reference attributed by native menu to `0.10.35.29145` | `B84B60DF5A24947A014801F23B9B85D1E77853F42A331918E2DC85B153E50527` |
 
-| Native method | Body bytes | Instructions |
+The old attribution comes from its exact retained capture; the new version came from the native menu rather than a stale `Updates/Versions.txt`. Mono.Cecil read metadata only. The comparison invoked no native method or Bridge request and changed no save, ticket or progress file.
+
+All eleven full signatures, method-body sizes, instruction counts and per-instruction opcode/operand text matched:
+
+| Method | Body bytes | Instructions |
 | --- | ---: | ---: |
 | `GameSave.SaveCurrentGame(string)` | 846 | 290 |
 | `GameSave.SavePath(string)` | 42 | 14 |
@@ -26,23 +33,22 @@ Both assemblies were read as metadata with Mono.Cecil. No native game method was
 | `GalaxyData.ExportRuntimeData(BinaryWriter)` | 284 | 122 |
 | `GalaxyData.ImportRuntimeData(BinaryReader)` | 224 | 101 |
 
-`GameData.CURRENT_PATCH` remains `23`. The unchanged export/import bodies support retaining the researched bounded prefix tuple: header `7`, GameData `13 / patch 23`, GameDesc `10`, Galaxy runtime marker `1`. This inference covers the compared persistence path; it does not establish that every native method, construction interface or gameplay behavior is unchanged.
+`GameData.CURRENT_PATCH=23` and unchanged compared bodies support the bounded tuple inference: native header `7`, GameData `13/patch23`, GameDesc `10`, Galaxy runtime marker `1`. This says nothing universal about construction interfaces or all gameplay behavior. The original comparison report SHA-256 is `7C4D5457CF976FE4E76B994590368CADFFDE267C2E44B82D2BF8D4A9F4534434`; the metadata-only caller SHA-256 is `EA8EB034AD8C0B29F511A83BD2C4A7A14035350F7F8386FB8B95672704BDC71D`. Detailed instruction hashes remain protected evidence, not bundled game code.
 
-The ignored comparison report `.local/native-29131-to-29145-persistence-comparison.json` contains both instruction hashes per method; SHA-256 `7C4D5457CF976FE4E76B994590368CADFFDE267C2E44B82D2BF8D4A9F4534434`. The metadata-only caller `.local/CompareNativePersistence29145.ps1` is `EA8EB034AD8C0B29F511A83BD2C4A7A14035350F7F8386FB8B95672704BDC71D`.
+## Pair-specific recovery and Journal policy
 
-| Version attribution | Protected reference | SHA-256 |
-| --- | --- | --- |
-| R1217 exact retained 29131 reference capture | b42f4943395e43e88e839e052a234f3c:141 | 5D7C54F4794FA4A155879E948D99CFFF609EC6CF2B780719CE57633C33BE1A6F |
-| Fresh 29145 native menu | 9d554a389ef44eb4922c6f37b85d8582:1 | DEA283CBFA438EF22C8A1AEFAC3BFBED4059CB7F2192902ED1FDC567C5444849 |
+`OwnedWorldPrimaryMigrationPolicy` preserves `29104 → 29131` evidence version `5` and adds `29131 → 29145` evidence version `6`, each with its own exact prompt. Legacy version/prompt cannot qualify the new pair. Default resume requires source/runtime equality. Prepare refuses confirmation/tick overrides and discloses the exact primary with complete identity/tick binding without consuming or loading.
 
-## Required product boundary
+Commit requires a subsequent explicit confirmation and matching digest, fresh unchanged active ticket replicas, primary, menu revision and original Journal, held under read-only leases. The durable attempt/tombstone precedes the single native load. After exact identity/planet/tick adoption, append only the next transition; preserve origin, all entries and the previous three transitions. `OwnedWorldVersionCompatibilityPolicy.MaximumDurableTransitions=4`; adoption ticks increase and durable sequences do not decrease. Persist the exact fourth transition before normal primary resave/header proof and new target-version credentials.
 
-The legacy 29104→29131 active-primary disclosure remains evidence version `5`, with its original third-transition prompt. The new 29131→29145 pair uses evidence version `6` and an exact fourth-transition prompt; a legacy version or prompt must not qualify it. Default resume still requires source/runtime version equality. Prepare leaves confirmation false and tick overrides absent, binds the exact primary tick and complete embedded identity, and neither loads nor consumes.
+No fifth transition, skipped link, downgrade, unknown pair, LastExit/autosave substitution, alternate save or replay of a consumed attempt is allowed. A mode-specific migration is not a default resume or permission to rewrite credential dates/history.
 
-After subsequent confirmation, commit must fresh-check matching unmodified active ticket replicas, the exact primary, native menu revision and the complete original Journal under read-only leases. The durable attempt/tombstone precedes the one native Load. Only after owned identity, planet and tick adoption may the exact fourth transition append with increasing adoption tick and nondecreasing durable sequence. Persist that transition while preserving Journal origin, entries and all three earlier transitions before normal primary resave and target-version credential issuance. A fifth transition, skipped link, changed file, unknown pair or interrupted consumption must refuse rather than replay.
+## Completed finite-construction history
 
-The original finite-construction store refuses a differing document version. Fresh read-only evidence confirms its schema `1`, version29131 and one completed five-object build: entities `6622/6624/6623/6626/6625`, last evidence tick `116214800`, file SHA-256 `272F16A91F2BAC347587F2CC175E3791C964D726A89EADC26C8CB749125A3587`. The original Journal SHA is `BE2E2FC8EBF319800B790773B9BE6397D3C31E56EBEB20D38F18C5E96932FF42`; its 102 entries and three transitions, unchanged credential hash and non-quarantined state are bound by root protected reference `eb097306510a4fe0b5243180958e2a87:1`, SHA-256 `5601D56E9F729E826D1B2EBAA6D6060BA53D45982FB5AA06C7F9D27FFC49964A`.
+`BlueprintProgressVersionPolicy.CanRetainCompletedHistory` permits only stored29131→runtime29145 completed history for the same session/Journal identity, with a complete continuous durable Journal, no pending persistence/error and a proven exact transition. The loaded tick must cover every recorded receipt; every build and object must already be completed. `BlueprintBuildStore` validates plan hashes/receipts before returning clones. Partial, unknown, corrupt, other-version or unproven history refuses.
 
-The candidate retention path permits only completed29131 history on29145, after the same owned identity/current session's complete continuous Journal proves its exact durable transition and has no pending persistence/error. The loaded tick must cover all recorded progress. Every existing plan hash and object receipt is validated first; partial, unknown, corrupt, other-version or unproven history still refuses. Reading returns clones and does not rewrite the file or restore execution authority. Only a subsequent ordinary durable update stamps the target document version while retaining every historical record; failed persistence leaves the source file intact. Never clear the store or repeat completed construction. Linked-store tests use synthetic files and test-only session/ACL substitutes; native entity/connection readback and Windows installation checks remain separate requirements.
+Reading neither rewrites the file nor restores a plan token or execution authority. A later ordinary durable update may stamp the target document version while preserving history; failed persistence leaves source evidence intact. Never clear a store or repeat completed construction to resolve a version mismatch. Synthetic linked-store tests do not substitute for native entity/topology readback or Windows installation evidence.
 
-Offline method equality, unit/integration tests and compilation do not establish live migration, saved-header readback, future normal resume, production continuity, package installation or complete 0.4 acceptance. Candidate deployment and a fresh native disclosure are separate steps; actual migration remains gated by later user confirmation.
+## Remaining limits
+
+Method equality and unit/integration tests cannot establish arbitrary-save compatibility, future normal resume, production continuity, all native build paths or cross-computer operation. Accepted same-version recovery and sustained supply have their own final evidence; the whole-candidate result does not erase those limits. Fresh authorization and native gates remain necessary for any later game or migration action.

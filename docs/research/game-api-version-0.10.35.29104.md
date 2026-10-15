@@ -1,16 +1,20 @@
-# DSP 0.10.35.29104 exact-pair recovery research
+# DSP 0.10.35.29104 exact-pair persistence research
 
-## Evidence and scope (2026-09-29)
+[English](game-api-version-0.10.35.29104.md) | [简体中文](game-api-version-0.10.35.29104.zh-CN.md)
 
-Steam updated the installed game while starting it for the next owned-world trial. The running Bridge reported `0.10.35.29104`; the protected, unconsumed primary ticket and its matching runtime/handoff replica still record `0.10.35.29088`, saved tick `77676444`, planet `104`, and durable Journal sequence `91`. The Journal has 91 entries, origin `0.10.34.28529`, and one existing durable `28529 → 29088` transition. A single read-only `reauthorize_expired_primary` prepare on the old installed Plugin returned `SESSION_NOT_OWNED`; no commit, load, save, or ticket consumption occurred.
+## Historical scope
 
-This research authorizes only the additional directional pair **`0.10.35.29088 → 0.10.35.29104`** on the protected expired-primary path. It does not authorize `28529 → 29104` directly, `29057 → 29104`, downgrade, a version wildcard, LastExit, arbitrary saves, or an automatic retry after an interrupted attempt.
+The 2026-09-29 investigation supports only `0.10.35.29088 → 0.10.35.29104` on the researched protected expired-primary path. It is evidence, not loading permission. The [complete immutable original](https://github.com/AvaloNero/Spherewright/blob/2a7a98d1932c404e3a7abc2c11233d9c0b8780d9/docs/research/game-api-version-0.10.35.29104.md) retains the then-current blocker and protected operational context. Save identity, candidate ticks and ticket contents belong in Lab, not this maintained product note.
 
-## Native comparison
+Current accepted local candidate support is DSP `0.10.35.29145`; see [later research](game-api-version-0.10.35.29145.md) and [final validation](../validation/v0.4.0.md). Historical refusal/pending statements do not describe the current installation.
 
-The retained 29088 `Assembly-CSharp.dll` is SHA-256 `C43A484F6ADF8A9E4B956156047070891B46860D5B5C707BA1377B6A2AF25732` (8,020,480 bytes). The installed 29104 DLL is SHA-256 `6C122E5443E6843979B4064050DFCB5E0D75577A0B64F6AE4111290238B33C12` (8,022,016 bytes); Steam's installed build ID is `25599610`. Both assemblies were read as metadata with Mono.Cecil, without invoking their game code. For each method below, the full signature, body byte length, instruction count, and per-instruction opcode/operand text were equal:
+## Metadata comparison
 
-| Native method | Body bytes | Instructions |
+The retained 29088 native reference is 8,020,480 bytes, SHA-256 `C43A484F6ADF8A9E4B956156047070891B46860D5B5C707BA1377B6A2AF25732`. The 29104 reference is 8,022,016 bytes, SHA-256 `6C122E5443E6843979B4064050DFCB5E0D75577A0B64F6AE4111290238B33C12`; recorded Steam build ID was `25599610`.
+
+Mono.Cecil metadata inspection, without native execution, found equal full signatures, body sizes, instruction counts and per-instruction opcode/operand text for:
+
+| Method | Body bytes | Instructions |
 | --- | ---: | ---: |
 | `GameSave.SaveCurrentGame(string)` | 846 | 290 |
 | `GameSave.SavePath(string)` | 42 | 14 |
@@ -24,10 +28,16 @@ The retained 29088 `Assembly-CSharp.dll` is SHA-256 `C43A484F6ADF8A9E4B956156047
 | `GalaxyData.ExportRuntimeData(BinaryWriter)` | 284 | 122 |
 | `GalaxyData.ImportRuntimeData(BinaryReader)` | 224 | 101 |
 
-29104 still declares `GameData.CURRENT_PATCH = 23`. Since the listed export/import bodies are instruction-identical to the previously researched 29088 build, the bounded save tuple remains header `7`, `GameData 13 / patch 23`, `GameDesc 10`, and Galaxy runtime marker `1`. This is a narrow persistence-path comparison, not a claim that every game method or gameplay behavior is unchanged. Rebuilding the Plugin against the exact installed 29104 DLL and testing are separate requirements.
+`GameData.CURRENT_PATCH` remains `23`. Unchanged compared import/export bodies support the narrow tuple inference: header `7`, GameData `13/patch23`, GameDesc `10`, Galaxy runtime marker `1`. This is a persistence-path comparison, not proof that all game methods or behavior are identical. Exact-reference Plugin compilation and native validation remain distinct evidence.
 
-## Required product boundary
+## Maintained recovery boundary
 
-The existing Journal already has a first transition. The second migration must validate that original full Journal and transition at the ticket's durable checkpoint, append only `29088 → 29104` after native adoption, persist it before normal primary saving, then read back the new native save and issue a 29104 ticket. The historical 91 entries, origin, first transition, owned identity, save name, and ticket expiry must not be rewritten. An expired-primary prepare must still disclose the exact candidate and require the user's **subsequent** explicit confirmation before commit. Any failure after credential consumption remains manual reconciliation, not replay.
+`OwnedWorldVersionCompatibilityPolicy` permits this exact link only after a matching source. It does not permit direct `28529 → 29104`, `29057 → 29104`, downgrade, wildcard or a skipped link. The current maximum is four durable transitions across the separately researched chain ending at 29145; that later extension does not weaken this pair's validation.
 
-Offline method equality, compilation and tests do **not** constitute live migration, successful save/readback, future resume, production continuity, or complete 0.4 acceptance.
+Validate the original complete Journal and source credential checkpoint before adoption. After native adoption, append only `29088 → 29104`, persist it before normal primary saving, then read back the target header/identity/tick and issue a target-version credential. Preserve historical origin, existing entries/transition, identity and credential dates; never relabel past history to make it qualify.
+
+Expired-primary prepare discloses the exact protected primary and requires a subsequent explicit conversation confirmation plus matching plan evidence at commit. Default resume does not gain cross-version authority. Consume durable attempt/tombstone before the single native load; changed evidence or interrupted consumed attempts refuse rather than replay. No LastExit/autosave substitution, arbitrary saves or import copy is implied.
+
+## Limits
+
+Offline equality, compilation and tests do not establish live migration, target save/readback, future resume, production continuity or complete `0.4` acceptance. The original research's lack of those proofs remains historical; later acceptance is established only by its separately indexed exact evidence. This page grants no Save/Load, installation or game authority.

@@ -1,111 +1,71 @@
 # Spherewright
 
-[中文](#中文) · [English](#english)
-
-## 中文
-
-Spherewright 通过 MCP 把外部 AI 智能体接入《戴森球计划》。它提供结构化观察和有界动作，同时让采集、手搓、科研、施工、能量消耗、飞行、物流与保存继续遵守游戏的正常机制。
-
-此包包含 Windows x64 版 Spherewright `{{VERSION}}`：
-
-- 由《戴森球计划》加载的 BepInEx 5 Plugin；
-- 供外部 Agent 应用连接的单文件自包含 `Spherewright.Mcp.exe`；
-- MCP 同步提供的开局移动 playbook。
-
-用户不需要源码仓库或 .NET SDK。
-
-### 支持范围
-
-- 《戴森球计划》未发布0.4候选目标 `0.10.35.29145`
-- BepInEx `5.4.17`
-- Windows x64
-- 单人和平模式（关闭黑雾/战斗）
-- 任意沙盒设置和资源倍率；它们会被报告，但不会扩大 Spherewright 的动作能力
-
-v0.3.3 已在本机分别验证：新建非沙盒 1× 世界、导入非沙盒 100× 世界、导入沙盒 1× 世界。三者均通过正常动作完成第一座建筑并保存。Spherewright 不调用沙盒工具，也不注入物品、能量或科技。黑雾/战斗、多人或 Nebula，以及广泛的第三方 Mod 兼容性暂不支持。
-
-0.4整体验收尚未完成，最终同提交手动包与Thunderstore包仍待安装、运行和恢复验证。当前29145开发cohort已完成同批菜单部署及原生v6准备；实际29131→29145迁移尚未执行。旧29131恢复和v0.3.3验证各自保留原版本范围，见[当前状态](https://github.com/AvaloNero/Spherewright-Lab/blob/14478a03c64c550e644c559405c8496b647552e7/operations/current-status.md)。
-
-### 安装并连接 MCP
-
-1. 通过 Thunderstore Mod Manager 或 r2modman 安装 Spherewright 及其 BepInEx 依赖。
-2. 从所选 Mod profile 启动一次《戴森球计划》，让 Plugin 生成配置和受保护的运行时描述文件。
-3. 在该 profile 中找到 `BepInEx/plugins/{{TEAM_NAME}}-Spherewright/Spherewright.Mcp.exe`。
-4. 将这个 EXE 注册为外部 Agent 应用中的本地 **stdio MCP Server**。不要在命令行中传入运行时描述文件、认证 token 或存档名。
-5. Spherewright 默认只读。需要操作游戏时，在该 profile 的 `BepInEx/config/dev.spherewright.bridge.cfg` 中设置 `Safety.AllowWrites=true`，然后重启游戏。
-
-### 直接发给 Agent
-
-> 连接 Spherewright MCP，先读取当前游戏状态和内置说明。有受保护的续档入口就继续，否则创建新档；如果当前是我手动载入的旧档，先准备导入并等我明确确认。只按正常游戏机制推进，遇到卡路或缺电时主动恢复，每完成一条产线就正常保存并汇报。
-
-### 从新档开始
-
-让游戏停在空闲主菜单，启用 `Safety.AllowWrites` 后告诉 Agent 创建一个 Spherewright 新档。Spherewright 会通过正常新建流程创建和平、非沙盒、1× 世界，内部名称为 `Spherewright_New_*`。Agent 第一次行动前应读取随 MCP 发布的 opening-movement playbook。
-
-### 读取旧档继续玩
-
-在配置中同时启用 `Safety.AllowWrites=true` 与 `Safety.AllowUserSaveImport=true`，重启游戏，然后由玩家在游戏菜单中**手动载入**目标和平单人存档。让 Agent 准备导入；它会先展示无副作用预检的说明，并等待你在后续消息中明确确认。确认后，Spherewright 只会通过正常保存 API 创建 `Spherewright_Imported_*` 独立副本，原档不会被覆盖、改名、删除或成为恢复目标。Journal 从导入点开始，不补造此前的首次事件；以后玩家和 Agent 都在副本中继续。
-
-已owned主档恢复应停在空闲菜单，使用受保护票据；default要求版本相同。精确版本迁移或过期恢复须先prepare披露、再取得后续明确确认，不能手改票据或改用另一存档绕过。一次性票据在原生加载前持久消费，失败或中断后核原结果，不重放。
-
-### 下载、证据与许可
-
-- [GitHub Releases：手动安装包、校验和与回滚说明](https://github.com/AvaloNero/Spherewright/releases)
-- [v0.3.2：Sol Max 与 Luna Max 双模型黑盒验收对比](https://github.com/AvaloNero/Spherewright-Lab/blob/14478a03c64c550e644c559405c8496b647552e7/scenarios/v0.3.2-black-box/comparison.md)
-- [源码与问题反馈](https://github.com/AvaloNero/Spherewright)
-
-Spherewright 使用 MIT License。
+[English](#english) · [中文](#中文)
 
 ## English
 
-Spherewright connects an external AI agent to **Dyson Sphere Program** through MCP. It exposes structured observations and bounded actions while keeping harvesting, handcrafting, research, construction, energy use, travel, logistics, and saving inside normal game mechanics.
+Spherewright connects an external Agent to **Dyson Sphere Program** through MCP. This Windows x64 package contains Spherewright `{{VERSION}}`: a BepInEx Plugin, matching self-contained `Spherewright.Mcp.exe`, and the Agent playbook. End users need no source checkout or .NET SDK.
 
-This package contains Spherewright `{{VERSION}}` for Windows x64:
+### Version and support
 
-- a BepInEx 5 Plugin loaded by Dyson Sphere Program;
-- a self-contained single-file `Spherewright.Mcp.exe` for an external Agent application;
-- the opening-movement playbook also exposed by the packaged MCP server.
+The maintained 0.4 source targets DSP `0.10.35.29145` and BepInEx `5.4.17`. **0.4.0 remains an unpublished candidate awaiting owner review**; this template does not mean a store release exists. The frozen candidate source `2a7a98d1932c404e3a7abc2c11233d9c0b8780d9` passed its declared local manual/Thunderstore-layout installation, runtime, same-version recovery and continuous-supply acceptance. See the [validation summary](https://github.com/AvaloNero/Spherewright/blob/main/docs/validation/v0.4.0.md). Later documentation does not replace those ZIPs.
 
-End users do not need the source repository or a .NET SDK.
+Supported gameplay is single-player peaceful mode. Sandbox/resource-multiplier settings are reported without adding sandbox actions. Actual 0.4 live evidence is limited to one owned non-sandbox 1× local world; v0.3.3's broader local import examples retain their historical scope. A separate Mod Manager/r2modman profile, another computer, installation transaction-crash recovery, Dark Fog/combat, multiplayer/Nebula and broad third-party Mod compatibility are unvalidated.
 
-### Supported scope
+### Install and connect
 
-- Dyson Sphere Program current unreleased 0.4 candidate target `0.10.35.29145`
-- BepInEx `5.4.17`
-- Windows x64
-- single-player peaceful mode with Dark Fog/combat disabled
-- any sandbox setting or resource multiplier; they are reported but do not expand Spherewright's action surface
+1. After authorized publication, install the selected Spherewright version and its BepInEx dependency through your manager. For the current unpublished candidate, use only its reviewed local archive.
+2. Launch the selected modded profile once to create configuration and the protected runtime descriptor.
+3. Locate `BepInEx/plugins/{{TEAM_NAME}}-Spherewright/Spherewright.Mcp.exe` in that profile and register it as a **local stdio MCP server**.
+4. Never pass a descriptor, token or save identity on the command line. Keep Plugin and MCP from the same build.
+5. Default mode is observation-only. Enable `Safety.AllowWrites=true` for intended structured actions, then restart DSP normally. Never overwrite loaded DLLs.
 
-v0.3.3 was locally validated in a fresh non-sandbox 1× world, an imported non-sandbox 100× world, and an imported sandbox 1× world. Each used ordinary actions to construct its first building and save normally. Spherewright never calls sandbox tools or injects items, energy, or technologies. Dark Fog/combat, multiplayer or Nebula, and broad third-party Mod compatibility are not supported.
+### New, imported and owned worlds
 
-Combined 0.4 acceptance remains open, including final same-commit manual and Thunderstore installation, runtime and recovery validation. The current 29145 development cohort has matching menu deployment and native v6 preparation evidence; actual 29131→29145 migration has not run. Earlier 29131 recovery and v0.3.3 results retain their original version scopes. See the [current state](https://github.com/AvaloNero/Spherewright-Lab/blob/14478a03c64c550e644c559405c8496b647552e7/operations/current-status.md).
+For a new world, leave DSP at the idle menu and prepare the ordinary new-game flow: peaceful, non-sandbox, 1× `Spherewright_New_*`. Read the opening playbook before moving.
 
-### Install and connect MCP
+To import a player-loaded supported peaceful save, additionally enable `Safety.AllowUserSaveImport=true`, restart and manually load it. Prepare import, review the disclosure, then explicitly confirm in a later message. Commit creates and verifies an independent `Spherewright_Imported_*` copy through normal saving; the original is unchanged and Journal history begins at import.
 
-1. Install Spherewright and its BepInEx dependency through Thunderstore Mod Manager or r2modman.
-2. Launch Dyson Sphere Program once from the selected modded profile so the Plugin creates its configuration and protected runtime descriptor.
-3. In that profile, locate `BepInEx/plugins/{{TEAM_NAME}}-Spherewright/Spherewright.Mcp.exe`.
-4. Register this EXE as a local **stdio MCP server** in the external Agent application. Do not pass a runtime descriptor, authentication token, or save identity on the command line.
-5. Spherewright starts observation-only. To allow gameplay actions, set `Safety.AllowWrites=true` in that profile's `BepInEx/config/dev.spherewright.bridge.cfg`, then restart the game.
+To resume an owned primary, use its exact protected ticket, identity and durable Journal from the idle menu. Same-version resume is the default. Disclosed migration/expired recovery needs later explicit confirmation. One-time tickets are consumed before native loading; reconcile failed/interrupted accepted actions without rekeying or replaying.
 
-### Copy-paste prompt for your Agent
+### Agent use and limits
 
-> Connect to Spherewright MCP and first read the current game state and bundled guidance. Continue through a protected resume path when available; otherwise create a new world. If I manually loaded an existing save, prepare an import and wait for my explicit confirmation. Use only normal game mechanics, recover proactively from blocked movement or low energy, and save and report after completing each production line.
+Read `spherewright://agent/playbooks/opening-movement-v1` before acting. A useful request is: “Read the current state and playbook, explain the next bounded phase, and execute only actions already authorized for that phase. Reconcile every accepted action and save according to the declared rules.”
 
-### Start from a new world
+Observation and planning do not grant write authority. No item/energy/technology injection, instant construction, teleportation, direct buffer editing, arbitrary save picker or autonomous expansion loop is provided. Interstellar flight/logistics remains future work.
 
-Leave the game at its idle main menu, enable `Safety.AllowWrites`, and ask the Agent to create a Spherewright world. Spherewright uses the normal new-game flow to create a peaceful, non-sandbox, 1× world with an internal `Spherewright_New_*` name. Before its first action, the Agent should read the opening-movement playbook bundled with the MCP server.
+[Installation](https://github.com/AvaloNero/Spherewright/blob/main/docs/release-installation.md) · [Releases](https://github.com/AvaloNero/Spherewright/releases) · [Source/issues](https://github.com/AvaloNero/Spherewright) · [Fixed Lab evidence](https://github.com/AvaloNero/Spherewright-Lab/tree/14478a03c64c550e644c559405c8496b647552e7). MIT licensed.
 
-### Continue an existing save
+## 中文
 
-Enable both `Safety.AllowWrites=true` and `Safety.AllowUserSaveImport=true`, restart the game, and have the player **manually load** the intended peaceful single-player save from DSP's menu. Ask the Agent to prepare an import. It must show the no-side-effect disclosure and wait for explicit confirmation in a later message. After confirmation, Spherewright uses DSP's normal save API to create a separate `Spherewright_Imported_*` copy. The original is never overwritten, renamed, deleted, or used as a recovery target. The new Journal starts at the import boundary and does not invent earlier first-time events; both player and Agent should continue in the copy.
+Spherewright 通过 MCP 将外部 Agent 接入**《戴森球计划》**。此 Windows x64 包包含 Spherewright `{{VERSION}}`：BepInEx Plugin、配套自包含 `Spherewright.Mcp.exe` 及 Agent 指南。用户不需要源码或 .NET SDK。
 
-Resume an already owned primary from the idle menu with its protected credential; default resume requires matching versions. Exact version migration or expired-primary recovery requires preparation, disclosure and a later explicit confirmation. Never edit the credential or substitute another save. The single-use credential is consumed durably before native loading; reconcile failed or interrupted attempts instead of replaying them.
+### 版本与支持范围
 
-### Downloads, evidence, and license
+当前维护的 0.4 源码目标为 DSP `0.10.35.29145` 和 BepInEx `5.4.17`。**0.4.0 仍是等待所有者审核的未发布候选**，此模板不代表商店已发布。冻结候选源码 `2a7a98d1932c404e3a7abc2c11233d9c0b8780d9` 已通过规定的本机手动/Thunderstore 布局安装、运行、同版本恢复和连续供给验收，见[验收摘要](https://github.com/AvaloNero/Spherewright/blob/main/docs/validation/v0.4.0.zh-CN.md)。后续文档不替换这些 ZIP。
 
-- [GitHub Releases: manual installer packages, checksums, and rollback instructions](https://github.com/AvaloNero/Spherewright/releases)
-- [v0.3.2 Sol Max versus Luna Max black-box comparison](https://github.com/AvaloNero/Spherewright-Lab/blob/14478a03c64c550e644c559405c8496b647552e7/scenarios/v0.3.2-black-box/comparison.md)
-- [Source and issue tracker](https://github.com/AvaloNero/Spherewright)
+支持单人和平模式。沙盒和资源倍率会被报告，不增加沙盒动作。0.4 实机证据限于一个 owned、非沙盒、1× 本机世界；v0.3.3 较广的本机导入示例保留历史范围。独立 Mod Manager/r2modman profile、另一台计算机、安装事务崩溃恢复、黑雾战斗、多人/Nebula 和广泛第三方 Mod 兼容尚未验证。
 
-Spherewright is available under the MIT License.
+### 安装与连接
+
+1. 正式获批发布后，通过管理器安装选定 Spherewright 版本及 BepInEx 依赖。当前未发布候选仅使用已审核本地包。
+2. 从选定 modded profile 启动一次游戏，生成配置与受保护运行时描述文件。
+3. 在该 profile 找到 `BepInEx/plugins/{{TEAM_NAME}}-Spherewright/Spherewright.Mcp.exe`，注册为**本地 stdio MCP 服务**。
+4. 不在命令行传入描述文件、token 或存档身份。Plugin 与 MCP 必须来自同一构建。
+5. 默认仅观察。准备授权结构化动作时启用 `Safety.AllowWrites=true`，再正常重启 DSP。不要覆盖已加载 DLL。
+
+### 新档、导入与 owned 世界
+
+新档时让 DSP 停在空闲菜单，准备正常新建流程：和平、非沙盒、1× 的 `Spherewright_New_*` 世界。首次移动前阅读开局指南。
+
+导入玩家已载入的受支持和平存档时，另行启用 `Safety.AllowUserSaveImport=true`，重启并手动载入。prepare 后阅读披露，并在后续消息明确确认。commit 通过正常保存创建并核验独立 `Spherewright_Imported_*` 副本，原档不变，Journal 从导入开始。
+
+恢复 owned 主档时，在空闲菜单使用精确受保护票据、身份和 durable Journal。默认同版本恢复。已披露迁移或过期恢复须后续明确确认。一次性票据在原生加载前消费，失败或中断的 accepted action 核原结果，不换键或重放。
+
+### Agent 使用与限制
+
+操作前阅读 `spherewright://agent/playbooks/opening-movement-v1`。可向 Agent 要求：“读取当前状态和指南，说明下一个有限阶段，只执行该阶段已授权动作，核销每个 accepted action，并按声明规则保存。”
+
+观察和规划不授予写入权限。不提供物品/能量/科技注入、瞬间施工、传送、直接缓冲编辑、任意选档或自主扩产。实际跨恒星航行与物流属于后续工作。
+
+[安装](https://github.com/AvaloNero/Spherewright/blob/main/docs/release-installation.zh-CN.md) · [发行](https://github.com/AvaloNero/Spherewright/releases) · [源码与反馈](https://github.com/AvaloNero/Spherewright) · [固定 Lab 证据](https://github.com/AvaloNero/Spherewright-Lab/tree/14478a03c64c550e644c559405c8496b647552e7)。使用 MIT 许可。

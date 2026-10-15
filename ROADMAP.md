@@ -1,354 +1,196 @@
 # Spherewright 0.3–1.0 Roadmap
 
-本文定义 Spherewright 从当前 Post-M0 开发基线走向 `1.0.0` 的公开能力路线、版本验收门和发行规则。它描述目标，不替代 [AGENTS.md](https://github.com/AvaloNero/Spherewright-Lab/blob/14478a03c64c550e644c559405c8496b647552e7/operations/agent-rules-imported.md) 的当前阶段授权与安全约束。
+[English](ROADMAP.md) | [简体中文](ROADMAP.zh-CN.md)
 
-## 版本锚点
+This roadmap defines the approved capability sequence, acceptance gates and release rules from the historical Post-M0 baseline to `1.0.0`. It does not grant gameplay or publication authority. Product contribution rules are in [AGENTS.md](AGENTS.md); scenario execution begins in Spherewright-Lab under its current scope.
 
-2026-09-26 当前重入门：上次成功保存点的恢复票据已过期，fresh 精确主档预检已通过，用户随后已明确确认恢复；尚未把这次确认记为加载成功。实时边界集中于[当前状态](https://github.com/AvaloNero/Spherewright-Lab/blob/14478a03c64c550e644c559405c8496b647552e7/operations/current-status.md)，以下带日期段落保留历史语义。
+## Version anchors and current status
 
-2026-09-24 升级后的原档恢复已完成一次受限 live `0.10.34.28529 → 0.10.35.29088` 迁移和正常保存，保持日记历史；当前恢复后阻塞为 fresh 工厂审计。仅支持29057/29088两个从28529直达的精确版本对，不核销持续产量、施工、第二次恢复或0.4最终门，见IFX-171及当档最新日记。
+The accepted local `0.4.0` candidate is source `2a7a98d1932c404e3a7abc2c11233d9c0b8780d9`, validated on Windows x64 with DSP `0.10.35.29145` and BepInEx `5.4.17.0`. See [product status](docs/project-status.md) and the [final validation summary](docs/validation/v0.4.0.md) for the exact evidence and limits. The latest published version remains `v0.3.3`; no `v0.4.0` tag, GitHub Release or Thunderstore publication exists from this work. The accepted candidate archives are frozen. This documentation maintenance creates no replacement package, installation or live acceptance.
 
-2026-09-24 IFX-170 的 expired-primary 重新授权已在上述精确29088迁移中窄核销：保留原身份与 Journal，未延长旧票据或导入副本。当前待 fresh 工厂审计；第二次恢复及后续0.4生产验收仍未核销，版本/安装证据见IFX-171和[当档日记](https://github.com/AvaloNero/Spherewright-Lab/blob/14478a03c64c550e644c559405c8496b647552e7/operations/gameplay-timeline.md)。游戏执行模型按用户要求改为 `gpt-6-luna / max`。
+- `0.1`: M0 First Red Matrix; safe Bridge, basic MCP primitives and the first automated energy-matrix line.
+- `0.2`: historical Post-M0 expansion; structure-matrix automation, same-system checkpoint flight, recovery tickets, Journal and write-proof hardening. These capability anchors do not invent unpublished tags or Releases.
+- `v0.3.0` is the first formal release under this roadmap. Every subsequent `0.x.0` must deliver an independently installable and accepted capability slice.
+- `0.x.y` is for fixes, compatibility, diagnostics, documentation and release corrections, without a new major gameplay action domain. Owner-approved `v0.3.1` is the narrow authorized-import backport; `v0.3.2` fixes naming and packaging; `v0.3.3` removes sandbox/resource-multiplier runtime gates without enabling sandbox actions.
 
-- `0.1` 能力锚点：M0 First Red Matrix，完成安全 Bridge、MCP 基础原语和首条红色矩阵自动产线。
-- `0.2` 能力锚点：Post-M0 产线扩展，完成黄糖自动化、同星系检查点飞行，以及恢复票据、日记和写入证明的硬化。这是历史开发基线，不补造未曾发布的 tag 或 Release。
-- `v0.3.0` 是本路线图下第一个正式发布版本。之后每个 `0.x.0` 都必须形成独立、可安装、可验收的完整能力切片。
-- `0.x.y` 只用于缺陷修复、兼容性、诊断、文档和发行修正，不在补丁版本中引入新的主要玩法动作域。`v0.3.1` 回移用户确认的存档导入，`v0.3.2` 修正新建档命名并补齐 Thunderstore 工件，`v0.3.3` 则只移除沙盒状态和资源倍率的运行门禁，不开放任何沙盒工具或旁路写入。
+The owner's 2026-09-05 decision combined all former Foundry `0.5` and Governor `0.6` scope and gates into `0.4.0` with Overseer, preparing for interstellar expansion. Voyager, Ascension and Release Candidate moved forward; published `0.3.x` and the `1.0.0` promotion point did not change.
 
-2026-09-05 按项目所有者最新要求，将原 `0.5.0 — Foundry` 与原 `0.6.0 — Governor` 的全部范围和验收门合并进尚未发布的 `0.4.0`，与 Overseer 一起交付，整体目标是**为跨星系扩张做准备**。原 Voyager、Ascension、Release Candidate 依次前移；先前“0.6–0.9 保持编号”的安排已被本次决定替代。已发布的 `0.3.x` 不改号，`1.0.0` 仍是正式版晋升点。
+| Version | Approved scope | Original position |
+| --- | --- | --- |
+| `0.4.0` | Overseer, Foundry & Governor: diagnostics, construction, balancing, expansion and departure preparation | Former `0.4` + `0.5` + `0.6` |
+| `0.5.0` | Voyager: actual interstellar travel and logistics | Former `0.7` |
+| `0.6.0` | Ascension: Dyson design, launch and power | Former `0.8` |
+| `0.7.0` | Release Candidate: public-surface freeze, release engineering and end-to-end acceptance | Former `0.9` |
+| `1.0.0` | Promote the same artifacts as the final qualifying `0.7.x` | Unchanged |
 
-| 当前版本 | 内容 | 原路线来源 |
-|---|---|---|
-| `0.4.0` | Overseer, Foundry & Governor：诊断、新建、配平扩产与跨星系准备 | 原 `0.4` + `0.5` + `0.6` |
-| `0.5.0` | Voyager：实际跨恒星飞行与物流 | 原 `0.7` |
-| `0.6.0` | Ascension：戴森系统设计、发射与功率 | 原 `0.8` |
-| `0.7.0` | Release Candidate：公共面冻结、发行工程与全流程验收 | 原 `0.9` |
-| `1.0.0` | 从最后一个合格 `0.7.x` 的同批工件晋升 | 正式版编号不变 |
+This is the current numbering. Old version numbers and pending statements remain historical in the [immutable previous roadmap](https://github.com/AvaloNero/Spherewright/blob/2a7a98d1932c404e3a7abc2c11233d9c0b8780d9/ROADMAP.md) and [Lab roadmap archive](https://github.com/AvaloNero/Spherewright-Lab/blob/14478a03c64c550e644c559405c8496b647552e7/archive/roadmap-history/ROADMAP-HISTORY-2026-09-24.md). They are not additional releases, current blockers or replay instructions.
 
-下文为唯一现行版本安排；历史日记中的旧编号保留其当时语义，不代表额外待发布版本。
+## Development and release rules
 
-## 开发与发行规则
+- The approved development model uses reviewable, reversible, single-purpose commits on `main`, without long-lived release branches. Temporary independent worktrees/review branches follow current contributor rules. Pushes, merges and publication require their applicable authorization; old operational permissions are not standing release authority.
+- Before a new `0.x.0` gameplay phase begins, update the current Lab phase rules in a separate reviewed change, naming permitted write families and retained prohibitions. This roadmap alone never authorizes those actions. The [imported historical rules](https://github.com/AvaloNero/Spherewright-Lab/blob/14478a03c64c550e644c559405c8496b647552e7/operations/agent-rules-imported.md) preserve provenance, not current execution scope.
+- New DSP fields, methods and call paths require the exact supported `Assembly-CSharp.dll` as evidence. Record signatures, hashes, reasons and readback invariants in [research](docs/research/game-api-m0.md).
+- All gameplay writes retain Unity-main-thread access, `inspect → prepare → commit → readback`, short plans, identity/session binding, idempotency, conservation and outcome-unknown quarantine.
+- Every complete release supplies self-contained artifacts requiring neither source nor the .NET SDK. From `0.3`, the minimum is a versioned ZIP, manifest and installation instructions/script; checksums, changelog, upgrades and rollback continue to mature.
+- Acceptance includes automated tests, native evidence on the supported DSP version, ordinary save/recovery, experience-ledger review and updated user documentation.
+- After all gates pass and the final commit is pushed to `main`, present the candidate commit, tests/native evidence, artifact hashes and release notes to the owner. Only explicit approval permits an annotated `v0.x.0` tag and matching GitHub Release. Never release a dirty/unpushed tree or reuse another version's publication permission.
+- Release records include the commit, DSP/BepInEx support, protocol/tool changes, install/upgrade steps, limits, tests and sanitized native evidence. Thunderstore and other registries require separate explicit authorization.
 
-- 直接在 `main` 开发，以可审阅、可回滚的单一目的提交推进，不使用长期发布分支。推送服从当次用户授权；2026-09-06 用户最新恢复验证后小步commit/push，先提交九个功能切片，原第十项打包/CI暂留本地。未验收的实机门如实保留，tag/发布仍待单独审核。
-- 每个 `0.x.0` 开工前，先用独立提交把 [AGENTS.md](https://github.com/AvaloNero/Spherewright-Lab/blob/14478a03c64c550e644c559405c8496b647552e7/operations/agent-rules-imported.md) 的“当前阶段”更新到该版本范围，明确新增允许的写入族和仍然保留的禁令。AGENTS 未更新前不得开工；Roadmap 本身不构成写入授权。
-- 每次新增 DSP 字段、方法或调用路径，必须以本机当前 `Assembly-CSharp.dll` 为准，并把签名、哈希、采用理由和复读不变量记录到 `docs/research/`。
-- 所有游戏写入继续执行 Unity 主线程、`inspect → prepare → commit → readback`、短期计划、幂等、资源守恒和不确定结果隔离；不得因为版本目标放宽正常游戏规则。
-- 每个完整版本必须提供不要求源码或 .NET SDK 的自包含安装工件。`0.3` 起最低形态为版本化 zip、manifest、安装说明或脚本；校验和、变更日志、升级与回滚在后续版本持续完善。
-- 版本验收必须同时包含自动测试、当前支持 DSP 版本的实机证据、普通保存/恢复、经验账本复核和用户文档更新。
-- 达到全部验收门并把最终提交推送到 `main` 后，先把候选 commit、测试/实机证据、工件哈希和 Release notes 交给用户审核；只有用户明确通过后才创建 annotated tag `v0.x.0`，再从该 tag 创建同版本 GitHub Release。不得提前打 tag，不得从未推送或脏工作区发布，也不得把上一版本的发布授权沿用到下一版本。
-- Release 至少记录：对应 commit、支持的 DSP/BepInEx 版本、协议与工具面变化、安装/升级步骤、已知限制、测试结果和脱敏实机证据。
-- GitHub Release 由版本门触发；Thunderstore 或其他注册表发布仍需用户另行明确授权。
+## Constraints throughout this roadmap
 
-## 全路线持续约束
+The `0.3–1.0` sequence excludes built-in LLMs, autonomous goal planners/long-running loops, Computer Use, screenshot recognition, input macros, external-memory control, item/energy/technology/buffer injection, teleportation, instant construction, save editing, game-speed changes, combat/Dark Fog, multiplayer/Nebula, non-Windows support promises and broad third-party Mod compatibility promises.
 
-以下内容不进入本路线所述的 `0.3–1.0` 版本：
+Arbitrary user saves are never enumerated, selected or actively loaded. The narrow import boundary is a world the player already loaded manually: effect-free prepare, subsequent explicit conversation consent, then normal saving to a new internally named owned copy. Unbounded construction and native-rule bypass remain excluded; bounded, individually verifiable blueprint reuse is allowed from `0.4`.
 
-- 内置 LLM、自主 Goal Planner 或长期自主循环；
-- Computer Use、截图识别、键鼠宏或外部内存控制；
-- 物品注入、传送、瞬建、直接科研解锁、直接填写生产缓冲、存档修改或游戏速度修改；
-- 黑雾、战斗、多人、Nebula；
-- 任意用户旧档的枚举、选择或主动载入，以及未经预检后对话确认就操作非 Spherewright owned world；唯一例外是玩家已在 DSP 内手工载入、Agent 完成无副作用预检并获得用户后续明确确认后，把当前内存世界通过正常保存另存为新 owned 副本；
-- 非 Windows 平台和广泛第三方 Mod 兼容承诺；
-- 无界施工、绕过原生规则的批量写入；有限且逐对象可验证的蓝图复用从 0.4 起允许。
-
-外部 Agent 始终负责目标选择和决策；Spherewright 只提供结构化观察、确定性 helper、安全动作原语和可验证结果。
+The external Agent chooses goals and actions. Spherewright supplies structured observations, deterministic helpers, safe primitives and verifiable outcomes.
 
 ## 0.3.0 — Logistics Towers
 
-状态：**released**（2026-09-03，tag/Release `v0.3.0`，commit `a52ff44`）。
+Status: **released**, 2026-09-03, tag/Release `v0.3.0`, commit `a52ff44`.
 
-### 目标
+### Goal and scope
 
-通过正常科技、物品、供电和运输规则完成行星/星际物流塔能力，让远端钛和硅稳定进入母星黄糖链，结束人工跨星球搬运和临时石矿制硅依赖。
+Use normal technology, items, power and transport to supply remote titanium and silicon to the home structure-matrix chain, ending manual interplanetary hauling and temporary stone-to-silicon dependence.
 
-### 范围
+- Research the native `PlanetTransport`, station and carrier paths; observe slots, caps, local/remote supply and demand, inventories, drones/vessels, charging, transport and errors.
+- Configure legitimate slots, modes, limits and transport/power parameters through separate two-phase actions.
+- Load existing items and fleets only through supported normal transfers, belts and sorters, without direct station-cargo/buffer writes.
+- Limit stellar stations to planets of the same star system; observing warper fields does not enable interstellar warp routes.
+- Complete the prepared particle-container, logistics-drone and planetary-station milestones, then a two-planet transport loop.
+- Supply the first self-contained versioned ZIP, manifest and installation path.
 
-- 研究并记录当前 DSP 版本中 `PlanetTransport`、物流塔及运输组件的真实调用路径。
-- 结构化观察行星/星际物流塔：槽位、库存上限、本地/星际供需模式、无人机/运输船、充电功率、运输状态和错误状态。
-- 以独立两阶段动作配置合法槽位、供需模式、库存上限、充电与运输参数。
-- 通过正常玩家可达的转移、传送带和分拣器路径装载物品、无人机和运输船；禁止直接写站内库存或内部缓冲。
-- 星际物流站在本版本只用于同星系行星间运输。翘曲器相关字段可观察，但不得建立跨恒星曲速航线。
-- 先完成当前存档已经备料的粒子容器、物流运输机和行星物流站里程碑，再扩展为双星球星际运输闭环。
-- 建立从 `0.3` 起可直接安装的最低发行包：版本化 zip、manifest 与安装说明/脚本，不要求最终用户安装 .NET SDK 或获取源码。
+### Acceptance gates
 
-### 验收门
-
-- 两个星球各有一座经普通施工完成并正常供电的星际物流站。
-- 运输船实际搬运远端钛和硅；开始前以当前可见游戏状态确认目标星球确有对应矿脉。
-- 黄糖链持续运行，不再依赖伊卡洛斯人工携货，临时石矿制硅链可安全退役或转为备用。
-- 物流塔所有写入均有 prepare/commit、幂等、双向库存或配置复读和资源守恒证明。
-- 普通保存、正常关闭和恢复后，配置与运输继续有效。
-- Core/Contracts/MCP 自动测试、完整 solution 构建和当前 DSP 实机回归通过。
-- `v0.3.0` 安装包在干净的受支持环境可启动并完成 MCP 握手。
+- Normally constructed, powered stellar stations on two planets; vessels actually carry titanium and silicon from currently observed corresponding veins.
+- Sustained structure-matrix production without manual hauling; safely retire the temporary silicon line or retain it as backup.
+- Prepare/commit, idempotency, paired inventory/configuration readback and conservation for every station write.
+- Configuration and transport survive normal save, close and recovery.
+- Core/Contracts/MCP tests, full solution build and supported-DSP native regression pass; the release package starts and completes an MCP handshake in a clean supported environment.
 
 ## 0.3.1 — Authorized Save Import
 
-状态：**released**（2026-09-04 发布，2026-09-05 从 prerelease 提升为正式 Release；tag `v0.3.1`，commit `33a733f`）。
+Status: **released**, first published 2026-09-04 and promoted from prerelease on 2026-09-05; tag `v0.3.1`, commit `33a733f`.
 
-这是项目所有者明确要求并批准发布的窄范围补丁例外。`v0.3.0` tag 和 Release 保持不可变；`v0.3.1` 从该 tag 的 commit `a52ff44` 最小回移，只包含授权导入能力及必要测试/文档，没有混入未完成的 v0.4 Overseer 功能。自包含包为 `sourceDirty=false`、232 个 manifest entry，安装版 MCP 报告 `0.3.1.0` / 50 tools；完整构建 0 warning / 0 error、127 项回移测试通过，ZIP SHA-256 为 `b05eabb20928e98850f6792ea001149fd2e30c92082994e6d9c43254e611cdcf`。v0.3.3 的本机发行 Plugin 又以相同两阶段边界完成两个外部和平档的“受限载入 → 对话确认 → 独立副本 → 普通动作 → 正常保存”，项目所有者据此把该历史版本提升为正式 Release；这不补造一项独立的 v0.3.1 异机运行声明。
+This owner-approved narrow patch backports import from immutable `v0.3.0` without unfinished Overseer work. Historical package/test details remain in the immutable roadmap; later local `v0.3.3` import evidence does not become an independent other-computer `v0.3.1` claim.
 
-### 范围与验收门
+### Scope and gates
 
-- 玩家自行在 DSP 中载入目标世界；Agent 只能先对当前受限 session/revision 做无游戏副作用的 prepare，展示“原档不变、新建 owned 副本、Journal 从导入点开始”的提示，并在对话中单独询问。
-- 只有用户在 prepare 之后的消息中明确同意，Agent 才能提交 `userConfirmedInConversation=true` 及两个边界确认；Plugin 将其视为 MCP 调用方对对话证据的声明，不提供快捷键、验证码或假装自行读取聊天历史。
-- commit 绑定当前进程/session/revision/精确 `GameData` 和短时单次 plan；服务端生成高熵 owned 名称并调用 DSP 正常保存 API 另存副本，不接受存档名或路径，不枚举、不主动载入、不覆盖、不改名、不删除原档。
-- 切换世界、revision 变化、计划过期或保存尝试都会使计划不可复用；保存成功和 header tick 复读均成立后才能认领，失败或结果不可证明时保持 unowned 并 fail closed。
-- 导入后沿用 owned world 的全部模式、写入、恢复、隔离和脱敏边界；Journal 从导入点开始并明确历史覆盖不完整，不补造旧世界已经发生的首次事件。
-- Core/Contracts/MCP 自动测试覆盖对话确认声明、双边界确认、计划时限/单次消费、session/对象绑定、计划过期、幂等、失败不认领和 DTO 脱敏；完整构建与当前 DSP 实机至少证明“原档 header 不变、新副本可保存恢复、重新进入原档仍受限”。
+- The player loads the world manually. Prepare exposes no world content or gameplay side effects, binds the restricted process/session/revision/exact `GameData`, and discloses preservation of the original, a new owned copy and Journal coverage starting at import.
+- A later explicit user message permits commit with `userConfirmedInConversation=true` and both boundary acknowledgements. This is the caller's declaration, not a shortcut code or claimed access to chat history.
+- The short one-use plan saves normally to a server-generated high-entropy name; no input save name/path, enumeration, original load/overwrite/rename/delete is accepted.
+- World/revision changes, expiry or a save attempt invalidate reuse. Ownership requires save success and exact header/tick readback; uncertain results remain restricted and fail closed.
+- All owned-world write, recovery, quarantine and privacy rules remain. Do not fabricate pre-import first events.
+- Automated coverage includes confirmation, boundaries, single use/expiry, session/object binding, idempotency, failed adoption and privacy. Native validation proves the original header unchanged, the copy save/recovery and restriction when returning to the original.
 
 ## 0.3.2 — New World Naming and Opening Recovery
 
-状态：**released**（2026-09-04 发布，2026-09-05 从 prerelease 提升为正式 Release；tag `v0.3.2`，commit `da11e44`）。
+Status: **released**, first published 2026-09-04 and promoted on 2026-09-05; tag `v0.3.2`, commit `da11e44`.
 
-这是不扩展玩法动作域的修复版：区分 Agent 新档和用户授权导入副本的命名，保持旧 `Spherewright_M0_*` 精确恢复兼容，并把落地基座/局部障碍的有界移动恢复整理为包内文档和 MCP 资源。项目所有者已另行授权以 Team `Arcueid_77` 生成同版本 Thunderstore 包；GitHub 手动安装包与 Thunderstore 包来自同一 tag。两次相互隔离的发行包黑盒新档验收都完成自动蓝矩阵并正常保存，[对比记录](https://github.com/AvaloNero/Spherewright-Lab/blob/14478a03c64c550e644c559405c8496b647552e7/scenarios/v0.3.2-black-box/comparison.md)保留两种外部 Agent 的路径、耗时和 API 等价成本。项目所有者于 2026-09-05 将 GitHub 条目标记为正式 Release。
+This fix separates Agent-created and imported-copy names, preserves exact legacy `Spherewright_M0_*` recovery, and packages bounded movement recovery around the landing base/local obstacles. The authorized GitHub and Thunderstore artifacts share one tag. Two isolated package black-box new-world trials completed automated electromagnetic matrices and normal saves; their [comparison](https://github.com/AvaloNero/Spherewright-Lab/blob/14478a03c64c550e644c559405c8496b647552e7/scenarios/v0.3.2-black-box/comparison.md) retains Agent paths, timing and API-equivalent cost.
 
 ## 0.3.3 — Gameplay Mode Compatibility
 
-状态：**released**（2026-09-05，tag/Release `v0.3.3`）。
+Status: **released**, 2026-09-05, tag/Release `v0.3.3`; latest formal release.
 
-这是从不可变 `v0.3.2` tag 制作的窄范围兼容性补丁。新建档仍默认为和平、非沙盒、1×；对已有或导入的和平存档，沙盒状态与资源倍率仍在 session 中结构化报告，但不再阻止普通动作、导入、计划重启恢复或飞行检查点恢复。Spherewright 仍不调用沙盒工具，不注入物品、能量、科技或设备缓冲。
-
-本机以发行 Plugin 完成三条 live 路径：新建和平/非沙盒/1× 世界、导入和平/非沙盒/100× 世界、导入和平/沙盒/1× 世界。三个世界都从空库存按正常机制采集、手搓磁线圈、选择电磁学、取得游戏奖励并由施工无人机建成首座电力感应塔，随后正常保存；两个外部原档的文件修改时间保持不变，改动只进入独立副本。该证据证明本机兼容性，不冒充独立的异机运行结果。
+New worlds remain peaceful/non-sandbox/1×. Existing or imported peaceful worlds report sandbox/resource settings, which no longer gate ordinary actions, import, planned-restart resume or flight-checkpoint recovery. Sandbox tools and injection remain absent. Local release-Plugin trials covered a new non-sandbox/1× world and imported non-sandbox/100× and sandbox/1× worlds, using normal gathering, crafting, research rewards, drone construction and saving while preserving both external originals. This is local compatibility evidence, not independent other-computer validation.
 
 ## 0.4.0 — Overseer, Foundry & Governor
 
-当前执行状态与代码/安装/正式版边界见 [current status](https://github.com/AvaloNero/Spherewright-Lab/blob/14478a03c64c550e644c559405c8496b647552e7/operations/current-status.md)。已通过的限定蓝图复制/取消/重启续建/持续产出和 Governor 2× 观察门不重复施工；三级链、持续供给、远征准备和最终同提交双包仍按以下验收门完成。
+Status: **accepted local candidate; publication pending**. The [final validation summary](docs/validation/v0.4.0.md) records the accepted source, frozen package hashes and evidence limits. Earlier dated pending/deployment notes in the immutable roadmap are superseded only within the scope of later evidence. Do not repeat accepted construction or convert a narrow positive into universal coverage.
 
-此前逐阶段施工与验证流水完整保存在 [历史快照](https://github.com/AvaloNero/Spherewright-Lab/blob/14478a03c64c550e644c559405c8496b647552e7/archive/roadmap-history/ROADMAP-HISTORY-2026-09-24.md)，其中的下一步、旧 token 和待验状态只代表当时截面，不是当前执行授权。后续一阶段一主证据，遵守 [证据记录规则](https://github.com/AvaloNero/Spherewright-Lab/blob/14478a03c64c550e644c559405c8496b647552e7/releases/v0.4.0/evidence/README.md)。下列目标、范围和验收门未缩减；夹在验收门内的带日期旧说明同样为历史上下文。
+### Goal
 
-### 目标
+Create a sustainable, diagnosable, expandable and recoverable industrial base in the departure system. Overseer identifies problems; Foundry compiles item/rate intent into inspectable finite construction; Governor balances and expands existing lines, power and sources. All three form one release. Complete key technology/mecha upgrades, warper/fuel replenishment, transport and expedition supplies. Actual interstellar travel, warp routes and cross-star dispatch stay in `0.5.0`.
 
-在当前出发星系内建立可持续供给、可诊断、可扩产和可恢复的工业基础，为 `0.5.0` 的实际跨星系探索与物流做准备：Overseer 发现问题，Foundry 把目标物品/速率编译为可检查、可恢复的空地建厂计划，Governor 对已有产线配平、扩产、补电和换源。三部分作为一个完整版本验收，不因某一个 helper 已完成就提前发布。
+### Overseer scope and gates
 
-本版本补齐关键科技/机甲升级、翘曲器与燃料供应、运输能力和远征备料；不把跨恒星飞行、曲速航线或跨恒星物流调度提前混入 `0.4.0`。
+- Observe multi-planet production, power, logistics and research; define measured/theoretical rates, utilization and game-time windows.
+- Distinguish input shortage, blocked output, insufficient power, logistics blockage and exhausted veins; trace supported physical upstream equipment and edges.
+- Produce diagnostic bundles with existing privacy rules, excluding credentials, plan tokens, private paths and raw save identity. Protect persistent window state using per-save/Journal patterns.
+- Retain the explicit player-loaded import/onboarding boundary with `v0.3.1` safety semantics.
+- Under controlled conditions distinguish material, power and logistics faults; use diagnostics to repair at least one, then clear all three. Restore stable nonzero production and finish with healthy normal saving.
+- Preserve window semantics across save/recovery without counting offline time, pause or observation gaps as throughput. The stationary-carrier 600-tick live positive remains an explicit coverage limit, not an excuse to synthesize game state.
 
-最新有限修复（2026-09-07）：1455安装态已将102硅改为独立入口，普通4带/1过滤分拣器材料、逐对象双端及全179实体审计通过。21个离散600tick窗中硅满500仍允许钛22→200回补，实际钛订单/运输船轮次继续；母星20/21窗钛块非零，1窗0，黄糖仍未持续恢复。正常保存27507910保留修复。1457源码只补公开MCP无人机readiness/部分施工不重放指南，Debug/Release、完整Release零警告错误及真实64工具/1资源读回通过。运行模块复制/续建、三级链、2×十分钟、准备清单与最终双包全部仍待，不能把此修复当连续吞吐验收。
+### Foundry scope and gates
 
-返航可靠性补充（2026-09-07）：1472-test/a157a0b已同批冷部署，Windows CI34112598180成功。旧失败checkpoint27507953因更新primary在启动时撤销，严格改走当前primary恢复而未复活票据；新航程532d165b于27593800→27599682成功并通过600tick稳定落地。完整十写审计保全母星2310实体/0prebuild，387非belt详情建立新完整基线；新窗第1写正常保存27644409后，新checkpoint已durable retired。普通返航正例不等于旧checkpoint重试或故障shore分支的连续轨迹验收，后者仍待；运行模块复制/续建、三级链、两倍十分钟、准备清单和最终双包门均不缩减。
+- Parameterized line plans, candidate sites, native terrain/collision/power/logistics checks and complete material budgets, using runtime recipes/dependency graphs and actual machine speeds. Name external supply and coproduct sinks explicitly.
+- An immutable finite action graph reuses existing safety and researched native blueprint/construction paths. Bounded batch prepare/commit and per-frame work are permitted; the model need not choose every belt.
+- Accept explicit user blueprint codes or explicitly selected current-owned buildings; support generation/export, bound input/decompression/object counts, and parse recipes, links, I/O and costs. Reject unsupported content; metadata is data. No arbitrary-file scan.
+- Check full materials, technology, native placement and external connections at the chosen pose. Aggregate/per-object outcomes distinguish unsubmitted, pending, completed, blocked and unknown, binding blueprint hash, identity, site, budget and idempotency.
+- Partial success never replays the whole graph. Cancel stops unexecuted work. Protected owned-bound progress survives restart; fresh inspection/prepare and actual-entity receipt reconciliation replace old tokens.
+- Plan generation, external selection and execution remain distinct. Replan on site changes. Belt/sorter lines can use existing primitives; delivery-based plans additionally require independent distributor add-on/configuration and conserved-courier primitives, rather than making these a prerequisite for every Foundry plan.
+- Generate a complete equipment/power/logistics/cost plan for at least one three-stage chain, then build with normal materials and drones. Save/restart mid-plan and continue without duplicate entities, charges or unexplained topology.
+- Demonstrate a running-module copy with native costs, settings, links and sustained output. Cover illegal/unsupported inputs, shortage, occupancy, stale plans, idempotency, partial success, cancel and deduplicated restart continuation. Preview/offline evidence alone cannot pass these gates.
+- Regress Overseer, owned save/import/resume, Journal and prior actions before release. Retain the original separation between implementation and independent long-lived-world construction/continuation validation.
 
-2026-09-07 / 1455-test只读补充（较早截面）：exact belt detail新增rearPickup，区分open path尾端对齐货包、未对齐、非尾/闭环与unknown，避免把分段物品排序当队首。1455项Debug/Release、完整Release零警告错误、实际源码64工具/1资源通过，当时尚待冷部署/live；后续部署/修复见上文。运行模块复制/续建、三级链、2×十分钟、出发准备清单和最终双包门均保持未完成。
+### Governor scope and gates
 
-### Overseer 范围
+- Analyze steady state and bottlenecks with the shared runtime recipe graph; calculate machine counts, transport, power and theoretical/measured rates. Propose expansion, power, logistics and source replacement.
+- Prioritize native same-family in-place upgrades of production equipment, belts and sorters, one entity per prepare/commit and only when that family is implemented and proven. Never assign `protoId`; verify debit/refund, recipe/filter, cargo and reciprocal links without assuming ID stability. The accepted executable subset is ordinary manufacturing assemblers and basic `2011 → 2012` sorters; belt/advanced-sorter upgrade research does not enable those families.
+- Compare upgrade, new-build and module-copy costs/benefits. Separate target demand, actual production/consumption, allocatable supply, stock delta and deficit; equal shortage-limited production/consumption is not balance.
+- Foundry plans new ground; Governor replans existing production using the same sizing helpers. External Agents select proposals and execute through finite Foundry/primitives, without an autonomous expansion loop.
+- Declare baseline, target, tolerance and steady-state window before action. Raise a chosen line to twice its fresh stable nonzero measured baseline and sustain it within the declared tolerance for at least ten game minutes.
+- Throughout that window require no grid instability, logistics deadlock, unexplained resource change or write quarantine. Changed conditions must yield an explainable new proposal.
+- Native-upgrade at least one existing device, preserve materials/cargo/connections and prove save/recovery. Recheck upstream, power and logistics after copying; doubling modules is not doubling throughput. Theoretical capacity cannot replace measurement or justify loosening tolerance afterward.
 
-1455本机后续：正常冷部署/同档恢复27241993，175实体/28配置/库存/Journal连续；真实MCP对110队首硅与102非尾负例通过。只读观察区间184tick和对应满硅槽/仅需钛证据确认当前挡料，不是供钛修复或Governor窗口。accepted9保留，下面全部生产/复制/续建/扩产/准备与双包验收门不变。
+### Departure preparation and whole-version gates
 
-- 多星球生产、供电、物流与科研摘要。
-- 明确定义采样周期和时间窗口的实际速率、理论速率与利用率。
-- 区分缺料、输出堵塞、供电不足、物流阻塞和矿脉耗尽。
-- 从目标物品向上游追踪关键设备、物流边和根因。
-- 生成继承现有协议脱敏规则的诊断包：不得包含 token、planToken、绝对路径或原始存档身份。
-- 时间窗口数据复用 per-save 持久化与日记保护模式，不另建无保护状态源。
-- 提供与 `v0.3.1` 同安全语义的用户授权导入/认领入口，作为玩家手动读档后交接给 Agent 的显式 onboarding 边界；该横切能力不改变 Overseer 的诊断目标。
+Use genuine expedition demand for three-stage construction and expansion. One line may supply several proofs, but costs, actual rate, mid-plan recovery and departure readiness each need evidence.
 
-当前已完成的功能切片包括：有界且由 session/过滤器/页大小绑定的多星球原生 600-tick 生产窗口；逐工厂供电/物流与全局科研摘要；按当前程序集公式重算的理论产能和利用率；assembler、matrix lab、miner 的直接首因分类；受 sorter/splitter 物料规则约束的同星递归；经精确 demand/supply station endpoint 与供应塔真实 Input belt 进入未显示远端 factory 的跨星递归；按 owned save 哈希隔离、current-user ACL 保护、单批原子持久化的物流进展窗口；以及 `public_allowlist_v1` 同 tick 诊断包。live 结果已经从母星钛块熔炉 `104:530` 经需求站 `104:1657` / 供应站 `102:44` 追到远端矿机 `102:1`，完整页与真实分页、错绑 cursor 拒绝、公共 JSON 脱敏及源码 MCP `0.4.0.0` / 53 tools 均通过。
+- Complete native research/mecha/logistics prerequisites from the current runtime catalog, without assumed recipes or direct unlocks.
+- Sustain automatic warper and chosen conventional-fuel replenishment; normally produce stations, vessels, remote mining, power and transport materials. Handcrafting may bootstrap or fill gaps, never replace the sustained key-consumable lines.
+- The external Agent selects a preparation kit and target quantities/rates. Record source, stock, measured replenishment, power/transport margin and deficit; close each against fresh readback and predeclared game-time windows.
+- Pass Overseer, Foundry, Governor and kit gates together, normally save the same owned world, and prove recovery, Journal continuity and healthy writes. Build complete same-source packages for owner review; earlier diagnostic packages or material drafts do not substitute.
+- Preparation covers the departure system only, without unseen-system resource disclosure. Actual round trips, target-system extraction and interstellar routes belong to `0.5.0`.
 
-四项明确验收门已有候选证据：受控物流配置阻塞、空载输入缺料与真实运输负载下的断电分别稳定得到 `logistics_blocked / confirmed`、`material_shortage / confirmed`、`insufficient_power / confirmed`；三者都通过正常配置恢复，并由真实补料、送达、网络 ratio 1、finding 清除与钛块 `12 min⁻¹` 核销。两轮活动运输分别在 tick `17572610/17579665` 普通保存、正常退出，再由 exact-primary 恢复并自动重存 `17572642/17579696`；新 session 的物流基线从恢复后的当前 game tick 重建，离线墙钟没有成熟成假 stall。最终 healthy 普通保存为 tick `17584412`，第七次十写审计保持同一和平、非沙盒、1× owned world、2254 built/0 prebuild、Journal `49/49` durable、三网满供电且 0 blocker/checkpoint/BepInEx error。
-
-Overseer 部分保留的 live 覆盖缺口是真实 carrier 连续 600 game tick 完全静止后再恢复。当前程序集与实机对照表明：已出发运输船会由 `StationComponent.InternalTickRemote` 持续推进，站点断电不冻结它；暂停不推进 game tick，改需求/路线或拆塔会改变 qualifying route，而直接改 `stage/t/uPos/uSpeed/warpState` 违反项目边界。该分支保留 Core 自动测试和明确已知限制，不能伪造实机证据。clean `8c49bcb` 的 Release 构建为 0 warning/0 error，262 项自动测试全通过；Windows Core CI run `33957178227` 成功。手动包为 234 files、233 manifest entries、53 tools、1 resource，SHA-256 `001323b108d76b0de4fdc9102312a8db2c8ba85d555392e7b8b572ad32542ee8`；Thunderstore 包为 12 entries，SHA-256 `c8e53d60b37940cca9fe229dbaecaf4f72f4c71c599e5a63d685ae2a7a5c33ed`。两包均为 `sourceDirty=false` 且绑定 commit `8c49bcba1226e152a653fb5cfded7face00db86b`。实际手动包安装后，4/4 Plugin 和 224/224 MCP 文件无缺失/哈希差异，MCP 无额外文件；3 个旧 PDB 不在 manifest 且不是运行程序集。安装态 protected resume 在 ticket minimum `18318499` 后完成，fresh tick `18319586` 为 owned/saved/healthy、Journal `49/49`，live MCP `0.4.0.0` 的 53 tools、playbook 和 tick `18334303` 的 3/3-factory `public_allowlist_v1` bundle 均通过。这些是合并前 Overseer 候选的历史证据；合并后的 Foundry、Governor 与准备清单仍须分别完成下列验收，最终工件必须重新构建与验证。
-
-2026-09-05 的候选刷新另增一项发布前回归：每张新恢复票据必须绑定逐档 Journal 最小 durable sequence，并在载入前/采用后双重验证。该回归已在同一 `owned-world-001` 上完成：旧票据兼容恢复并自动升级；新票据精确记录 `attached_existing_save`、tracking tick `4428079` 和 minimum durable sequence `49`；正常保存/关闭后的 checkpoint-bearing 恢复通过。随后在 current-user-only 受保护副本中先移走 Journal、再放回连续但只到 sequence `48` 的截断件，两次有效 prepare 都 fail-closed、没有 plan/commit/action/loader，且同一 token 保持可用；逐字节恢复原 `49/49` 文档后，同一票据在 minimum tick `18290246` 上恢复成功，最终 fresh tick `18291377`、owned/saved/healthy、无 blocker/checkpoint。旧 token 在两份 store 中均有 durable tombstone，新票据重新签发，临时敏感备份已删除；最终 clean 包安装后的又一次受保护恢复保持同一边界。
-
-### Overseer 验收门
-
-2026-09-07补充：有正库存的配置物流源成为保守因果边界，保留消费者缺料/聚合库存并明确发货未证明，不再径直用更深满仓症状替代它。该切片1418离线、后续1420同批冷部署与同档恢复通过；Bridge26890053及实际源码MCP26949464均在104:530→1657→102:44边界保留聚合库存8、stocked_logistics_boundary与unproven。远端矿机满50/50仍是其局部事实；不把此只读修复算成供应恢复、可分配库存证明或版本完成。
-
-- 在受控条件下分别制造缺料、断电和物流阻塞，Overseer 能稳定区分三者。
-- 外部 Agent 依据诊断修复至少一个场景，随后把三个故障全部清除。
-- 相关产线恢复到非零且稳定的实际产量，并以 healthy writes 普通保存收官。
-- 跨保存/恢复后窗口语义一致，不把离线、暂停或采样缺口误算为实际吞吐。
-
-### Foundry 范围（原 0.5.0，完整并入本版本）
-
-最新源码/实机切片（2026-09-07）：0956f6b普通Move增加32m/33点/66原生射线的可选风险提示，1405项离线测试、完整Release及CI通过。同批正常冷部署、protected resume26508610后，真实MCP正负例与root固定24m方案的正常Move/Walk读回通过；不自动寻路、不改hash/准入、不把未发现风险当通路保证。Luna随后正常取铁300、递归手搓带60，十写全量2299实体/71详情、J55/55/healthy审计通过。775腾位后的新四个600tick窗黄糖真实产2/1/1/1并保存，后续恢复保留水链/775预约；油/钛补给与永久金刚石分流仍待，不能把短窗输出当持续供应。运行模块复制/续建、完整三级链、Governor两倍十分钟、准备清单与最终合并双包的原验收门保持未完成。
-
-较早实机补充（2026-09-07）：1370同批部署后，主会话固定规划、Luna以正常材料/无人机完成15段原生球面新带与两只水过滤sorter，专线753→761恢复自动补水。四个独立600tick窗证明水与有机/钛晶体实际加工，正常保存26239001后root完整2300实体/64详情审计通过；后续26508610恢复已保留水链拓扑，恢复后的持续供流尚需独立窗口。这个受控供给修复不是运行模块蓝图复制、三级链施工、Governor两倍十分钟或最终整包验收，后述原门保持。
-
-当前实机进度（2026-09-07）：1324已冷部署。Luna按主会话固定方案正常完成2269→2283→2281→2282，action e1574d6f在25768360→25768977由无人机完成3个NEW预建筑，2001仅46→43。正常保存25827878、关闭、同档恢复/重存25827909后，root完整2283对象/47详情证明材料、身份、位置、原邻边及原生公式验证的朝向保持，无重复扣料/建造。普通2001源带续接这一窄修复通过；不是运行模块蓝图复制或Foundry计划中途续建。1258/1309的源码与预检历史保留在存档日记和EXP-229–231，不再作为现行待部署状态。
-
-当前安全限制：全部NEW带点完整占位检查；既有源只支持同级、水平、开放货物路径、出口空闲且最多一条入带、中心唯一，向空地non-removing cover延伸至少两条NEW带。旧源/货物/邻边保全、NEW预算及MCP兼容确认必须齐备；目标合流、换级、倾斜/抬高、闭环仍拒绝，不自动修复旧世界。其他带等级实机、供水/黄糖持续恢复、运行模块复制与续建、三级链、Governor两倍十分钟、准备清单和最终双包门仍未完成。
-
-- 参数化生产线计划、候选选址、碰撞/地形/供电/物流检查和物料预算。
-- 复用运行时 recipe catalog 与依赖图；目标速率按实际设备速度计算，外部供给和副产物必须显式表示。
-- 计划输出为不可变有限动作图，复用已有安全机制及经当前 DLL 证明的原生蓝图/建设路径；允许有界批量 prepare/commit，本地执行器按每帧上限推进，不要求模型逐根带决策。
-- 蓝图来源为用户明确提供的代码或当前 owned world 明确选定的建筑集合，支持生成/导出；不扫描任意用户文件，说明文字只作数据。
-- 限制输入/解压大小、对象数量和支持类型，完整解析建筑、配方、内部连接、输入输出和材料；不支持内容明确拒绝。指定位置/方向后用原生预检检查整图材料、科技、地形、碰撞及外部连接。
-- prepare → commit → actionId 提供聚合及逐对象未提交/待施工/已完成/受阻/结果未知状态；绑定蓝图哈希、owned identity、现场、预算和幂等。部分失败不重放整图，取消只停止未执行部分，不拆已建对象或宣称全部回滚。
-- 跨重启进度绑定 owned save identity 并受保护持久化。重启后重新 inspect 与 prepare，不复用失效 planToken；已完成步骤按实际实体身份复读去重。
-- 明确区分计划生成、用户或外部 Agent 选择，以及逐步执行；人工操作造成现场改变时用 fresh 状态重新规划。
-- 普通 belt/sorter 产线可先用既有原语贯通；配送型计划只有在物流配送器 add-on、状态/配置、配送运输机守恒转移获得独立安全原语后才可执行（EXP-186），它不是所有 Foundry 计划的通用前置。
-
-### Foundry 验收门
-
-实现进度（2026-09-05）：第一块只读 Core 编译器与 `spherewright_get_foundry_plan` 已实现，复用运行时依赖图计算共享上游用量、实际设备速度下的台数和基础功率，并显式报告外供/副产物。当前仅为 `material_plan/executable=false` 草案；284 项无游戏 DLL 测试通过，完整 Release 构建零警告/零错误；源码 MCP 实际 stdio 握手为 54 tools / 1 resource，Foundry 标记只读并能从 playbook 发现。最终代码 `b9e74bd` 的 Windows Core CI run `33971193774` 成功。同批 Plugin 4/4 DLL 实装哈希匹配，同档 protected resume 后由 Luna Max 通过真实 MCP 调用验证 `1203 @ 30/min`：三级配方、4 熔炉+4 制造台、机器基础功率 2.52 MW、铁矿 120/min、铜矿 15/min；重复草案哈希稳定，零速率和错误 session 均拒绝。Journal `51/51` durable，最终 fresh tick `19393344`、saved tick `19369366`、healthy。场地绑定、完整物流与电网成本、不可变动作图和受保护续建仍未实现；本次普通恢复不冒充建厂中途续建，未声称上述新设备或实际产量已经建成。
-
-2026-09-06 场地切片：上述工具增加可选 `site`，对最多 32 台机器生成有界球面网格，经原生吸附、形状感知的碰撞体净空与当前建造入口的实体/预建筑占位守卫与逐台原生条件检查，再核算整份机器库存。返回 `site_preview/executable=false` 和 session/revision/姿态/条件评估哈希；不签发动作 token，不证明物流/电网或按档续建。317 项测试和完整 Release 构建通过（零警告/错误）。同批部署后实体1491占位在 native 检查前拒绝，tick19790031的单熔炉空地候选实际执行 native 检查并返回 `NotEnoughItem`（整份预算缺1台）；尚无 native Ok 正例，不能把该缺料结果当作其他条件全通过。
-
-2026-09-06 有限复用第一批：规范已独立提交授权；新增只读 `inspect_blueprint/export_blueprint`，以及复用普通动作协议的 `prepare_upgrade/commit_upgrade`。蓝图限制256KiB代码/128KiB压缩/1MiB解压、64对象/8区域，先严格解析后native MD5F/字节往返核验，不支持内容整份拒绝。实机5对象显式选区导出/重新解析通过，保留recipe97、铁过滤1101、内部连接并另披露4条源边界；签名篡改、重复选择、stale endpoint均无写入拒绝。升级支持普通制造台同族高阶（实机只验未解锁拒绝）及基本分拣器2011→2012。27的携铜1件升级证明即时材料/货物守恒和幂等，但只有一条factory边，触发IFX-028补齐必需双端守卫，没有冒充完整拓扑。修复版对一端23在prepare拒绝；749升级实机证明2012 -1/2011 +1、filter1101和两条reciprocal保留，并经保存22213308→正常退出→protected resume/重存22213339复验。升级后同一蓝图含3×2011和1×2012，原生模型/过滤/连接再次往返通过，仍 `executable=false`。最后正常保存22221235，fresh22224301–22224335 owned/healthy、Journal54/54、三网满供电。404项Debug/Release测试、完整Release零警告错误；真实MCP58 tools/1 resource及双端playbook通过。研究buffer新增明确点数单位（IFX-026），蓝图类型与升级白名单已解耦（IFX-027）。没有新发行包/异机声明；原生蓝图现场绑定、施工/部分成功/取消/逐对象持久化续建、belt/高阶sorter升级和Governor实际扩产仍未完成。
-
-2026-09-06 有限施工源码切片：新增32对象的native site预检、普通建设入口逐对象执行、受保护write-ahead进度、部分成功/取消/新session fresh续建。5个新MCP方法（进度读回及施工/取消两对prepare/commit），读取工具仍executable=false。458项Release测试、完整Release零警告错误；保存22943478/正常关闭后4/4开发DLL已冷部署，尚待live。当前仍缺运行模块复制与取消/重启正例、完整三级链全成本/施工、Governor2×十分钟、准备清单和最终合并包验收；不因新增工具缩减原验收门。
-
-- 为至少一条三级生产链生成含设备、供电、物流和成本的完整计划。
-- 只使用正常库存、施工无人机和现有原语完成建造。
-- 中途正常保存并重启后继续，最终没有重复实体、重复扣料或无法解释的拓扑差异。
-- 计划失效、现场占用或资源变化时重新规划，而不是复用陈旧 token 或强行落地。
-- 实机复制一组正常运行的生产模块，验证原生材料成本、配置/连接和持续产出；覆盖非法/不支持蓝图、缺料、占位、stale、幂等、部分成功、取消和保存重启后逐对象去重续建。预览与离线测试不冒充该验收。
-- 发布前复跑 Overseer、owned save/import/resume、Journal 和原有动作语义回归；由 Luna Max 子 Agent 在同一长期存档验证建厂与续建，主会话负责接口设计和代码实现。
-
-### Governor 范围（原 0.6.0，完整并入本版本）
-
-分析存量产线的稳态和瓶颈，为外部 Agent 提供确定性的配平、扩产与换源方案。
-
-- 复用现有运行时配方依赖图完成确定性配方分解，不另起不一致的配方模型。
-- 计算设备数量、物流吞吐、供电预算、理论速率和实际速率。
-- 生成扩产、补电、物流增强和矿脉替换方案。
-- 优先实现生产设备、传送带、分拣器的同族原地升级（逐实体 prepare/commit）；只调用当前 DLL 已证明的原生 API，不写 protoId，不假设实体 ID 不变，验证扣料/返还、配方/过滤器、货物与连接。
-- 比较原地升级、增建和复制模块的成本及收益；分别计算目标需求、实际生产/消耗、可分配供给、库存变化和缺口，不把缺料下产出等于消耗称作配平。
-- 同一 `0.4.0` 内，Foundry 负责空地新建计划，Governor 负责存量产线分析和再规划，并复用 Foundry 的规模计算 helper。
-- 方案由外部 Agent 选择，执行仍通过 `0.4` 的 Foundry 计划或既有安全原语逐步完成，不内置自主扩产循环。
-- 每个计划明确记录基线、目标速率、允许误差和稳态窗口。
-
-### Governor 验收门
-
-2026-09-09 / 组合验收源码修复、待冷部署：IFX-075原来的内存基线缺口已补齐逐owned、64KiB/8声明、当前用户ACL与flush/原子替换的私有存储。首次锁定必须落盘成功才返回`declarationDurable=true`；同档同游戏版本且Journal连续性通过的健康planned resume，凭已消费票据的原最低tick覆盖锁定点后可复用原hash。旧主档即使后来运行/自动重存到更高tick也不能补证。重启始终把连续采样归零，`durable=false`仍指样本；不接受客户端历史、旧token或扩产后替换基线。Release完整构建零警告错误，Core/Contracts/MCP共1556测试通过；故障回调、存档水位、身份/版本/完整性、8声明上限、重启后重新覆盖36000tick与MCP/指南发现均有离线证据。尚未冷部署/实机锁定或恢复声明，无真实blueprint commit，黄糖供给仍待；原蓝图取消/续建及2×实机门不缩减。详见IFX-075/EXP-271。
-
-2026-09-07 / 1217源码诊断切片：明确区分接线几何读取/候选/投影/朝向/倾斜/校验失败，不把最后一个槽的TooSkew泛化成所有失败根因。1217项Debug/Release及完整Release通过，64工具不变；当前1201安装态，新阶段消息待冷部署。此可观测性改动不改变供水、蓝图复制/续建、三级链、2×十分钟、准备清单或最终双包的未完成状态。
-
-2026-09-07 / 1201安装态：0c59dab同批DLL与源码哈希相等，CI34061648108通过；protected resume自动重存25258871，J55/55、healthy及29对象身份/设置/连接保持。accepted9未归零。四个明确接线prepare仍拒绝，无commit，因此偏移辅助成功施工及持续供水尚未通过；下面源码段的“未安装”仅保留较早截面，其他验收门不变。
-
-2026-09-07 / 1201-test接线适配：普通2011/2012可在旧精确槽之外预检一个明确belt上的原生微调接点，不扫描邻带、不放宽角度/碰撞，静态几何/offset绑定和逐阶段位姿/连接证明齐备。1201项Debug/Release、完整Release零警告错误、源码MCP64 tools/1 resource通过；未安装/live，当前1144同档正常保存25258840、八写提前审计healthy/J55/55/2280built/0prebuild。供水/黄糖运输、运行模块复制/续建、三级链、2×十分钟、准备清单和最终双包门仍未通过。
-
-2026-09-07 / 1144安装态复验：同批冷部署和protected resume成功、自动重存25092923；761容量/预约设置跨保存恢复一致。775 set-bans30在25142861的即时DTO与2280错误哈希域的非重试拒绝均有本机原始证据。15m Move成功，accepted7保留；外侧水带仅原生放置prepare通过，端点连接及持续供水/钛晶石/黄糖仍未证明。下面较早段落的“待冷部署”保留当时截面，不覆盖本次有限正例，也不缩减运行模块/三级链/2×十分钟/准备清单/最终双包门。
-
-2026-09-07 / 1144-test调用诊断：MCP参数与指南明确sorter-filter采用根configurationStateHash，storage-capacity仍采用完整stateHash。可确证的错误域不再误报可重试现场变化；未知来源不匹配仍要求fresh read。1144项Debug/Release、完整Release零警告错误与源码MCP64 tools/1 resource/32678字符指南通过；1066运行态的新诊断和1132即时证据仍待冷部署/live。此修复不改变写入语义，也不抵扣下列生产/扩产/整包验收门。
-
-2026-09-07 / 1132-test即时证据：仓配置成功动作保留同tick前后设置/库存，避免把解禁后的正常held货投递误判成动作失败。1132项Debug/Release、完整Release零警告错误及源码MCP64 tools/1 resource通过；新字段未安装/live。游戏三个配置动作已终态核销，但清理阶段遗漏分段观察，只实际开放3073tick、暂收74件，不计6000tick或稳定供水通过；原扩产/准备/打包门不变。
-
-2026-09-07 / 1066安装态后续实测：五次持货过滤、三次双边守恒移料、761锁已有格/预约水格均terminal成功，并由主会话逐raw及全23页2280built/独立0prebuild核销十写。水格count0没有注入，bans30仍保留；尾带仍混料，尚无持续供水、该配置保存恢复或Governor扩产证明。源码1115的Windows CI34056095397已成功；安装版本与源码验证分开，不缩减以下原验收门。
-
-2026-09-07 / 1066-test容量修复切片：既有configure-building新增单仓原生自动化容量/过滤预约；普通单向Inserting分拣器可修改后续过滤并完整保留既有持货/目标/运动。25项仓格策略、2项Contracts与3项MCP新回归后1066项Debug/Release及完整Release零警告错误；MCP仍64工具/1资源，30340字符指南一致。同批冷部署/同档恢复后，761禁入配置24849780、2218持氢换过滤24855565均实机terminal成功，库存/端点/玩家保持并完成十写审计；水格预约和持续供水仍待。不能把单次腾格送入水2当持续恢复。三级链/蓝图复制及续建、真实2×十分钟、准备清单和最终双包验收不缩减。
-
-2026-09-07 / 1105-test带路径读取准备：以当前DLL固定45字节导出头获取私有长度/分段数，主动在正文前结束只读导出；验证公开数组尺寸后只用有界托管复制，复用既有完整path解析。39项新回归后1105项Debug/Release及完整Release零警告错误通过。尚未接到upgrade动作或任何公开读取入口，白名单不变，没有belt升级或该读取适配实机通过声明；游戏继续1066安装态。这是后续完整路径/货物/邻边证明的基础，不能当作Governor带升级完成。
-
-2026-09-07 / 1115-test读取诊断修复：0/缺失/不可取绝对值的对象ID改为明确INVALID_REQUEST，包内指南区分objectId/entityId与第一页/完整工厂。9 Core/1 MCP新增回归、1115项Debug/Release、完整Release和源码64 tools/1 resource/31150字符指南通过；安装态1066不热替换，新错误码live待验。现有实机恢复不因这项调用者诊断修复重开存档。
-
-2026-09-07 供水事故修复切片：普通分拣器可在原生建造时指定初始过滤，计划/预建筑/完工双端均核对；新MCP拒绝旧Plugin未确认的过滤计划。991项Debug/Release及完整Release通过，工具数量不变。尚待冷部署/实机，旧混仓与供水缺口仍存在；不能把过滤接口等同于恢复吞吐或满足Governor两倍门。
-
-2026-09-07 带升级准备切片：完成Core完整受影响CargoPath导出解析/静态绑定/即时货物与速度变化证明，76项合成回归、955项Debug/Release和完整Release构建通过。仍未接入Plugin或开放belt升级；不能以这项离线证明替代原生材料/连接读回及实机验收。
-
-2026-09-06 增建成本补充：可选显式 `parallelExpansionBlueprint` 在稳定非零基线后按目标减基线复用Foundry全部模块建材、native场地、满基础负载供电和额定输送预算；成本范围与外部基础设施排除项单列，意图/整图哈希复用现有有限执行器。806项Release离线及完整Release零警告错误通过，此新增比较尚未安装/live验证；专用补电/物流/换源、真实复制/续建和两倍十分钟门未缩减。
-
-2026-09-06 进度：新增只读 `spherewright_get_governor_plan`，复用Foundry规模计算和同tick Overseer，比较同族升级/增建/复制的成本、返还与理论增益；实际增益仍unknown、balanced=false。八个有界选区序列各需三段独立非零600tick基线，跨session/现场/规模变化和采样缺口不能沿用；区分目标需求、实际产消、当地可分配余量、选区库存差与缺口，不把行星计数冒充逐机器统计。初始487项离线切片随后进入510-test冷部署，首个live电机30/min提案如实返回零产、warming_up/0样本而非已配平。完整供电/物流/换源方案、可核销的十分钟扩产和下列验收仍未完成。
-
-- 选定一条现有生产线，把目标吞吐提高到基线的两倍。
-- 在计划声明的误差范围内连续保持至少十分钟游戏时间。
-- 期间无电网失稳、物流死锁、不可解释资源变化或写入隔离。
-- 现场条件改变后能提供可解释的新方案，而不是继续依赖旧规模结论。
-- 实机升级至少一种已有设备，保持材料/货物/连接正确并通过保存恢复；复制后重验上游、电力和物流，模块数量翻倍不等于实际吞吐翻倍。
-
-基线必须是执行前 fresh 采样得到的稳定非零实际吞吐；目标、误差和窗口在执行前声明，不能以理论产能替代实测，也不能事后放宽误差来通过验收。
-
-### 跨星系准备与整体交付验收
-
-2026-09-07 / 879源码观察补充：既有inspect增加独立单段beltCargo、明确unknown/observed和非加总覆盖，Debug/Release879与完整Release通过，未冷部署。这不开放belt升级，也不代替运行模块/三级链/两倍十分钟/准备清单验收；实机仍在767上恢复现有黄糖链供水。
-
-2026-09-06 / 767恢复复验：protected resume成功，主档重存23992240，115/719/720修复双端与邻居配置保存恢复通过；24112905–24113594一写完整审计healthy/J55/55/2267built/0prebuild/0blocker/checkpoint。四个5对象复制候选均因占位、满基础负载功率不足或跨纬线拒绝；真实输送预算两路均分配30/min、额定45/30，但没有blueprint commit。774黄糖消费者存在，1112/1118/6003实际产消仍0；供给修复、运行模块复制/续建、三级链、两倍十分钟、准备清单和最终双包均未完成。下列“恢复尚待”是较早截面，不覆盖本次修复持久性正例。
-
-2026-09-06 / 当前实机补充：736安装态完成719/720普通拆除及无人机重建，包含1件金刚石返还，保存23827812、五写完整审计healthy/J55/55。原蓝图ErrorInserterData已消失，但新候选占位、完整native放置检查未执行且功率预算不足，仍无blueprint commit。三段600tick窗金刚石均0/min、715输出100/100堵塞；这不是模块复制或Governor基线完成。修复保存后恢复、供料与下游恢复、复制/续建、预声明两倍十分钟等原验收门全部保留。
-
-2026-09-06 / 767输送预算补充：Foundry现把每个带/普通分拣器的原生满电单件容量纳入有限流分配，包含边界带、sorter跨格、共享流量和续建规则哈希。未知/高级堆叠容量明确阻断组合计划；普通蓝图支持未缩减，理论预算也不等于公平分流、外供稳定或实测吞吐。31项新增Core回归后Release767通过、完整Release0警告错误；随后736正常保存23992209、一写完整审计与正常退出，30f125d的767同批DLL已冷部署4/4哈希匹配，protected resume及新预算live另行核验，原实机/准备清单/双包门保持不变。
-
-2026-09-06 / 736本机实测补充：同档protected resume后，空载2011分拣器115经正常回收和无人机重建恢复108→115→113双端，2011为4→5→4且邻居旧连接/配方保留。普通保存23753687、4写审计healthy/J55/55/2267built/0prebuild/三网满电。三个独立600tick窗石墨产量18/12/12每分钟，仍缺煤，不是配平或两倍验收；此次修复的保存恢复尚待。以下736源码段中的“待冷部署”仅为此前截面；Foundry组合施工仍未live验证。现有9月5日两个0.4 ZIP属于旧构建，不包含本批最新改动，不能作为最终合并包。
-
-最新源码切片（2026-09-06 / 736-test）：Foundry已把显式蓝图布局与物料意图、内部有向流分配、完整建材和逐对象步骤接入同一有限执行器，原意图随保护记录保留，取消/续建不重复收费。它不是任意自动布局，belt/sorter带宽、三级链实际施工与吞吐仍待验。普通2011/2012拆除补上115缺端修复入口，具有货物count/inc和现存配对边守卫，尚待冷部署实测。736项Debug/Release、完整Release零警告错误、真实MCP64tools/1resource/22881字符同批指南、35包能力策略检查通过。672实机正常走到煤308后保存23725814并完成3写审计，J55/55、Walk0/400MJ、2267built/0prebuild、三网满电。以下原实机验收门均不缩减；没有新最终ZIP、push/tag/release。
-
-当前差距复核（2026-09-06 / 672-test源码）：Overseer主要场景、749分拣器原生升级及保存恢复已验。有限蓝图仍缺运行模块复制、部分施工/取消/重启续建的live正例；Foundry新增独立原生电网覆盖/满基础负载预算，但三级链完整物流/电力施工计划仍未贯通。Governor已实现实验前锁定声明与连续窗口观察，617实机三窗30/min基线成立，锁定却被未归因全局矿竭告警误阻断；源码已按目标/选区路径划分告警，仍缺实际2×十分钟和完整基础设施/换源方案。原生燃料资格现公开于目录，不能只按燃料棒名称找补给。最新Debug/Release672测试、完整Release零警告错误、真实MCP64tools/1resource和同批20838字符指南通过，尚无新最终ZIP。617同档最新普通保存23604289，提前9写审计healthy/J55/55/2267built/0prebuild；含两次位置stall、一次低能量策略失误后的正常断能终态，随后氢20正常转移/refuel并恢复能源。115缺少113返回连接仍待修复，不把它未经对照就定为石墨亏供唯一根因。准备清单、翘曲器/选定燃料自动供给与最终双包整体验收都未完成；本目标仅0.4，不提前进入0.5。
-
-较早差距截面（2026-09-06 / 567-test源码）：Overseer主要场景与749分拣器原生升级/保存恢复已验；有限蓝图执行器已有离线实现，但运行模块复制、部分施工取消/重启续建仍缺live正例；Foundry完整三级链的物流/电力全成本计划仍未贯通；Governor目前是只读三方案提案，还缺完整基础设施/换源方案及执行前稳定非零基线上的2×十分钟；关键消耗品自动补给、准备清单和最终合并包也未验收。最新源码567项Debug/Release通过、完整Release零警告错误，MCP64 tools/1 resource。原生科研优先级已实测保持其他顺序/进度/库存，2701于23177285正常解锁；IFX-033皮带出边投影已521-test冷部署并同档恢复。现场金刚石715模块受仓储类型限制，主会话新增普通2101配置/过滤/哈希/读回及33项Core回归；该扩展已554-test冷部署，716/717的30格/default/过滤读取实测通过，仍无blueprint commit。另发现IFX-034把流动库存绑定为配置，567-test已修复并通过回归/真实MCP元数据，待保存后冷部署及非零基线实测。旧Overseer-only ZIP被新包能力检查正确拒绝，不充当最终包。此处不把已实现但未实测的项算作完成，不按工具数量计算完成率。
-
-三级链建厂和存量扩产优先选择服务远征准备的真实需求，不为演示另起无关产线；同一条线可以提供多项验收证据，但物料预算、实际吞吐、重启续建和出发准备必须各自证明。
-
-- 通过正常科研与升级补齐跨恒星航行、物流所需的前置条件；具体前置和配方来自当前运行时目录，不能凭历史经验硬填或直接解锁。
-- 空间翘曲器与选定常规燃料具备持续自动补充能力；星际物流站、运输船及远端采矿、供电、输送所需建材通过正常生产备齐。手搓可用于启动或补缺，但不能替代关键消耗品的持续产线。
-- 外部 Agent 明确选择准备清单及目标数量/速率；每项记录来源、现有库存、实际补充速率、供电/运输余量与剩余缺口。目标必须以 fresh 读回和声明的游戏时间窗口核销，不能只用理论产能或一次库存快照宣称准备完成。
-- Overseer、Foundry、Governor 的验收门和准备清单同时通过后，在同一 owned save 正常保存并验证恢复、Journal 连续性和 healthy writes；再重新构建完整发行包交用户审核。旧诊断候选或物料草案的证据不替代这一整体验收。
-- 本版本只准备出发星系一侧，不新增跨恒星飞行/曲速调度，不泄露未探索星系资源；实际往返、目标星系资源获取和跨恒星物流路线由 `0.5.0` 验收。
+The accepted candidate retains separate mid-plan three-stage and whole-kit recovery proofs plus a final contiguous 36060-game-tick joint-supply window. Those retained proofs satisfy the accepted local candidate within their recorded scope; they do not establish all Mods, machines, worlds or computers.
 
 ## 0.5.0 — Voyager
 
-状态：**planned**（原 `0.7.0`，范围与验收门完整前移）。
+Status: **planned**, moved intact from former `0.7.0`.
 
-### 目标
+### Goal and scope
 
-在正常宇宙探索、能源和翘曲器规则下完成跨恒星飞行与物流。
+Complete interstellar travel/logistics under normal exploration, energy and warper rules. Catalogs obey native exploration visibility without leaking unseen veins. Plan routes, distance, energy, warpers and return budgets; expose launch, flight, warp, braking, landing, replenishment and recovery stages. A pre-flight checkpoint binds exactly one flight and loses rollback authority after success/covering primary save. Observe/configure cross-star stations, vessels and warpers. Reuse accepted finite construction, upgrades and balancing for remote modules.
 
-### 范围
+### Acceptance gates
 
-- 恒星、行星和资源目录遵守游戏原生探索可见性；未探索星系不泄露正常星图不可见的矿脉细节。
-- 跨恒星航线、距离、能源、翘曲器和返航预算。
-- 起飞、航行、曲速、减速、着陆、补能和恢复的结构化阶段。
-- 飞行前检查点只绑定当前精确飞行；成功并由主档保存覆盖后立即失去回档能力。
-- 星际物流站、运输船与翘曲器的跨恒星配置及状态观察。
-- 复用 0.4 已验证的有限蓝图、原地升级和配平能力在其他星系部署模块，不另建一套规划体系。
+- Normally travel to another star and return safely; bring back a resource missing from the departure system.
+- Establish and prove at least one sustained interstellar logistics route.
+- Cause one recoverable flight failure and recover only its exact checkpoint; never roll back a world covered by a newer primary save.
 
-### 验收门
-
-- 伊卡洛斯正常往返另一恒星并安全着陆。
-- 从目标星系带回母星系缺少的资源。
-- 建立并证明至少一条持续工作的跨恒星物流路线。
-- 人为制造一次可恢复的飞行失败，只能使用该次飞行的精确检查点恢复，不得回滚已被后续主档覆盖的世界。
-
-技术上复用 `0.3` 物流塔与既有检查点飞行原语；产品上接续 `0.4` 已验收的出发准备、诊断、新建与扩产能力。跨恒星航线、实际航行预算和曲速适配仍须在本版本按当前程序集单独实现和验证。
+Reuse the `0.3` station and existing checkpoint primitives while separately implementing/researching current-assembly interstellar routes, budgets and warp behavior.
 
 ## 0.6.0 — Ascension
 
-状态：**planned**（原 `0.8.0`，范围与验收门完整前移）。
+Status: **planned**, moved intact from former `0.8.0`.
 
-### 目标
+### Goal and scope
 
-让外部 Agent 通过正常生产和结构化戴森设计能力建成可持续发射并输出功率的戴森系统。
+Build a Dyson system with sustainable launches and power through normal industry and structured design. Observe/configure late technology, solar sails, rockets, ejectors, silos and ray receivers; inspect swarm/orbits/nodes/frames/shells. New native-proven orbit/node/frame design writes require prepare/commit, idempotency, readback and safety-matrix validation. Deterministic legality/cost/progress helpers support external design decisions and long-window launch, shortage, power and progress observation.
 
-### 范围
+### Acceptance gates
 
-- 后期科技、太阳帆、运载火箭、电磁轨道弹射器、垂直发射井和射线接收站的观察与配置。
-- 戴森云、轨道、节点、框架和壳层的结构化观察。
-- 新增经当前版本调用链证明的戴森云轨道与壳层节点/框架设计写入，分别执行 prepare/commit、幂等、复读和安全矩阵验证。
-- 确定性的轨道/壳层合法性、成本和进度 helper；设计决定仍由外部 Agent 作出。
-- 长时间发射、停机、缺料、供电和结构进度观察。
-
-### 验收门
-
-- 通过正常产业链制造并发射第一枚太阳帆和第一枚运载火箭。
-- 戴森球节点、框架或壳层出现可复读的真实结构进度。
-- 射线接收站在正常条件下持续输出非零功率。
-- 保存、重启和长时间运行后，设计、发射状态和进度保持一致。
+- Normally manufacture and launch the first sail and rocket; prove real node/frame/shell progress by readback.
+- Sustain nonzero ray-receiver power under normal conditions.
+- Preserve design, launch state and progress across save, restart and long operation.
 
 ## 0.7.0 — Release Candidate
 
-状态：**planned**（原 `0.9.0`，范围与验收门完整前移）。
+Status: **planned**, moved intact from former `0.9.0`.
 
-### 目标
+### Goal and scope
 
-冻结准备晋升 `1.0.0` 的公共面，完成可分发、可升级、可回滚的发行工程和从新档到戴森功率的全流程证明。
+Freeze the public surface for `1.0.0` and complete reproducible distribution, upgrade, rollback and a new-world-to-Dyson-power proof. No new major action domain. Freeze MCP/protocol/errors/compatibility, version handshake, deprecation and migration rules, and fail-closed unsupported-DSP handling. Supply Thunderstore-compatible layout and GitHub installation/upgrade/uninstall/rollback artifacts; atomically deploy the same-batch Plugin/Core/Contracts set, addressing partial replacement and `TypeLoadException`. Retain self-contained MCP, manifest, checksums, changelog, diagnostics, clear user/developer dependencies, normal/abnormal exit, offline recovery, performance and endurance regressions.
 
-### 范围
+### Acceptance gates
 
-- 不再新增主要动作域；冻结 MCP 工具面、协议、结构化错误码和兼容性承诺。
-- Plugin/MCP 版本握手、弃用策略、迁移规则和不支持 DSP 版本的 fail-closed 行为。
-- Thunderstore 兼容包结构，以及 GitHub Release 的安装、升级、卸载和回滚工件。
-- 三个程序集同批原子部署，拒绝部分替换；覆盖曾出现的 `TypeLoadException` 风险。
-- 自包含 MCP、manifest、校验和、CHANGELOG、诊断信息和明确的最终用户/开发者依赖区分。
-- 正常关闭、异常退出、长期离线恢复、性能和长时间运行回归。
+- Use the exact final artifacts intended for `1.0.0` from a fresh owned world to sustained Dyson power, retaining complete sanitized evidence.
+- Install, upgrade, save and recover in a second independent owned world; cover repeated normal exits, one abnormal exit, long offline recovery and multi-day operation with one coherent evidence chain.
+- Automatically prove no MCP/protocol/error-code diff between the final `0.7.x` and `1.0.0`.
+- No known P0/P1 remains in the public defect list; state this in release notes. README, AGENTS, CHANGELOG, LICENSE, installation and metadata agree.
+- End users need neither source nor SDK; installation, upgrade, uninstall and failure rollback are reproducible.
 
-### 验收门
+## 1.0.0 promotion rule
 
-- 使用将晋升为 `1.0.0` 的同一批最终工件，从新的 Spherewright owned world 走到持续戴森功率，并归档完整脱敏证据。
-- 在第二个独立 owned world 完成安装、升级、保存和恢复回归。
-- 覆盖多轮正常关闭、一次异常退出、长期离线恢复和多日长跑，不重复拆分互相矛盾的证据链。
-- 最后一个 `0.7.x` 与 `1.0.0` 之间的 MCP 工具面、协议和错误码 diff 为空，并由自动检查证明。
-- 公开缺陷清单中没有已知 P0/P1；结论写入 release notes，而非口头声明。
-- README、AGENTS、CHANGELOG、LICENSE、安装说明和发行元数据一致。
-- 最终用户不需要源码或 .NET SDK，且安装、升级、卸载、失败回滚均可复现。
-
-## 1.0.0 晋升规则
-
-`1.0.0` 只从通过全部 `0.7` Release Candidate 验收门的同一批工件晋升。晋升阶段只允许修复阻断发布的缺陷；其他兼容性修复进入 `1.0.x`，新能力进入后续路线图。
+Promote only the same artifacts that pass every `0.7` gate. During promotion, fix only release blockers. Other compatibility fixes belong in `1.0.x`; new capabilities require a subsequent roadmap.

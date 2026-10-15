@@ -1,22 +1,16 @@
 # Contributing to Spherewright
 
-Spherewright is currently a personal project under active development. Until the
-`1.0.0` release, the maintainer is not accepting pull requests. Unsolicited pull
-requests may be closed without review so that the implementation and safety
-model can evolve through one coherent development path.
+[English](CONTRIBUTING.md) · [简体中文](CONTRIBUTING.zh-CN.md)
 
-Hands-on testing is welcome. If you encounter a reproducible problem while
-trying Spherewright, please open a GitHub Issue and include:
+Spherewright is a personal project under active development. Until `1.0.0`, the maintainer is not accepting external pull requests. Unsolicited PRs may be closed without review while implementation and safety evolve through one coherent path. Maintainer-owned development is unaffected.
 
-- the Dyson Sphere Program and BepInEx versions;
-- the Spherewright version or commit;
-- the structured error code and the smallest reproducible sequence;
-- sanitized state or action evidence that helps distinguish an observation,
-  rejected prepare, accepted action, or unknown outcome.
+Hands-on testing and reproducible defect reports are welcome. Open a GitHub Issue with:
 
-Never attach save files, runtime descriptors, authentication tokens, plan
-tokens, private paths, or evidence from a save that Spherewright does not own.
+- DSP and BepInEx versions;
+- Spherewright version or exact commit;
+- structured error code and smallest reproducible sequence;
+- sanitized evidence distinguishing observation, rejected prepare, accepted action and unknown outcome.
 
-The contribution policy will be reconsidered after `1.0.0`. Opening an Issue
-does not imply that a feature request will be accepted, but confirmed defects
-are useful input to the roadmap and the incident/fix record.
+Never attach Saves, runtime descriptors, authentication/plan tokens, private paths or evidence from a save Spherewright does not own. Keep original accepted action IDs locally for reconciliation; do not replay them to improve a report.
+
+The policy will be reconsidered after `1.0.0`. An Issue does not guarantee feature acceptance. Read [documentation](docs/README.md), [status](docs/project-status.md) and [contributor rules](AGENTS.md).

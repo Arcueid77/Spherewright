@@ -1,0 +1,261 @@
+<a id="spherewright-agent-playbook-opening-and-core-operation"></a>
+# Spherewright Agent 指南：开局与核心操作
+
+[English](https://github.com/AvaloNero/Spherewright/blob/main/docs/agent-playbook.md) | [简体中文](agent-playbook.zh-CN.md)
+
+每个会话首次游戏操作前必须阅读本指南。它也是内嵌 MCP 资源 `spherewright://agent/playbooks/opening-movement-v1`，不需要活动 Bridge 即可读取。
+
+当前维护版面向原生 `0.10.35.29145`。已验收 0.4.0 候选仍固定于 `2a7a98d1932c404e3a7abc2c11233d9c0b8780d9`，最新正式发布为 v0.3.3。修改本指南不会更新已安装 MCP 或冻结候选包。能力、当前授权、原生可执行性和最终验收是不同事实。本指南不授予游戏、加载、恢复、安装、部署或发布权限。
+
+<a id="session-entry-and-ownership"></a>
+## 会话入口与所有权
+
+1. 读取状态、本资源及新的会话、玩家快照。核对 `ownedBySpherewright`、精确会话、星球、revision、和平证据、`writeHealth`、持久 Journal、已接受和进行中的操作及已安装组件组合。明确指出失败字段，未知不能替换为零。
+2. 在闲置菜单只使用授权且公布的受保护恢复，或正常新世界流程。不能猜测、枚举或传入存档名。新世界通过原生流程固定和平、1 倍、非沙盒。
+3. 玩家加载世界是受限世界。导入要求精确会话 prepare、披露、之后明确用户回复，再正常保存独立受管副本。`attached_existing_save` 不声明接管前历史。
+4. 写入关闭、非受管或不健康时保持只读，直到规定流程成功。原生支持或早期预览通过不等于授权。
+5. Host 重启不是游戏重启，遵守[重连规则](#restart-and-interplanetary-flight)。新证据替换旧观察，不清零接受计数或未解决操作。
+
+<a id="active-primary-after-a-researched-version-change"></a>
+## 已研究版本变化后的有效主存档
+
+`reauthorize_version_changed_primary` 仅支持未变化、有效、健康的 `29104→29131` 来源与证据 5，或 `29131→29145` 与证据 6。默认恢复要求同版本。Prepare 在闲置菜单使用当前受保护 token，确认 false，不覆盖 tick。要求精确版本对、嵌入身份、候选等于记录 tick、该版本对专用 prompt/digest、要求确认且禁止立即 commit。旧证据 5 的提示不能用于新版本对。
+
+展示披露并获得之后明确回复后才 commit。Commit 在只读租约下重查副本、主存档、原 Journal、菜单 revision，加载前持久消耗，再证明接管及精确第三或第四次转换，之后正常重存、发新凭据。未知对、跳链、第五次转换、旧证据、重放均拒绝。消耗后失败需要对账。
+
+旧版本已完成蓝图历史只有在支持的同身份 Journal 转换得到证明，且加载 tick 覆盖回执时才能保留。读取不重写文件；下次正常进度更新保留记录并标记支持版本。部分、未知或未证明进度仍拒绝。不能清空进度或重建成功对象。
+
+<a id="expired-planned-restart-credential"></a>
+## 过期的计划重启凭据
+
+`restartResumeAvailable` 表示来源存在，不表示未过期授权。不能改有效期、离线续期、换源或导入副本伪造连续性。`reauthorize_expired_primary` 只预览精确健康过期 ticket 绑定的主存档记录 tick 和原持久 Journal。Prepare 不携带确认、tick 覆盖，要求证据 2 及精确模式、身份、候选、源与目标、prompt/digest 回显。
+
+展示候选与提示，等待之后明确回复，再以 `userConfirmedInConversation=true` 和该次新 `confirmationDigest` commit。Digest 是协议回显，不是让用户输入的验证码。`commitAllowedNow=false`、`USER_CONFIRMATION_REQUIRED` 不豁免其他 blocker。计划变化或过期必须重新披露，批准不能搬到变化证据上。
+
+过期主存档仅支持已研究有向对：`0.10.34.28529→0.10.35.29057`、`0.10.34.28529→0.10.35.29088`、`0.10.35.29088→0.10.35.29104`、`0.10.35.29104→0.10.35.29131`、`0.10.35.29131→0.10.35.29145`。保留 Journal 起始版本、条目、旧转换，要求有效版本一致，最多四次连续持久转换。不允许未知对、降级或普通默认跨版本恢复。
+
+Plugin 租约绑定完整主文件和 Journal，加载前持久化尝试与消耗记录。中断、失败消耗会受阻隔离，不自动重试。一次接受后轮询终态，证明受管、已保存、健康的身份、tick、原持久 Journal 和新凭据。离线测试不是实机恢复证据。
+
+<a id="active-credential-explicitly-authorized-fixed-autosave0"></a>
+## 有效凭据：明确授权的固定 AutoSave0
+
+`reauthorize_fixed_autosave0` 只使用未变化的有效健康来源、相同受保护副本、原 Journal、已知进度下限及精确授权候选，预览固定原生 AutoSave0。要求证据版本 **4**，源、运行时、候选为同一支持版本，精确嵌入身份，`candidateGameTick=minimumGameTick=expectedRecoveryGameTick`，专用 prompt/digest。主存档仍须匹配身份和 ticket tick；两个完整文件均有指纹、租约。不能迁移或回退。
+
+已有明确会话授权精确匹配披露候选时不用重复询问，泛化“继续”不授权另一个候选。Prepare 仍未确认且只读，commit 在匹配授权下声明并带新 digest；其他 blocker 保留。轮询一个 action，验证正常主重存、Journal、新凭据，对账已有工作，中断或未知时冻结。
+
+<a id="expired-fixed-autosave0-credential"></a>
+## 过期的固定 AutoSave0 凭据
+
+`reauthorize_expired_autosave0` 仅使用固定 AutoSave0、过期健康来源、批准下限与精确 tick、未变化原主存档和 Journal。要求 `recoveryEvidenceVersion=3`、prepared 精确身份与候选、相同支持版本、专用 prompt/digest、要求确认且禁止立即 commit。候选必须新于 ticket 和已观察主存档；任意槽、LastExit、主存档作为加载源、迁移和回退均拒绝。
+
+Prepare 不接受确认。展示具体披露并获得之后明确回复，再 commit 一次。持久消耗先于加载，完整文件租约和 Journal 连续性先于正常主保存、新凭据。保留并对账更新接受回执，不能重放。
+
+<a id="commit-discipline"></a>
+## Commit 纪律
+
+- 普通操作只 prepare 下一个已批准动作，要求 `prepared=true`、新 token、`commitAllowedNow=true`、无 blocker。只读预览是独立无 token 契约，不能囤令牌或扫候选。
+- 重新授权 prepare 有意返回 `commitAllowedNow=false` 与 `USER_CONFIRMATION_REQUIRED`。仅在没有其他 blocker，且精确披露模式要求的明确会话授权已满足时，才可用确认标志和精确 digest commit 同一个仍有效的计划。该模式要求之后明确回复时必须先取得回复；只有规定的有效固定 AutoSave0 模式可使用已有匹配授权。不能等待另一次 prepare 返回 true，也不能伪造 true 预检。确认只满足已披露的确认要求，绝不绕过其他 blocker。
+- 直连 Bridge 脚本在同一受保护调用上下文保留 prepare/commit，不能打印、持久化 `planToken` 用于跨进程。普通 MCP prepare/commit 可按协议传递计划。只有证明零接受、零进行中操作，才能丢弃孤儿计划；可能接受就必须对账原 action。
+- 使用正确哈希域。研究采用 `selectionStateHash` 的 `expectedSelectionStateHash`，不是通用 progression `stateHash`。Sorter-filter 使用根 `configurationStateHash`，storage-capacity 使用完整 `stateHash`。诊断过期前先检查实际 payload 和哈希来源。
+- 现有 Lab 调用器如 `Invoke-SpherewrightNormalAction` 必须同时绑定 commit 的 `sessionId`、`planetId`，不能临时手写新 payload。同阶段两次拒绝 commit 要停止调用器诊断；格式错误、响应丢失不证明拒绝。
+- 轮询原 action 至终态：**Host 超时不等于完成**。核对 terminal/succeeded、身份、真实 ID、材料与增产点、双向边。可能接受后的丢响应、观察错误、格式断言、超时都冻结新写，不能换 key 重放。
+- 普通 configure 计划的 `targetObjectId` 可选，返回绑定不是请求哈希回显。保留明确的模式专用检查。分拣器配置返回请求绑定的 `expectedStateHash`；`plannedSorterFilterItemId`、可空 target 不是配置必需字段，配置终态 `targetObjectIds` 可为空。独立验证时复用当前 Core 规范哈希，不编造回显，也不因调用器断言失败重放接受操作。
+- 一个游戏写入者持有当前有限声明。交接要求原写入者停止、无尚未终态的操作或未对账结果及明确单写者交接。保留完整受保护意图、回执覆盖，包括未匹配 commit 意图。
+- 执行前固定结果、范围、成功前缀、请求、时间、写预算、完成和停止条件。新 Lab 窗口按配置默认 20，既有十写声明保留上限和计数。所需正常保存在同预算内预留。到限冻结 commit、独立对账审计后明确重开。两次相似原生失败停止候选家族，做结构重设计。
+- `wholePlanExecutable=false` 的只读结果不可执行。既有有限授权可覆盖另行批准的必要工作，但每操作仍需原生 prepare 和精确预算；不授权未批准恢复、另一个世界或正式发布。
+- 采样保留原游戏 tick 截止、墙时截止及请求上限。之后零产出窗不证明此前无产出。保留失败窗、缺口、调用器时间和原证据，不自动扩预算、重启或追认通过。
+
+直连检查字段是 **objectId，不是 entityId**（正实体、负预建造）；玩家用新 localPlanetId，配置用 entityId，转移用 storageEntityId。仍有 nextCursor 时，前 100 条缺少 ID 不证明消失。先修 schema 错误，不能重放成功建造。
+
+<a id="research-buffers-and-inventory-accounting"></a>
+## 研究缓冲与库存对账
+
+`attached_existing_save`、`historicalCoverageComplete=false` 下，缺少首事件不证明从未制造。保留完整旧条目前缀、`durableThroughSequence`、无 pending、无 persistence error。操作不必新增 Journal，不能强求每次 +1。不能重放完成制造或补造跟踪前历史满足断言。
+
+保留 `mechaResearchItemBuffer`、`autoManageResearchItems` 和前后 progression。每物品 **3600 点** 不是额外背包栈。正常管理可退回整件，余点不能向上取整；这不允许接受任意库存增加。数量、触发、操作边界不明就停止新写。
+
+研究完成前采集 `completionItemRewards`（最多 32 条）。它不是交付回执；null 或缺失是未知，空列表是已观察无奖励。保留顺序和重复条目，对账 `unlockTick`、完整库存与增产点、缓冲和容量。交付未知、溢出或多个可能来源使增量未解决。绝不重放完成操作。奖励不是手工或生产，不得创建、补记首次生产 Journal 事件。
+
+核对运行时物品身份：请求 `itemId`、返回 `itemName`、`get_recipe_catalog` 输入输出必须一致；否则丢弃诊断，不能为错误物料 commit 供给修改。
+
+核对单位：研究站缓冲为点数、每物品 3600，普通库存为 items/1。电力 `power-generation-current-tick` 绝非燃料库存；旧 Plugin 即使错报 items/1 也必须排除。`unitsPerItem=0` 无转换含义，禁止除零。整数有封顶，能量总数用完整宽度电力汇总。
+
+原生生产是滚动 600 tick 窗口，不是区间账本。不能累加重叠窗口，或对有缺口窗口套完整区间不等式。重叠、缺口和库存观察区间分别保留。流入下限低于目标是无法下结论，不是上限失败；零 `P=C` 或满库存都不证明持续供给。修正标准不能追认旧窗，固定目标、容差、缺口清零规则不变。
+
+<a id="rear-pickup-on-mixed-input-belts"></a>
+## 混合输入带的尾部拾取
+
+`beltCargo.rearPickup` 观察所选开放尾部的原生对齐包。排序段总量不是队列顺序，无对齐包不是空，unavailable 是未知。新读取双向站输入、needs、容量：原生输入不能跳过不需要的包，storageIndex 是上次接收槽，不是输入过滤器。
+
+以重复包、needs 证据诊断持续阻塞。一个水源不能使共享带变纯。容量增加只是有限排空，必须证明持续源与汇；不能清库存制造吞吐，也不能重放部分路线。
+
+<a id="energy-and-approach"></a>
+## 能量与接近
+
+移动、采集、建造、飞行前检查核心、燃料舱、可用燃料和充电路线，使用原生补燃料 prepare/commit 和守恒证明。`acceptedAsMechaFuel` 是原生证据，不靠记忆燃料棒名称；null 是未知。热值不证明范围、燃耗。不能反复探测耗尽核心。已稳定 Walk 就取消恢复意图。有限即时新读、prepare 重试只适用于确定未接受请求，不适用于未知 commit。
+
+`prepare_move` 校验目标，不证明通道；`prepare_harvest` 也不证明接近通道。采集前以有界切平面路径点把观察到的障碍留在玩家身后。
+
+采集接近在原生到达或产出、节点减少前使用相同 **180/600 游戏 tick** 进度窗。原地正常采矿不是停滞；缺电时暂停，恢复后重置。真实终态停滞保留原 action，不能重放、传送或内置寻路。
+
+`prepare_move.surfacePreview` 是最短弧建议证据（最多 32 m、33 样本、66 射线），不是原生寻路或路线净空。Partial、unavailable、缺失是未知，不是干地。通过也不预测控制器或样本间净空。终态后要求实际稳定 Walk、低速和足够能量。
+
+较长或不完整观察的过水，只能由外部选择一次连续原生 Move，目标必须是在当前受管世界重新观察、此前验证的 Walk 落点，带障碍证据、有限过水和恢复储备。建筑存在本身不是 Walk 落点。禁止建立中间水上目标；这不会把 unavailable 变干地证据，也不是未知岸线的通用例外。轮询同 action 至终态并要求 `movementState=Walk`；失败或非 Walk 到达立即停，不重复同目标。
+
+完整观察的短过水可在途中有水。要求 `state=observed`、`unknownSampleCount=0`、`arcLengthMetres<=32`、完整间距 `arcLengthMetres/(samples.Count-1)<=1`，末尾干地后缀至少 4 m。后缀每点需 `groundHit=true`、`waterHit=true`、有限非 null `groundBelowWaterMetres<=-0.1`，且无岸线风险。采用 `arrivalTolerance=1.5`，不要强制 0.5 m；半径归一、三维距离会占用容差。容差要高于径向差并留停止余量，干地后缀还须 ≥`2*arrivalTolerance+1` 米。不能扩大失败操作容差重放。这仍不证明 Walk 或净空。浅水终点、缺样、partial、unavailable 均不合格。对精确审阅目标重 prepare、重核证据、commit 一次、轮询终态。失败或未就绪落点即停，保留 action；不能扩成候选扫描或自动寻路。
+
+这是 Move 接近规则，不是建筑放置门槛。移动预览通过不批准建筑占地。已在当前原生建造范围内就不要额外 Move。全占地原生地面、碰撞、科技、材料仍必查，不能用路径样本覆盖 `NeedGround` 拒绝。检查真实 `plannedPosition` 的电力覆盖。
+
+成功移动后原生减速可能需要有界只读稳定等待，例如最多八次、间隔 250 ms，而非额外或重复 Move。会话 revision 不是接受操作计数。已接受命令要继续轮询，不能竞争发命令。
+
+<a id="stalled-move-recovery"></a>
+## Move 停滞恢复
+
+- `position_stalled`、`route_stalled` 终态后不重复同目标。
+- 检查附近对象，包括带、分拣器。重合位置也保留不同 ID。用当前目录、检查确认物品，粗半径不是水平行走占地。不完整、过期分页不能排除障碍。逃出后留在障碍簇外，再穿同障碍不算新路线。无独立授权不能拆工作产线。
+- 单个可识别障碍：切平面投影远离方向，prepare 一个表面目标，约 **5 m**。
+- 多个或未知障碍：两个正交切平面轴，最多四目标 `+u,-u,+v,-v`，约 **4 m**，每方向一次。每次轮询终态，首次成功即停，四次全失败停止搜索。
+- 登陆舱属于植被，不保证是工厂实体，保留四向回退。
+- 原业务已可 prepare 时执行业务，不继续驱动至中心。
+
+所有恢复复用 `prepare_move`、`commit_move`。禁止传送、输入注入、写位置或无界寻路。
+
+<a id="construction-and-production-lines"></a>
+## 建造与产线
+
+建造终态成功与无人机空闲是不同事实。Working 计所有存活非空闲无人机。先核对返回对象、材料、连接；下一步需空闲时使用有界读取，例如最多 20 次、间隔 500 ms。仅以新哈希继续未提交部分，不能重放完成路线或模块。拆除后 ID 可复用，必须重查物品、姿态、端点。
+
+不能对每次普通建造或保存都强加所有无人机空闲。已有成功终态读回、玩家静止健康且待建、待修目标为零时，返航中能否 commit 仍由原生校验决定。保留初始空闲边界与独立阶段就绪审计。这不允许操作重叠、未知结果或省略哈希。
+
+`INVENTORY_INSUFFICIENT`、`NotEnoughItem` 后不能库存不变重试。通过正常制造或转移取得材料，按相同显式端点重查完整路径。材料检查可能先于其他失败，不证明放置。旧 Plugin 可能记为位置无效；混合、未知、占用、覆盖错误保留各自诊断。
+
+新分拣器由原生成本、终态、身份、过滤和连接证明建造。`sorterEndpoints` 是未来放置几何，不是运行时序。即使 `sorterEndpoints=unavailable`，也查 `pickTargetObjectId`、`insertTargetObjectId` 和双向连接，不能把成功终态改成失败；也不能豁免原生 `prepare_build` 拒绝。电力和实际货物流另证。
+
+建立 pending-readback，绑定原 action、新成功终态、唯一返回新 ID、计划源与终点。仅允许该证明对象在两端新增预期双向边，保留全部旧边和其他配置。两物理端点槽位均证明后才完成本地步骤。不能宽泛略连接、放行未证 ID，或未计新增边就做零变化断言。后检查异常不授权重放，新对账后只继续未提交后缀。
+
+有条件时使用原生槽位姿态与外向方向；带虚拟姿态不知道物理占用。追踪所有允许物品通过的双向路径，完成相关分页。矩阵用研究站，不是制造台。当前 `buffers` 不观察带货物，空列表是货物未知，不是空带。不能清库存制造需求并声称输出。
+
+详情 `beltCargo` 要求 observed；缺失、unavailable 是未知。带保护区的 512 格段可能与邻段重复，不能相加，也不是整路升级货物保留证明。
+
+`materialInventoryObjectIds` 最多选 256 对象、64 路、总 32768 格、4096 成员，每路最多 8192 格、512 带。每路只计一次，包括选择外成员，不能按选择比例摊分。要求相同会话、星球、tick，无缺失或 unavailable。支持带、仓储、罐、分拣器、制造台、矿机、物流站及普通火力、核聚变燃料状态；订单不是库存，电力缓冲必须排除。电力节点（`power-node`）、其他发电机、研究站不支持。切片不证明流量，不同 tick 不能拼成同 tick 库存。
+
+`tankFluidCount` 显式零证明空，null、缺失是未知，空 `buffers` 本身不是零。液体缓冲和标量是同份库存；单次排空不是持续氢汇证明。
+
+Storage-capacity 绑定完整状态：`set-bans` 禁尾部输入，`lock-occupied` 保留已占格，`filter-empty-or-matching` 保留真空或同物品格，`clear-filters` 清保留而非物品。Filter0 不等于空，lock-occupied 不保留空格；公共缓冲不是原生格号。保留精确数量、增产点、拓扑、投影过滤。
+
+若批准有限容量调整，声明移动精确物品数及要恢复的原 bans。Bans 不是全局冻结：TakeItem 向前搜索，全部禁格仍可被普通分拣器取出。转移后重查，若声明恰一保留输出格就证明恰一个匹配投影过滤，保留其他格，仅规划未完成步骤。不能反复移库存或加有限仓储假装持续需求。
+
+已有 sorter-filter 保留持货、运动，只改未来拾取。确认 `componentKind=inserter` 且字段存在的 `filterItemId=null` 是无过滤，请求 `filterItemId=0` 清过滤，两种表示不同。字段缺失、检查失败或非 inserter 仍未知。保留接受操作，绝不重放。改过滤不需要重做建造路径、放置预览。
+
+`storageConfigurationReadback` 是同步原生配置边界，不是之后轮询时刻，不要求跨 tick 库存相等。例如终态转移 `600 -> 580`、之后 581 可能是后续原生流动；保留原转移终态并单独调查，不能作为持续供给基线。转移使用 `storageEntityId`。
+
+不能仅因建筑存在宣告产线完成。证明已解锁配置配方、真实供电、输入运输或消耗、目标非零输出在有界 tick 增加。持久 Journal 可支持但不替代。批准里程碑后正常保存并验证保存 tick、健康。
+
+<a id="power-and-fuel"></a>
+## 电力与燃料
+
+`configurationStateHash` 不是通用静态拓扑指纹。保留完整 before、probe、after 快照，对比身份、位置、旋转、电网、连接及其他静态字段。只有已识别发电缓冲的非负整数数量可变化，角色、燃料物品名、单位、增产点仍保留。无法解释的哈希继续阻止计划，不能重写返回哈希，每个实际操作仍新原生 prepare/commit。
+
+`power-generation-current-tick` 不是燃料库存，零不证明燃料空。`isWorking=false` 不权威证明发电机停止，无独立燃料观察时数量未知。原生 `energyCapacity` 是动态观察，不是成员拓扑。独立比较受影响消费者、发电机成员，保留批准容量下限和供电比例及变化；这些值都不证明燃料库存、燃耗、连续性，变化本身不证明原因。Null 不证明断网。
+
+公布时，详情 `inspect_factory_entity.fuelPowerState` 的 bufferedFuelCount 是物品，loadedFuelEnergyJoules 是能量，不是额外燃料。缓冲与已加载 ID 可不同，null、unavailable 是未知，零缓冲不代表无余热。材料切片需切片 tick 的 fuelPowerState。操作哈希不变，容量、当前发电为 J/t；额定计算不是真燃耗或持续分配。禁止为观察而调用修改能量、发电的原生方法。
+
+采用当前原生 `fuelPowerProfile`，不能套记忆额定值。`fuelEnergyUsePerTick * 3600 / fuelHeatValueJoules` 是额定基础消耗，不是实发电、燃料库存或持续供给。这些火力、核聚变额定值不能给未建或未供燃料发电机信用。没有有效负载时增加发电机不会成倍增加燃耗，先声明有用需求与独立测量窗。
+
+预算既有完整基础负载加全部剩余计划需求，包含闲置机器、充电、外送和新覆盖设备。不能等有利容量尖峰或忽略缺口。Power `energyCapacity` 是当前 tick 可用发电，不是不可变装机拓扑。保留解释变化，实际发电、容量、燃料分别成立。
+
+Foundry 机器电力采用吸附 `site.machines[].position`，不是 `site.origin`，也不是另一设备的精确位置探针。不能把正面或负面结果跨偏移套用。检查真实 `plannedPosition`、明确覆盖余量及真实计划消费者，不能用代理机器替代；完成后核对消费者真实网络、供电。几何缺失是未知，不允许建造。
+
+纯节点 null 详情不证明无网，读取完整汇总和成员。规划风机时两两至少 10.5 m，检查所有计划对。原生放置、电力门槛保留，不授权移动、重建成功对象。
+
+有限额外仓储不证明持续供给，低于声明需求限流也不证明目标。保留失败窗、采样缺口。瞬时电力或燃料库存不等于长窗验收。
+
+发电单位单独用 J/t。isWorking=false 不权威证明停机。纯节点可无网络详情，新塔可能合网改 ID；先对账完整汇总、实际成员数、覆盖、拓扑。缺证据或无法解释变化仍须停止。
+
+<a id="bounded-blueprints-and-upgrades-development-subset"></a>
+## 有限蓝图与升级（开发子集）
+
+蓝图检查、导出仅为数据，`executable=false`。导出最多 64 个、64 m 内明确完成对象；检查限代码 256 KiB、压缩 128 KiB、负载 1 MiB、64 对象、8 区域。未知内容、设置拒绝，元数据不可信。复制 storageConfiguration，不复制货物。检查 `inputEndpointFacingDot/outputEndpointFacingDot`，负值表示背向，不允许绕过 `TooSkew`。
+
+可选选址最多 32 显式对象、闭合内部端、无环依赖，检查完整原生成本、解锁、范围、地形、碰撞、电力。原生 `SnapTropic` 可调整跨回归线网格，返回逐对象姿态需重新批准，对齐不豁免检查。不能重放完成对象，也不能连续循环附近锚点应对重复拒绝。
+
+有限 `prepare_blueprint_build` 绑定代码、选址、评估或精确 `resumeBuildId`、新进度、新玩家哈希和最多 32 提交。每 tick 最多一个就绪对象，正常材料、无人机。读逐对象状态、回执，批次暂停不是全完成。取消只停未来提交。受保护预写进度在恢复前对账身份、材料、配置、双向和自由端拓扑，重启不恢复 token、不重放模块。未知隔离写入。
+
+Foundry 材料读取不可执行。机器网格通过不含物流、电力设施和持续供应。显式蓝图组合绑定原 foundryIntent、精确阶段数、全成本依赖、逐物品流、自由边界、独立原生电力和额定运输。`transportCapacityVerified` 仍 false，阻塞分配可低于需求。基础 2011/2012 跨度额定不是实测吞吐，堆叠 2013 阻塞此组合。相同代码、选址、意图、哈希用于既有有限 prepare/commit；恢复不能替意图，剩余电力不重复计完成对象。
+
+升级仅公布的制造台更高档或普通 2011→2012，需一整台目标设备和返还空间。分拣器两条真实连接必须双向，不能只看缓存目标。原生 STT 不是游戏 tick：`max(10000,inserterSttRaw*span)`；基础理想周期 `max(4,ceil(2*STT/10000))` 是额定，不是实测。制造台进度重置，分拣器比例缩放。保留即时 `upgradeReadback` 和物品 delta，新读取实际结果 ID、产线、电力、流量。不能重放成功建造修调用器断言。
+
+拆除仅公布子集。空默认 2101 要全部 30 原生格为空、默认，无堆叠、连接、预建造、缓存引用，不自动重建。空 2001 链头最多 16 带、512 格，完整空独立路且无外部引用。先正常断开外部分拣器，不能移中段或相连尾。原生返还、幸存对象证明仍必需。
+
+<a id="governor-measurement-and-acceptance"></a>
+## Governor 测量与验收
+
+只读 Governor 对明确来源比较实测需求、缺口和成本排除项。星球速率要求相关生产者完整归属。采样前选定周期：默认 600 或 3600、原生六 tick 对齐计数；要求匹配回显和三个不同独立窗口。源、会话、观察物品范围、周期变化清历史。
+
+仅规划目标变化可请求实测两倍。锁前只重新定价目标速率保留不变来源历史，但须重编译、新核对新 proposalHash，在任何扩建写入前锁定。基线不稳定仍不稳定，不扩大容差或重试至好看样本。已锁目标、容差、规模不可改，原目标、容差、规模保持不可变。
+
+写入前要求持久服务端 `validationBaselineProposalHash`，同源、同 revision、3600 tick 内。禁止客户历史速率或编辑归档。可选并行蓝图以目标减就绪非零实测基线，使用相同 Foundry 意图、哈希，不计外部源汇设施。
+
+执行、采样保留同一锁。只有健康计划受保护恢复、相同受管身份、版本、Journal、原 ticket 下限覆盖锁才可恢复。观察从零重启；存储缺失、损坏或锁前证据是阻塞，不允许扩建后重新锁。
+
+计锁定原生窗口连续并集，重复、墙时不加信用。缺口、无效速率、源变更、采样健康未知清进度。Governor throughputValidation.resetReason 是上次重置历史，不是当前失败标志。一起读当前速率、区间、容差、归属、健康、连续 tick；重复文本不是不同独立失败窗口。采样缺口不能恢复旧信用。
+
+`currentWindow` 与库存变化区间不同。长周期改善分辨率，不允许放松 10%、改进行中实验或重解释失败。连续 ≥36000 合格 tick，加要求时精确两倍、≤10%，仅为吞吐证据，不是整体平衡或逐 tick 健康。保留失败窗，源守恒、自动供给、真实运输、保存恢复另证。
+
+`output_blocked` 的 `output_buffer_capacity` 是下一批准入阈值，不是物理仓储容量：`101-q`、`9*q+1`、`19*q+1`。短窗例外要求停止、满电；速率、电力、容量未知不合格，其他情形仍需完整周期。无诊断不证明持续供应，不能清库存抹诊断。
+
+`stocked_logistics_boundary` 的 `configured_route_supply_total` 不是可用未预留库存，`logistics_dispatch_state=unproven` 不证明派送或原因。改物流、扩矿前检查原生订单、机队、路线进展。
+
+<a id="native-free-ground-belt-route-choice"></a>
+### 原生自由地面传送带选择
+
+默认 `native_grid` 适合网格对齐直线末段。显式 `beltPathMode=native_geodesic` 选择一个原生地面路径，不是自动寻路。要求 `plannedBeltPath.routingMode` 和完整原生路径检查，不修改玩家命令。本身不启用已有带覆盖，不证明两个分拣器连接。不能省端点 ID 绕 `belt_path_existing_overlap`，原生覆盖复用不自动修既有世界。
+
+仅源覆盖的原生 2001–2003 子集要求同档、零倾角、自由输出、开放路径、最多一条输入带、新 ID 与哈希、唯一中心、有界旧货物证明及至少两 NEW。零成本、不移除锚点留在原生检查、创建中。此仅源路径拒绝终点覆盖、占用输入合并、替换或升级锚点、高架及闭路。创建须同帧保留完整旧货物、路径，只允许原自由输出变为与新预建造双向边。地面 2001 空终点复用另需不同完整空开路、自由输入、精确 `destinationBindingMode=non_removing_belt_cover` 和 `empty_open_path_native_geometry_v1` 回显；两完整旧路、所有旧边仍绑定。无人机完成后有序成员必须恰为源 + NEW + 终点，无额外实体或旧边丢失。唯一带供源例外是单独证明无电空钛矿机，不允许泛化带供给、带货拼接。源保留要求整路原生旋转和碰撞体证明，不是任意四元数容忍。证明未知隔离写入，绝不允许重放。
+
+花费路线预算前检查源、桥、消费端。合法带不证明分拣器，球面对角虚拟朝向可能拒绝网格设备，优先直线末段。不要求建造前整链通过时，在最小批准接口测试前缀后先 prepare 关键分拣器，再建剩余路线。该前缀不是整路通过，预测基方向不是原生批准。
+
+分拣器米距离、原生格跨度独立：带与设备 5.5 m、3.499 格；带与带 5 m、3.2 格。`TooFar` 不是 `OutOfReach`。加中继前检查明确已有内部带段、方向、货物、物理空槽、全部旧双向边。几何不是原生放置批准。保留整条成功路线，每新端点对只 prepare 一次，拒绝即停；不任意搜邻居、自动改路或重放。
+
+精确、回退诊断分别保留 `nativeChecks`（真正调用 DSP 放置验证数）、`lastNativeRejection`、`lastPreNativeRejection`。零次表示放置未知，旧 Plugin 可能只报最后精确槽位错。候选数不是原生放置次数。读取 `candidate_validation_rejected`、`bestFacingDegrees=unknown` 等阶段原因。不能重放不变端点对、放宽门槛。回退不含火力电站，旧版本还拒绝双带插值，新版本可公布 `native_two_belt_segments`，要求两几何绑定、最多 64 原生路径区间，闭路拒绝。原生 quarter-turn、两次曲线投影前折叠 <40° 种子门槛不能由后续拟合救回。`TooClose` 是最小格跨度，不是玩家距离。支持不保证任意一对可连，几何变化需新 prepare。
+
+<a id="frozen-geometry-and-whole-route-read-only-qualification"></a>
+### 冻结几何与整路只读资格
+
+以完整 factoryGeometryHash 冻结最多 256 带符号对象、64 地形点，纳入预建造、扩展边界。已建带需 `native_runtime_belt_collider_world_bounds`。可选最多 16 原生段、每段 64 点、总 1024 点，给精确完整网格、高架点，不查占用、原生条件。要求有序无 token 回显，不能以估算 geodesic 替代。
+
+端点预览绑定一 NEW2001 跨度、最多两真实端点、普通 2011/2012、过滤、quarter-turn。`plannedBeltQuarterTurns` 是向外槽位姿态：source 朝已有源反向，destination 朝已有终点。适配器已将终点转 180°，不能再转一次。预建造与完成带参考系不同，不能复制 quarter-turn 数；仍必须新查原生角度、跨度、占用、材料。
+
+整路 `beltRoutePreview` 绑定两真实端点、冻结几何、最多 12 显式段、240 m 弦长总、192 NEW，要求完整 stage1、全部带与两分拣器联合原生检查及完整请求、哈希、预算回显。两预览必须 `prepared=false`、`commitAllowedNow=false`、`executable=false`、精确玩家哈希、无 token。不能交 commit 或普通执行器，旧组件缺回显为不可用，不回退建造。
+
+区分原生前 guard、真实原生拒绝、通过。响应成功但 performed=false 或有 blocker 不是原生批准。通过仅证明采集时有界几何、材料、原生条件，不证明未来真实 ID、电力、持续供给或整计划许可。遵守固定候选、预览、请求预算，退役失败家族，不为每候选做审计读取循环。
+
+<a id="one-explicit-elevated-native-belt-span"></a>
+### 单个明确高架原生跨度
+
+`beltPathMode=native_elevated_grid` 允许普通 2001、显式 `beltStartAltitudeLevel`、`beltEndAltitudeLevel` 0..3 且一端升高、每层 1.3333333 m、4..64 完整点、平坦两端、坡度 ≤0.5。边界为原生吸附端点 1.5–30 m 三维直线距离，不是网格路线折线总长。保留独立 64 点、每段、高度及全原生检查，不抬升、裁剪、任意寻路或静默拍平。
+
+唯一高架绑定源为精确空独立高架 2001 尾，带新 ID、哈希、起点、自由终点、完整旧路证明及保留零成本覆盖；3..63 NEW 仍查占用、成本。不允许有货、供给源或终点复用；下一段须用真实终态读回 ID，不能预测拼接。
+
+本地调用器断言不是原生拒绝。再 prepare 前独立核对原精确字段；成功不允许执行未批准整链。合法坡道不证明两个分拣器。仅轮询原操作至终态，保留成功坡道，只为独立授权后续新 prepare。
+
+<a id="restart-and-interplanetary-flight"></a>
+## 重启与行星间飞行
+
+Codex、MCP Host 关闭、重启、断连、上下文压缩、回合结束，均不得触发 DSP 保存、退出、重启、加载。重连时新读受管身份、会话、revision、持久 Journal、外部接受计数和原操作账本。健康且已对账则继续当前世界、不受保护重载；当前是十写声明就保留该计数。未解决则冻结新写、对账同 action，绝不重放。换写入者要求原写入者停止、无尚未终态的操作或未对账结果、明确单写者交接。
+
+只在用户明确关闭游戏，或必要且已授权冷部署时关闭 DSP，保留正常保存、终态、关闭、受保护恢复。Host 重启不授予加载权限，也不证明存档新鲜。
+
+菜单 `gameLoaded=false` 正常，不能等 `gameLoaded=true` 才 prepare。受保护可用不表示原生就绪；prepare 查预加载、菜单、无 loader、精确源和 Journal，不消耗、不加载。只有真实未就绪拒绝才有界等待。接受终态后要求受管、已存、健康 tick 与 Journal。
+
+主存档早于已知接受工作时先停，不加载。只有精确批准 `verified_newer_lastexit` 才可用健康含 Journal 来源、已知下限与批准候选、证据 1、嵌入身份、完整文件与租约。不推断确认、不伪造隔离、不任意选源、不覆盖主文件。对账保存实体、材料、连接，不能重放成功调用器或伪造旧会话审计。
+
+主恢复、AutoSave0、飞行能力独立，不是选择器，新进度后不复活旧能力。Governor 附着失败保留原声明，不能改归档或替基线。修复后的冷组件可恢复同声明并清观察，不恢复旧信用。
+
+飞行要求新核对正常核心、燃料、专用检查点，使用原生 Fly/Sail 并付能量，轮询到稳定落地。过渡中可选读取 `NO_LOCAL_PLANET` 不是终态，继续轮询同 actionId、延后本地读取，不能重启飞行调用器。
+
+有界岸线恢复中，瞬时 Walk 不算到达，精确未完成命令必须持续进度、能量检查直到目标。不能发竞争 Move；要求连续 600 tick 地面低速。终态 `recovery_required` 不能从之后快照改称成功，只有仍公布的匹配检查点可恢复。
+
+冷启动可能因精确主进度更新而使失败飞行检查点退役。不能改 ticket 或复活 token。公布的主受保护恢复是进入更新时间线的独立流程，检查后再新飞行、新检查点。失败重试在资格仍有效时可重复加载同匹配点。稳定到达后确认能力消失，并正常保存主世界使退役持久。
+
+当前场景执行从当前 [Spherewright-Lab](https://github.com/AvaloNero/Spherewright-Lab) 检出目录开始，先读取其当前 [AGENTS.md](https://github.com/AvaloNero/Spherewright-Lab/blob/main/AGENTS.md) 与[活动交接](https://github.com/AvaloNero/Spherewright-Lab/blob/main/operations/active-handoff.md)；本内嵌指南不授予权限。[Lab 固定快照](https://github.com/AvaloNero/Spherewright-Lab/tree/14478a03c64c550e644c559405c8496b647552e7)与[已验收指南](https://github.com/AvaloNero/Spherewright/blob/2a7a98d1932c404e3a7abc2c11233d9c0b8780d9/docs/agent-playbook.md)仅保留历史证据、示例。历史成功绝不授予重放权限。

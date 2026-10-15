@@ -1,14 +1,20 @@
 # Changelog
 
-## 0.4.0 — unpublished candidate
+[English](CHANGELOG.md) · [简体中文](CHANGELOG.zh-CN.md)
 
-- Bounded Overseer diagnosis, Foundry material/site/power planning and native construction workflows.
-- Limited blueprint progress, cancellation and safe continuation, plus Governor production declarations and measured observations.
-- Matching MCP/Plugin protocol surface, packaged Agent playbook, and constrained owned-primary recovery disclosures.
-- Frozen manual and Thunderstore candidates passed their declared local acceptance. Publication remains subject to owner review.
+## 0.4.0 — accepted candidate, unpublished
 
-See [Release notes](docs/release-notes/v0.4.0.md) and the [concise validation summary](docs/validation/v0.4.0.md). Repository responsibility changes do not replace the accepted candidate bytes.
+- Bounded Overseer diagnosis; Foundry recipe/material/site/base-power planning and native construction.
+- Finite blueprint progress, cancellation and fresh continuation; Governor pre-execution declarations and measured game-tick observations.
+- Matching MCP/Plugin surface, embedded and packaged playbook, durable Journal-bound owned-primary recovery and disclosed exact-version migration.
+- Frozen manual and Thunderstore-layout candidates passed their declared local installation, runtime, recovery and continuous-supply acceptance. Publication awaits owner review.
 
-## Released versions
+See [release notes](docs/release-notes/v0.4.0.md) and [validation](docs/validation/v0.4.0.md). Later documentation maintenance does not replace frozen candidate bytes.
 
-[v0.3.3](https://github.com/AvaloNero/Spherewright/releases/tag/v0.3.3) and earlier tags retain their original history, packages and evidence scope.
+## Published releases
+
+- [v0.3.3](https://github.com/AvaloNero/Spherewright/releases/tag/v0.3.3): peaceful sandbox/resource-multiplier compatibility; [historical notes](packaging/thunderstore/changelog/0.3.3.md).
+- [v0.3.2](https://github.com/AvaloNero/Spherewright/releases/tag/v0.3.2): new-world naming, opening playbook and structured movement failures; [historical notes](packaging/thunderstore/changelog/0.3.2.md).
+- [v0.3.1](https://github.com/AvaloNero/Spherewright/releases/tag/v0.3.1) and [v0.3.0](https://github.com/AvaloNero/Spherewright/releases/tag/v0.3.0) retain original release notes and support scopes.
+
+Existing release tags, packages and historical evidence remain their original artifacts.
