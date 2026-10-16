@@ -3,7 +3,7 @@
 
 [English](protocol.md) | [简体中文](protocol.zh-CN.md)
 
-协议版本为 `1`，原生基准为 `0.10.35.29145`。本文描述当前维护的源码，不宣称已安装组件状态。已验收 0.4.0 候选固定于 `2a7a98d1932c404e3a7abc2c11233d9c0b8780d9`，最新正式发布仍是 v0.3.3。参见[产品状态](project-status.zh-CN.md)、[安全模型](safety-model.zh-CN.md)和 [Agent 指南](agent-playbook.zh-CN.md)。
+协议版本为 `1`，原生兼容候选面向 `0.10.35.29151`（[离线证据；实机检查待完成](validation/native-29151-preflight.zh-CN.md)）。本文描述当前维护的源码，不宣称已安装组件状态。已验收 0.4.0 候选固定于 `2a7a98d1932c404e3a7abc2c11233d9c0b8780d9`，最新正式发布仍是 v0.3.3。参见[产品状态](project-status.zh-CN.md)、[安全模型](safety-model.zh-CN.md)和 [Agent 指南](agent-playbook.zh-CN.md)。
 
 <a id="framing-and-authentication"></a>
 ## 帧与认证
@@ -266,7 +266,7 @@ Sorter-filter 绑定根配置及手持货物，支持无货 Returning 或普通 
 
 恢复使用当前受保护 token。菜单 `gameLoaded=false` 正常，新 prepare 检查原生预加载、菜单、无 loader、精确源及 Journal，不加载。可用性本身不证明有效期或最终就绪。
 
-六模式、证据 1–6、精确候选、下限、确认、租约、消耗、迁移见[安全模型](safety-model.zh-CN.md#protected-recovery-and-version-changes)。有效迁移只允许 `29104→29131`/5 或 `29131→29145`/6，过期主模式只允许已研究有向链。Journal 最多四次持久转换，默认仍限同版本。不增加选择器、回退、ticket 编辑或消耗后自动重放。
+六模式、证据 1–6、精确候选、下限、确认、租约、消耗、迁移见[安全模型](safety-model.zh-CN.md#protected-recovery-and-version-changes)。有效迁移只允许 `29104→29131`/5 或 `29131→29145`/6，过期主模式只允许已研究有向链。过期主模式仅新增已研究的 `29145→29151`，Journal 最多五次持久转换，默认仍限同版本。不增加选择器、回退、ticket 编辑或消耗后自动重放。
 
 飞行 commit 先验证独立内部检查点。只恢复匹配失败或中断飞行，稳定到达或覆盖主进度会使能力退役。过渡时 `NO_LOCAL_PLANET` 不允许再飞行或加载。
 

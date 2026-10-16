@@ -6,6 +6,8 @@ Spherewright is a version-coupled product with four source projects. It exposes 
 
 This document describes the maintained source. The accepted 0.4.0 candidate is fixed at `2a7a98d1932c404e3a7abc2c11233d9c0b8780d9`, the native baseline is `0.10.35.29145`, and the latest published release remains v0.3.3. Documentation changes do not update an installed Plugin/MCP cohort or alter the accepted candidate archives. See [product status](project-status.md) and [v0.4 validation](validation/v0.4.0.md).
 
+The compatibility candidate targets `0.10.35.29151` with only the exact expired-primary direction and completed-history retention described in [native preflight](validation/native-29151-preflight.md). Its source tests and pending runtime validation do not change the frozen baseline above.
+
 ## Four product boundaries
 
 | Project | Responsibility | Boundary |

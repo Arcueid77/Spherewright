@@ -8,6 +8,8 @@ The latest published release is v0.3.3. **0.4.0 remains an unpublished, locally 
 
 The accepted 0.4 environment is Windows x64, DSP `0.10.35.29145`, BepInEx `5.4.17.0`, one peaceful owned non-sandbox 1× local world. Runtime compatibility permits supported peaceful sandbox/resource-multiplier settings without adding sandbox actions, but broader 0.4 live coverage has not been established. v0.3.3 results retain their historical build scope.
 
+The current compatibility candidate packages declare DSP `0.10.35.29151`. Its [offline preflight](validation/native-29151-preflight.md) and subsequent exact-source Lab runtime report must be read alongside the frozen 29145 acceptance. A package target version does not certify that candidate's installation or protected recovery. An expired 29145 primary requires the exact prepared `29145→29151` disclosure and subsequent confirmation; active-primary evidence 5/6 keeps its previous scope.
+
 Two layouts provide the same gameplay/MCP capabilities:
 
 | Layout | Plugin | MCP |

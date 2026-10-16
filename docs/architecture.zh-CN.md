@@ -7,6 +7,8 @@ Spherewright 由四个版本耦合的源码项目组成。产品向外部 Agent 
 
 本文描述当前维护的源码。已验收的 0.4.0 候选固定于 `2a7a98d1932c404e3a7abc2c11233d9c0b8780d9`，原生游戏基准为 `0.10.35.29145`，最新正式发布仍为 v0.3.3。修改文档不会更新已安装的 Plugin/MCP 组合，也不会改变已验收候选归档。参见[产品状态](project-status.zh-CN.md)与 [v0.4 验证](validation/v0.4.0.zh-CN.md)。
 
+兼容候选面向 `0.10.35.29151`，只加入[原生预检](validation/native-29151-preflight.zh-CN.md)所述的精确过期主档方向及完成历史保留。其源码测试与待完成实机验证不改变上述冻结基准。
+
 <a id="four-product-boundaries"></a>
 ## 四个产品边界
 

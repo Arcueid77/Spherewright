@@ -165,7 +165,7 @@ try {
         runtime = 'win-x64'
         sourceCommit = $gitCommit
         sourceDirty = $sourceDirty
-        supportedDspVersion = '0.10.35.29145'
+        supportedDspVersion = '0.10.35.29151'
         supportedBepInExVersion = '5.4.17.0'
         runtimeBlackBoxTested = $false
         createdAtUtc = [DateTimeOffset]::UtcNow.ToString('O')

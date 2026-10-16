@@ -2,7 +2,7 @@
 
 [English](protocol.md) | [简体中文](protocol.zh-CN.md)
 
-Protocol version is `1`; native baseline is `0.10.35.29145`. This describes maintained source, not an installed-cohort claim. The accepted 0.4.0 candidate is fixed at `2a7a98d1932c404e3a7abc2c11233d9c0b8780d9`; latest published release remains v0.3.3. See [product status](project-status.md), [safety](safety-model.md) and the [Agent playbook](agent-playbook.md).
+Protocol version is `1`; native compatibility candidate targets `0.10.35.29151` ([offline evidence; live checks pending](validation/native-29151-preflight.md)). This describes maintained source, not an installed-cohort claim. The accepted 0.4.0 candidate is fixed at `2a7a98d1932c404e3a7abc2c11233d9c0b8780d9`; latest published release remains v0.3.3. See [product status](project-status.md), [safety](safety-model.md) and the [Agent playbook](agent-playbook.md).
 
 ## Framing and authentication
 
@@ -252,7 +252,7 @@ Import prepare binds restricted current session/revision without content. Only a
 
 Resume uses the current protected token. At the menu `gameLoaded=false` is expected: fresh prepare checks native preload/menu/no-loader, exact source and Journal without loading. Availability alone proves neither valid expiry nor final readiness.
 
-The six modes, evidence versions 1–6, exact candidate/floor/confirmation requirements, leases, consumption and migrations are in [safety](safety-model.md#protected-recovery-and-version-changes). Active migration permits only `29104→29131`/5 or `29131→29145`/6; expired-primary has only researched directional links. Journal permits ≤4 durable transitions. Default remains exact-version-only. No selector, fallback, ticket edit or post-consumption automatic replay.
+The six modes, evidence versions 1–6, exact candidate/floor/confirmation requirements, leases, consumption and migrations are in [safety](safety-model.md#protected-recovery-and-version-changes). Active migration permits only `29104→29131`/5 or `29131→29145`/6; expired-primary has only researched directional links. Expired-primary adds only the researched `29145→29151` pair; Journal permits ≤5 durable transitions. Default remains exact-version-only. No selector, fallback, ticket edit or post-consumption automatic replay.
 
 Flight commit verifies a separate internal checkpoint first. Reload only accepts the matching failed/interrupted flight; stable arrival/covering primary progress retires it. Transition-time `NO_LOCAL_PLANET` is not permission for another flight/load.
 

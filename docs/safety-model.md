@@ -4,7 +4,7 @@
 
 Spherewright exposes bounded normal-game capabilities. A capability, a positive preview, an accepted local candidate and permission to execute are separate facts. This document grants no gameplay, Save/Load, recovery/migration, installation, deployment or publication authority. Game work starts in the current [Spherewright-Lab](https://github.com/Arcueid77/Spherewright-Lab) checkout after reading its current [AGENTS.md](https://github.com/Arcueid77/Spherewright-Lab/blob/main/AGENTS.md) and [active handoff](https://github.com/Arcueid77/Spherewright-Lab/blob/main/operations/active-handoff.md).
 
-The maintained native baseline is `0.10.35.29145`. The accepted 0.4.0 candidate remains fixed at `2a7a98d1932c404e3a7abc2c11233d9c0b8780d9`; latest published release is v0.3.3. A documentation update does not install a new cohort or republish that candidate. See [product status](project-status.md).
+The maintained compatibility candidate targets `0.10.35.29151`; see [offline native evidence and pending live checks](validation/native-29151-preflight.md). The accepted 0.4.0 candidate remains fixed at `2a7a98d1932c404e3a7abc2c11233d9c0b8780d9`; latest published release is v0.3.3. A documentation update does not install a new cohort or republish that candidate. See [product status](project-status.md).
 
 ## Native execution and transport
 
@@ -80,9 +80,9 @@ A protected capability is not a save picker. Never edit a ticket, expiry, identi
 
 AutoSave0 modes require a candidate strictly newer than the credential and any observed primary. There is no fallback to another autosave, primary or LastExit. Prepare in reauthorization modes does not accept pre-asserted confirmation. Its exact mode, evidence version, identity, candidate, source/target, prompt/digest and disallowed-commit echoes must match. An earlier generic “continue” does not authorize a different candidate.
 
-Expired-primary reauthorization permits exact same-version adoption or these researched directional native migrations: `0.10.34.28529→0.10.35.29057`, `0.10.34.28529→0.10.35.29088`, `0.10.35.29088→0.10.35.29104`, `0.10.35.29104→0.10.35.29131` and `0.10.35.29131→0.10.35.29145`. Default resume still requires matching versions. Skipped links, unknown pairs and downgrades reject.
+Expired-primary reauthorization permits exact same-version adoption or these researched directional native migrations: `0.10.34.28529→0.10.35.29057`, `0.10.34.28529→0.10.35.29088`, `0.10.35.29088→0.10.35.29104`, `0.10.35.29104→0.10.35.29131` `0.10.35.29131→0.10.35.29145` and `0.10.35.29145→0.10.35.29151`. Only the expired-primary mode adds the last pair; active-primary evidence 5/6 stays unchanged. Default resume still requires matching versions. Skipped links, unknown pairs and downgrades reject.
 
-Journal origin/history remain unchanged. At most four durable researched transitions are permitted; each must continue the effective source version with monotonic adoption tick and durable sequence. For the full researched patch chain, each intermediate link must exist. Ticket, primary and Journal effective version must agree with the allowed source/runtime pair.
+Journal origin/history remain unchanged. At most five durable researched transitions are permitted; each must continue the effective source version with monotonic adoption tick and durable sequence. For the full researched patch chain, each intermediate link must exist. Ticket, primary and Journal effective version must agree with the allowed source/runtime pair.
 
 Default resume binds the protected ticket and menu revision. Source selection checks the eligible internal primary or fixed LastExit header tick and file-modification freshness, and commit rechecks the ticket and source selection. When present, its protected Journal checkpoint must validate before loading and after adoption; the existing legacy-ticket compatibility remains limited to its supported path. Adoption must still prove embedded owned identity, expected planet, peaceful mode and the minimum tick. Default resume does not compute a complete source-file fingerprint or hold a source-file read-only lease through adoption.
 

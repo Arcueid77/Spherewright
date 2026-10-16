@@ -4,7 +4,7 @@
 
 Read this playbook before the first gameplay action in a session. It is also the embedded MCP resource `spherewright://agent/playbooks/opening-movement-v1`, available without a live Bridge.
 
-This maintained guide targets native `0.10.35.29145`. The accepted 0.4.0 candidate remains fixed at `2a7a98d1932c404e3a7abc2c11233d9c0b8780d9`; latest published release is v0.3.3. Editing this guide does not update an installed MCP or frozen candidate package. Capability, current authorization, native executability and final acceptance are separate. This guide grants no gameplay, loading, recovery, installation, deployment or publication authority.
+This maintained guide targets the `0.10.35.29151` compatibility candidate; its offline evidence and pending live checks are recorded in [native preflight](https://github.com/Arcueid77/Spherewright/blob/main/docs/validation/native-29151-preflight.md). The accepted 0.4.0 candidate remains fixed at `2a7a98d1932c404e3a7abc2c11233d9c0b8780d9`; latest published release is v0.3.3. Editing this guide does not update an installed MCP or frozen candidate package. Capability, current authorization, native executability and final acceptance are separate. This guide grants no gameplay, loading, recovery, installation, deployment or publication authority.
 
 ## Session entry and ownership
 
@@ -18,9 +18,9 @@ This maintained guide targets native `0.10.35.29145`. The accepted 0.4.0 candida
 
 `reauthorize_version_changed_primary` supports unchanged active healthy `29104→29131` provenance/evidence 5 or `29131→29145`/evidence 6 only. Default resume requires equal versions. Prepare from idle menu with current protected token, confirmation false and no tick overrides. Require exact source/target, embedded identity, candidate equal to recorded tick, pair-specific prompt/digest, confirmation required and commit disallowed. An old evidence-5 prompt cannot qualify the new pair.
 
-Show the disclosure and obtain a subsequent explicit reply before commit. Commit rechecks replicas, primary, original Journal and menu revision under read-only leases, durably consumes before loading, then proves adoption and the exact third/fourth transition before normal resave/new credentials. Unknown pairs, skipped links, a fifth transition, stale evidence and replay reject. Failure after consumption needs reconciliation.
+Show the disclosure and obtain a subsequent explicit reply before commit. Commit rechecks replicas, primary, original Journal and menu revision under read-only leases, durably consumes before loading, then proves adoption and the exact third/fourth transition before normal resave/new credentials. Unknown pairs, skipped links, a fifth transition through this active-credential mode, stale evidence and replay reject. Failure after consumption needs reconciliation.
 
-Completed earlier-version blueprint history may survive only the supported same-identity Journal-proved transition and a loaded tick covering its receipts. Reading does not rewrite it; the next normal progress update preserves records and stamps the supported version. Partial/unknown/unproved progress still rejects. Never clear progress or rebuild successful objects.
+Completed earlier-version blueprint history may survive only the same-identity, fully durable `29131→29145→29151` Journal suffix (or its supported single hop), with every receipt covered before its first adoption and by the loaded tick. Reading does not rewrite it; the next normal progress update preserves records and stamps the supported version. Partial/unknown/unproved progress still rejects. Never clear progress or rebuild successful objects.
 
 ## Expired planned-restart credential
 
@@ -28,7 +28,7 @@ Completed earlier-version blueprint history may survive only the supported same-
 
 Show candidate and prompt, wait for a subsequent explicit reply, then commit with `userConfirmedInConversation=true` and that fresh `confirmationDigest`. The digest is a protocol echo, not a code the user must type. `commitAllowedNow=false`/`USER_CONFIRMATION_REQUIRED` does not waive other blockers. Changed/expired plans need new disclosure; approval cannot move to changed evidence.
 
-Only researched expired-primary directional pairs are supported: `0.10.34.28529→0.10.35.29057`, `0.10.34.28529→0.10.35.29088`, `0.10.35.29088→0.10.35.29104`, `0.10.35.29104→0.10.35.29131` and `0.10.35.29131→0.10.35.29145`. Preserve Journal origin/entries/prior transitions; require effective-version agreement and at most four continuous durable transitions. No unknown pair, downgrade or ordinary default cross-version resume.
+Only researched expired-primary directional pairs are supported: `0.10.34.28529→0.10.35.29057`, `0.10.34.28529→0.10.35.29088`, `0.10.35.29088→0.10.35.29104`, `0.10.35.29104→0.10.35.29131` `0.10.35.29131→0.10.35.29145` and `0.10.35.29145→0.10.35.29151`. Preserve Journal origin/entries/prior transitions; require effective-version agreement and at most five continuous durable transitions. The fifth transition is available only through this expired-primary mode; active-primary evidence 5/6 is unchanged. No unknown pair, downgrade or ordinary default cross-version resume.
 
 The Plugin leases complete primary/Journal evidence and persists attempt/consumed records before loading. Interrupted/failed consumption is fenced, not automatically retried. After one accepted action, poll terminal and prove owned/saved/healthy identity, tick, original durable Journal and renewed credential. Offline tests are not live recovery evidence.
 

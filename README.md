@@ -22,6 +22,8 @@ The candidate passed its declared three-stage chain, continuous joint supply, pr
 
 Accepted 0.4 configuration: Windows x64, DSP `0.10.35.29145`, BepInEx `5.4.17.0`, one owned peaceful/non-sandbox/1× local world. Older releases retain their own support scope. Use matching Plugin, MCP and shared assemblies.
 
+Current maintenance prepares a DSP `0.10.35.29151` compatibility candidate. [Native preflight](docs/validation/native-29151-preflight.md) separates its source research from the frozen 29145 acceptance and tracks the required new package/runtime checks through Lab.
+
 - [Installation](docs/release-installation.md) and [interrupted-installation recovery](docs/installation-recovery.md)
 - [Agent playbook](docs/agent-playbook.md), also embedded in MCP and included in packages
 - [Protocol](docs/protocol.md), [safety model](docs/safety-model.md) and [architecture](docs/architecture.md)

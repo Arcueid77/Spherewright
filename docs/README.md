@@ -34,6 +34,8 @@ Latest published release is v0.3.3; accepted 0.4 candidate source is `2a7a98d193
 
 ## Native research
 
+- [29151 compatibility preflight](validation/native-29151-preflight.md) / [中文](validation/native-29151-preflight.zh-CN.md): exact expired-primary direction, completed-history retention, offline evidence and pending live checks.
+
 [Environment](research/environment.md), [M0 historical baseline](research/game-api-m0.md), [Overseer](research/game-api-overseer.md), [Foundry](research/game-api-foundry.md), [29057/29088 history](research/game-api-version-0.10.35.md), [29104 history](research/game-api-version-0.10.35.29104.md), [29145 compatibility](research/game-api-version-0.10.35.29145.md) and [installation startup guard](research/installation-startup-guard.md) each have a complete Chinese companion. Research states its applicable version and direct symbols; historical findings do not certify the current runtime.
 
 ## Compatibility paths

@@ -18,6 +18,10 @@ public sealed class OwnedWorldVersionCompatibilityPolicyTests
         Assert.True(OwnedWorldVersionCompatibilityPolicy.IsSupportedMigration(TargetPatch, CurrentPatch));
         Assert.True(OwnedWorldVersionCompatibilityPolicy.IsSupportedMigration(CurrentPatch, LatestPatch));
         Assert.True(OwnedWorldVersionCompatibilityPolicy.IsSupportedMigration(LatestPatch, NextPatch));
+        Assert.True(OwnedWorldVersionCompatibilityPolicy.IsSupportedMigration(NextPatch, CurrentNative));
+        Assert.False(OwnedWorldVersionCompatibilityPolicy.IsSupportedMigration(LatestPatch, CurrentNative));
+        Assert.False(OwnedWorldVersionCompatibilityPolicy.IsSupportedMigration(CurrentNative, NextPatch));
+        Assert.False(OwnedWorldVersionCompatibilityPolicy.IsSupportedMigration(NextPatch, "0.10.35.29152"));
         Assert.False(OwnedWorldVersionCompatibilityPolicy.IsSupportedMigration(CurrentPatch, NextPatch));
         Assert.False(OwnedWorldVersionCompatibilityPolicy.IsSupportedMigration(Source, NextPatch));
         Assert.False(OwnedWorldVersionCompatibilityPolicy.IsSupportedMigration(NextPatch, LatestPatch));
@@ -45,6 +49,10 @@ public sealed class OwnedWorldVersionCompatibilityPolicyTests
     [InlineData("0.10.35.29088", "0.10.35.29104", true)]
     [InlineData("0.10.35.29131", "0.10.35.29145", true)]
     [InlineData("0.10.35.29145", "0.10.35.29145", true)]
+    [InlineData("0.10.35.29145", "0.10.35.29151", true)]
+    [InlineData("0.10.35.29151", "0.10.35.29151", true)]
+    [InlineData("0.10.35.29131", "0.10.35.29151", false)]
+    [InlineData("0.10.35.29151", "0.10.35.29145", false)]
     [InlineData("0.10.35.29104", "0.10.35.29145", false)]
     [InlineData("0.10.35.29145", "0.10.35.29131", false)]
     [InlineData("0.10.34.28529", "0.10.35.29104", false)]
@@ -121,6 +129,38 @@ public sealed class OwnedWorldVersionCompatibilityPolicyTests
     {
         Assert.False(OwnedWorldVersionCompatibilityPolicy.AllowsReauthorization(null!, Target));
         Assert.False(OwnedWorldVersionCompatibilityPolicy.AllowsReauthorization(Source, null!));
+    }
+
+    [Theory]
+    [InlineData("valid", true)]
+    [InlineData("missing-fourth", false)]
+    [InlineData("same-tick", false)]
+    [InlineData("regressed-sequence", false)]
+    [InlineData("skipped-version", false)]
+    [InlineData("unknown-target", false)]
+    public void FifthAdoptionNeedsTheExactFourDurableLinksAndCannotBeReplayed(string fault, bool allowed)
+    {
+        var original = new[]
+        {
+            ValidTransition(to: TargetPatch),
+            ValidTransition(from: TargetPatch, to: CurrentPatch, adoptedAt: AdoptedTick + 1),
+            ValidTransition(from: CurrentPatch, to: LatestPatch, adoptedAt: AdoptedTick + 2),
+            ValidTransition(from: LatestPatch, to: NextPatch, adoptedAt: AdoptedTick + 3),
+        };
+        var fifth = ValidTransition(from: NextPatch, to: CurrentNative, adoptedAt: AdoptedTick + 4);
+        if (fault == "missing-fourth") original = original.Take(3).ToArray();
+        if (fault == "same-tick") fifth.AdoptedAtGameTick--;
+        if (fault == "regressed-sequence") fifth.DurableThroughSequence--;
+        if (fault == "skipped-version") fifth.FromGameVersion = LatestPatch;
+        if (fault == "unknown-target") fifth.ToGameVersion = "0.10.35.29152";
+        Assert.Equal(allowed, OwnedWorldVersionCompatibilityPolicy.CanAppendTransition(
+            Source, original, EntryCount, NextPatch, CurrentNative, fifth));
+        var proposed = original.Append(fifth).ToArray();
+        Assert.Equal(allowed, OwnedWorldVersionCompatibilityPolicy.JournalMatches(Source, proposed, EntryCount, CurrentNative));
+        Assert.False(OwnedWorldVersionCompatibilityPolicy.CanAppendTransition(
+            Source, proposed, EntryCount, NextPatch, CurrentNative, fifth));
+        Assert.False(OwnedWorldVersionCompatibilityPolicy.JournalMatches(
+            Source, proposed.Append(fifth).ToArray(), EntryCount, CurrentNative));
     }
 
     [Fact]
@@ -272,6 +312,7 @@ public sealed class OwnedWorldVersionCompatibilityPolicyTests
     private const string CurrentPatch = OwnedWorldVersionCompatibilityPolicy.CurrentPatchVersion;
     private const string LatestPatch = OwnedWorldVersionCompatibilityPolicy.LatestPatchVersion;
     private const string NextPatch = OwnedWorldVersionCompatibilityPolicy.NextPatchVersion;
+    private const string CurrentNative = OwnedWorldVersionCompatibilityPolicy.CurrentNativeVersion;
 
     private static GameplayJournalVersionTransition ValidTransition(
         string from = Source,

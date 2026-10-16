@@ -8,7 +8,7 @@ Spherewright connects an external Agent to **Dyson Sphere Program** through MCP.
 
 ### Version and support
 
-The maintained 0.4 source targets DSP `0.10.35.29145` and BepInEx `5.4.17`. **0.4.0 remains an unpublished candidate awaiting owner review**; this template does not mean a store release exists. The frozen candidate source `2a7a98d1932c404e3a7abc2c11233d9c0b8780d9` passed its declared local manual/Thunderstore-layout installation, runtime, same-version recovery and continuous-supply acceptance. See the [validation summary](https://github.com/Arcueid77/Spherewright/blob/main/docs/validation/v0.4.0.md). Later documentation does not replace those ZIPs.
+The maintained 0.4 compatibility candidate targets DSP `0.10.35.29151` and BepInEx `5.4.17`. **0.4.0 remains an unpublished candidate awaiting owner review**; this template does not mean a store release exists. The frozen candidate source `2a7a98d1932c404e3a7abc2c11233d9c0b8780d9` passed its declared 29145 local manual/Thunderstore-layout installation, runtime, same-version recovery and continuous-supply acceptance. See the [validation summary](https://github.com/Arcueid77/Spherewright/blob/main/docs/validation/v0.4.0.md). Later documentation does not replace those ZIPs.
 
 Supported gameplay is single-player peaceful mode. Sandbox/resource-multiplier settings are reported without adding sandbox actions. Actual 0.4 live evidence is limited to one owned non-sandbox 1× local world; v0.3.3's broader local import examples retain their historical scope. A separate Mod Manager/r2modman profile, another computer, installation transaction-crash recovery, Dark Fog/combat, multiplayer/Nebula and broad third-party Mod compatibility are unvalidated.
 
@@ -42,7 +42,7 @@ Spherewright 通过 MCP 将外部 Agent 接入**《戴森球计划》**。此 Wi
 
 ### 版本与支持范围
 
-当前维护的 0.4 源码目标为 DSP `0.10.35.29145` 和 BepInEx `5.4.17`。**0.4.0 仍是等待所有者审核的未发布候选**，此模板不代表商店已发布。冻结候选源码 `2a7a98d1932c404e3a7abc2c11233d9c0b8780d9` 已通过规定的本机手动/Thunderstore 布局安装、运行、同版本恢复和连续供给验收，见[验收摘要](https://github.com/Arcueid77/Spherewright/blob/main/docs/validation/v0.4.0.zh-CN.md)。后续文档不替换这些 ZIP。
+当前维护的 0.4 兼容候选目标为 DSP `0.10.35.29151` 和 BepInEx `5.4.17`。**0.4.0 仍是等待所有者审核的未发布候选**，此模板不代表商店已发布。冻结候选源码 `2a7a98d1932c404e3a7abc2c11233d9c0b8780d9` 已通过规定的 29145 本机手动/Thunderstore 布局安装、运行、同版本恢复和连续供给验收，见[验收摘要](https://github.com/Arcueid77/Spherewright/blob/main/docs/validation/v0.4.0.zh-CN.md)。后续文档不替换这些 ZIP。
 
 支持单人和平模式。沙盒和资源倍率会被报告，不增加沙盒动作。0.4 实机证据限于一个 owned、非沙盒、1× 本机世界；v0.3.3 较广的本机导入示例保留历史范围。独立 Mod Manager/r2modman profile、另一台计算机、安装事务崩溃恢复、黑雾战斗、多人/Nebula 和广泛第三方 Mod 兼容尚未验证。
 

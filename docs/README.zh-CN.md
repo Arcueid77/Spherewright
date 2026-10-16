@@ -34,6 +34,8 @@
 
 ## 原生研究
 
+- [29151 兼容预检](validation/native-29151-preflight.md) / [中文](validation/native-29151-preflight.zh-CN.md)：精确过期主存档方向、完成历史保留、离线证据及待完成实机检查。
+
 [环境](research/environment.zh-CN.md)、[M0 历史基线](research/game-api-m0.zh-CN.md)、[Overseer](research/game-api-overseer.zh-CN.md)、[Foundry](research/game-api-foundry.zh-CN.md)、[29057/29088 历史](research/game-api-version-0.10.35.zh-CN.md)、[29104 历史](research/game-api-version-0.10.35.29104.zh-CN.md)、[29145 兼容](research/game-api-version-0.10.35.29145.zh-CN.md)及[安装启动门](research/installation-startup-guard.zh-CN.md)均有完整双语。研究注明适用版本及直接符号；历史发现不验收当前运行时。
 
 ## 兼容路径

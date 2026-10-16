@@ -18,6 +18,7 @@ public sealed class OwnedWorldResumeTicketStoreIntegrationTests
     private const string CurrentPatchGameVersion = "0.10.35.29104";
     private const string LatestPatchGameVersion = "0.10.35.29131";
     private const string NextPatchGameVersion = "0.10.35.29145";
+    private const string CurrentNativeGameVersion = "0.10.35.29151";
     private const string OwnedSaveName = "synthetic-protected-world-identity";
     private const string SessionId = "synthetic-session";
     private const int PlanetId = 104;
@@ -129,6 +130,64 @@ public sealed class OwnedWorldResumeTicketStoreIntegrationTests
         new GameplayJournalVersionTransition { FromGameVersion = CurrentPatchGameVersion, ToGameVersion = LatestPatchGameVersion,
             AdoptedAtGameTick = MinimumTick - 1, DurableThroughSequence = 2, RecordedAtUtc = "2026-10-13T00:00:00Z" },
     };
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void Expired29145PrimaryPreviews29151OnlyWithItsCompleteOriginalHistory(bool missingFourth)
+    {
+        var history = OriginalFourTransitions();
+        if (missingFourth) history = history.Take(3).ToArray();
+        using var scenario = VersionTransitionScenario.CreateExpired(
+            NextPatchGameVersion, CurrentNativeGameVersion, GameVersion, history);
+        var beforeTicket = File.ReadAllBytes(scenario.RuntimeTicketPath);
+        var beforeHandoff = File.ReadAllBytes(scenario.HandoffTicketPath);
+        Assert.False(scenario.Store.TryGetActiveTicket(scenario.Token, out _, out _));
+        Assert.Equal(!missingFourth, scenario.Store.TryGetExpiredPrimaryProvenance(
+            scenario.Token, out var ticket, out _, out _));
+        if (!missingFourth) Assert.Equal(NextPatchGameVersion, ticket!.GameVersion);
+        Assert.Equal(beforeTicket, File.ReadAllBytes(scenario.RuntimeTicketPath));
+        Assert.Equal(beforeHandoff, File.ReadAllBytes(scenario.HandoffTicketPath));
+        Assert.False(File.Exists(scenario.RuntimeAttemptPath));
+        Assert.False(File.Exists(scenario.RuntimeTombstonePath));
+    }
+
+    [Fact]
+    public void FifthMigrationDoesNotExpandActiveCredentialAuthority()
+    {
+        using var scenario = VersionTransitionScenario.CreateActive(
+            NextPatchGameVersion, GameVersion, OriginalFourTransitions());
+        var store = scenario.OpenStore(CurrentNativeGameVersion);
+        Assert.False(store.TryGetActiveTicket(scenario.Token, out _, out _));
+        Assert.False(store.TryGetVersionChangedPrimaryProvenance(scenario.Token, out _, out _, out _));
+        Assert.False(store.TryGetExpiredPrimaryProvenance(scenario.Token, out _, out _, out _));
+        Assert.False(store.TryGetFixedAutosaveProvenance(scenario.Token, out _, out _, out _));
+    }
+
+    [Fact]
+    public void Normal29151ResumeNeedsItsDurableFifthTransitionAndKeepsDefaultSameVersionOnly()
+    {
+        var history = OriginalFourTransitions().Append(new GameplayJournalVersionTransition
+        {
+            FromGameVersion = NextPatchGameVersion, ToGameVersion = CurrentNativeGameVersion,
+            AdoptedAtGameTick = MinimumTick, DurableThroughSequence = 2, RecordedAtUtc = "2026-10-17T00:00:00Z",
+        }).ToArray();
+        using var complete = VersionTransitionScenario.CreateActive(CurrentNativeGameVersion, GameVersion, history);
+        Assert.True(complete.Store.TryGetActiveTicket(complete.Token, out _, out _));
+        using var missingFifth = VersionTransitionScenario.CreateActive(CurrentNativeGameVersion, GameVersion, OriginalFourTransitions());
+        Assert.False(missingFifth.Store.TryGetActiveTicket(missingFifth.Token, out _, out _));
+    }
+
+    private static GameplayJournalVersionTransition[] OriginalFourTransitions()
+    {
+        var history = OriginalThreeTransitions();
+        foreach (var transition in history) transition.AdoptedAtGameTick--;
+        return history.Append(new GameplayJournalVersionTransition
+        {
+            FromGameVersion = LatestPatchGameVersion, ToGameVersion = NextPatchGameVersion,
+            AdoptedAtGameTick = MinimumTick - 1, DurableThroughSequence = 2, RecordedAtUtc = "2026-10-15T00:00:00Z",
+        }).ToArray();
+    }
 
     [Fact]
     public void ExpiredTicketIsRejectedByDefaultButHealthyCompleteProvenanceCanBePrepared()

@@ -22,6 +22,8 @@ Plugin、MCP、Contracts 和 Bridge.Core 保持为强版本耦合的 monorepo。
 
 0.4 已验收配置：Windows x64、DSP `0.10.35.29145`、BepInEx `5.4.17.0`，一个 owned、和平、非沙盒、1× 的本机世界。旧发行版保留各自支持范围。Plugin、MCP 和共享程序集必须配套。
 
+当前维护正在准备 DSP `0.10.35.29151` 兼容候选。[原生预检](docs/validation/native-29151-preflight.zh-CN.md)区分源码研究与冻结的 29145 验收，新的包及实机检查由 Lab 继续记录。
+
 - [安装](docs/release-installation.zh-CN.md)与[中断安装恢复](docs/installation-recovery.zh-CN.md)
 - [Agent 指南](docs/agent-playbook.zh-CN.md)，英文版也嵌入 MCP 并随包提供
 - [协议](docs/protocol.zh-CN.md)、[安全模型](docs/safety-model.zh-CN.md)和[架构](docs/architecture.zh-CN.md)

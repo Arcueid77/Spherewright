@@ -8,6 +8,7 @@
 - Finite blueprint progress, cancellation and fresh continuation; Governor pre-execution declarations and measured game-tick observations.
 - Matching MCP/Plugin surface, embedded and packaged playbook, durable Journal-bound owned-primary recovery and disclosed exact-version migration.
 - Frozen manual and Thunderstore-layout candidates passed their declared local installation, runtime, recovery and continuous-supply acceptance. Publication awaits owner review.
+- Compatibility candidate for `0.10.35.29151`: exact expired-primary `29145→29151`, fifth durable Journal transition and completed-history retention; [offline evidence and pending live checks](docs/validation/native-29151-preflight.md) remain separate from frozen acceptance.
 
 See [release notes](docs/release-notes/v0.4.0.md) and [validation](docs/validation/v0.4.0.md). Later documentation maintenance does not replace frozen candidate bytes.
 

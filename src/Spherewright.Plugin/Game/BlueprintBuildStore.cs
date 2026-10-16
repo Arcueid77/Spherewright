@@ -112,11 +112,9 @@ internal sealed class BlueprintBuildStore
                     throw new InvalidDataException("Finite plan store identity or bound is invalid.");
                 foreach (var state in _document.Builds) state.Validate();
                 if (_document.GameVersion != _gameVersion
-                    && (_document.GameVersion != OwnedWorldVersionCompatibilityPolicy.LatestPatchVersion
-                        || _gameVersion != OwnedWorldVersionCompatibilityPolicy.NextPatchVersion
-                        || !BlueprintProgressVersionPolicy.CanRetainCompletedHistory(_document.GameVersion, _gameVersion,
+                    && !BlueprintProgressVersionPolicy.CanRetainCompletedHistory(_document.GameVersion, _gameVersion,
                             _sessions.SessionId!, GameplayJournalIdentity.HashOwnedSaveIdentity(_sessions.OwnedSaveName!),
-                            _journalProvider?.Invoke(), _document.Builds)))
+                            _journalProvider?.Invoke(), _document.Builds))
                     throw new InvalidDataException("Finite progress requires its exact version or proven completed-history adoption.");
             }
             else _document = new BlueprintBuildDocument { IdentityHash = identity, GameVersion = _gameVersion };
