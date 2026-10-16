@@ -13,8 +13,8 @@ See [release notes](docs/release-notes/v0.4.0.md) and [validation](docs/validati
 
 ## Published releases
 
-- [v0.3.3](https://github.com/AvaloNero/Spherewright/releases/tag/v0.3.3): peaceful sandbox/resource-multiplier compatibility; [historical notes](packaging/thunderstore/changelog/0.3.3.md).
-- [v0.3.2](https://github.com/AvaloNero/Spherewright/releases/tag/v0.3.2): new-world naming, opening playbook and structured movement failures; [historical notes](packaging/thunderstore/changelog/0.3.2.md).
-- [v0.3.1](https://github.com/AvaloNero/Spherewright/releases/tag/v0.3.1) and [v0.3.0](https://github.com/AvaloNero/Spherewright/releases/tag/v0.3.0) retain original release notes and support scopes.
+- [v0.3.3](https://github.com/Arcueid77/Spherewright/releases/tag/v0.3.3): peaceful sandbox/resource-multiplier compatibility; [historical notes](packaging/thunderstore/changelog/0.3.3.md).
+- [v0.3.2](https://github.com/Arcueid77/Spherewright/releases/tag/v0.3.2): new-world naming, opening playbook and structured movement failures; [historical notes](packaging/thunderstore/changelog/0.3.2.md).
+- [v0.3.1](https://github.com/Arcueid77/Spherewright/releases/tag/v0.3.1) and [v0.3.0](https://github.com/Arcueid77/Spherewright/releases/tag/v0.3.0) retain original release notes and support scopes.
 
 Existing release tags, packages and historical evidence remain their original artifacts.

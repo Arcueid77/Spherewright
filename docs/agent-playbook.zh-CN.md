@@ -1,7 +1,7 @@
 <a id="spherewright-agent-playbook-opening-and-core-operation"></a>
 # Spherewright Agent 指南：开局与核心操作
 
-[English](https://github.com/AvaloNero/Spherewright/blob/main/docs/agent-playbook.md) | [简体中文](agent-playbook.zh-CN.md)
+[English](https://github.com/Arcueid77/Spherewright/blob/main/docs/agent-playbook.md) | [简体中文](agent-playbook.zh-CN.md)
 
 每个会话首次游戏操作前必须阅读本指南。它也是内嵌 MCP 资源 `spherewright://agent/playbooks/opening-movement-v1`，不需要活动 Bridge 即可读取。
 
@@ -283,4 +283,4 @@ Codex、MCP Host 关闭、重启、断连、上下文压缩、回合结束，均
 
 冷启动可能因精确主进度更新而使失败飞行检查点退役。不能改 ticket 或复活 token。公布的主受保护恢复是进入更新时间线的独立流程，检查后再新飞行、新检查点。失败重试在资格仍有效时可重复加载同匹配点。稳定到达后确认能力消失，并正常保存主世界使退役持久。
 
-当前场景执行从当前 [Spherewright-Lab](https://github.com/AvaloNero/Spherewright-Lab) 检出目录开始，先读取其当前 [AGENTS.md](https://github.com/AvaloNero/Spherewright-Lab/blob/main/AGENTS.md) 与[活动交接](https://github.com/AvaloNero/Spherewright-Lab/blob/main/operations/active-handoff.md)；本内嵌指南不授予权限。[Lab 固定快照](https://github.com/AvaloNero/Spherewright-Lab/tree/14478a03c64c550e644c559405c8496b647552e7)与[已验收指南](https://github.com/AvaloNero/Spherewright/blob/2a7a98d1932c404e3a7abc2c11233d9c0b8780d9/docs/agent-playbook.md)仅保留历史证据、示例。历史成功绝不授予重放权限。
+当前场景执行从当前 [Spherewright-Lab](https://github.com/Arcueid77/Spherewright-Lab) 检出目录开始，先读取其当前 [AGENTS.md](https://github.com/Arcueid77/Spherewright-Lab/blob/main/AGENTS.md) 与[活动交接](https://github.com/Arcueid77/Spherewright-Lab/blob/main/operations/active-handoff.md)；本内嵌指南不授予权限。[Lab 固定快照](https://github.com/Arcueid77/Spherewright-Lab/tree/14478a03c64c550e644c559405c8496b647552e7)与[已验收指南](https://github.com/Arcueid77/Spherewright/blob/2a7a98d1932c404e3a7abc2c11233d9c0b8780d9/docs/agent-playbook.md)仅保留历史证据、示例。历史成功绝不授予重放权限。

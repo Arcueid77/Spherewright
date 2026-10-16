@@ -6,7 +6,7 @@
 
 M0 是历史普通世界 First Red Matrix 能力锚点。初期原生检查使用 DSP `0.10.34.28529`、`Assembly-CSharp.dll` SHA-256 `AE0BA95F75BD879A62AA4CE253B2AB78EAA4FB3C7C595F5E1FEE75EBE0E0EF85`，以及针对性 ILSpy/Mono.Cecil 检查。这是历史来源，不是当前支持版本。已验收 `0.4.0` 本机候选使用 DSP `0.10.35.29145`；见[环境](environment.md)、[精确版本研究](game-api-version-0.10.35.29145.md)及[最终验收](../validation/v0.4.0.md)。
 
-[完整不可变原文](https://github.com/AvaloNero/Spherewright/blob/2a7a98d1932c404e3a7abc2c11233d9c0b8780d9/docs/research/game-api-m0.md)保留带日期调查、签名与旧部署证据，含退役沙盒实验和当时待验结果。这些段落不授予当前动作权限，也不覆盖后续验收证据。反编译游戏源码、原始存档和私有身份不得进入产品仓库。
+[完整不可变原文](https://github.com/Arcueid77/Spherewright/blob/2a7a98d1932c404e3a7abc2c11233d9c0b8780d9/docs/research/game-api-m0.md)保留带日期调查、签名与旧部署证据，含退役沙盒实验和当时待验结果。这些段落不授予当前动作权限，也不覆盖后续验收证据。反编译游戏源码、原始存档和私有身份不得进入产品仓库。
 
 ## 启动、所有权与观察
 

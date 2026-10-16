@@ -42,7 +42,7 @@ function Convert-PackagedGuideLinks {
         $suffix = $parts.Groups['suffix'].Value
         if ($aliases.ContainsKey($relative)) { return $aliases[$relative] + $suffix }
         $encoded = (($relative -split '/') | ForEach-Object { [Uri]::EscapeDataString($_) }) -join '/'
-        return "https://github.com/AvaloNero/Spherewright/blob/$gitCommit/$encoded$suffix"
+        return "https://github.com/Arcueid77/Spherewright/blob/$gitCommit/$encoded$suffix"
     })
 }
 if (-not $OutputDirectory) {

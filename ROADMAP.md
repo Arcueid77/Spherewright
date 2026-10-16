@@ -23,12 +23,12 @@ The owner's 2026-09-05 decision combined all former Foundry `0.5` and Governor `
 | `0.7.0` | Release Candidate: public-surface freeze, release engineering and end-to-end acceptance | Former `0.9` |
 | `1.0.0` | Promote the same artifacts as the final qualifying `0.7.x` | Unchanged |
 
-This is the current numbering. Old version numbers and pending statements remain historical in the [immutable previous roadmap](https://github.com/AvaloNero/Spherewright/blob/2a7a98d1932c404e3a7abc2c11233d9c0b8780d9/ROADMAP.md) and [Lab roadmap archive](https://github.com/AvaloNero/Spherewright-Lab/blob/14478a03c64c550e644c559405c8496b647552e7/archive/roadmap-history/ROADMAP-HISTORY-2026-09-24.md). They are not additional releases, current blockers or replay instructions.
+This is the current numbering. Old version numbers and pending statements remain historical in the [immutable previous roadmap](https://github.com/Arcueid77/Spherewright/blob/2a7a98d1932c404e3a7abc2c11233d9c0b8780d9/ROADMAP.md) and [Lab roadmap archive](https://github.com/Arcueid77/Spherewright-Lab/blob/14478a03c64c550e644c559405c8496b647552e7/archive/roadmap-history/ROADMAP-HISTORY-2026-09-24.md). They are not additional releases, current blockers or replay instructions.
 
 ## Development and release rules
 
 - The approved development model uses reviewable, reversible, single-purpose commits on `main`, without long-lived release branches. Temporary independent worktrees/review branches follow current contributor rules. Pushes, merges and publication require their applicable authorization; old operational permissions are not standing release authority.
-- Before a new `0.x.0` gameplay phase begins, update the current Lab phase rules in a separate reviewed change, naming permitted write families and retained prohibitions. This roadmap alone never authorizes those actions. The [imported historical rules](https://github.com/AvaloNero/Spherewright-Lab/blob/14478a03c64c550e644c559405c8496b647552e7/operations/agent-rules-imported.md) preserve provenance, not current execution scope.
+- Before a new `0.x.0` gameplay phase begins, update the current Lab phase rules in a separate reviewed change, naming permitted write families and retained prohibitions. This roadmap alone never authorizes those actions. The [imported historical rules](https://github.com/Arcueid77/Spherewright-Lab/blob/14478a03c64c550e644c559405c8496b647552e7/operations/agent-rules-imported.md) preserve provenance, not current execution scope.
 - New DSP fields, methods and call paths require the exact supported `Assembly-CSharp.dll` as evidence. Record signatures, hashes, reasons and readback invariants in [research](docs/research/game-api-m0.md).
 - All gameplay writes retain Unity-main-thread access, `inspect → prepare → commit → readback`, short plans, identity/session binding, idempotency, conservation and outcome-unknown quarantine.
 - Every complete release supplies self-contained artifacts requiring neither source nor the .NET SDK. From `0.3`, the minimum is a versioned ZIP, manifest and installation instructions/script; checksums, changelog, upgrades and rollback continue to mature.
@@ -86,7 +86,7 @@ This owner-approved narrow patch backports import from immutable `v0.3.0` withou
 
 Status: **released**, first published 2026-09-04 and promoted on 2026-09-05; tag `v0.3.2`, commit `da11e44`.
 
-This fix separates Agent-created and imported-copy names, preserves exact legacy `Spherewright_M0_*` recovery, and packages bounded movement recovery around the landing base/local obstacles. The authorized GitHub and Thunderstore artifacts share one tag. Two isolated package black-box new-world trials completed automated electromagnetic matrices and normal saves; their [comparison](https://github.com/AvaloNero/Spherewright-Lab/blob/14478a03c64c550e644c559405c8496b647552e7/scenarios/v0.3.2-black-box/comparison.md) retains Agent paths, timing and API-equivalent cost.
+This fix separates Agent-created and imported-copy names, preserves exact legacy `Spherewright_M0_*` recovery, and packages bounded movement recovery around the landing base/local obstacles. The authorized GitHub and Thunderstore artifacts share one tag. Two isolated package black-box new-world trials completed automated electromagnetic matrices and normal saves; their [comparison](https://github.com/Arcueid77/Spherewright-Lab/blob/14478a03c64c550e644c559405c8496b647552e7/scenarios/v0.3.2-black-box/comparison.md) retains Agent paths, timing and API-equivalent cost.
 
 ## 0.3.3 — Gameplay Mode Compatibility
 

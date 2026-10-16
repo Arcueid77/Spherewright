@@ -4,7 +4,7 @@
 
 ## 研究范围与后续验收
 
-2026-10-15 研究仅支持 `0.10.35.29131 → 0.10.35.29145`，保留精确 owned-primary 与 Journal 来源。[完整不可变原文](https://github.com/AvaloNero/Spherewright/blob/2a7a98d1932c404e3a7abc2c11233d9c0b8780d9/docs/research/game-api-version-0.10.35.29145.md)保留初始默认路径拒绝、元数据报告、受保护引用及当时待实现/部署边界。[Lab 阻塞记录](https://github.com/AvaloNero/Spherewright-Lab/blob/14478a03c64c550e644c559405c8496b647552e7/releases/v0.4.0/evidence/2026-10-15/owned-primary-29145-blocker.md)保留该历史阶段。通用 `SESSION_NOT_OWNED` 提示本身不证明隔离。
+2026-10-15 研究仅支持 `0.10.35.29131 → 0.10.35.29145`，保留精确 owned-primary 与 Journal 来源。[完整不可变原文](https://github.com/Arcueid77/Spherewright/blob/2a7a98d1932c404e3a7abc2c11233d9c0b8780d9/docs/research/game-api-version-0.10.35.29145.md)保留初始默认路径拒绝、元数据报告、受保护引用及当时待实现/部署边界。[Lab 阻塞记录](https://github.com/Arcueid77/Spherewright-Lab/blob/14478a03c64c550e644c559405c8496b647552e7/releases/v0.4.0/evidence/2026-10-15/owned-primary-29145-blocker.md)保留该历史阶段。通用 `SESSION_NOT_OWNED` 提示本身不证明隔离。
 
 后续[最终验收](../validation/v0.4.0.md)在 Windows x64 / DSP `0.10.35.29145` / BepInEx `5.4.17.0` 上验收源码 `2a7a98d1932c404e3a7abc2c11233d9c0b8780d9`，原生、包和恢复证据有独立索引。不得将原“候选未部署”当当前状态，也不得把元数据一致单独升格为实机证明。冻结候选包不变；本次文档工作不授予加载、安装或发布权限。
 

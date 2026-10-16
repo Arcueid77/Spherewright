@@ -6,7 +6,7 @@
 
 M0 is the historical ordinary-world First Red Matrix capability anchor. The initial native inspection used DSP `0.10.34.28529`, `Assembly-CSharp.dll` SHA-256 `AE0BA95F75BD879A62AA4CE253B2AB78EAA4FB3C7C595F5E1FEE75EBE0E0EF85`, and targeted ILSpy/Mono.Cecil inspection. That is historical provenance, not the currently supported build. The accepted `0.4.0` local candidate uses DSP `0.10.35.29145`; see [environment](environment.md), [exact-version research](game-api-version-0.10.35.29145.md) and [final validation](../validation/v0.4.0.md).
 
-The [complete immutable original](https://github.com/AvaloNero/Spherewright/blob/2a7a98d1932c404e3a7abc2c11233d9c0b8780d9/docs/research/game-api-m0.md) preserves dated investigations, signatures and old deployment evidence. It includes retired sandbox experiments and then-pending results. Those passages do not grant current action authority or override later accepted evidence. Keep decompiled game source, raw saves and private identities out of the product repository.
+The [complete immutable original](https://github.com/Arcueid77/Spherewright/blob/2a7a98d1932c404e3a7abc2c11233d9c0b8780d9/docs/research/game-api-m0.md) preserves dated investigations, signatures and old deployment evidence. It includes retired sandbox experiments and then-pending results. Those passages do not grant current action authority or override later accepted evidence. Keep decompiled game source, raw saves and private identities out of the product repository.
 
 ## Bootstrap, ownership and observation
 

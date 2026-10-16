@@ -4,7 +4,7 @@
 
 ## Scope and provenance
 
-This note maintains the runtime/installer exclusion contract implemented by `InstallationStartupGuard`, `SpherewrightPlugin.Awake` and `StopHost`. The [original 2026-09-27 research](https://github.com/AvaloNero/Spherewright/blob/2a7a98d1932c404e3a7abc2c11233d9c0b8780d9/docs/research/installation-startup-guard.md) is historical source/offline evidence; its then-pending deployment text is not the current candidate status. See [final validation](../validation/v0.4.0.md) for accepted local package/runtime evidence and retained limits. No DSP gameplay API or save format is changed by this guard.
+This note maintains the runtime/installer exclusion contract implemented by `InstallationStartupGuard`, `SpherewrightPlugin.Awake` and `StopHost`. The [original 2026-09-27 research](https://github.com/Arcueid77/Spherewright/blob/2a7a98d1932c404e3a7abc2c11233d9c0b8780d9/docs/research/installation-startup-guard.md) is historical source/offline evidence; its then-pending deployment text is not the current candidate status. See [final validation](../validation/v0.4.0.md) for accepted local package/runtime evidence and retained limits. No DSP gameplay API or save format is changed by this guard.
 
 ## Native/runtime input
 

@@ -4,11 +4,11 @@
 
 Spherewright connects an external Agent to **Dyson Sphere Program** through a matching MCP server and BepInEx Plugin. Structured observation, planning and bounded native actions retain normal materials, research, power, construction drones and game time. The product embeds no LLM or autonomous expansion loop.
 
-Plugin, MCP, Contracts and Bridge.Core remain one version-coupled monorepo. [Spherewright-Lab](https://github.com/AvaloNero/Spherewright-Lab) owns scenarios, operational handoffs and detailed evidence; product builds, tests and packaging are independent.
+Plugin, MCP, Contracts and Bridge.Core remain one version-coupled monorepo. [Spherewright-Lab](https://github.com/Arcueid77/Spherewright-Lab) owns scenarios, operational handoffs and detailed evidence; product builds, tests and packaging are independent.
 
 ## Versions and scope
 
-The latest published release is [v0.3.3](https://github.com/AvaloNero/Spherewright/releases/tag/v0.3.3). **0.4.0 is a locally accepted candidate awaiting owner publication review**, with no formal tag, GitHub Release or Thunderstore publication. The frozen candidate source is `2a7a98d1932c404e3a7abc2c11233d9c0b8780d9`. Later documentation changes do not replace its packages or runtime proof.
+The latest published release is [v0.3.3](https://github.com/Arcueid77/Spherewright/releases/tag/v0.3.3). **0.4.0 is a locally accepted candidate awaiting owner publication review**, with no formal tag, GitHub Release or Thunderstore publication. The frozen candidate source is `2a7a98d1932c404e3a7abc2c11233d9c0b8780d9`. Later documentation changes do not replace its packages or runtime proof.
 
 - **Overseer:** bounded production, power, logistics and research observations, upstream tracing and diagnosis. Recommendations grant no write authority.
 - **Foundry:** multi-level recipe, material, machine, base-power and bounded site/dependency plans with explicit external supplies. Preview and execution remain separate.

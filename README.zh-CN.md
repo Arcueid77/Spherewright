@@ -4,11 +4,11 @@
 
 Spherewright 通过配套 MCP 服务和 BepInEx Plugin，把外部 Agent 接入《戴森球计划》。结构化观察、规划和有界原生动作保留正常材料、科研、供电、施工无人机及游戏时间约束。产品不内置 LLM 或自主扩产循环。
 
-Plugin、MCP、Contracts 和 Bridge.Core 保持为强版本耦合的 monorepo。[Spherewright-Lab](https://github.com/AvaloNero/Spherewright-Lab) 维护场景、运行交接和完整证据；产品独立构建、测试和打包。
+Plugin、MCP、Contracts 和 Bridge.Core 保持为强版本耦合的 monorepo。[Spherewright-Lab](https://github.com/Arcueid77/Spherewright-Lab) 维护场景、运行交接和完整证据；产品独立构建、测试和打包。
 
 ## 版本与范围
 
-最新正式发行版是 [v0.3.3](https://github.com/AvaloNero/Spherewright/releases/tag/v0.3.3)。**0.4.0 是本机验收通过、等待所有者审核发布的候选**，尚无正式 tag、GitHub Release 或 Thunderstore 发布。冻结候选源码为 `2a7a98d1932c404e3a7abc2c11233d9c0b8780d9`。后续文档更改不替换其候选包或运行证明。
+最新正式发行版是 [v0.3.3](https://github.com/Arcueid77/Spherewright/releases/tag/v0.3.3)。**0.4.0 是本机验收通过、等待所有者审核发布的候选**，尚无正式 tag、GitHub Release 或 Thunderstore 发布。冻结候选源码为 `2a7a98d1932c404e3a7abc2c11233d9c0b8780d9`。后续文档更改不替换其候选包或运行证明。
 
 - **Overseer**：有界生产、能源、物流及科研观察，上游追踪与诊断。建议不授予写入权限。
 - **Foundry**：多级配方、材料、设备、基础功率及有界场地和依赖计划，明确外部供给。预览与执行保持独立。

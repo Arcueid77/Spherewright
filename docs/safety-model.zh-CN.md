@@ -3,7 +3,7 @@
 
 [English](safety-model.md) | [简体中文](safety-model.zh-CN.md)
 
-Spherewright 提供有界的正常游戏能力。具备能力、预览通过、候选本地验收通过与获准执行是不同事实。本文不授予游戏、Save/Load、恢复或迁移、安装、部署、发布权限。游戏工作从当前 [Spherewright-Lab](https://github.com/AvaloNero/Spherewright-Lab) 检出目录开始，先读取其当前 [AGENTS.md](https://github.com/AvaloNero/Spherewright-Lab/blob/main/AGENTS.md) 与[活动交接](https://github.com/AvaloNero/Spherewright-Lab/blob/main/operations/active-handoff.md)。
+Spherewright 提供有界的正常游戏能力。具备能力、预览通过、候选本地验收通过与获准执行是不同事实。本文不授予游戏、Save/Load、恢复或迁移、安装、部署、发布权限。游戏工作从当前 [Spherewright-Lab](https://github.com/Arcueid77/Spherewright-Lab) 检出目录开始，先读取其当前 [AGENTS.md](https://github.com/Arcueid77/Spherewright-Lab/blob/main/AGENTS.md) 与[活动交接](https://github.com/Arcueid77/Spherewright-Lab/blob/main/operations/active-handoff.md)。
 
 当前维护的原生基准为 `0.10.35.29145`。已验收 0.4.0 候选仍固定于 `2a7a98d1932c404e3a7abc2c11233d9c0b8780d9`，最新正式版本为 v0.3.3。更新文档不会安装新组件组合，也不会重新发布候选。参见[产品状态](project-status.zh-CN.md)。
 
@@ -113,4 +113,4 @@ Host 关闭、重连、压缩独立于 DSP 生命周期，不得自动保存、�
 
 不得发布存档名与文件、ticket、凭据、真实身份、原始请求响应、运行描述文件、本机绝对路径、DLL 或崩溃转储。证据保留于受保护本地，仅发布脱敏结论。公共诊断包使用明确白名单，这不自动使其他任意 DTO 脱敏。
 
-测试、源码审查、原生 prepare 通过、已安装读回和实机持续验收证明不同事实。待检查不算成功。正式 tag、Release、Thunderstore 发布需要独立授权。早期详细证据保留于[已验收安全文档](https://github.com/AvaloNero/Spherewright/blob/2a7a98d1932c404e3a7abc2c11233d9c0b8780d9/docs/safety-model.md)与 [Lab 历史快照](https://github.com/AvaloNero/Spherewright-Lab/tree/14478a03c64c550e644c559405c8496b647552e7)。
+测试、源码审查、原生 prepare 通过、已安装读回和实机持续验收证明不同事实。待检查不算成功。正式 tag、Release、Thunderstore 发布需要独立授权。早期详细证据保留于[已验收安全文档](https://github.com/Arcueid77/Spherewright/blob/2a7a98d1932c404e3a7abc2c11233d9c0b8780d9/docs/safety-model.md)与 [Lab 历史快照](https://github.com/Arcueid77/Spherewright-Lab/tree/14478a03c64c550e644c559405c8496b647552e7)。

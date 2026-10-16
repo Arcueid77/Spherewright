@@ -13,8 +13,8 @@
 
 ## 已发布版本
 
-- [v0.3.3](https://github.com/AvaloNero/Spherewright/releases/tag/v0.3.3)：和平模式下沙盒与资源倍率兼容；[历史说明](packaging/thunderstore/changelog/0.3.3.md)。
-- [v0.3.2](https://github.com/AvaloNero/Spherewright/releases/tag/v0.3.2)：新档命名、开局指南与结构化移动失败；[历史说明](packaging/thunderstore/changelog/0.3.2.md)。
-- [v0.3.1](https://github.com/AvaloNero/Spherewright/releases/tag/v0.3.1) 和 [v0.3.0](https://github.com/AvaloNero/Spherewright/releases/tag/v0.3.0) 保留原发行说明及支持范围。
+- [v0.3.3](https://github.com/Arcueid77/Spherewright/releases/tag/v0.3.3)：和平模式下沙盒与资源倍率兼容；[历史说明](packaging/thunderstore/changelog/0.3.3.md)。
+- [v0.3.2](https://github.com/Arcueid77/Spherewright/releases/tag/v0.3.2)：新档命名、开局指南与结构化移动失败；[历史说明](packaging/thunderstore/changelog/0.3.2.md)。
+- [v0.3.1](https://github.com/Arcueid77/Spherewright/releases/tag/v0.3.1) 和 [v0.3.0](https://github.com/Arcueid77/Spherewright/releases/tag/v0.3.0) 保留原发行说明及支持范围。
 
 既有发行 tag、包及历史证据继续对应原始产物。

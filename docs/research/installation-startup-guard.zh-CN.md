@@ -4,7 +4,7 @@
 
 ## 范围与来源
 
-本文维护 `InstallationStartupGuard`、`SpherewrightPlugin.Awake` 和 `StopHost` 实现的运行时/安装器互斥契约。[2026-09-27 原始研究](https://github.com/AvaloNero/Spherewright/blob/2a7a98d1932c404e3a7abc2c11233d9c0b8780d9/docs/research/installation-startup-guard.md)属于历史源码/离线证据，其中当时待部署文字不是当前候选状态。已验收的本机包/运行证据及限制见[最终验收](../validation/v0.4.0.md)。此守卫不改变 DSP 游戏 API 或存档格式。
+本文维护 `InstallationStartupGuard`、`SpherewrightPlugin.Awake` 和 `StopHost` 实现的运行时/安装器互斥契约。[2026-09-27 原始研究](https://github.com/Arcueid77/Spherewright/blob/2a7a98d1932c404e3a7abc2c11233d9c0b8780d9/docs/research/installation-startup-guard.md)属于历史源码/离线证据，其中当时待部署文字不是当前候选状态。已验收的本机包/运行证据及限制见[最终验收](../validation/v0.4.0.md)。此守卫不改变 DSP 游戏 API 或存档格式。
 
 ## 原生/运行时输入
 

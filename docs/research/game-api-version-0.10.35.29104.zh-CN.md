@@ -4,7 +4,7 @@
 
 ## 历史范围
 
-2026-09-29 调查只为已研究受保护 expired-primary 路径上的 `0.10.35.29088 → 0.10.35.29104` 提供证据，不授予加载权限。[完整不可变原文](https://github.com/AvaloNero/Spherewright/blob/2a7a98d1932c404e3a7abc2c11233d9c0b8780d9/docs/research/game-api-version-0.10.35.29104.md)保留当时阻塞及受保护运行上下文。存档身份、候选 tick 和票据内容属于 Lab，不进入此维护产品说明。
+2026-09-29 调查只为已研究受保护 expired-primary 路径上的 `0.10.35.29088 → 0.10.35.29104` 提供证据，不授予加载权限。[完整不可变原文](https://github.com/Arcueid77/Spherewright/blob/2a7a98d1932c404e3a7abc2c11233d9c0b8780d9/docs/research/game-api-version-0.10.35.29104.md)保留当时阻塞及受保护运行上下文。存档身份、候选 tick 和票据内容属于 Lab，不进入此维护产品说明。
 
 当前已验收本机候选支持 DSP `0.10.35.29145`；见[后续研究](game-api-version-0.10.35.29145.md)及[最终验收](../validation/v0.4.0.md)。历史拒绝/待验声明不是当前安装描述。
 

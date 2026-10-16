@@ -23,12 +23,12 @@
 | `0.7.0` | Release Candidate：公共面冻结、发行工程与全流程验收 | 原 `0.9` |
 | `1.0.0` | 将最后一个合格 `0.7.x` 的同批工件晋升 | 不变 |
 
-这是现行编号。[不可变旧版路线图](https://github.com/AvaloNero/Spherewright/blob/2a7a98d1932c404e3a7abc2c11233d9c0b8780d9/ROADMAP.md)及 [Lab 路线图归档](https://github.com/AvaloNero/Spherewright-Lab/blob/14478a03c64c550e644c559405c8496b647552e7/archive/roadmap-history/ROADMAP-HISTORY-2026-09-24.md)中的旧编号、待验声明保留历史语义，不代表额外版本、当前阻塞或重放指令。
+这是现行编号。[不可变旧版路线图](https://github.com/Arcueid77/Spherewright/blob/2a7a98d1932c404e3a7abc2c11233d9c0b8780d9/ROADMAP.md)及 [Lab 路线图归档](https://github.com/Arcueid77/Spherewright-Lab/blob/14478a03c64c550e644c559405c8496b647552e7/archive/roadmap-history/ROADMAP-HISTORY-2026-09-24.md)中的旧编号、待验声明保留历史语义，不代表额外版本、当前阻塞或重放指令。
 
 ## 开发与发行规则
 
 - 已批准的开发模式是在 `main` 上以可审阅、可回滚的单一目的提交推进，不使用长期发行分支。临时独立工作树或审阅分支遵守当前贡献规则。推送、合并和发布各自服从适用授权；旧运行许可不是持续发布授权。
-- 新 `0.x.0` 游戏阶段开始前，先以独立的已审阅变更更新 Lab 当前阶段规则，明确允许的写入族及保留禁令。路线图本身从不授权这些动作。[导入的历史规则](https://github.com/AvaloNero/Spherewright-Lab/blob/14478a03c64c550e644c559405c8496b647552e7/operations/agent-rules-imported.md)保留来源，不是当前执行范围。
+- 新 `0.x.0` 游戏阶段开始前，先以独立的已审阅变更更新 Lab 当前阶段规则，明确允许的写入族及保留禁令。路线图本身从不授权这些动作。[导入的历史规则](https://github.com/Arcueid77/Spherewright-Lab/blob/14478a03c64c550e644c559405c8496b647552e7/operations/agent-rules-imported.md)保留来源，不是当前执行范围。
 - 新增 DSP 字段、方法和调用路径必须以精确受支持 `Assembly-CSharp.dll` 为证据，在[研究文档](docs/research/game-api-m0.md)记录签名、哈希、采用理由和读回不变量。
 - 所有游戏写入保留 Unity 主线程、`inspect → prepare → commit → readback`、短期计划、身份/session 绑定、幂等、守恒和结果未知隔离。
 - 完整版本必须提供不要求源码或 .NET SDK 的自包含工件。自 `0.3` 起最低形态为版本化 ZIP、manifest 与安装说明/脚本；校验和、变更日志、升级及回滚持续完善。
@@ -86,7 +86,7 @@
 
 状态：**已发布**，2026-09-04 首发、2026-09-05 提升；tag `v0.3.2`，commit `da11e44`。
 
-此修复区分 Agent 新档与导入副本名称，保留旧 `Spherewright_M0_*` 精确恢复，并打包落地基座/局部障碍附近的有界移动恢复。已授权 GitHub 与 Thunderstore 工件来自同一 tag。两次相互隔离的发行包黑盒新档测试均完成自动电磁矩阵并正常保存；[比较记录](https://github.com/AvaloNero/Spherewright-Lab/blob/14478a03c64c550e644c559405c8496b647552e7/scenarios/v0.3.2-black-box/comparison.md)保留 Agent 路径、耗时及 API 等价成本。
+此修复区分 Agent 新档与导入副本名称，保留旧 `Spherewright_M0_*` 精确恢复，并打包落地基座/局部障碍附近的有界移动恢复。已授权 GitHub 与 Thunderstore 工件来自同一 tag。两次相互隔离的发行包黑盒新档测试均完成自动电磁矩阵并正常保存；[比较记录](https://github.com/Arcueid77/Spherewright-Lab/blob/14478a03c64c550e644c559405c8496b647552e7/scenarios/v0.3.2-black-box/comparison.md)保留 Agent 路径、耗时及 API 等价成本。
 
 ## 0.3.3 — Gameplay Mode Compatibility
 

@@ -4,7 +4,7 @@
 
 ## 范围与来源
 
-原始检查使用 DSP `0.10.34.28529`、原生 SHA-256 `AE0BA95F75BD879A62AA4CE253B2AB78EAA4FB3C7C595F5E1FEE75EBE0E0EF85`。[完整不可变研究](https://github.com/AvaloNero/Spherewright/blob/2a7a98d1932c404e3a7abc2c11233d9c0b8780d9/docs/research/game-api-overseer.md)保留公式、反例和带日期本机证据，它们属于历史的版本化观察。当前本机候选支持 DSP `0.10.35.29145`，以[最终验收](../validation/v0.4.0.md)限定；文档维护不是新的原生比较或部署。
+原始检查使用 DSP `0.10.34.28529`、原生 SHA-256 `AE0BA95F75BD879A62AA4CE253B2AB78EAA4FB3C7C595F5E1FEE75EBE0E0EF85`。[完整不可变研究](https://github.com/Arcueid77/Spherewright/blob/2a7a98d1932c404e3a7abc2c11233d9c0b8780d9/docs/research/game-api-overseer.md)保留公式、反例和带日期本机证据，它们属于历史的版本化观察。当前本机候选支持 DSP `0.10.35.29145`，以[最终验收](../validation/v0.4.0.md)限定；文档维护不是新的原生比较或部署。
 
 ## 工厂只读边界
 

@@ -4,7 +4,7 @@
 
 ## Historical scope
 
-The 2026-09-29 investigation supports only `0.10.35.29088 → 0.10.35.29104` on the researched protected expired-primary path. It is evidence, not loading permission. The [complete immutable original](https://github.com/AvaloNero/Spherewright/blob/2a7a98d1932c404e3a7abc2c11233d9c0b8780d9/docs/research/game-api-version-0.10.35.29104.md) retains the then-current blocker and protected operational context. Save identity, candidate ticks and ticket contents belong in Lab, not this maintained product note.
+The 2026-09-29 investigation supports only `0.10.35.29088 → 0.10.35.29104` on the researched protected expired-primary path. It is evidence, not loading permission. The [complete immutable original](https://github.com/Arcueid77/Spherewright/blob/2a7a98d1932c404e3a7abc2c11233d9c0b8780d9/docs/research/game-api-version-0.10.35.29104.md) retains the then-current blocker and protected operational context. Save identity, candidate ticks and ticket contents belong in Lab, not this maintained product note.
 
 Current accepted local candidate support is DSP `0.10.35.29145`; see [later research](game-api-version-0.10.35.29145.md) and [final validation](../validation/v0.4.0.md). Historical refusal/pending statements do not describe the current installation.
 

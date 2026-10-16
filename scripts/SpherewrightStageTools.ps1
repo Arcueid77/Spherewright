@@ -6,7 +6,7 @@ function Get-SpherewrightCommitChecks {
     [CmdletBinding()]
     param([Parameter(Mandatory)][ValidatePattern('^[0-9a-f]{40}$')][string]$CommitSha)
     # Reuse gh, fetch once, exact full SHA. An absent run is unknown, not green.
-    $json = & gh run list --repo AvaloNero/Spherewright --commit $CommitSha --limit 5 --json databaseId,headSha,status,conclusion,url
+    $json = & gh run list --repo Arcueid77/Spherewright --commit $CommitSha --limit 5 --json databaseId,headSha,status,conclusion,url
     if ($LASTEXITCODE -ne 0) { throw 'CI status collection failed; do not infer success.' }
     $decoded = ($json -join "`n") | ConvertFrom-Json
     $runs = @()

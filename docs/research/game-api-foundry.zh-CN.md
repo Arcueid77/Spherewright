@@ -4,7 +4,7 @@
 
 ## 范围与来源
 
-本文维护有界 Foundry 施工和 Governor 分析的产品研究。[完整不可变原文](https://github.com/AvaloNero/Spherewright/blob/2a7a98d1932c404e3a7abc2c11233d9c0b8780d9/docs/research/game-api-foundry.md)保留原生签名、几何反例、带日期离线/实机边界和退役阶段记录。多数初期研究使用 DSP `0.10.34.28529` / 原生 SHA-256 `AE0BA95F75BD879A62AA4CE253B2AB78EAA4FB3C7C595F5E1FEE75EBE0E0EF85`；高架源绑定修正使用 `0.10.35.29131` / `74AC6162CEF8394A6021C8475132CAE4DF4F840871A99E63CC7D2C8297661BC0`。这些历史基线不是当前通用兼容声明。
+本文维护有界 Foundry 施工和 Governor 分析的产品研究。[完整不可变原文](https://github.com/Arcueid77/Spherewright/blob/2a7a98d1932c404e3a7abc2c11233d9c0b8780d9/docs/research/game-api-foundry.md)保留原生签名、几何反例、带日期离线/实机边界和退役阶段记录。多数初期研究使用 DSP `0.10.34.28529` / 原生 SHA-256 `AE0BA95F75BD879A62AA4CE253B2AB78EAA4FB3C7C595F5E1FEE75EBE0E0EF85`；高架源绑定修正使用 `0.10.35.29131` / `74AC6162CEF8394A6021C8475132CAE4DF4F840871A99E63CC7D2C8297661BC0`。这些历史基线不是当前通用兼容声明。
 
 已验收本机候选为源码 `2a7a98d1932c404e3a7abc2c11233d9c0b8780d9`、DSP `0.10.35.29145`。[最终验收](../validation/v0.4.0.md)保留有界模块/Governor 证明、独立三级链中途与整体清单恢复，以及最终持续供给证据。旧“未安装/待实机”文字保留历史语义，本次重写不安装、不执行原生动作、不新增验收。
 

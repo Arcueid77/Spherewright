@@ -4,7 +4,7 @@
 
 ## Scope and provenance
 
-The original inspections used DSP `0.10.34.28529` and native SHA-256 `AE0BA95F75BD879A62AA4CE253B2AB78EAA4FB3C7C595F5E1FEE75EBE0E0EF85`. Their [complete immutable research](https://github.com/AvaloNero/Spherewright/blob/2a7a98d1932c404e3a7abc2c11233d9c0b8780d9/docs/research/game-api-overseer.md) retains formulas, counterexamples and dated local evidence. Those are historical versioned observations. Current local candidate support is DSP `0.10.35.29145`, as bounded by [final validation](../validation/v0.4.0.md); documentation maintenance is not a new native comparison or deployment.
+The original inspections used DSP `0.10.34.28529` and native SHA-256 `AE0BA95F75BD879A62AA4CE253B2AB78EAA4FB3C7C595F5E1FEE75EBE0E0EF85`. Their [complete immutable research](https://github.com/Arcueid77/Spherewright/blob/2a7a98d1932c404e3a7abc2c11233d9c0b8780d9/docs/research/game-api-overseer.md) retains formulas, counterexamples and dated local evidence. Those are historical versioned observations. Current local candidate support is DSP `0.10.35.29145`, as bounded by [final validation](../validation/v0.4.0.md); documentation maintenance is not a new native comparison or deployment.
 
 ## Read-only factory boundary
 

@@ -6,7 +6,7 @@
 
 The accepted local `0.4.0` candidate is source `2a7a98d1932c404e3a7abc2c11233d9c0b8780d9`, on Windows x64, DSP `0.10.35.29145` and BepInEx `5.4.17.0`. [Product status](../project-status.md) and [final validation](../validation/v0.4.0.md) distinguish that candidate from the latest published `v0.3.3`. Candidate archives remain frozen; documentation changes do not rebuild them or establish a new installation/native trial.
 
-The earlier per-deployment chronology, machine-specific audit and then-pending results are historical. Their complete immutable source is the [research at the accepted commit](https://github.com/AvaloNero/Spherewright/blob/2a7a98d1932c404e3a7abc2c11233d9c0b8780d9/docs/research/environment.md). Detailed operational evidence belongs in [Spherewright-Lab](https://github.com/AvaloNero/Spherewright-Lab/tree/14478a03c64c550e644c559405c8496b647552e7), which consumes a fixed read-only product dependency. Product build/test/package has no Lab dependency.
+The earlier per-deployment chronology, machine-specific audit and then-pending results are historical. Their complete immutable source is the [research at the accepted commit](https://github.com/Arcueid77/Spherewright/blob/2a7a98d1932c404e3a7abc2c11233d9c0b8780d9/docs/research/environment.md). Detailed operational evidence belongs in [Spherewright-Lab](https://github.com/Arcueid77/Spherewright-Lab/tree/14478a03c64c550e644c559405c8496b647552e7), which consumes a fixed read-only product dependency. Product build/test/package has no Lab dependency.
 
 ## Reproducible inputs
 

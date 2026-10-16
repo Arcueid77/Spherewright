@@ -5,7 +5,7 @@
 Spherewright 是 Plugin / MCP / Contracts / Bridge.Core 强版本耦合 monorepo。按需阅读[产品状态](docs/project-status.zh-CN.md)、[文档](docs/README.zh-CN.md)、[路线图](ROADMAP.zh-CN.md)、[架构](docs/architecture.zh-CN.md)、[协议](docs/protocol.zh-CN.md)和[安全](docs/safety-model.zh-CN.md)。不要把完整历史运行账本加载进模型上下文。
 
 - 通用能力、通用测试、打包安装脚本、协议、安全、用户指南及简明逐版本验收留在本仓。四个源码项目保持一起。
-- 场景、writer 范围、状态交接、时间线、事故与完整证据归 [Spherewright-Lab](https://github.com/AvaloNero/Spherewright-Lab)。历史证明使用[固定 v0.4 快照](https://github.com/AvaloNero/Spherewright-Lab/tree/14478a03c64c550e644c559405c8496b647552e7)。不向产品仓复制存档特定实体 ID、tick、R 编号或运行流水。
+- 场景、writer 范围、状态交接、时间线、事故与完整证据归 [Spherewright-Lab](https://github.com/Arcueid77/Spherewright-Lab)。历史证明使用[固定 v0.4 快照](https://github.com/Arcueid77/Spherewright-Lab/tree/14478a03c64c550e644c559405c8496b647552e7)。不向产品仓复制存档特定实体 ID、tick、R 编号或运行流水。
 - Lab 消费固定只读产品子模块。通用变更在独立 clone/worktree 实现，经过相关测试、可审核提交及准确 SHA 的成功 CI 后，Lab 才更新 gitlink/锁。产品构建、测试和打包不能依赖 Lab。
 - `docs/agent-playbook.md` 是 EmbeddedResource 和包输入，资源名/URI 保持稳定。变更需要核验嵌入资源与包内内容，不会更新冻结候选或已安装 MCP。维护完整中文伴页和包内语言导航。
 - 保留原生安全：Unity 对象只在主线程访问，线程外使用深复制 DTO，fresh prepare，精确计划/session/身份绑定，single-flight commit，原 action/幂等键核销及 unknown 隔离。禁止物品或科技注入、瞬间施工、传送、任意存档编辑或直接写游戏缓冲。

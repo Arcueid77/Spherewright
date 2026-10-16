@@ -6,7 +6,7 @@
 
 已验收的本机 `0.4.0` 候选源码为 `2a7a98d1932c404e3a7abc2c11233d9c0b8780d9`，环境为 Windows x64、DSP `0.10.35.29145`、BepInEx `5.4.17.0`。[产品状态](../project-status.md)和[最终验收](../validation/v0.4.0.md)区分此候选与最新正式 `v0.3.3`。候选包保持冻结；文档变更不重建工件，也不构成新安装或实机验证。
 
-早期逐次部署流水、特定机器审计和当时待验结果属于历史，完整不可变来源见[已验收提交中的研究](https://github.com/AvaloNero/Spherewright/blob/2a7a98d1932c404e3a7abc2c11233d9c0b8780d9/docs/research/environment.md)。详细运行证据属于 [Spherewright-Lab](https://github.com/AvaloNero/Spherewright-Lab/tree/14478a03c64c550e644c559405c8496b647552e7)，Lab 消费固定、只读产品依赖；产品构建/测试/打包不依赖 Lab。
+早期逐次部署流水、特定机器审计和当时待验结果属于历史，完整不可变来源见[已验收提交中的研究](https://github.com/Arcueid77/Spherewright/blob/2a7a98d1932c404e3a7abc2c11233d9c0b8780d9/docs/research/environment.md)。详细运行证据属于 [Spherewright-Lab](https://github.com/Arcueid77/Spherewright-Lab/tree/14478a03c64c550e644c559405c8496b647552e7)，Lab 消费固定、只读产品依赖；产品构建/测试/打包不依赖 Lab。
 
 ## 可复现输入
 

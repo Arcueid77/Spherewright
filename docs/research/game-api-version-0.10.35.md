@@ -4,7 +4,7 @@
 
 ## Historical scope and exact inputs
 
-This records the 2026-09-24 research for only the directional pairs `0.10.34.28529 → 0.10.35.29057` and `0.10.34.28529 → 0.10.35.29088`. It is historical persistence evidence, not current runtime status or recovery authority. The full method hashes, rationale and then-pending observations remain in the [immutable original](https://github.com/AvaloNero/Spherewright/blob/2a7a98d1932c404e3a7abc2c11233d9c0b8780d9/docs/research/game-api-version-0.10.35.md). Current candidate support is `0.10.35.29145`; see [environment](environment.md), [later research](game-api-version-0.10.35.29145.md) and [final validation](../validation/v0.4.0.md).
+This records the 2026-09-24 research for only the directional pairs `0.10.34.28529 → 0.10.35.29057` and `0.10.34.28529 → 0.10.35.29088`. It is historical persistence evidence, not current runtime status or recovery authority. The full method hashes, rationale and then-pending observations remain in the [immutable original](https://github.com/Arcueid77/Spherewright/blob/2a7a98d1932c404e3a7abc2c11233d9c0b8780d9/docs/research/game-api-version-0.10.35.md). Current candidate support is `0.10.35.29145`; see [environment](environment.md), [later research](game-api-version-0.10.35.29145.md) and [final validation](../validation/v0.4.0.md).
 
 | Native reference | Bytes | Assembly-CSharp.dll SHA-256 |
 | --- | ---: | --- |

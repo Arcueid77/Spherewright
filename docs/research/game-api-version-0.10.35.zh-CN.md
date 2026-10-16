@@ -4,7 +4,7 @@
 
 ## 历史范围与精确输入
 
-本文记录 2026-09-24 仅针对有向版本对 `0.10.34.28529 → 0.10.35.29057` 和 `0.10.34.28529 → 0.10.35.29088` 的研究，属于历史持久化证据，不是当前运行状态或恢复权限。完整方法哈希、理由与当时待验观察见[不可变原文](https://github.com/AvaloNero/Spherewright/blob/2a7a98d1932c404e3a7abc2c11233d9c0b8780d9/docs/research/game-api-version-0.10.35.md)。当前候选支持 `0.10.35.29145`；见[环境](environment.md)、[后续研究](game-api-version-0.10.35.29145.md)和[最终验收](../validation/v0.4.0.md)。
+本文记录 2026-09-24 仅针对有向版本对 `0.10.34.28529 → 0.10.35.29057` 和 `0.10.34.28529 → 0.10.35.29088` 的研究，属于历史持久化证据，不是当前运行状态或恢复权限。完整方法哈希、理由与当时待验观察见[不可变原文](https://github.com/Arcueid77/Spherewright/blob/2a7a98d1932c404e3a7abc2c11233d9c0b8780d9/docs/research/game-api-version-0.10.35.md)。当前候选支持 `0.10.35.29145`；见[环境](environment.md)、[后续研究](game-api-version-0.10.35.29145.md)和[最终验收](../validation/v0.4.0.md)。
 
 | 原生引用 | 字节数 | Assembly-CSharp.dll SHA-256 |
 | --- | ---: | --- |

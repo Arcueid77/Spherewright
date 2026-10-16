@@ -15,7 +15,7 @@ This document describes the maintained source. The accepted 0.4.0 candidate is f
 | `Spherewright.Plugin` | BepInEx 5 adapter, local Named Pipe, native observation and normal-game execution | All DSP/Unity access stays on Unity's main thread |
 | `Spherewright.Mcp` | MCP stdio tools, protected Bridge discovery and the embedded Agent playbook | No reference to game DLLs; no separate gameplay implementation |
 
-The product builds, tests and packages independently of [Spherewright-Lab](https://github.com/AvaloNero/Spherewright-Lab/tree/14478a03c64c550e644c559405c8496b647552e7). Lab owns scenarios, current operational handoffs, game-writer declarations and detailed evidence. Its product submodule is a fixed dependency. Product code has no reverse dependency on Lab.
+The product builds, tests and packages independently of [Spherewright-Lab](https://github.com/Arcueid77/Spherewright-Lab/tree/14478a03c64c550e644c559405c8496b647552e7). Lab owns scenarios, current operational handoffs, game-writer declarations and detailed evidence. Its product submodule is a fixed dependency. Product code has no reverse dependency on Lab.
 
 ```text
 External Agent chooses a finite goal
@@ -74,4 +74,4 @@ Source capability, offline test results, installed cohort and live acceptance ar
 
 Current acceptance evidence is summarized in [validation](validation/v0.4.0.md). The separate same-LAN game-validation-computer design remains a deferred architecture, with the Pipe local to that computer and an authenticated remote command channel for deployment/MCP/evidence. See [the retained proposal](remote-validation.md); it requires its own explicit scope.
 
-Earlier architecture and operational details are available at the [accepted source](https://github.com/AvaloNero/Spherewright/blob/2a7a98d1932c404e3a7abc2c11233d9c0b8780d9/docs/architecture.md) and the [fixed Lab reference](https://github.com/AvaloNero/Spherewright-Lab/tree/14478a03c64c550e644c559405c8496b647552e7). Historical success is evidence, never a replay plan or new execution authority.
+Earlier architecture and operational details are available at the [accepted source](https://github.com/Arcueid77/Spherewright/blob/2a7a98d1932c404e3a7abc2c11233d9c0b8780d9/docs/architecture.md) and the [fixed Lab reference](https://github.com/Arcueid77/Spherewright-Lab/tree/14478a03c64c550e644c559405c8496b647552e7). Historical success is evidence, never a replay plan or new execution authority.

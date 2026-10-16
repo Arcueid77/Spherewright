@@ -279,4 +279,4 @@ Sorter-filter 绑定根配置及手持货物，支持无货 Returning 或普通 
 
 Move 地表预览是观察，不是寻路，180/600 tick 失败指导禁止重复目标。被动漂移保留独立可信检查、时间、位移限制。之后就绪失败不撤销成功，revision 不是接受操作计数。
 
-源码依据：[Contracts](../src/Spherewright.Contracts)、[MCP 工具](../src/Spherewright.Mcp/Tools)、[Core](../src/Spherewright.Bridge.Core)、[原生适配器](../src/Spherewright.Plugin/Game)。早期细节：[已验收协议](https://github.com/AvaloNero/Spherewright/blob/2a7a98d1932c404e3a7abc2c11233d9c0b8780d9/docs/protocol.md)、[Lab 固定参考](https://github.com/AvaloNero/Spherewright-Lab/tree/14478a03c64c550e644c559405c8496b647552e7)。离线契约不证明已安装或实机验收。
+源码依据：[Contracts](../src/Spherewright.Contracts)、[MCP 工具](../src/Spherewright.Mcp/Tools)、[Core](../src/Spherewright.Bridge.Core)、[原生适配器](../src/Spherewright.Plugin/Game)。早期细节：[已验收协议](https://github.com/Arcueid77/Spherewright/blob/2a7a98d1932c404e3a7abc2c11233d9c0b8780d9/docs/protocol.md)、[Lab 固定参考](https://github.com/Arcueid77/Spherewright-Lab/tree/14478a03c64c550e644c559405c8496b647552e7)。离线契约不证明已安装或实机验收。

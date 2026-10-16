@@ -17,7 +17,7 @@ Spherewright 由四个版本耦合的源码项目组成。产品向外部 Agent 
 | `Spherewright.Plugin` | BepInEx 5 适配器、本地 Named Pipe、原生观察与正常游戏执行 | 所有 DSP/Unity 访问都在 Unity 主线程 |
 | `Spherewright.Mcp` | MCP stdio 工具、受保护的 Bridge 发现与内嵌 Agent 指南 | 不引用游戏 DLL，也不另做一套游戏执行实现 |
 
-产品可独立于 [Spherewright-Lab](https://github.com/AvaloNero/Spherewright-Lab/tree/14478a03c64c550e644c559405c8496b647552e7) 构建、测试和打包。Lab 维护场景、当前操作交接、游戏写入者声明与详细证据，其产品子模块是固定依赖。产品代码不反向依赖 Lab。
+产品可独立于 [Spherewright-Lab](https://github.com/Arcueid77/Spherewright-Lab/tree/14478a03c64c550e644c559405c8496b647552e7) 构建、测试和打包。Lab 维护场景、当前操作交接、游戏写入者声明与详细证据，其产品子模块是固定依赖。产品代码不反向依赖 Lab。
 
 ```text
 外部 Agent 选择有限目标
@@ -82,4 +82,4 @@ Core 的 `BlueprintBuildState` 保存不可变几何、有向依赖与逐对象�
 
 当前验收证据概述见[验证记录](validation/v0.4.0.zh-CN.md)。同局域网独立游戏验证机仍是延期架构：Pipe 留在游戏机本地，部署、远程 MCP 与证据收集走经过认证的远程命令通道。参见[保留的方案](remote-validation.zh-CN.md)，该架构需要独立明确的任务范围。
 
-早期架构与操作细节保留于[已验收源码](https://github.com/AvaloNero/Spherewright/blob/2a7a98d1932c404e3a7abc2c11233d9c0b8780d9/docs/architecture.md)与 [Lab 固定参考](https://github.com/AvaloNero/Spherewright-Lab/tree/14478a03c64c550e644c559405c8496b647552e7)。历史成功是证据，不是重放计划或新执行授权。
+早期架构与操作细节保留于[已验收源码](https://github.com/Arcueid77/Spherewright/blob/2a7a98d1932c404e3a7abc2c11233d9c0b8780d9/docs/architecture.md)与 [Lab 固定参考](https://github.com/Arcueid77/Spherewright-Lab/tree/14478a03c64c550e644c559405c8496b647552e7)。历史成功是证据，不是重放计划或新执行授权。
