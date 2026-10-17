@@ -4,11 +4,11 @@
 
 ## 选择版本与包布局
 
-最新正式发行版为 v0.3.3。**0.4.0 仍是尚未发布、等待所有者审核的候选。** 冻结生产验收源码 `2a7a98d1932c404e3a7abc2c11233d9c0b8780d9`、其 ZIP hash 及原本机验收见[验收](validation/v0.4.0.zh-CN.md)。当前包调用验收源码为 `e018b7f45c70f5fe029418cad987af794b5cb9bf`；后续事实文档提交不重生成这些包或改变安装源码身份。
+从[官方发行](https://github.com/Arcueid77/Spherewright/releases)或已审核本地包选择版本。包清单记录该构建的版本、源码提交与 payload hash，并应使用配套校验和记录。历史生产验收源码 `2a7a98d1932c404e3a7abc2c11233d9c0b8780d9` 及其原 ZIP hash 见[验收](validation/v0.4.0.zh-CN.md)。另行记录的 2026-10-17 包调用验收源码为 `e018b7f45c70f5fe029418cad987af794b5cb9bf`；这些历史包保留各自源码身份。
 
-冻结生产验收使用 Windows x64、DSP `0.10.35.29145`、BepInEx `5.4.17.0`，一个和平、owned、非沙盒、1× 本机世界。当前 e018 安装、调用及连续性检查使用同一本机环境及 DSP `0.10.35.29151`。运行兼容允许受支持的和平沙盒或资源倍率设置，不增加沙盒动作，但更广的 0.4 实机覆盖尚未建立。v0.3.3 结果保留原构建的历史范围。
+冻结生产验收使用 Windows x64、DSP `0.10.35.29145`、BepInEx `5.4.17.0`，一个和平、owned、非沙盒、1× 本机世界。引用的 e018 安装、调用及连续性检查使用同一本机环境及 DSP `0.10.35.29151`。运行兼容允许受支持的和平沙盒或资源倍率设置，不增加沙盒动作，但更广的 0.4 实机覆盖尚未建立。v0.3.3 结果保留原构建的历史范围。
 
-e018 两种候选布局已通过官方事务路径实际安装，各自完整通过 64 MCP 工具调用，分别记录数据/预检成功及预期原生安全拒绝，矩阵 accepted/unknown 均为零。所有者明确确认的原主档迁移、正常保存及之后同版本恢复保留持久 Journal 和已完成历史。详见[固定实机报告及包 hash](https://github.com/Arcueid77/Spherewright-Lab/blob/00f4359eef704bc7cd5c148438c05e0d3121bda6/operations/package-callability-2026-10-17.md)及[原生验证](validation/native-29151-preflight.zh-CN.md)。冻结 29145 生产证据保留原源码/session 范围，本次不增加新的生产长窗。以后恢复过期的 29145 主档仍须准备披露精确 `29145→29151` 后再获明确确认；有效主模式证据 5/6 保持原范围。
+引用的 e018 两种布局已通过官方事务路径实际安装，各自完整通过 64 MCP 工具调用，分别记录数据/预检成功及预期原生安全拒绝，矩阵 accepted/unknown 均为零。所有者明确确认的原主档迁移、正常保存及之后同版本恢复保留持久 Journal 和已完成历史。详见[固定实机报告及包 hash](https://github.com/Arcueid77/Spherewright-Lab/blob/00f4359eef704bc7cd5c148438c05e0d3121bda6/operations/package-callability-2026-10-17.md)及[原生验证](validation/native-29151-preflight.zh-CN.md)。证据只适用于引用的源码、包及源码/session 范围，本次不增加新的生产长窗。以后恢复过期的 29145 主档仍须准备披露精确 `29145→29151` 后再获明确确认；有效主模式证据 5/6 保持原范围。
 
 两种布局提供相同游戏和 MCP 能力：
 
@@ -40,9 +40,9 @@ $dspDir = Read-Host 'Exact DSP installation directory'
 
 ## Thunderstore 布局
 
-0.4 包已在规定的本机标准布局验证；**正式商店发布以及独立 Mod Manager/r2modman profile 尚未验证**。不要假设商店已经提供尚未发布的 0.4 下载。
+使用标准 Thunderstore 布局，Plugin 与配套单文件 MCP 一同安装。引用的本机标准布局检查不证明独立 Mod Manager/r2modman profile；应核对选定 profile 的实际组件和 MCP 路径。
 
-获得正式发布授权后，可通过管理器安装选定版本及其声明的 `xiaoye97-BepInEx-5.4.17` 依赖。在该 profile 中找到：
+通过管理器安装选定版本及其声明的 `xiaoye97-BepInEx-5.4.17` 依赖。在该 profile 中找到：
 
 ```text
 BepInEx/plugins/Arcueid_77-Spherewright/Spherewright.Mcp.exe

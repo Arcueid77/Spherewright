@@ -5,7 +5,7 @@
 
 每个会话首次游戏操作前必须阅读本指南。它也是内嵌 MCP 资源 `spherewright://agent/playbooks/opening-movement-v1`，不需要活动 Bridge 即可读取。
 
-当前维护版面向 `0.10.35.29151` 兼容候选，离线证据与待完成实机检查见[原生预检](https://github.com/Arcueid77/Spherewright/blob/main/docs/validation/native-29151-preflight.zh-CN.md)。已验收 0.4.0 候选仍固定于 `2a7a98d1932c404e3a7abc2c11233d9c0b8780d9`，最新正式发布为 v0.3.3。修改本指南不会更新已安装 MCP 或冻结候选包。能力、当前授权、原生可执行性和最终验收是不同事实。本指南不授予游戏、加载、恢复、安装、部署或发布权限。
+本指南描述 DSP `0.10.35.29151` 的 0.4.0 接口，逐源码的离线及实机证据见[原生兼容验证](https://github.com/Arcueid77/Spherewright/blob/main/docs/validation/native-29151-preflight.zh-CN.md)。历史 29145 生产验收仍固定于 `2a7a98d1932c404e3a7abc2c11233d9c0b8780d9`。准确构建身份应读取已安装组件版本与包清单，正式版本见[发行](https://github.com/Arcueid77/Spherewright/releases)。修改本指南不会更新已安装 MCP 或冻结包。能力、当前授权、原生可执行性和最终验收是不同事实。本指南不授予游戏、加载、恢复、安装、部署或发布权限。
 
 <a id="session-entry-and-ownership"></a>
 ## 会话入口与所有权

@@ -4,7 +4,7 @@
 
 Read this playbook before the first gameplay action in a session. It is also the embedded MCP resource `spherewright://agent/playbooks/opening-movement-v1`, available without a live Bridge.
 
-This maintained guide targets the `0.10.35.29151` compatibility candidate; its offline evidence and pending live checks are recorded in [native preflight](https://github.com/Arcueid77/Spherewright/blob/main/docs/validation/native-29151-preflight.md). The accepted 0.4.0 candidate remains fixed at `2a7a98d1932c404e3a7abc2c11233d9c0b8780d9`; latest published release is v0.3.3. Editing this guide does not update an installed MCP or frozen candidate package. Capability, current authorization, native executability and final acceptance are separate. This guide grants no gameplay, loading, recovery, installation, deployment or publication authority.
+This guide describes the 0.4.0 interface for DSP `0.10.35.29151`; source-specific offline and live evidence is recorded in [native compatibility validation](https://github.com/Arcueid77/Spherewright/blob/main/docs/validation/native-29151-preflight.md). Historical 29145 production acceptance remains fixed at `2a7a98d1932c404e3a7abc2c11233d9c0b8780d9`. Read the installed component versions and package manifests for their exact build identity, and [Releases](https://github.com/Arcueid77/Spherewright/releases) for published versions. Editing this guide does not update an installed MCP or frozen package. Capability, current authorization, native executability and final acceptance are separate. This guide grants no gameplay, loading, recovery, installation, deployment or publication authority.
 
 ## Session entry and ownership
 

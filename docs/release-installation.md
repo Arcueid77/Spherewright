@@ -4,11 +4,11 @@
 
 ## Choose a version and layout
 
-The latest published release is v0.3.3. **0.4.0 remains an unpublished candidate awaiting owner review.** Frozen production-acceptance source `2a7a98d1932c404e3a7abc2c11233d9c0b8780d9`, its ZIP hashes and original local acceptance are recorded in [validation](validation/v0.4.0.md). Current package-callability source is `e018b7f45c70f5fe029418cad987af794b5cb9bf`. Later factual documentation commits do not rebuild those packages or change the installed-source identity.
+Choose a version from the [official Releases](https://github.com/Arcueid77/Spherewright/releases) or a reviewed local archive. The package manifest identifies that build's version, source commit and payload hashes; use the matching checksum record. Historical production-acceptance source `2a7a98d1932c404e3a7abc2c11233d9c0b8780d9` and its original ZIP hashes are recorded in [validation](validation/v0.4.0.md). The separate 2026-10-17 package-callability source is `e018b7f45c70f5fe029418cad987af794b5cb9bf`; those historical packages retain their own source identity.
 
-Frozen production acceptance used Windows x64, DSP `0.10.35.29145`, BepInEx `5.4.17.0` and one peaceful owned non-sandbox 1× local world. Current e018 installation, callability and continuity checks used the same local environment on DSP `0.10.35.29151`. Runtime compatibility permits supported peaceful sandbox/resource-multiplier settings without adding sandbox actions, but broader 0.4 live coverage has not been established. v0.3.3 results retain their historical build scope.
+Frozen production acceptance used Windows x64, DSP `0.10.35.29145`, BepInEx `5.4.17.0` and one peaceful owned non-sandbox 1× local world. The cited e018 installation, callability and continuity checks used the same local environment on DSP `0.10.35.29151`. Runtime compatibility permits supported peaceful sandbox/resource-multiplier settings without adding sandbox actions, but broader 0.4 live coverage has not been established. v0.3.3 results retain their historical build scope.
 
-Both e018 candidate layouts were actually installed through the official transaction path and independently passed all 64 MCP calls, including successful data/preparation and expected native safety refusals; matrix accepted/unknown counts were zero. The owner-confirmed original-primary migration, normal saving and subsequent same-version recovery preserved durable Journal and completed history. See the [fixed runtime report and package hashes](https://github.com/Arcueid77/Spherewright-Lab/blob/00f4359eef704bc7cd5c148438c05e0d3121bda6/operations/package-callability-2026-10-17.md) and [native validation](validation/native-29151-preflight.md). Frozen 29145 production evidence retains its original source/session scope; no new production long window is claimed. Any future expired 29145 primary still requires the exact prepared `29145→29151` disclosure and subsequent confirmation; active-primary evidence 5/6 keeps its previous scope.
+Both cited e018 layouts were actually installed through the official transaction path and independently passed all 64 MCP calls, including successful data/preparation and expected native safety refusals; matrix accepted/unknown counts were zero. The owner-confirmed original-primary migration, normal saving and subsequent same-version recovery preserved durable Journal and completed history. See the [fixed runtime report and package hashes](https://github.com/Arcueid77/Spherewright-Lab/blob/00f4359eef704bc7cd5c148438c05e0d3121bda6/operations/package-callability-2026-10-17.md) and [native validation](validation/native-29151-preflight.md). Evidence applies only to its cited source, packages and source/session scope; no new production long window is claimed. Any future expired 29145 primary still requires the exact prepared `29145→29151` disclosure and subsequent confirmation; active-primary evidence 5/6 keeps its previous scope.
 
 Two layouts provide the same gameplay/MCP capabilities:
 
@@ -40,9 +40,9 @@ Register the returned `Spherewright.Mcp.exe` as a local stdio MCP server in your
 
 ## Thunderstore layout
 
-The 0.4 archive has been validated in its declared local standard layout; **formal store publication and a separate Mod Manager/r2modman profile remain unvalidated**. Do not assume an unpublished 0.4 package is already downloadable from the store.
+Use the standard Thunderstore layout with the Plugin and matching single-file MCP together. The cited local standard-layout checks do not certify a separate Mod Manager/r2modman profile; verify the selected profile's actual components and MCP path.
 
-After an authorized publication, install the selected version and its declared `xiaoye97-BepInEx-5.4.17` dependency through your manager. In that selected profile, locate:
+Install the selected version and its declared `xiaoye97-BepInEx-5.4.17` dependency through your manager. In that selected profile, locate:
 
 ```text
 BepInEx/plugins/Arcueid_77-Spherewright/Spherewright.Mcp.exe
