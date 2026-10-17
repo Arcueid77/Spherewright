@@ -8,7 +8,7 @@ Plugin、MCP、Contracts 和 Bridge.Core 保持为强版本耦合的 monorepo。
 
 ## 版本与范围
 
-最新正式发行版是 [v0.3.3](https://github.com/Arcueid77/Spherewright/releases/tag/v0.3.3)。**0.4.0 是本机验收通过、等待所有者审核发布的候选**，尚无正式 tag、GitHub Release 或 Thunderstore 发布。冻结候选源码为 `2a7a98d1932c404e3a7abc2c11233d9c0b8780d9`。后续文档更改不替换其候选包或运行证明。
+最新正式发行版是 [v0.3.3](https://github.com/Arcueid77/Spherewright/releases/tag/v0.3.3)。**0.4.0 尚未发布，等待所有者审核发布。** 当前包调用验收候选源码为 `e018b7f45c70f5fe029418cad987af794b5cb9bf`；冻结的生产验收候选仍为 `2a7a98d1932c404e3a7abc2c11233d9c0b8780d9`。后续文档提交不改变任一候选的包或已安装源码身份。
 
 - **Overseer**：有界生产、能源、物流及科研观察，上游追踪与诊断。建议不授予写入权限。
 - **Foundry**：多级配方、材料、设备、基础功率及有界场地和依赖计划，明确外部供给。预览与执行保持独立。
@@ -16,13 +16,13 @@ Plugin、MCP、Contracts 和 Bridge.Core 保持为强版本耦合的 monorepo。
 - **Governor**：执行前生产声明与实际游戏 tick 观察。库存、额定容量和短样本不能证明持续生产。
 - **存档连续性**：owned、票据绑定的精确主档恢复，保持 durable Journal 连续性；已披露迁移另需后续确认。不提供任意选档或编辑器。
 
-候选已通过规定的三级链、连续联合供给、准备套件、保存恢复及两种本机包布局检查。[验收](docs/validation/v0.4.0.zh-CN.md)记录准确 hash、范围与限制。实际跨恒星航行和物流仍属后续工作。
+冻结的 29145 候选已通过规定的三级链、连续联合供给、准备套件、保存恢复及两种本机包布局检查。[验收](docs/validation/v0.4.0.zh-CN.md)记录其准确 hash、范围与限制。这些生产结果保留原源码及 session 范围。实际跨恒星航行和物流仍属后续工作。
 
 ## 安装与使用
 
-0.4 已验收配置：Windows x64、DSP `0.10.35.29145`、BepInEx `5.4.17.0`，一个 owned、和平、非沙盒、1× 的本机世界。旧发行版保留各自支持范围。Plugin、MCP 和共享程序集必须配套。
+冻结生产验收使用 Windows x64、DSP `0.10.35.29145`、BepInEx `5.4.17.0`，一个 owned、和平、非沙盒、1× 的本机世界。当前候选在同一本机环境及 DSP `0.10.35.29151` 完成测试。旧发行版保留各自支持范围。Plugin、MCP 和共享程序集必须配套。
 
-当前维护正在准备 DSP `0.10.35.29151` 兼容候选。[原生预检](docs/validation/native-29151-preflight.zh-CN.md)区分源码研究与冻结的 29145 验收，新的包及实机检查由 Lab 继续记录。
+当前两种包布局各自完整通过已安装 MCP 的 64 工具调用，分别记录数据/预检成功与预期原生安全拒绝，矩阵内无 accepted 或 unknown 动作。所有者明确确认的原世界迁移及之后的同版本恢复保留持久 Journal 与已完成历史。详见[固定实机报告](https://github.com/Arcueid77/Spherewright-Lab/blob/00f4359eef704bc7cd5c148438c05e0d3121bda6/operations/package-callability-2026-10-17.md)及[原生验证](docs/validation/native-29151-preflight.zh-CN.md)。本阶段不增加新的持续生产验收。
 
 - [安装](docs/release-installation.zh-CN.md)与[中断安装恢复](docs/installation-recovery.zh-CN.md)
 - [Agent 指南](docs/agent-playbook.zh-CN.md)，英文版也嵌入 MCP 并随包提供

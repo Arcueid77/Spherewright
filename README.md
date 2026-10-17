@@ -8,7 +8,7 @@ Plugin, MCP, Contracts and Bridge.Core remain one version-coupled monorepo. [Sph
 
 ## Versions and scope
 
-The latest published release is [v0.3.3](https://github.com/Arcueid77/Spherewright/releases/tag/v0.3.3). **0.4.0 is a locally accepted candidate awaiting owner publication review**, with no formal tag, GitHub Release or Thunderstore publication. The frozen candidate source is `2a7a98d1932c404e3a7abc2c11233d9c0b8780d9`. Later documentation changes do not replace its packages or runtime proof.
+The latest published release is [v0.3.3](https://github.com/Arcueid77/Spherewright/releases/tag/v0.3.3). **0.4.0 remains unpublished and awaits owner publication review.** The current package-callability candidate is `e018b7f45c70f5fe029418cad987af794b5cb9bf`. The frozen production-acceptance candidate remains `2a7a98d1932c404e3a7abc2c11233d9c0b8780d9`; later documentation commits do not change either candidate's package or installed-source identity.
 
 - **Overseer:** bounded production, power, logistics and research observations, upstream tracing and diagnosis. Recommendations grant no write authority.
 - **Foundry:** multi-level recipe, material, machine, base-power and bounded site/dependency plans with explicit external supplies. Preview and execution remain separate.
@@ -16,13 +16,13 @@ The latest published release is [v0.3.3](https://github.com/Arcueid77/Spherewrig
 - **Governor:** pre-execution production declarations and game-tick observations. Inventory, rated capacity and short samples do not prove sustained production.
 - **Save continuity:** owned, ticket-bound exact-primary resume with durable Journal continuity and separately confirmed disclosed migration. No arbitrary save picker or editor.
 
-The candidate passed its declared three-stage chain, continuous joint supply, preparation kit, save/recovery and both local package-layout checks. [Validation](docs/validation/v0.4.0.md) records exact hashes, scope and limits. Interstellar flight/logistics remains future work.
+The frozen 29145 candidate passed its declared three-stage chain, continuous joint supply, preparation kit, save/recovery and both local package-layout checks. [Validation](docs/validation/v0.4.0.md) records its exact hashes, scope and limits. Those production results retain their original source/session scope. Interstellar flight/logistics remains future work.
 
 ## Install and use
 
-Accepted 0.4 configuration: Windows x64, DSP `0.10.35.29145`, BepInEx `5.4.17.0`, one owned peaceful/non-sandbox/1× local world. Older releases retain their own support scope. Use matching Plugin, MCP and shared assemblies.
+Frozen production acceptance used Windows x64, DSP `0.10.35.29145`, BepInEx `5.4.17.0` and one owned peaceful/non-sandbox/1× local world. The current candidate was tested on the same local environment with DSP `0.10.35.29151`. Older releases retain their own support scope. Use matching Plugin, MCP and shared assemblies.
 
-Current maintenance prepares a DSP `0.10.35.29151` compatibility candidate. [Native preflight](docs/validation/native-29151-preflight.md) separates its source research from the frozen 29145 acceptance and tracks the required new package/runtime checks through Lab.
+Both current package layouts independently passed all 64 installed MCP calls, including data/preparation success and expected native safety refusals, with no accepted or unknown matrix action. The owner-confirmed original-world migration and subsequent same-version recovery preserved durable Journal and completed history. See the [fixed runtime report](https://github.com/Arcueid77/Spherewright-Lab/blob/00f4359eef704bc7cd5c148438c05e0d3121bda6/operations/package-callability-2026-10-17.md) and [native validation](docs/validation/native-29151-preflight.md). This phase adds no new sustained-production acceptance.
 
 - [Installation](docs/release-installation.md) and [interrupted-installation recovery](docs/installation-recovery.md)
 - [Agent playbook](docs/agent-playbook.md), also embedded in MCP and included in packages
