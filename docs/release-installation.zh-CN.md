@@ -10,6 +10,10 @@
 
 引用的 e018 两种布局已通过官方事务路径实际安装，各自完整通过 64 MCP 工具调用，分别记录数据/预检成功及预期原生安全拒绝，矩阵 accepted/unknown 均为零。所有者明确确认的原主档迁移、正常保存及之后同版本恢复保留持久 Journal 和已完成历史。详见[固定实机报告及包 hash](https://github.com/Arcueid77/Spherewright-Lab/blob/00f4359eef704bc7cd5c148438c05e0d3121bda6/operations/package-callability-2026-10-17.md)及[原生验证](validation/native-29151-preflight.zh-CN.md)。证据只适用于引用的源码、包及源码/session 范围，本次不增加新的生产长窗。以后恢复过期的 29145 主档仍须准备披露精确 `29145→29151` 后再获明确确认；有效主模式证据 5/6 保持原范围。
 
+2026-10-17 最终双包另对应源码 `b7c0002dbe2e8f5608c5ca140b0c6326a1818021`，不替换上述历史包身份。其手动与标准 Thunderstore 两种布局均已完成正常冷安装、`29151→29151` 默认 owned 主档恢复，且各自独立通过一轮完整 64 工具矩阵（23 数据成功 / 6 预检成功 / 35 预期原生拒绝，矩阵 accepted/unknown 为零）。两次恢复保留持久 Journal 和已完成历史，没有重做原世界迁移。对应源码安装、恢复及完整矩阵的最终独立结果审计全部通过。详见[固定对应源码报告](https://github.com/Arcueid77/Spherewright-Lab/blob/74a4ec3d91608467911460eaf0d317800e60309b/operations/formal-release-2026-10-17.md)。后续事实文档 SHA 不改变这些包的源码身份，也不重新打包。
+
+**下载（2026-10-17）：**[GitHub v0.4.0](https://github.com/Arcueid77/Spherewright/releases/tag/v0.4.0) 已发布手动 ZIP、Thunderstore 布局 ZIP、校验和及生成清单。附注 tag `v0.4.0` 指向源码 `b7c0002dbe2e8f5608c5ca140b0c6326a1818021`。[Thunderstore 条目](https://thunderstore.io/c/dyson-sphere-program/p/Arcueid_77/Spherewright/)仍为 `0.3.3`，其 `0.4.0` 上传尚未完成；安装 0.4.0 请使用 GitHub 手动包。
+
 两种布局提供相同游戏和 MCP 能力：
 
 | 布局 | Plugin | MCP |

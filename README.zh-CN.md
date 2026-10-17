@@ -8,7 +8,9 @@ Plugin、MCP、Contracts 和 Bridge.Core 保持为强版本耦合的 monorepo。
 
 ## 版本与范围
 
-最新正式发行版是 [v0.3.3](https://github.com/Arcueid77/Spherewright/releases/tag/v0.3.3)。**0.4.0 尚未发布，等待所有者审核发布。** 当前包调用验收候选源码为 `e018b7f45c70f5fe029418cad987af794b5cb9bf`；冻结的生产验收候选仍为 `2a7a98d1932c404e3a7abc2c11233d9c0b8780d9`。后续文档提交不改变任一候选的包或已安装源码身份。
+最终同源 0.4.0 双包的源码为 `b7c0002dbe2e8f5608c5ca140b0c6326a1818021`，面向 DSP `0.10.35.29151`。冻结生产验收源码仍为 `2a7a98d1932c404e3a7abc2c11233d9c0b8780d9`。后续纯事实文档提交不改变双包或安装源码身份。
+
+**下载（2026-10-17）：**[GitHub v0.4.0](https://github.com/Arcueid77/Spherewright/releases/tag/v0.4.0) 已发布手动 ZIP、Thunderstore 布局 ZIP、校验和及生成清单。附注 tag `v0.4.0` 指向源码 `b7c0002dbe2e8f5608c5ca140b0c6326a1818021`。[Thunderstore 条目](https://thunderstore.io/c/dyson-sphere-program/p/Arcueid_77/Spherewright/)仍为 `0.3.3`，其 `0.4.0` 上传尚未完成；安装 0.4.0 请使用 GitHub 手动包。
 
 - **Overseer**：有界生产、能源、物流及科研观察，上游追踪与诊断。建议不授予写入权限。
 - **Foundry**：多级配方、材料、设备、基础功率及有界场地和依赖计划，明确外部供给。预览与执行保持独立。
@@ -20,9 +22,13 @@ Plugin、MCP、Contracts 和 Bridge.Core 保持为强版本耦合的 monorepo。
 
 ## 安装与使用
 
-冻结生产验收使用 Windows x64、DSP `0.10.35.29145`、BepInEx `5.4.17.0`，一个 owned、和平、非沙盒、1× 的本机世界。当前候选在同一本机环境及 DSP `0.10.35.29151` 完成测试。旧发行版保留各自支持范围。Plugin、MCP 和共享程序集必须配套。
+冻结生产验收使用 Windows x64、DSP `0.10.35.29145`、BepInEx `5.4.17.0`，一个 owned、和平、非沙盒、1× 本机世界。最终候选面向同一本机环境及 DSP `0.10.35.29151`。旧发行版保留各自支持范围，Plugin、MCP 和共享程序集必须配套。
 
-当前两种包布局各自完整通过已安装 MCP 的 64 工具调用，分别记录数据/预检成功与预期原生安全拒绝，矩阵内无 accepted 或 unknown 动作。所有者明确确认的原世界迁移及之后的同版本恢复保留持久 Journal 与已完成历史。详见[固定实机报告](https://github.com/Arcueid77/Spherewright-Lab/blob/00f4359eef704bc7cd5c148438c05e0d3121bda6/operations/package-callability-2026-10-17.md)及[原生验证](docs/validation/native-29151-preflight.zh-CN.md)。本阶段不增加新的持续生产验收。
+最终 b7 手动与标准 Thunderstore 两种布局均已完成正常冷安装及同版本 `29151→29151` 默认 owned 主档恢复。每种布局各自独立通过一轮完整的已安装 64 工具矩阵：23 数据成功、6 预检成功、35 预期原生拒绝，矩阵 accepted/unknown 均为零。两次恢复保留持久 Journal 和已完成历史，没有再次迁移。安全拒绝证明调用时保留原生安全门，不表示执行了每项受保护写操作。对应源码安装、恢复及完整矩阵的最终独立结果审计全部通过。详见[固定对应源码实机报告](https://github.com/Arcueid77/Spherewright-Lab/blob/74a4ec3d91608467911460eaf0d317800e60309b/operations/formal-release-2026-10-17.md)。
+
+此前 `e018b7f45c70f5fe029418cad987af794b5cb9bf` 的两布局调用、明确确认的原世界 `29145→29151` 迁移及之后同版本恢复，仍由[固定历史报告](https://github.com/Arcueid77/Spherewright-Lab/blob/00f4359eef704bc7cd5c148438c05e0d3121bda6/operations/package-callability-2026-10-17.md)证明，不转记为 b7 的新迁移或生产长窗。另见[原生验证](docs/validation/native-29151-preflight.zh-CN.md)。
+
+只读[Nexus 核查](https://www.nexusmods.com/dysonsphereprogram/mods/23?tab=files)发现原 0.3.3 主文件处于隔离状态，公开页面未说明检测引擎或具体原因。不声明新 0.4 已上传或获 Nexus/第三方扫描放行；本次仅检查 Nexus。
 
 - [安装](docs/release-installation.zh-CN.md)与[中断安装恢复](docs/installation-recovery.zh-CN.md)
 - [Agent 指南](docs/agent-playbook.zh-CN.md)，英文版也嵌入 MCP 并随包提供
