@@ -6,7 +6,9 @@ This roadmap defines the approved capability sequence, acceptance gates and rele
 
 ## Version anchors and current status
 
-The accepted local `0.4.0` candidate is source `2a7a98d1932c404e3a7abc2c11233d9c0b8780d9`, validated on Windows x64 with DSP `0.10.35.29145` and BepInEx `5.4.17.0`. See [product status](docs/project-status.md) and the [final validation summary](docs/validation/v0.4.0.md) for the exact evidence and limits. The latest published version remains `v0.3.3`; no `v0.4.0` tag, GitHub Release or Thunderstore publication exists from this work. The accepted candidate archives are frozen. This documentation maintenance creates no replacement package, installation or live acceptance.
+The active phase is `0.5.0` Voyager, started by the owner's 2026-10-19 instruction with the original three acceptance gates unchanged. Its development source, installed components, candidate packages and completed native acceptance must retain separate identities. No `0.5.0` candidate or acceptance is claimed by this phase-start change.
+
+The formal `v0.4.0` baseline is tagged source `b7c0002dbe2e8f5608c5ca140b0c6326a1818021`, published on GitHub with both package layouts for DSP `0.10.35.29151` and BepInEx `5.4.17.0`. The older production-acceptance source `2a7a98d1932c404e3a7abc2c11233d9c0b8780d9` on DSP `0.10.35.29145` and its frozen archives remain historical evidence, not the new phase baseline. See [product status](docs/project-status.md) and [0.4 validation](docs/validation/v0.4.0.md) for their distinct evidence and limits. Preserve published tags, packages, hashes, historical locks and acceptance; do not repeat accepted 0.4 construction, doubled throughput or long windows. The outstanding 0.4 Thunderstore website upload verification is tracked separately and does not block independent Voyager development or authorize another publication.
 
 - `0.1`: M0 First Red Matrix; safe Bridge, basic MCP primitives and the first automated energy-matrix line.
 - `0.2`: historical Post-M0 expansion; structure-matrix automation, same-system checkpoint flight, recovery tickets, Journal and write-proof hardening. These capability anchors do not invent unpublished tags or Releases.
@@ -90,13 +92,13 @@ This fix separates Agent-created and imported-copy names, preserves exact legacy
 
 ## 0.3.3 — Gameplay Mode Compatibility
 
-Status: **released**, 2026-09-05, tag/Release `v0.3.3`; latest formal release.
+Status: **released**, 2026-09-05, tag/Release `v0.3.3`.
 
 New worlds remain peaceful/non-sandbox/1×. Existing or imported peaceful worlds report sandbox/resource settings, which no longer gate ordinary actions, import, planned-restart resume or flight-checkpoint recovery. Sandbox tools and injection remain absent. Local release-Plugin trials covered a new non-sandbox/1× world and imported non-sandbox/100× and sandbox/1× worlds, using normal gathering, crafting, research rewards, drone construction and saving while preserving both external originals. This is local compatibility evidence, not independent other-computer validation.
 
 ## 0.4.0 — Overseer, Foundry & Governor
 
-Status: **accepted local candidate; publication pending**. The [final validation summary](docs/validation/v0.4.0.md) records the accepted source, frozen package hashes and evidence limits. Earlier dated pending/deployment notes in the immutable roadmap are superseded only within the scope of later evidence. Do not repeat accepted construction or convert a narrow positive into universal coverage.
+Status: **released on GitHub**, 2026-10-17, annotated tag `v0.4.0`, source `b7c0002dbe2e8f5608c5ca140b0c6326a1818021`, DSP `0.10.35.29151`; Thunderstore website upload verification remains separate. [Product status](docs/project-status.md) and the [validation summary](docs/validation/v0.4.0.md) distinguish final package/install evidence from frozen earlier production acceptance. Earlier dated pending/deployment notes retain their historical scope. Do not repeat accepted construction or convert a narrow positive into universal coverage.
 
 ### Goal
 
@@ -147,19 +149,31 @@ The accepted candidate retains separate mid-plan three-stage and whole-kit recov
 
 ## 0.5.0 — Voyager
 
-Status: **planned**, moved intact from former `0.7.0`.
+Status: **active development**, started by the owner's 2026-10-19 instruction; moved intact from former `0.7.0`. All three Voyager acceptance gates remain open. No new package, installation or live acceptance follows from a documentation or source-lock change.
 
 ### Goal and scope
 
-Complete interstellar travel/logistics under normal exploration, energy and warper rules. Catalogs obey native exploration visibility without leaking unseen veins. Plan routes, distance, energy, warpers and return budgets; expose launch, flight, warp, braking, landing, replenishment and recovery stages. A pre-flight checkpoint binds exactly one flight and loses rollback authority after success/covering primary save. Observe/configure cross-star stations, vessels and warpers. Reuse accepted finite construction, upgrades and balancing for remote modules.
+Complete interstellar travel/logistics under normal exploration, energy and warper rules. Reuse existing same-system flight, checkpoint, station, Foundry and Governor capabilities. Historical 0.4 same-system scope is not a Voyager prohibition; removing that guard alone does not implement safe warp travel. All other native, safety, privacy and explicit-confirmation gates remain.
+
+The first slice covers native-visible star-map and exploration/resource observations, preserving unknowns; finite destination/distance/technology/core/fuel/native-warper budgets with outbound and return reserves, landing and withdrawal conditions; and launch, cruise, warp entry/exit, approach, braking, landing, replenishment and failure states. Research the exact installed legal native assembly's signatures, units and call conditions before adding an adapter. Extend the existing single-flight/checkpoint lifecycle with conserved material/energy readback, original-action cancellation/timeout/disconnect reconciliation, success retirement and the prohibition on rolling back progress covered by a newer primary save. New methods require a complete Plugin build, relevant tests and green exact-SHA CI before Lab updates its fixed source lock and cold-deploys at a necessary boundary.
+
+Then choose the nearest suitable target using native-visible information, lock a finite round trip and return reserve, land and verify the real star/planet, energy, items and observable resources. Confirm unknown veins only after arrival or normal exploration, obtain a finite resource quantity normally, return to the departure site, read back and normally save. A resource is missing from the departure system only with legitimate exploration evidence; unexplored is not absent. If the current seed cannot support that clause, record the precise constraint rather than inventing absence or making unbounded blind flights.
+
+After protected recovery is proven, use a controlled recoverable native failure within a safe finite flight budget, then the same verified destination for minimal mining, power, stations and connections. Load vessels and warpers through normal native paths and prove actual extraction, repeated vessel delivery and home consumption. Declare quantities/rates, inventory trends, energy/consumables and a window covering multiple real complete transport cycles. Normal save/recovery must preserve the route and continuing transport. No large remote factory or home-chain rebuild is required. Dyson systems, whole-galaxy development, arbitrary automatic layouts and optimal multi-system scheduling are outside this phase.
 
 ### Acceptance gates
 
-- Normally travel to another star and return safely; bring back a resource missing from the departure system.
+- Normally travel to another star and return safely; bring back a resource missing from the departure system, supported by legitimate exploration evidence.
 - Establish and prove at least one sustained interstellar logistics route.
 - Cause one recoverable flight failure and recover only its exact checkpoint; never roll back a world covered by a newer primary save.
 
-Reuse the `0.3` station and existing checkpoint primitives while separately implementing/researching current-assembly interstellar routes, budgets and warp behavior.
+| Original clause | Existing capability | Gap | Minimum implementation | Tests / native evidence |
+| --- | --- | --- | --- | --- |
+| Safe round trip and return with a departure-system-missing resource | Same-system flight, refuel/gathering and checkpoint primitives | Native visibility, route units, warp conditions and protected return budget | Extend the flight controller with visible-target planning, finite reserves and explicit warp/landing states | Offline fuel/warper shortage, invisible target, stale plan, duplicate commit and interruption; native absence evidence, landed outbound/return readback, conserved items/energy and normal save |
+| At least one sustained interstellar logistics route | Stations, vessels, finite Foundry construction and Governor observations | Cross-star configuration, native warper use and continuing source-to-consumer proof | Minimal mine, power, stations and connections at the verified target, supplied with legitimate vessels/warpers | Predeclared quantities/rates and multiple complete real transport cycles, actual mining/delivery/home consumption, normal save/recovery and continued transport |
+| Recoverable flight failure and exact checkpoint recovery without newer-primary rollback | Flight-bound checkpoints, protected recovery and durable Journal | Warp-stage interruption and checkpoint lifecycle coverage | Reconcile the original flight/checkpoint; retire on success or covering primary; reject expired/overwritten checkpoints | Offline phase interruption, expiry and overwrite regressions; controlled safe native failure and exact recovery. Ordinary travel and offline checks alone do not close this gate |
+
+Detailed scenario evidence and the active snapshot belong in [Spherewright-Lab Voyager](https://github.com/Arcueid77/Spherewright-Lab/tree/main/scenarios/v0.5-voyager); general capabilities, protocol, playbook and user guides stay here. New public Voyager capabilities use the `0.5` development version while retaining `0.4` protocol compatibility; the historical 64-tool count is not a feature ceiling. Final manual and Thunderstore-layout candidates must share one clean pushed source SHA, complete prescribed build/regression/package/schema/install/save-recovery checks and all three gates, and be presented for owner review with hashes. Keep the candidate source SHA distinct from later evidence-only SHAs. Creating a `0.5` tag, Release or Thunderstore upload still requires separate approval.
 
 ## 0.6.0 — Ascension
 

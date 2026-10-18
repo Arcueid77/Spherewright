@@ -2,7 +2,13 @@
 
 [English](project-status.md) · [简体中文](project-status.zh-CN.md)
 
-**下载（2026-10-17）：**[GitHub v0.4.0](https://github.com/Arcueid77/Spherewright/releases/tag/v0.4.0) 已发布手动 ZIP、Thunderstore 布局 ZIP、校验和及生成清单。附注 tag `v0.4.0` 指向源码 `b7c0002dbe2e8f5608c5ca140b0c6326a1818021`。[Thunderstore 条目](https://thunderstore.io/c/dyson-sphere-program/p/Arcueid_77/Spherewright/)仍为 `0.3.3`，其 `0.4.0` 上传尚未完成；安装 0.4.0 请使用 GitHub 手动包。
+**活动阶段（2026-10-19）：`0.5.0` Voyager 开发。** 所有者阶段启动指令保留且仅保留三项验收：正常跨恒星安全往返，带回出发星系有合法证据缺失的资源；至少一条持续跨恒星物流路线；一次可恢复飞行失败及其精确 checkpoint 恢复，且不回滚较新 primary 进度。三项门均未关闭，目前不声明已有 0.5 候选、安装组件或实机验收。详见[范围与能力/缺口表](../ROADMAP.zh-CN.md#050--voyager)及 [Lab 活动快照](https://github.com/Arcueid77/Spherewright-Lab/blob/main/scenarios/v0.5-voyager/current-status.md)。
+
+以正式 0.4 源码 `b7c0002dbe2e8f5608c5ca140b0c6326a1818021` 及其 DSP `0.10.35.29151` 证据为出发基线，保留全部已发布 tag/包/哈希、历史锁和验收，不重做已验收的 0.4 建厂、两倍扩产或长窗。Thunderstore 网站上传核验仍是单列的 0.4 发布事项，不阻塞无依赖的 0.5 工作，也不授权重新发布。新公开 Voyager 能力归入 0.5 开发版本，保留 0.4 协议兼容；历史 64 工具数量不是能力上限。
+
+第一切片核当前安装原生程序集，在既有 flight/checkpoint/station 上补充探索可见信息、有限去返程燃料/翘曲器预算、明确曲速/落地阶段及恢复保护。历史同星系阶段限制不禁止新阶段；原生、安全、隐私和明确确认门全部保留。产品修改使用本独立仓或已批准 worktree，完整 Plugin 构建/相关检查及准确 SHA 绿 CI 后，Lab 才推进固定只读依赖。实际安装、候选哈希及实机结果须与活动源码锁分开记录，缺失工件保持缺失。本阶段不授权 0.5 tag、Release 或注册表上传。
+
+**下载（2026-10-17）：**[GitHub v0.4.0](https://github.com/Arcueid77/Spherewright/releases/tag/v0.4.0) 已发布手动 ZIP、Thunderstore 布局 ZIP、校验和及生成清单。附注 tag `v0.4.0` 指向源码 `b7c0002dbe2e8f5608c5ca140b0c6326a1818021`。2026-10-17 最后一次有记录的 [Thunderstore 官方条目](https://thunderstore.io/c/dyson-sphere-program/p/Arcueid_77/Spherewright/)核查显示 `0.3.3`；所有者网站自助上传的实际版本和结果仍未核验，与 0.5 分开跟踪。安装 0.4.0 请使用 GitHub 手动包。
 
 冻结生产验收源码为 `2a7a98d1932c404e3a7abc2c11233d9c0b8780d9`，原生版本为 `0.10.35.29145`。两份 ZIP 保持冻结，hash 见[验收](validation/v0.4.0.zh-CN.md)；链路、生产长窗及准备套件证据保留原源码/session 范围。
 
