@@ -54,6 +54,16 @@ public interface IBridgeClient
         LocalPlanetRequest request,
         CancellationToken cancellationToken);
 
+    Task<BridgeCallResult<VoyagerStarCatalogSnapshot>> GetVoyagerStarCatalogAsync(
+        string sessionId,
+        GetVoyagerStarCatalogRequest request,
+        CancellationToken cancellationToken);
+
+    Task<BridgeCallResult<VoyagerRouteBudgetSnapshot>> PreviewVoyagerRouteAsync(
+        string sessionId,
+        PreviewVoyagerRouteRequest request,
+        CancellationToken cancellationToken);
+
     Task<BridgeCallResult<RecipeCatalogSnapshot>> GetRecipeCatalogAsync(
         string sessionId,
         LocalPlanetRequest request,

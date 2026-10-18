@@ -178,19 +178,24 @@ internal sealed class FlightCheckpointReloadCoordinator
         {
             ActionId = Guid.NewGuid().ToString("D"),
             Ticket = current,
+            SourceSessionId = _sessions.CaptureOnMainThread().SessionId,
+            IdempotencyKey = request.IdempotencyKey,
         };
+        OwnedSaveRecoveryLease? checkpointLease = null;
         try
         {
+            checkpointLease = _tickets.OpenVerifiedCheckpointLease(current);
             _normalActions.NotifyFlightCheckpointReloadStartingOnMainThread(current);
-            _sessions.ExpectNextSessionToBeLoadedFromFlightCheckpoint(current);
-            DSPGame.StartGame(current.CheckpointSaveName);
+            _sessions.ExpectNextSessionToBeLoadedFromFlightCheckpoint(current, checkpointLease);
+            checkpointLease = null; // The session owns the read-only lease through native adoption.
         }
         catch (Exception exception)
         {
+            checkpointLease?.Dispose();
             _sessions.CancelExpectedFlightCheckpointSession();
             return GameCallResult<FlightCheckpointReloadResult>.Failed(BridgeError.Create(
                 BridgeErrorCodes.ActionFailed,
-                $"DSP rejected the exact pre-flight checkpoint through its normal loader ({exception.GetType().Name}).",
+                $"The exact checkpoint could not be armed before native dispatch ({exception.GetType().Name}); no native load was called.",
                 false,
                 "Keep the same checkpoint token, inspect local logs, and do not load another save."));
         }
@@ -205,14 +210,38 @@ internal sealed class FlightCheckpointReloadCoordinator
         };
         if (!_idempotency.TryAdd(IdempotencyScope, request.IdempotencyKey, fingerprint, result))
         {
+            _sessions.CancelExpectedFlightCheckpointSession();
             return GameCallResult<FlightCheckpointReloadResult>.Failed(BridgeError.Create(
                 BridgeErrorCodes.IdempotencyCapacityExceeded,
-                "The idempotency cache reached capacity after DSP accepted the exact checkpoint load.",
+                "The original checkpoint reload could not be registered before native dispatch; no native load was called.",
                 false,
-                "Do not retry with a new key; inspect session state and the returned action ID."));
+                "Inspect the original request and preserve the checkpoint; no native load was started."));
         }
 
         _actions[action.ActionId] = action;
+        if (!_tickets.TryMarkReloadStarted(current.CheckpointId, action.ActionId, out var pendingRejection))
+        {
+            action.PreDispatchFailure = pendingRejection;
+            result.Accepted = false;
+            result.State = NormalActionStates.ActionFailed;
+            _sessions.CancelExpectedFlightCheckpointSession();
+            return GameCallResult<FlightCheckpointReloadResult>.Succeeded(result);
+        }
+        action.DispatchEntered = true;
+        try
+        {
+            DSPGame.StartGame(current.CheckpointSaveName);
+        }
+        catch (Exception exception)
+        {
+            action.DispatchOutcomeUnknown = true;
+            action.UnknownReason = $"The original checkpoint load entered native dispatch and then threw ({exception.GetType().Name}); loading may have started. Reconcile only this action; never rekey or replay.";
+            result.State = NormalActionStates.OutcomeUnknown;
+            // Keep the exact source lease/expectation until native adoption, a
+            // verified rejection, or the bounded wait. The durable pending marker
+            // also fences fresh reloads after a process restart.
+            _sessions.QuarantineWritesOnMainThread(action.ActionId, action.UnknownReason);
+        }
         return GameCallResult<FlightCheckpointReloadResult>.Succeeded(result);
     }
 
@@ -224,37 +253,78 @@ internal sealed class FlightCheckpointReloadCoordinator
             return false;
         }
 
+        if (action.CompletedSnapshot is not null)
+        {
+            result = action.CompletedSnapshot;
+            return true;
+        }
+
         var session = _sessions.CaptureOnMainThread();
         result = new ActionResultSnapshot
         {
             ActionId = action.ActionId,
             ActionKind = "reload-flight-checkpoint",
-            State = NormalActionStates.WaitingForGame,
+            State = action.DispatchOutcomeUnknown ? NormalActionStates.OutcomeUnknown : NormalActionStates.WaitingForGame,
             Terminal = false,
             Succeeded = false,
             FlightCheckpointId = action.Ticket.CheckpointId,
             FlightCheckpointReloadToken = action.Ticket.ReloadToken,
             FlightCheckpointGameTick = action.Ticket.SavedGameTick,
-            Message = "DSP accepted the exact internally named pre-flight checkpoint; Spherewright is validating its reusable provenance proof.",
+            IdempotencyKey = action.IdempotencyKey,
+            Message = action.DispatchOutcomeUnknown ? action.UnknownReason
+                : "DSP accepted the exact internally named pre-flight checkpoint; Spherewright is validating its reusable provenance proof.",
         };
-        if (session.OwnedBySpherewright
+        if (!action.DispatchEntered)
+        {
+            result.State = NormalActionStates.ActionFailed;
+            result.Terminal = true;
+            result.Message = action.PreDispatchFailure ?? "No native checkpoint load was dispatched.";
+            return true;
+        }
+        if (session.GameLoaded
+            && session.OwnedBySpherewright
+            && string.Equals(session.SaveName, action.Ticket.OwnedSaveName, StringComparison.Ordinal)
+            && !string.IsNullOrWhiteSpace(session.SessionId)
+            && !string.Equals(session.SessionId, action.SourceSessionId, StringComparison.Ordinal)
             && session.CurrentSessionLoadedFromFlightCheckpoint
             && string.Equals(session.FlightCheckpointId, action.Ticket.CheckpointId, StringComparison.Ordinal)
             && session.LocalPlanetId == action.Ticket.OriginPlanetId
             && session.GameTick >= action.Ticket.SavedGameTick)
         {
+            if (action.Ticket.ReloadPending
+                && !_tickets.TryMarkReloadReconciled(action.Ticket.CheckpointId, action.ActionId, out var reconciliationRejection))
+            {
+                action.DispatchOutcomeUnknown = true;
+                action.UnknownReason ??= reconciliationRejection
+                    + " Preserve the original action; do not replay the native load.";
+                result.State = NormalActionStates.OutcomeUnknown;
+                result.Message = action.UnknownReason;
+                _sessions.QuarantineWritesOnMainThread(action.ActionId, action.UnknownReason);
+                return true;
+            }
+            if (action.DispatchOutcomeUnknown && session.WriteQuarantineActionId == action.ActionId)
+                _sessions.TryClearQuarantineOnMainThread(action.ActionId, action.UnknownReason!, out _);
             result.State = NormalActionStates.Completed;
             result.Terminal = true;
             result.Succeeded = true;
             result.SessionId = session.SessionId;
             result.PlanetId = session.LocalPlanetId;
+            result.ReconciledFromOutcomeUnknown = action.DispatchOutcomeUnknown;
+            result.ReconciledAtGameTick = action.DispatchOutcomeUnknown ? session.GameTick : null;
             result.Message = "The exact pre-flight checkpoint passed provenance checks and is ready to retry the same flight; the primary owned save was not replaced.";
+            action.CompletedSnapshot = result;
         }
         else if (!string.IsNullOrWhiteSpace(_sessions.FlightCheckpointAdoptionError))
         {
-            result.State = NormalActionStates.ActionFailed;
-            result.Terminal = true;
-            result.Message = _sessions.FlightCheckpointAdoptionError;
+            // A failed adoption check or bounded wait does not prove that the
+            // original native dispatch never loaded. Keep the original action
+            // pending rather than turn uncertainty into permission to retry.
+            action.DispatchOutcomeUnknown = true;
+            action.UnknownReason ??= _sessions.FlightCheckpointAdoptionError
+                + " Reconcile only the original checkpoint action; do not rekey or replay.";
+            result.State = NormalActionStates.OutcomeUnknown;
+            result.Message = action.UnknownReason;
+            _sessions.QuarantineWritesOnMainThread(action.ActionId, action.UnknownReason);
         }
 
         return true;
@@ -357,6 +427,11 @@ internal sealed class FlightCheckpointReloadCoordinator
                 ticket.OriginPlanetId,
                 ticket.DestinationPlanetId,
                 ticket.SavedGameTick,
+                ticket.CheckpointFileFingerprint,
+                ticket.LifecycleState,
+                ticket.LastAttemptActionId,
+                ticket.RecoveryRequiredAtGameTick,
+                ticket.ReloadActionId,
                 ticket.PlayerStateHash,
                 ticket.StarSystemStateHash,
                 ticket.IssuedAtUtc);
@@ -372,5 +447,13 @@ internal sealed class FlightCheckpointReloadCoordinator
         public string ActionId { get; set; } = string.Empty;
 
         public FlightCheckpointTicket Ticket { get; set; } = null!;
+
+        public string? SourceSessionId { get; set; }
+        public string IdempotencyKey { get; set; } = string.Empty;
+        public bool DispatchEntered { get; set; }
+        public bool DispatchOutcomeUnknown { get; set; }
+        public string? UnknownReason { get; set; }
+        public string? PreDispatchFailure { get; set; }
+        public ActionResultSnapshot? CompletedSnapshot { get; set; }
     }
 }

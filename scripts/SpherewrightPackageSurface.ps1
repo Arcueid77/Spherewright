@@ -76,7 +76,7 @@ function Assert-SpherewrightPackageSurface {
     }
     # The tool names did not change when geometry/route qualification was added.
     # A same-count older MCP must not qualify as the current package surface.
-    function Get-RequiredPackageSchemaNode($Schema, [string]$Path, [string]$ExpectedType) {
+    function Get-RequiredPackageSchemaNode($Schema, [string]$Path, [string]$ExpectedType, [string]$Context='read-only geometry/route') {
         $node = $Schema
         foreach ($part in $Path.Split('.')) {
             $container = if ($part -ceq 'items') { $node } else {
@@ -85,7 +85,7 @@ function Assert-SpherewrightPackageSurface {
             }
             $member = if ($null -ne $container) { $container.PSObject.Properties[$part] } else { $null }
             if (-not $member -or $null -eq $member.Value) {
-                throw "The package lacks the read-only geometry/route schema: $Path."
+                throw "The package lacks the $Context schema: $Path."
             }
             $node = $member.Value
         }
@@ -98,7 +98,7 @@ function Assert-SpherewrightPackageSurface {
         }).Count -gt 0
         if ($types.Count -lt 1 -or $types.Count -gt 2 -or $types -cnotcontains $ExpectedType -or
             $invalidTypes -or @($types | Select-Object -Unique).Count -ne $types.Count) {
-            throw "The package has an incompatible read-only geometry/route schema type: $Path."
+            throw "The package has an incompatible $Context schema type: $Path."
         }
         return $node
     }
@@ -181,6 +181,62 @@ function Assert-SpherewrightPackageSurface {
             'ALL-belts-plus-two-sorters', 'tokenless', 'nativeBeltSegments', 'nativeConditionsChecked=false')) {
         if ($ResourcePlaybook.IndexOf($rule, [StringComparison]::Ordinal) -lt 0) {
             throw "The merged 0.4 playbook lacks required finite-construction/Governor rule: $rule."
+        }
+    }
+    if ($Version -ge [version]'0.5.0') {
+        $toolNames = @($Tools | ForEach-Object { $_.name })
+        if (@($toolNames | Where-Object { $_ -isnot [string] -or [string]::IsNullOrWhiteSpace($_) }).Count -gt 0 -or
+            @($toolNames | Sort-Object -Unique).Count -ne $Tools.Count) {
+            throw 'The Voyager package requires nonempty distinct tool names.'
+        }
+        foreach ($name in @('spherewright_get_voyager_star_catalog', 'spherewright_preview_voyager_route')) {
+            $matchingTools = @($Tools | Where-Object { $_.name -ceq $name })
+            if ($matchingTools.Count -ne 1) { throw "The Voyager package requires exactly one tool named $name." }
+            $tool = $matchingTools[0]
+            $annotations = $tool.PSObject.Properties['annotations']
+            foreach ($annotation in @(@('readOnlyHint',$true), @('destructiveHint',$false), @('idempotentHint',$true), @('openWorldHint',$false))) {
+                $member = if ($annotations) { $annotations.Value.PSObject.Properties[$annotation[0]] } else { $null }
+                if (-not $member -or $member.Value -isnot [bool] -or $member.Value -ne $annotation[1]) {
+                    throw "The Voyager package has missing/incorrect read-only metadata for $name`: $($annotation[0])."
+                }
+            }
+            $description = $tool.PSObject.Properties['description']
+            foreach ($rule in @('READ-ONLY', 'tokenless', 'executable=false', 'commitAllowedNow=false')) {
+                if (-not $description -or ([string]$description.Value).IndexOf($rule,[StringComparison]::Ordinal) -lt 0) {
+                    throw "The Voyager package lacks the non-executable read contract for $name`: $rule."
+                }
+            }
+            $schemaProperty = $tool.PSObject.Properties['inputSchema']
+            if (-not $schemaProperty) { throw "The Voyager package lacks the read-only Voyager input schema for $name." }
+            $schema = $schemaProperty.Value
+            $shape = @(@('sessionId','string'), @('planetId','integer'), @('stateHashVersion','integer'))
+            $requiredFields = @('sessionId','planetId')
+            if ($name -ceq 'spherewright_get_voyager_star_catalog') {
+                $shape += ,@('limit','integer')
+            } else {
+                $shape += @(@('destinationPlanetId','integer'), @('expectedPlayerStateHash','string'), @('expectedCatalogStateHash','string'),
+                    @('maximumFlightGameTicks','integer'), @('returnReserveGameTicks','integer'), @('minimumCoreEnergyRatio','number'), @('extraWarperReserve','integer'))
+                $requiredFields += @('destinationPlanetId','expectedPlayerStateHash','expectedCatalogStateHash')
+            }
+            foreach ($entry in $shape) {
+                $null = Get-RequiredPackageSchemaNode $schema $entry[0] $entry[1] 'read-only Voyager'
+            }
+            $required = $schema.PSObject.Properties['required']
+            foreach ($field in $requiredFields) {
+                if (-not $required -or @($required.Value) -cnotcontains $field) {
+                    throw "The Voyager package makes a bound read parameter optional: $name.$field."
+                }
+            }
+        }
+        $playbookResources = @($Resources | Where-Object { $_ -and $_.PSObject.Properties['uri'] -and $_.uri -ceq 'spherewright://agent/playbooks/opening-movement-v1' })
+        if ($playbookResources.Count -ne 1 -or -not $playbookResources[0].PSObject.Properties['mimeType'] -or $playbookResources[0].mimeType -cne 'text/markdown') {
+            throw 'The Voyager package requires the stable Markdown Agent playbook resource exactly once.'
+        }
+        foreach ($rule in @('spherewright_get_voyager_star_catalog', 'spherewright_preview_voyager_route',
+                'maximumFlightGameTicks', 'returnReserveGameTicks', 'tokenless', 'executable=false', 'newer primary')) {
+            if ($ResourcePlaybook.IndexOf($rule,[StringComparison]::Ordinal) -lt 0) {
+                throw "The Voyager playbook lacks the visibility/budget/recovery rule: $rule."
+            }
         }
     }
     if ($Version.Major -eq 0 -and $Version.Minor -eq 4) {

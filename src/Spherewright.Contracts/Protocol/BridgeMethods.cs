@@ -8,6 +8,8 @@ public static class BridgeMethods
     public const string GetProgressionState = "get_progression_state";
     public const string GetGameplayJournal = "get_gameplay_journal";
     public const string GetLocalStarSystem = "get_local_star_system";
+    public const string GetVoyagerStarCatalog = "get_voyager_star_catalog";
+    public const string PreviewVoyagerRoute = "preview_voyager_route";
     public const string GetRecipeCatalog = "get_recipe_catalog";
     public const string ListResourceNodes = "list_resource_nodes";
     public const string InspectResourceNode = "inspect_resource_node";

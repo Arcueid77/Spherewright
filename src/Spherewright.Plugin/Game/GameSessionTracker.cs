@@ -36,6 +36,8 @@ internal sealed class GameSessionTracker : IDisposable
     private DateTimeOffset _resumeSourceLeaseAcquiredAtUtc;
     private string? _resumeAdoptionError;
     private FlightCheckpointTicket? _expectedFlightCheckpoint;
+    private OwnedSaveRecoveryLease? _flightCheckpointSourceLease;
+    private DateTimeOffset _flightCheckpointLeaseAcquiredAtUtc;
     private string? _currentFlightCheckpointId;
     private bool _currentSessionLoadedFromFlightCheckpoint;
     private string? _flightCheckpointAdoptionError;
@@ -161,6 +163,12 @@ internal sealed class GameSessionTracker : IDisposable
 
     public void UpdateOnMainThread()
     {
+        if (_flightCheckpointSourceLease is not null
+            && DateTimeOffset.UtcNow - _flightCheckpointLeaseAcquiredAtUtc > TimeSpan.FromMinutes(5))
+        {
+            CancelExpectedFlightCheckpointSession();
+            _flightCheckpointAdoptionError = "The exact checkpoint load exceeded its protected adoption wait; inspect the original action without replay.";
+        }
         if (_resumeSourceLease is not null
             && DateTimeOffset.UtcNow - _resumeSourceLeaseAcquiredAtUtc > TimeSpan.FromMinutes(5))
         {
@@ -276,6 +284,7 @@ internal sealed class GameSessionTracker : IDisposable
 
                 _flightCheckpointAdoptionError = rejection;
                 _expectedFlightCheckpoint = null;
+                ReleaseFlightCheckpointSourceLease();
                 _ownedSaveState = OwnedSaveStates.None;
                 _logger.LogError("Spherewright rejected a flight-checkpoint reload because provenance did not match");
                 return;
@@ -285,6 +294,7 @@ internal sealed class GameSessionTracker : IDisposable
             _ownedData = currentData;
             _ownedSaveName = ticket.OwnedSaveName;
             _expectedFlightCheckpoint = null;
+            ReleaseFlightCheckpointSourceLease();
             _ownedSaveState = OwnedSaveStates.Saved;
             _ownedSaveError = null;
             _ownedSessionStartTick = GameMain.gameTick;
@@ -1004,7 +1014,18 @@ internal sealed class GameSessionTracker : IDisposable
         }
     }
 
-    public void Dispose() => ReleaseResumeSourceLease();
+    public void Dispose()
+    {
+        ReleaseResumeSourceLease();
+        ReleaseFlightCheckpointSourceLease();
+    }
+
+    private void ReleaseFlightCheckpointSourceLease()
+    {
+        _flightCheckpointSourceLease?.Dispose();
+        _flightCheckpointSourceLease = null;
+        _flightCheckpointLeaseAcquiredAtUtc = default;
+    }
 
     public void MarkCurrentSessionFlightCheckpoint(FlightCheckpointTicket ticket)
     {
@@ -1056,7 +1077,7 @@ internal sealed class GameSessionTracker : IDisposable
             && GameMain.gameTick >= ticket.SavedGameTick;
     }
 
-    public void ExpectNextSessionToBeLoadedFromFlightCheckpoint(FlightCheckpointTicket ticket)
+    public void ExpectNextSessionToBeLoadedFromFlightCheckpoint(FlightCheckpointTicket ticket, OwnedSaveRecoveryLease checkpointLease)
     {
         if (ticket is null)
         {
@@ -1075,6 +1096,8 @@ internal sealed class GameSessionTracker : IDisposable
         }
 
         _expectedFlightCheckpoint = ticket;
+        _flightCheckpointSourceLease = checkpointLease ?? throw new ArgumentNullException(nameof(checkpointLease));
+        _flightCheckpointLeaseAcquiredAtUtc = DateTimeOffset.UtcNow;
         _ownedSaveState = OwnedSaveStates.WaitingForWorld;
         _ownedSaveError = null;
         _flightCheckpointAdoptionError = null;
@@ -1083,6 +1106,7 @@ internal sealed class GameSessionTracker : IDisposable
     public void CancelExpectedFlightCheckpointSession()
     {
         _expectedFlightCheckpoint = null;
+        ReleaseFlightCheckpointSourceLease();
         if (!IsCurrentSessionOwned)
         {
             _ownedSaveState = OwnedSaveStates.None;
@@ -1264,6 +1288,9 @@ internal sealed class GameSessionTracker : IDisposable
     private List<WriteBlocker> CreateWriteBlockers(string peacefulState)
     {
         var blockers = new List<WriteBlocker>();
+        if (_flightCheckpoints.HasUnreconciledReload)
+            blockers.Add(new WriteBlocker { Code = BridgeErrorCodes.ServerBusy,
+                Message = "The original checkpoint reload is unresolved; poll its exact action before any new write." });
         if (string.Equals(_writeHealth, WriteHealthStates.Quarantined, StringComparison.Ordinal))
         {
             blockers.Add(new WriteBlocker

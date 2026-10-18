@@ -48,6 +48,12 @@ public sealed class PlanetSnapshot
     public UniversalPositionSnapshot UniversalPosition { get; set; } = new UniversalPositionSnapshot();
 
     public List<string> PotentialResourceTypes { get; set; } = new List<string>();
+
+    // Theme possibilities are never surveyed vein evidence. On older Plugins this
+    // field is absent; an empty legacy list must not be treated as absence proof.
+    public bool PotentialResourceTypesVisible { get; set; }
+
+    public int RequiredObserveLevel { get; set; }
 }
 
 public sealed class UniversalPositionSnapshot

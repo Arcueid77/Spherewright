@@ -77,6 +77,29 @@ function Test-Surface([object[]]$Surface, [string]$Text=$playbook) {
     Assert-SpherewrightPackageSurface -Version '0.4.0.0' -Tools $Surface -Resources $resources -PackagedPlaybook $Text -ResourcePlaybook $Text
 }
 
+$voyagerPlaybook = $playbook + ' spherewright_get_voyager_star_catalog spherewright_preview_voyager_route maximumFlightGameTicks returnReserveGameTicks tokenless executable=false newer primary'
+function New-TestVoyagerSurface {
+    New-TestSurface
+    foreach ($name in @('spherewright_get_voyager_star_catalog','spherewright_preview_voyager_route')) {
+        $properties = [ordered]@{sessionId=[pscustomobject]@{type='string'};planetId=[pscustomobject]@{type='integer'};stateHashVersion=[pscustomobject]@{type='integer'}}
+        $required = @('sessionId','planetId')
+        if ($name -ceq 'spherewright_get_voyager_star_catalog') {
+            $properties['limit'] = [pscustomobject]@{type='integer'}
+        } else {
+            foreach ($field in @('destinationPlanetId','maximumFlightGameTicks','returnReserveGameTicks','extraWarperReserve')) { $properties[$field]=[pscustomobject]@{type='integer'} }
+            foreach ($field in @('expectedPlayerStateHash','expectedCatalogStateHash')) { $properties[$field]=[pscustomobject]@{type='string'} }
+            $properties['minimumCoreEnergyRatio'] = [pscustomobject]@{type='number'}
+            $required += @('destinationPlanetId','expectedPlayerStateHash','expectedCatalogStateHash')
+        }
+        [pscustomobject]@{name=$name;description='READ-ONLY tokenless executable=false commitAllowedNow=false';
+            annotations=[pscustomobject]@{readOnlyHint=$true;destructiveHint=$false;idempotentHint=$true;openWorldHint=$false};
+            inputSchema=[pscustomobject]@{type='object';properties=[pscustomobject]$properties;required=$required}}
+    }
+}
+function Test-VoyagerSurface([object[]]$Surface, [string]$Text=$voyagerPlaybook, [object[]]$ResourceList=$resources) {
+    Assert-SpherewrightPackageSurface -Version '0.5.0' -Tools $Surface -Resources $ResourceList -PackagedPlaybook $Text -ResourcePlaybook $Text
+}
+
 $cases = 0
 Test-Surface @(New-TestSurface); $cases++
 Assert-SpherewrightPackageSurface -Version '0.3.3.0' -Tools @() -PackagedPlaybook 'legacy' -ResourcePlaybook 'legacy'; $cases++
@@ -213,4 +236,55 @@ foreach ($invalidResources in @(
         Assert-SpherewrightPackageSurface -Version '0.4.0' -Tools @(New-TestSurface) -Resources $invalidResources -PackagedPlaybook $playbook -ResourcePlaybook $playbook
     } 'exactly one Markdown Agent playbook resource'; $cases++
 }
-[pscustomobject]@{passed=$cases;failed=0;scope='offline package surface policy only; no game or ZIP validation'} | ConvertTo-Json
+Test-VoyagerSurface @(New-TestVoyagerSurface); $cases++
+$caseTools = @(New-TestVoyagerSurface)
+$caseTools += [pscustomobject]@{name='spherewright_future_read_only_tool'}
+Test-VoyagerSurface $caseTools; $cases++ # More than the current surface is permitted; no 66-tool ceiling.
+Assert-Rejects { Test-VoyagerSurface @(New-TestSurface) } 'Voyager package requires exactly one tool'; $cases++
+foreach ($name in @('spherewright_get_voyager_star_catalog','spherewright_preview_voyager_route')) {
+    Assert-Rejects { Test-VoyagerSurface @(New-TestVoyagerSurface | Where-Object name -cne $name) } 'Voyager package requires exactly one tool'; $cases++
+    foreach ($field in @('readOnlyHint','destructiveHint','idempotentHint','openWorldHint')) {
+        $caseTools = @(New-TestVoyagerSurface)
+        $tool = @($caseTools | Where-Object name -ceq $name)[0]
+        $tool.annotations.$field = -not $tool.annotations.$field
+        Assert-Rejects { Test-VoyagerSurface $caseTools } 'Voyager package has missing/incorrect read-only metadata'; $cases++
+    }
+    foreach ($rule in @('READ-ONLY','tokenless','executable=false','commitAllowedNow=false')) {
+        $caseTools = @(New-TestVoyagerSurface)
+        $tool = @($caseTools | Where-Object name -ceq $name)[0]
+        $tool.description = $tool.description.Replace($rule,'')
+        Assert-Rejects { Test-VoyagerSurface $caseTools } 'non-executable read contract'; $cases++
+    }
+    $caseTools = @(New-TestVoyagerSurface)
+    $tool = @($caseTools | Where-Object name -ceq $name)[0]
+    $tool.inputSchema.required = @('sessionId')
+    Assert-Rejects { Test-VoyagerSurface $caseTools } 'makes a bound read parameter optional'; $cases++
+    foreach ($field in @('sessionId','planetId','stateHashVersion')) {
+        $caseTools = @(New-TestVoyagerSurface)
+        $tool = @($caseTools | Where-Object name -ceq $name)[0]
+        $tool.inputSchema.properties.PSObject.Properties.Remove($field)
+        Assert-Rejects { Test-VoyagerSurface $caseTools } 'read-only Voyager schema'; $cases++
+    }
+}
+foreach ($field in @('destinationPlanetId','expectedPlayerStateHash','expectedCatalogStateHash','maximumFlightGameTicks','returnReserveGameTicks','minimumCoreEnergyRatio','extraWarperReserve')) {
+    $caseTools = @(New-TestVoyagerSurface)
+    $tool = @($caseTools | Where-Object name -ceq 'spherewright_preview_voyager_route')[0]
+    $tool.inputSchema.properties.PSObject.Properties.Remove($field)
+    Assert-Rejects { Test-VoyagerSurface $caseTools } 'read-only Voyager schema'; $cases++
+}
+foreach ($field in @('maximumFlightGameTicks','returnReserveGameTicks','minimumCoreEnergyRatio')) {
+    $caseTools = @(New-TestVoyagerSurface)
+    $tool = @($caseTools | Where-Object name -ceq 'spherewright_preview_voyager_route')[0]
+    $tool.inputSchema.properties.$field.type = 'string'
+    Assert-Rejects { Test-VoyagerSurface $caseTools } 'incompatible read-only Voyager schema type'; $cases++
+}
+$caseTools = @(New-TestVoyagerSurface)
+($caseTools | Where-Object name -ceq 'spherewright_get_voyager_star_catalog').inputSchema.properties.PSObject.Properties.Remove('limit')
+Assert-Rejects { Test-VoyagerSurface $caseTools } 'read-only Voyager schema'; $cases++
+$caseTools = @(New-TestVoyagerSurface); $caseTools += $caseTools[-1]
+Assert-Rejects { Test-VoyagerSurface $caseTools } 'nonempty distinct tool names'; $cases++
+foreach ($rule in @('spherewright_get_voyager_star_catalog','spherewright_preview_voyager_route','maximumFlightGameTicks','returnReserveGameTicks','newer primary')) {
+    Assert-Rejects { Test-VoyagerSurface @(New-TestVoyagerSurface) ($voyagerPlaybook.Replace($rule,'')) } 'Voyager playbook lacks'; $cases++
+}
+Assert-Rejects { Test-VoyagerSurface @(New-TestVoyagerSurface) $voyagerPlaybook @() } 'stable Markdown Agent playbook'; $cases++
+[pscustomobject]@{passed=$cases;failed=0;scope='offline 0.4/0.5 package surface policy only; no game or ZIP validation'} | ConvertTo-Json

@@ -2,7 +2,7 @@
 
 [English](protocol.md) | [简体中文](protocol.zh-CN.md)
 
-Protocol version is `1`; native compatibility candidate targets `0.10.35.29151` ([offline evidence; live checks pending](validation/native-29151-preflight.md)). This describes maintained source, not an installed-cohort claim. The accepted 0.4.0 candidate is fixed at `2a7a98d1932c404e3a7abc2c11233d9c0b8780d9`; latest published release remains v0.3.3. See [product status](project-status.md), [safety](safety-model.md) and the [Agent playbook](agent-playbook.md).
+Protocol version remains `1`; the `0.5.0` Voyager development interface targets DSP `0.10.35.29151` and retains the `0.4` protocol surface. This describes maintained source, not an installed-cohort or Voyager live-acceptance claim. Formal `v0.4.0` is tagged at `b7c0002dbe2e8f5608c5ca140b0c6326a1818021`; older production acceptance remains fixed at `2a7a98d1932c404e3a7abc2c11233d9c0b8780d9`. See [product status](project-status.md), [native validation](validation/native-29151-preflight.md), [safety](safety-model.md) and the [Agent playbook](agent-playbook.md).
 
 ## Framing and authentication
 
@@ -21,6 +21,8 @@ spherewright_get_player_state
 spherewright_get_progression_state
 spherewright_get_gameplay_journal
 spherewright_get_local_star_system
+spherewright_get_voyager_star_catalog
+spherewright_preview_voyager_route
 spherewright_get_recipe_catalog
 spherewright_get_build_catalog
 spherewright_get_foundry_plan
@@ -104,6 +106,24 @@ Mutable prepare binds current session/revision/`GameData`, action, identity, par
 `STALE_SESSION`, `SESSION_NOT_OWNED` and `STALE_STATE` distinguish stale session, ownership and state. Wrong request/hash domains may be `INVALID_REQUEST`. Missing mode evidence or combat mode blocks gameplay commits; sandbox/resource settings remain explicit without expanding capabilities.
 
 Lists use bounded immutable pages and opaque session/planet/filter/page-size cursors. Retain capture ticks and finish one snapshot; independent calls are not a transaction. Never publish capability fields, raw requests, descriptors or private paths.
+
+## Voyager visibility and route previews
+
+The `0.5` read-only tools `spherewright_get_voyager_star_catalog` and `spherewright_preview_voyager_route` map to Bridge methods `get_voyager_star_catalog` and `preview_voyager_route`. Both require the current owned session and origin planet. They observe native exploration visibility and calculate a finite route preview. For permitted views, the catalog may request `StarData.RunScanningThread` / `PlanetData.RunScanThread` through the normal star-map path; this can populate legitimate visible scan caches, while pending scans stay unknown. It never invokes arbitrary generators or creates a remote factory. These reads do not launch, enter warp, consume fuel/warpers, save, create a checkpoint, load a save or create a gameplay action. The preview is tokenless and `executable=false`. A positive budget is not a flight commit or live acceptance.
+
+Catalog input is `sessionId`, `planetId`, optional `limit` (1–32 stars, default 16) and `stateHashVersion` (1). Route input additionally requires `destinationPlanetId`, `expectedPlayerStateHash` and `expectedCatalogStateHash`. Defaults are `maximumFlightGameTicks=36000`, `returnReserveGameTicks=18000`, `minimumCoreEnergyRatio=0.8` and `extraWarperReserve=1`. The maximum is the whole round trip (7200–108000 game ticks); the return window is reserved within it and must leave at least 3600 ticks for each leg. The finite core ratio is 0.8–1.0; extra warpers are 0–18, above the two native round-trip warpers. Energy fields use joules, power fields watts, and distances explicitly provide metres and light years. These are conservative budget bounds, not measured flight duration or consumption.
+
+Both results keep `prepared=false`, `executable=false` and `commitAllowedNow=false`, with no `planToken`; MCP rejects a response that advertises execution authority. `resourceVisibility=unknown`, null `resources` or null `planets` must not become observed empty/zero. `resourceSummaryComplete` and `scanReady` delimit the evidence, and explicit observed zero remains zero. `budgetComputed=false` means the numeric budget is unavailable, not a zero-cost route. `budgetBasis` names the conservative calculation; `budgetSufficient` is separate from execution permission. Retain the individual energy/technology/visibility/warper checks and structured `blockers`.
+
+Observed star/planet summaries declare `resourceSummaryScope=remaining_veins_and_native_gas_oceans`: remaining veins plus legitimately visible native gas/ocean sources. A zero vein row does not prove that its item is absent from the whole system. Check every required planet's complete, visible summary and all native source kinds; unknown, incomplete or truncated coverage of that system cannot establish system-wide absence. Truncating unrelated galaxy entries does not invalidate a completely represented system. `expectedPlayerStateHash` binds the complete player snapshot `stateHash`, not the narrower player action hash domain.
+
+Preserve unknown resource visibility and budget fields. A hidden or unobserved resource is not absent; theme-based potential is not a surveyed vein. A departure-system-missing-resource claim requires legitimate complete exploration evidence. Use fresh catalog/player bindings and current native technology, units, distance, core/fuel, warper consumption and outbound/return reserves. Report a blocker or unknown instead of treating unavailable evidence as zero consumption or spare capacity. Do not infer that a destination is safe to land from a route preview.
+
+Existing flight/checkpoint safety still applies: reconcile the original action after cancellation, timeout or disconnect; a result-unknown action must not be repeated under another key. A flight checkpoint belongs to its exact eligible interrupted flight, retires after successful arrival or covering primary progress, and cannot roll back progress covered by a newer primary save. These reads never grant recovery authority or add a cross-star commit. New interstellar execution requires its separately implemented native controller and fresh prepare/commit/readback gates.
+
+Flight-checkpoint ticket v2 records `CheckpointFileFingerprint` from the existing protected `OwnedSaveRecoveryLease`, binding the entire file plus its exact embedded owned identity, native version, peaceful mode and saved tick. Prepare and commit freshly revalidate this evidence; matching tick/mtime alone is insufficient. Commit keeps a read-only lease through asynchronous native adoption, with a five-minute upper bound and release on success, failure, cancellation or disposal. A legacy v1 flight ticket without this strong evidence is rejected; it is never promoted into new recovery authority. This does not change protected-primary confirmation/migration gates or claim a native failed-flight acceptance.
+
+Before native dispatch, reload registers the original action/key and durably records `ReloadPending` / `ReloadActionId`. An exception after entering native loading retains that original accepted action as `outcome_unknown`, with its source lease/expectation; reconcile only that action, never rekey. Durable pending state blocks fresh reloads and ordinary writes. Success requires exact checkpoint adoption in a new session distinct from the dispatch source; old checkpoint flags are insufficient. Reconciliation marks the ticket `recovered` and preserves the original completion result; another reload requires a newly failed bound flight attempt.
 
 <a id="detail-only-belt-cargo-observation-04-development-slice"></a>
 ## Factory, cargo, material and fuel observations

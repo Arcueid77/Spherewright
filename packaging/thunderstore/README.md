@@ -8,7 +8,11 @@ Spherewright connects an external Agent to **Dyson Sphere Program** through MCP.
 
 ### Version and support
 
-This 0.4 package targets DSP `0.10.35.29151` and BepInEx `5.4.17`. Its exact source commit and payload hashes are recorded in `spherewright-manifest.json`; keep every component from that build together. Historical production-acceptance source `2a7a98d1932c404e3a7abc2c11233d9c0b8780d9` passed its declared 29145 local manual/Thunderstore-layout installation, runtime, same-version recovery and continuous-supply acceptance. See the [validation summary](https://github.com/Arcueid77/Spherewright/blob/main/docs/validation/v0.4.0.md) and [native compatibility reports](https://github.com/Arcueid77/Spherewright/blob/main/docs/validation/native-29151-preflight.md). Evidence applies only to its stated source, native version and scope.
+This `{{VERSION}}` package targets DSP `0.10.35.29151` and BepInEx `5.4.17`. Its exact source commit and payload hashes are recorded in `spherewright-manifest.json`; keep every component from that build together.
+
+**0.5 Voyager development preview, unpublished:** the current slice adds `spherewright_get_voyager_star_catalog` and `spherewright_preview_voyager_route`, preserving native exploration visibility, unknown resources, finite outbound/return budgets and non-executable previews. Permitted normal native scans may populate visible scan caches; they never create remote factories. Flight-checkpoint ticket v2 binds exact whole-file evidence and uses a protected read-only lease through native adoption; missing strong evidence, changed contents and newer primary progress reject recovery. This slice does not enable cross-star flight commits. Voyager live acceptance is **0 of 3 gates complete**: the resource-return round trip, sustained cross-star logistics, and controlled failed-flight/exact-checkpoint recovery remain pending. A development archive is for reviewed validation, not a formal Release or Thunderstore publication.
+
+Historical 0.4 evidence remains separate: formal `v0.4.0` is source `b7c0002dbe2e8f5608c5ca140b0c6326a1818021` on DSP `0.10.35.29151`. Older production-acceptance source `2a7a98d1932c404e3a7abc2c11233d9c0b8780d9` passed its declared 29145 local manual/Thunderstore-layout installation, runtime, same-version recovery and continuous-supply acceptance. See the [product status](https://github.com/Arcueid77/Spherewright/blob/main/docs/project-status.md), [validation summary](https://github.com/Arcueid77/Spherewright/blob/main/docs/validation/v0.4.0.md) and [native compatibility reports](https://github.com/Arcueid77/Spherewright/blob/main/docs/validation/native-29151-preflight.md). Evidence applies only to its stated source, native version and scope; it does not establish 0.5 acceptance. Existing 0.4 archives and their hashes remain unchanged.
 
 Supported gameplay is single-player peaceful mode. Sandbox/resource-multiplier settings are reported without adding sandbox actions. Actual 0.4 live evidence is limited to one owned non-sandbox 1× local world; v0.3.3's broader local import examples retain their historical scope. A separate Mod Manager/r2modman profile, another computer, installation transaction-crash recovery, Dark Fog/combat, multiplayer/Nebula and broad third-party Mod compatibility are unvalidated.
 
@@ -32,7 +36,7 @@ To resume an owned primary, use its exact protected ticket, identity and durable
 
 Read `spherewright://agent/playbooks/opening-movement-v1` before acting. A useful request is: “Read the current state and playbook, explain the next bounded phase, and execute only actions already authorized for that phase. Reconcile every accepted action and save according to the declared rules.”
 
-Observation and planning do not grant write authority. No item/energy/technology injection, instant construction, teleportation, direct buffer editing, arbitrary save picker or autonomous expansion loop is provided. Interstellar flight/logistics remains future work.
+Observation and planning do not grant write authority. No item/energy/technology injection, instant construction, teleportation, direct buffer editing, arbitrary save picker or autonomous expansion loop is provided. Interstellar flight/logistics execution and its live acceptance remain pending Voyager work.
 
 [Installation](https://github.com/Arcueid77/Spherewright/blob/main/docs/release-installation.md) · [Releases](https://github.com/Arcueid77/Spherewright/releases) · [Source/issues](https://github.com/Arcueid77/Spherewright) · [Fixed Lab evidence](https://github.com/Arcueid77/Spherewright-Lab/tree/14478a03c64c550e644c559405c8496b647552e7). MIT licensed.
 
@@ -42,7 +46,11 @@ Spherewright 通过 MCP 将外部 Agent 接入**《戴森球计划》**。此 Wi
 
 ### 版本与支持范围
 
-此 0.4 包面向 DSP `0.10.35.29151` 和 BepInEx `5.4.17`。准确源码提交与 payload hash 记录在 `spherewright-manifest.json`，全部组件须来自该同一构建。历史生产验收源码 `2a7a98d1932c404e3a7abc2c11233d9c0b8780d9` 已通过规定的 29145 本机手动/Thunderstore 布局安装、运行、同版本恢复和连续供给验收，见[验收摘要](https://github.com/Arcueid77/Spherewright/blob/main/docs/validation/v0.4.0.zh-CN.md)及[原生兼容报告](https://github.com/Arcueid77/Spherewright/blob/main/docs/validation/native-29151-preflight.zh-CN.md)。证据只适用于声明的源码、原生版本和范围。
+此 `{{VERSION}}` 包面向 DSP `0.10.35.29151` 和 BepInEx `5.4.17`。准确源码提交与 payload hash 记录在 `spherewright-manifest.json`，全部组件须来自该同一构建。
+
+**0.5 Voyager 开发预览，未发布：**当前切片增加 `spherewright_get_voyager_star_catalog` 和 `spherewright_preview_voyager_route`，保留原生探索可见性、未知资源、有限去返程预算及不可执行预览。许可的正常原生扫描可生成可见扫描缓存，但不会创建远端工厂。飞行 checkpoint ticket v2 绑定精确完整文件证据，原生异步认领期间持有受保护只读 lease；缺少强证据、内容变化或较新 primary 覆盖进度均拒绝恢复。本切片未开放跨恒星飞行 commit。Voyager 实机验收为 **0/3 门完成**：资源往返、持续跨星物流、可控飞行失败/精确 checkpoint 恢复均待验。开发包用于已审核验证，不代表正式 Release 或 Thunderstore 发布。
+
+历史 0.4 证据分开保留：正式 `v0.4.0` 对应源码 `b7c0002dbe2e8f5608c5ca140b0c6326a1818021`、DSP `0.10.35.29151`；旧生产验收源码 `2a7a98d1932c404e3a7abc2c11233d9c0b8780d9` 已通过规定的 29145 本机手动/Thunderstore 布局安装、运行、同版本恢复和连续供给验收，见[产品状态](https://github.com/Arcueid77/Spherewright/blob/main/docs/project-status.zh-CN.md)、[验收摘要](https://github.com/Arcueid77/Spherewright/blob/main/docs/validation/v0.4.0.zh-CN.md)及[原生兼容报告](https://github.com/Arcueid77/Spherewright/blob/main/docs/validation/native-29151-preflight.zh-CN.md)。证据只适用于声明的源码、原生版本和范围，不代表 0.5 验收；已有 0.4 包及其哈希保持不变。
 
 支持单人和平模式。沙盒和资源倍率会被报告，不增加沙盒动作。0.4 实机证据限于一个 owned、非沙盒、1× 本机世界；v0.3.3 较广的本机导入示例保留历史范围。独立 Mod Manager/r2modman profile、另一台计算机、安装事务崩溃恢复、黑雾战斗、多人/Nebula 和广泛第三方 Mod 兼容尚未验证。
 
@@ -66,6 +74,6 @@ Spherewright 通过 MCP 将外部 Agent 接入**《戴森球计划》**。此 Wi
 
 操作前阅读 `spherewright://agent/playbooks/opening-movement-v1`。可向 Agent 要求：“读取当前状态和指南，说明下一个有限阶段，只执行该阶段已授权动作，核销每个 accepted action，并按声明规则保存。”
 
-观察和规划不授予写入权限。不提供物品/能量/科技注入、瞬间施工、传送、直接缓冲编辑、任意选档或自主扩产。实际跨恒星航行与物流属于后续工作。
+观察和规划不授予写入权限。不提供物品/能量/科技注入、瞬间施工、传送、直接缓冲编辑、任意选档或自主扩产。实际跨恒星航行/物流执行及其实机验收仍是待完成的 Voyager 工作。
 
 [安装](https://github.com/Arcueid77/Spherewright/blob/main/docs/release-installation.zh-CN.md) · [发行](https://github.com/Arcueid77/Spherewright/releases) · [源码与反馈](https://github.com/Arcueid77/Spherewright) · [固定 Lab 证据](https://github.com/Arcueid77/Spherewright-Lab/tree/14478a03c64c550e644c559405c8496b647552e7)。使用 MIT 许可。

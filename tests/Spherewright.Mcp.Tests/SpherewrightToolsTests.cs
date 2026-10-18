@@ -334,7 +334,7 @@ public sealed class SpherewrightToolsTests
         var tools = provider.GetServices<McpServerTool>().ToArray();
         var tool = Assert.Single(tools, value => value.ProtocolTool.Name == "spherewright_prepare_build").ProtocolTool;
 
-        Assert.Equal(64, tools.Length);
+        Assert.Equal(tools.Length, tools.Select(value => value.ProtocolTool.Name).Distinct(StringComparer.Ordinal).Count());
         Assert.Single(provider.GetServices<McpServerResource>());
         var properties = tool.InputSchema.GetProperty("properties");
         Assert.True(properties.TryGetProperty("beltEndpointPreview", out var previewSchema));
@@ -1526,6 +1526,7 @@ public sealed class SpherewrightToolsTests
                 "spherewright_get_recipe_catalog",
                 "spherewright_get_session_state",
                 "spherewright_get_status",
+                "spherewright_get_voyager_star_catalog",
                 "spherewright_inspect_assembler",
                 "spherewright_inspect_blueprint",
                 "spherewright_inspect_factory_entity",
@@ -1553,6 +1554,7 @@ public sealed class SpherewrightToolsTests
                 "spherewright_prepare_select_research",
                 "spherewright_prepare_transfer",
                 "spherewright_prepare_upgrade",
+                "spherewright_preview_voyager_route",
             },
             tools.Select(tool => tool.ProtocolTool.Name).OrderBy(name => name).ToArray());
         Assert.All(
@@ -3011,6 +3013,14 @@ public sealed class SpherewrightToolsTests
                 LocalPlanetId = request.PlanetId,
             }));
         }
+
+        public Task<BridgeCallResult<VoyagerStarCatalogSnapshot>> GetVoyagerStarCatalogAsync(
+            string sessionId, GetVoyagerStarCatalogRequest request, CancellationToken cancellationToken) =>
+            Task.FromResult(BridgeCallResult<VoyagerStarCatalogSnapshot>.Succeeded(new VoyagerStarCatalogSnapshot()));
+
+        public Task<BridgeCallResult<VoyagerRouteBudgetSnapshot>> PreviewVoyagerRouteAsync(
+            string sessionId, PreviewVoyagerRouteRequest request, CancellationToken cancellationToken) =>
+            Task.FromResult(BridgeCallResult<VoyagerRouteBudgetSnapshot>.Succeeded(new VoyagerRouteBudgetSnapshot()));
 
         public Task<BridgeCallResult<RecipeCatalogSnapshot>> GetRecipeCatalogAsync(
             string sessionId,

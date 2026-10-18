@@ -3571,15 +3571,18 @@ internal sealed partial class GameStateReader
         foreach (var planet in localStar.planets.Where(candidate => candidate is not null).OrderBy(candidate => candidate.id))
         {
             var theme = LDB.themes.Select(planet.theme);
-            var resources = CapturePotentialResourceTypes(theme);
+            var visibility = VoyagerVisibilityPolicy.EvaluatePlanet(GameMain.history?.universeObserveLevel ?? -1,
+                planet.id == localPlanet.id, true, planet.factory is not null,
+                (planet.uPosition - player.uPosition).magnitude, false, false);
+            var resources = visibility.ObservationAllowed ? CapturePotentialResourceTypes(theme) : new List<string>();
             var universalPosition = planet.uPosition;
             planets.Add(new PlanetSnapshot
             {
                 PlanetId = planet.id,
                 Name = planet.displayName,
                 PlanetType = planet.type.ToString(),
-                ThemeId = planet.theme,
-                ThemeName = theme?.displayName ?? string.Empty,
+                ThemeId = visibility.ObservationAllowed ? planet.theme : 0,
+                ThemeName = visibility.ObservationAllowed ? theme?.displayName ?? string.Empty : string.Empty,
                 IsCurrentPlanet = planet.id == localPlanet.id,
                 IsBirthPlanet = planet.id == galaxy.birthPlanetId,
                 IsGasGiant = planet.type == EPlanetType.Gas,
@@ -3594,6 +3597,8 @@ internal sealed partial class GameStateReader
                     Z = universalPosition.z,
                 },
                 PotentialResourceTypes = resources,
+                PotentialResourceTypesVisible = visibility.ObservationAllowed,
+                RequiredObserveLevel = visibility.RequiredObserveLevel,
             });
         }
 
@@ -3611,7 +3616,7 @@ internal sealed partial class GameStateReader
             result.SessionId,
             result.StarId,
             string.Join("|", planets.Select(planet =>
-                $"{planet.PlanetId}:{planet.Name}:{planet.PlanetType}:{planet.ThemeId}:{planet.IsGasGiant}:{string.Join(",", planet.PotentialResourceTypes)}")));
+                $"{planet.PlanetId}:{planet.Name}:{planet.PlanetType}:{planet.ThemeId}:{planet.IsGasGiant}:{planet.PotentialResourceTypesVisible}:{planet.RequiredObserveLevel}:{string.Join(",", planet.PotentialResourceTypes)}")));
         return GameCallResult<LocalStarSystemSnapshot>.Succeeded(result);
     }
 

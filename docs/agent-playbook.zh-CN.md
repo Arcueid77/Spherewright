@@ -5,7 +5,7 @@
 
 每个会话首次游戏操作前必须阅读本指南。它也是内嵌 MCP 资源 `spherewright://agent/playbooks/opening-movement-v1`，不需要活动 Bridge 即可读取。
 
-本指南描述 DSP `0.10.35.29151` 的 0.4.0 接口，逐源码的离线及实机证据见[原生兼容验证](https://github.com/Arcueid77/Spherewright/blob/main/docs/validation/native-29151-preflight.zh-CN.md)。历史 29145 生产验收仍固定于 `2a7a98d1932c404e3a7abc2c11233d9c0b8780d9`。准确构建身份应读取已安装组件版本与包清单，正式版本见[发行](https://github.com/Arcueid77/Spherewright/releases)。修改本指南不会更新已安装 MCP 或冻结包。能力、当前授权、原生可执行性和最终验收是不同事实。本指南不授予游戏、加载、恢复、安装、部署或发布权限。
+本指南描述 DSP `0.10.35.29151` 的 0.5.0 开发接口，保留 0.4 协议接口；逐源码的离线及实机证据见[原生兼容验证](https://github.com/Arcueid77/Spherewright/blob/main/docs/validation/native-29151-preflight.zh-CN.md)。历史 29145 生产验收仍固定于 `2a7a98d1932c404e3a7abc2c11233d9c0b8780d9`。准确构建身份应读取已安装组件版本与包清单，正式版本见[发行](https://github.com/Arcueid77/Spherewright/releases)。修改本指南不会更新已安装 MCP 或冻结包。能力、当前授权、原生可执行性和最终验收是不同事实。本指南不授予游戏、加载、恢复、安装、部署或发布权限。
 
 <a id="session-entry-and-ownership"></a>
 ## 会话入口与所有权
@@ -263,6 +263,23 @@ DSP **经度网格间距随纬度变化**。固定赤道行列公式不是权威
 唯一高架绑定源为精确空独立高架 2001 尾，带新 ID、哈希、起点、自由终点、完整旧路证明及保留零成本覆盖；3..63 NEW 仍查占用、成本。不允许有货、供给源或终点复用；下一段须用真实终态读回 ID，不能预测拼接。
 
 本地调用器断言不是原生拒绝。再 prepare 前独立核对原精确字段；成功不允许执行未批准整链。合法坡道不证明两个分拣器。仅轮询原操作至终态，保留成功坡道，只为独立授权后续新 prepare。
+
+<a id="voyager-visibility-and-route-previews"></a>
+## Voyager 可见信息与航线预览
+
+已安装 0.5 组件提供 `spherewright_get_voyager_star_catalog` 和 `spherewright_preview_voyager_route` 时，使用 fresh 受管 session/出发地观察及原生可见目标。这些是只读、无 token、`executable=false` 的观察，不起飞、曲速、耗料、保存、创建 checkpoint 或游戏 action。目录只对许可视图请求正常原生星图扫描，可能生成合法可见扫描缓存；扫描未就绪仍保持未知，不调用任意生成器或创建远端工厂。航线预览不开放跨星 commit，也不证明安全落地或原生验收。历史 0.4 同星系阶段范围不禁止 Voyager 开发；所有原生执行与确认门继续保留。
+
+目录 `limit` 限定 1–32 颗恒星。航线 `maximumFlightGameTicks` 是整个往返，默认 36000，范围 7200–108000；`returnReserveGameTicks` 默认从总窗内预留 18000，去返程各至少 3600 tick。`minimumCoreEnergyRatio` 须为 0.8–1.0 有限值；`extraWarperReserve` 在原生往返两枚之外额外预留 0–18 枚。保留 fresh `expectedPlayerStateHash`/`expectedCatalogStateHash`、明确米/光年与焦耳/瓦单位、独立预算检查及 `blockers`。即使 `budgetSufficient=true`，仍保持 `prepared=false`、`executable=false`、`commitAllowedNow=false` 且无 `planToken`；MCP 拒绝相反执行标志。
+
+资源可见性与预算的未知必须保持未知。未勘探不等于缺失，主题潜在资源不是已勘探矿脉；缺失资源验收要求合法完整的出发星系探索证据，不得要求抵达或正常探测前读取隐藏目的地矿脉。核对原生单位、距离/科技/核心/燃料、真实翘曲器消耗、去返程储备、落地、补给与撤回条件。`budgetComputed=false`、阻塞或不可用预算不代表零成本，也不许可消耗受保护返程储备，须保留 `budgetBasis`；目录/玩家绑定过期应刷新，不能把预览作为 plan token 复用。
+
+`resourceSummaryScope=remaining_veins_and_native_gas_oceans` 表示剩余矿脉及合法可见的原生气体/海洋来源。某矿脉行归零不等于全系物品缺失；须完整覆盖所有相关行星和来源类型，该星系不能有未知、不完整或截断覆盖。无关恒星条目截断不使完整星系证据失效。`expectedPlayerStateHash` 使用完整玩家快照 `stateHash`，不是更窄的玩家 action 哈希。
+
+预览成功不证明 checkpoint 可用或可恢复。取消、超时或断线后核销原 action，未知 commit 不得换键重放。只有精确且符合条件的失败/中断航程可使用其公布 checkpoint；成功或 primary 覆盖进度即退役，较新主档进度不得回滚。原生飞行扩展和安全可控失败/恢复演示仍是独立验收门；普通往返与离线检查不能单独关闭故障恢复门。
+
+Flight ticket v2 复用现有受保护 `OwnedSaveRecoveryLease`，绑定 `CheckpointFileFingerprint`、精确内嵌 owned 身份、原生版本、和平模式及保存 tick。Prepare 和 commit fresh 重验完整文件证据，tick/mtime 相同也不能放行已变化内容。Commit 持只读 lease 贯穿原生异步认领，最多五分钟，成功、失败、取消或 dispose 均释放。拒绝缺少强文件证据的旧 v1 flight 票据，不得编辑或提升为新恢复权限；protected-primary 的确认及迁移要求保持不变。
+
+Reload 在原生 dispatch 前登记原 action/key，持久记录 `ReloadPending` / `ReloadActionId`。进入原生加载后抛异常时，原 accepted action 保持 `outcome_unknown` 并保留 source lease/expectation；只查询原 action，不得换键或重放。Pending 阻止新 reload 及普通写入；成功须证明精确认领发生在不同于 dispatch 来源的新 session，旧 checkpoint 标志不能证明成功。核销后票据成为 `recovered`，保留原完成回执，再次 reload 须有新一次绑定航程失败。
 
 <a id="restart-and-interplanetary-flight"></a>
 ## 重启与行星间飞行

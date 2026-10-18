@@ -2,6 +2,8 @@ using System.Diagnostics;
 using System.Security.Cryptography;
 using System.Text;
 using BepInEx.Logging;
+using Spherewright.Bridge.Core.Safety;
+using Spherewright.Plugin.Game;
 using Spherewright.Plugin.Security;
 using Spherewright.Plugin.Transport;
 
@@ -9,7 +11,7 @@ namespace Spherewright.Plugin.RuntimeDescriptor;
 
 internal sealed class FlightCheckpointStore
 {
-    private const int TicketVersion = 1;
+    private const int TicketVersion = 2;
     private static readonly TimeSpan TicketLifetime = TimeSpan.FromHours(24);
     private readonly string _ticketPath;
     private readonly string _bridgeInstanceId;
@@ -21,10 +23,16 @@ internal sealed class FlightCheckpointStore
         string bridgeInstanceId,
         string gameVersion,
         ManualLogSource logger)
+        : this(bridgeInstanceId, gameVersion, logger, DefaultHandoffDirectory())
     {
-        var pluginDirectory = Path.GetDirectoryName(typeof(FlightCheckpointStore).Assembly.Location)
-            ?? throw new InvalidOperationException("The Spherewright Plugin directory is unavailable.");
-        var handoffDirectory = Path.Combine(pluginDirectory, "runtime-handoff");
+    }
+
+    internal FlightCheckpointStore(
+        string bridgeInstanceId,
+        string gameVersion,
+        ManualLogSource logger,
+        string handoffDirectory)
+    {
         WindowsCurrentUserSecurity.EnsureSecureDirectory(handoffDirectory);
         _ticketPath = Path.Combine(handoffDirectory, "flight-checkpoint.json");
         _bridgeInstanceId = bridgeInstanceId;
@@ -35,11 +43,49 @@ internal sealed class FlightCheckpointStore
         _logger.LogInfo("Spherewright initialized the protected reusable flight-checkpoint store");
     }
 
+    private static string DefaultHandoffDirectory()
+    {
+        var pluginDirectory = Path.GetDirectoryName(typeof(FlightCheckpointStore).Assembly.Location)
+            ?? throw new InvalidOperationException("The Spherewright Plugin directory is unavailable.");
+        return Path.Combine(pluginDirectory, "runtime-handoff");
+    }
+
     public FlightCheckpointTicket? CurrentTicket => IsReloadEligible(_currentTicket)
         ? _currentTicket
         : null;
 
     public bool HasCurrentTicket => CurrentTicket is not null;
+
+    public bool HasUnreconciledReload => _currentTicket?.ReloadPending == true;
+
+    public bool TryMarkReloadStarted(string checkpointId, string actionId, out string rejection)
+    {
+        var ticket = _currentTicket;
+        if (!IsReloadEligible(ticket) || ticket is null || ticket.ReloadPending
+            || ticket.CheckpointId != checkpointId || string.IsNullOrWhiteSpace(actionId))
+        {
+            rejection = "The exact checkpoint has an unresolved reload or is no longer eligible.";
+            return false;
+        }
+        ticket.ReloadActionId = actionId;
+        ticket.ReloadPending = true;
+        return TryPersistLifecycle(ticket, "record the original checkpoint reload before native dispatch", out rejection);
+    }
+
+    public bool TryMarkReloadReconciled(string checkpointId, string actionId, out string rejection)
+    {
+        var ticket = _currentTicket;
+        if (ticket is null || ticket.CheckpointId != checkpointId || ticket.ReloadActionId != actionId || !ticket.ReloadPending)
+        {
+            rejection = "Only the original pending checkpoint reload can be reconciled.";
+            return false;
+        }
+        ticket.ReloadPending = false;
+        ticket.LifecycleState = FlightCheckpointLifecycleStates.Recovered;
+        if (TryPersistLifecycle(ticket, "reconcile the original checkpoint reload after exact new-session adoption", out rejection)) return true;
+        ticket.ReloadPending = true;
+        return false;
+    }
 
     public FlightCheckpointTicket CreateDraft(
         string ownedSaveName,
@@ -94,6 +140,13 @@ internal sealed class FlightCheckpointStore
         }
 
         ticket.SavedGameTick = savedGameTick;
+        using (var lease = OwnedSaveRecoveryLease.Open(GameSave.SavePath(ticket.CheckpointSaveName), ticket.OwnedSaveName))
+        {
+            if (lease.Prefix.GameTick != savedGameTick || !lease.Prefix.Peaceful
+                || !string.Equals(lease.Prefix.GameVersion, _gameVersion, StringComparison.Ordinal))
+                throw new InvalidDataException("The completed checkpoint does not prove its exact owned identity, native version, peaceful mode and saved tick.");
+            ticket.CheckpointFileFingerprint = lease.Fingerprint;
+        }
         if (!IsStructurallyValid(ticket))
         {
             throw new InvalidOperationException("The completed flight-checkpoint identity is invalid.");
@@ -114,6 +167,7 @@ internal sealed class FlightCheckpointStore
         var ticket = _currentTicket;
         if (!IsReloadEligible(ticket)
             || ticket is null
+            || ticket.ReloadPending
             || !string.Equals(ticket.CheckpointId, checkpointId, StringComparison.Ordinal)
             || string.IsNullOrWhiteSpace(actionId)
             || gameTick < ticket.SavedGameTick)
@@ -140,9 +194,11 @@ internal sealed class FlightCheckpointStore
         var ticket = _currentTicket;
         if (!IsStructurallyValid(ticket)
             || ticket is null
+            || ticket.ReloadPending
             || !string.Equals(ticket.CheckpointId, checkpointId, StringComparison.Ordinal)
             || IsSuccessfulOrRetired(ticket)
             || string.IsNullOrWhiteSpace(actionId)
+            || !string.Equals(ticket.LastAttemptActionId, actionId, StringComparison.Ordinal)
             || gameTick < ticket.SavedGameTick)
         {
             rejection = "The failed flight does not match the current checkpoint lifecycle.";
@@ -165,9 +221,11 @@ internal sealed class FlightCheckpointStore
         var ticket = _currentTicket;
         if (!IsStructurallyValid(ticket)
             || ticket is null
+            || ticket.ReloadPending
             || !string.Equals(ticket.CheckpointId, checkpointId, StringComparison.Ordinal)
             || IsSuccessfulOrRetired(ticket)
             || string.IsNullOrWhiteSpace(actionId)
+            || !string.Equals(ticket.LastAttemptActionId, actionId, StringComparison.Ordinal)
             || gameTick < ticket.SavedGameTick)
         {
             rejection = "The successful flight does not match the current checkpoint lifecycle.";
@@ -237,9 +295,15 @@ internal sealed class FlightCheckpointStore
         var candidate = _currentTicket ?? ReadFromDisk();
         if (!IsReloadEligible(candidate)
             || candidate is null
+            || candidate.ReloadPending
             || !FixedTimeEquals(candidate.ReloadToken, reloadToken))
         {
-            rejection = "The flight-checkpoint ticket is missing, expired, retired, already succeeded, or belongs to another game version.";
+            rejection = "The flight-checkpoint ticket is missing, expired, retired, already succeeded, has an unresolved original reload, or belongs to another game version.";
+            return false;
+        }
+
+        if (!TryValidatePrimaryCoverage(candidate, out rejection))
+        {
             return false;
         }
 
@@ -251,20 +315,50 @@ internal sealed class FlightCheckpointStore
     public bool TryValidateCheckpointFile(FlightCheckpointTicket ticket, out string rejection)
     {
         rejection = string.Empty;
-        if (!IsStructurallyValid(ticket))
+        if (!IsReloadEligible(ticket))
         {
-            rejection = "The reusable flight-checkpoint ticket is invalid.";
+            rejection = "The reusable flight-checkpoint ticket is invalid, expired, retired, or already succeeded.";
             return false;
         }
 
-        GameSave.ReadHeader(ticket.CheckpointSaveName, false, out var header);
-        if (header is null || header.gameTick != ticket.SavedGameTick)
+        if (!TryValidatePrimaryCoverage(ticket, out rejection))
         {
-            rejection = "The exact pre-flight save is missing or its saved game tick no longer matches the protected ticket.";
+            return false;
+        }
+
+        try
+        {
+            using (OpenVerifiedCheckpointLease(ticket)) { }
+        }
+        catch (Exception exception) when (
+            exception is IOException
+            || exception is InvalidDataException
+            || exception is UnauthorizedAccessException
+            || exception is ArgumentException
+            || exception is NotSupportedException
+            || exception is System.Security.SecurityException
+            || exception is CryptographicException)
+        {
+            rejection = "The exact pre-flight save could not be verified; recovery is unavailable.";
             return false;
         }
 
         return true;
+    }
+
+    internal OwnedSaveRecoveryLease OpenVerifiedCheckpointLease(FlightCheckpointTicket ticket)
+    {
+        if (!IsReloadEligible(ticket) || !TryValidatePrimaryCoverage(ticket, out _))
+            throw new InvalidDataException("The checkpoint is expired, retired or covered by a newer primary.");
+        var lease = OwnedSaveRecoveryLease.Open(GameSave.SavePath(ticket.CheckpointSaveName), ticket.OwnedSaveName);
+        if (lease.Prefix.GameTick != ticket.SavedGameTick || !lease.Prefix.Peaceful
+            || !string.Equals(lease.Prefix.GameVersion, _gameVersion, StringComparison.Ordinal)
+            || !string.Equals(lease.Fingerprint, ticket.CheckpointFileFingerprint, StringComparison.Ordinal))
+        {
+            lease.Dispose();
+            throw new InvalidDataException("The exact pre-flight save no longer matches its protected full-file evidence.");
+        }
+        return lease;
     }
 
     private bool IsStructurallyValid(FlightCheckpointTicket? ticket) =>
@@ -283,6 +377,7 @@ internal sealed class FlightCheckpointStore
         && ticket.DestinationPlanetId > 0
         && ticket.OriginPlanetId != ticket.DestinationPlanetId
         && ticket.SavedGameTick >= 0
+        && !string.IsNullOrWhiteSpace(ticket.CheckpointFileFingerprint)
         && ticket.IssuedAtUtc != default
         && (ticket.ExpiresAtUtc == default || ticket.ExpiresAtUtc > ticket.IssuedAtUtc)
         && IsKnownLifecycle(ticket.LifecycleState)
@@ -319,6 +414,7 @@ internal sealed class FlightCheckpointStore
         || string.Equals(lifecycle, FlightCheckpointLifecycleStates.Active, StringComparison.Ordinal)
         || string.Equals(lifecycle, FlightCheckpointLifecycleStates.RecoveryRequired, StringComparison.Ordinal)
         || string.Equals(lifecycle, FlightCheckpointLifecycleStates.FlightSucceeded, StringComparison.Ordinal)
+        || string.Equals(lifecycle, FlightCheckpointLifecycleStates.Recovered, StringComparison.Ordinal)
         || string.Equals(lifecycle, FlightCheckpointLifecycleStates.Retired, StringComparison.Ordinal);
 
     private static string EffectiveLifecycle(FlightCheckpointTicket ticket) =>
@@ -404,12 +500,26 @@ internal sealed class FlightCheckpointStore
             return;
         }
 
+        TryValidatePrimaryCoverage(ticket, out _);
+    }
+
+    // Both prepare and commit reach this fresh native comparison. A constructor-only
+    // check would miss a normal primary save made after a failed flight in this process.
+    private bool TryValidatePrimaryCoverage(FlightCheckpointTicket ticket, out string rejection)
+    {
+        rejection = string.Empty;
         try
         {
             GameSave.ReadHeader(ticket.OwnedSaveName, false, out var header);
-            if (header is null || header.gameTick <= ticket.SavedGameTick)
+            if (header is null || header.gameTick < 0)
             {
-                return;
+                rejection = "The exact primary save timeline is unavailable; checkpoint rollback safety is unknown.";
+                return false;
+            }
+
+            if (header.gameTick <= ticket.SavedGameTick)
+            {
+                return true;
             }
 
             ticket.LifecycleState = FlightCheckpointLifecycleStates.Retired;
@@ -422,6 +532,9 @@ internal sealed class FlightCheckpointStore
             {
                 _logger.LogInfo("Spherewright retired a flight checkpoint whose exact primary save already covered a newer timeline");
             }
+
+            rejection = "A newer exact primary save covers progress after this flight checkpoint; rollback is forbidden.";
+            return false;
         }
         catch (Exception exception) when (
             exception is IOException
@@ -429,6 +542,8 @@ internal sealed class FlightCheckpointStore
             || exception is ArgumentException)
         {
             _logger.LogWarning($"Spherewright could not compare the exact primary save with its flight checkpoint ({exception.GetType().Name})");
+            rejection = "The exact primary save timeline could not be verified; checkpoint rollback safety is unknown.";
+            return false;
         }
     }
 
@@ -519,6 +634,12 @@ internal sealed class FlightCheckpointTicket
 
     public long SavedGameTick { get; set; }
 
+    public string CheckpointFileFingerprint { get; set; } = string.Empty;
+
+    public string ReloadActionId { get; set; } = string.Empty;
+
+    public bool ReloadPending { get; set; }
+
     public string PlayerStateHash { get; set; } = string.Empty;
 
     public string StarSystemStateHash { get; set; } = string.Empty;
@@ -548,4 +669,6 @@ internal static class FlightCheckpointLifecycleStates
     public const string RecoveryRequired = "recovery_required";
     public const string FlightSucceeded = "flight_succeeded";
     public const string Retired = "retired";
+
+    public const string Recovered = "recovered";
 }

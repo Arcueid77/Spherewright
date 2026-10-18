@@ -832,6 +832,32 @@ internal sealed class NamedPipeBridgeServer : IDisposable
                             cancellationToken).ConfigureAwait(false);
                         break;
                     }
+                case BridgeMethods.GetVoyagerStarCatalog:
+                    {
+                        var request = PluginJson.Deserialize<BridgeRequestEnvelope<GetVoyagerStarCatalogRequest>>(requestJson);
+                        if (request?.Payload is null)
+                        {
+                            await WriteInvalidPayloadAsync(pipe, header.RequestId, cancellationToken).ConfigureAwait(false);
+                            break;
+                        }
+                        await DispatchAndWriteAsync(pipe, header.RequestId, header.SessionId,
+                            () => _gameStateReader.GetVoyagerStarCatalogOnMainThread(header.SessionId, request.Payload),
+                            cancellationToken).ConfigureAwait(false);
+                        break;
+                    }
+                case BridgeMethods.PreviewVoyagerRoute:
+                    {
+                        var request = PluginJson.Deserialize<BridgeRequestEnvelope<PreviewVoyagerRouteRequest>>(requestJson);
+                        if (request?.Payload is null)
+                        {
+                            await WriteInvalidPayloadAsync(pipe, header.RequestId, cancellationToken).ConfigureAwait(false);
+                            break;
+                        }
+                        await DispatchAndWriteAsync(pipe, header.RequestId, header.SessionId,
+                            () => _gameStateReader.PreviewVoyagerRouteOnMainThread(header.SessionId, request.Payload),
+                            cancellationToken).ConfigureAwait(false);
+                        break;
+                    }
                 case BridgeMethods.CommitQuarantineReconciliation:
                     {
                         var request = PluginJson.Deserialize<BridgeRequestEnvelope<CommitNormalActionRequest>>(requestJson);

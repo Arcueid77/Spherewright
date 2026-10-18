@@ -511,6 +511,20 @@ internal sealed class NamedPipeBridgeClient : IBridgeClient
             cancellationToken).ConfigureAwait(false);
     }
 
+    public Task<BridgeCallResult<VoyagerStarCatalogSnapshot>> GetVoyagerStarCatalogAsync(
+        string sessionId,
+        GetVoyagerStarCatalogRequest request,
+        CancellationToken cancellationToken) =>
+        CallAsync<GetVoyagerStarCatalogRequest, VoyagerStarCatalogSnapshot>(
+            BridgeMethods.GetVoyagerStarCatalog, sessionId, request, cancellationToken);
+
+    public Task<BridgeCallResult<VoyagerRouteBudgetSnapshot>> PreviewVoyagerRouteAsync(
+        string sessionId,
+        PreviewVoyagerRouteRequest request,
+        CancellationToken cancellationToken) =>
+        CallAsync<PreviewVoyagerRouteRequest, VoyagerRouteBudgetSnapshot>(
+            BridgeMethods.PreviewVoyagerRoute, sessionId, request, cancellationToken);
+
     public async Task<BridgeCallResult<PreparedOwnedWorldResumePlan>> PrepareOwnedWorldResumeAsync(
         PrepareOwnedWorldResumeRequest request,
         CancellationToken cancellationToken)

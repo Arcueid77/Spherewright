@@ -3355,7 +3355,7 @@ internal sealed partial class NormalGameActionCoordinator
         return preview;
     }
 
-    private static bool BuildUiIsIdle(Player player)
+    internal static bool BuildUiIsIdle(Player player)
     {
         var build = player.controller?.actionBuild;
         return build is not null

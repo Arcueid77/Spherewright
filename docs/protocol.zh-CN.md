@@ -3,7 +3,7 @@
 
 [English](protocol.md) | [简体中文](protocol.zh-CN.md)
 
-协议版本为 `1`，原生兼容候选面向 `0.10.35.29151`（[离线证据；实机检查待完成](validation/native-29151-preflight.zh-CN.md)）。本文描述当前维护的源码，不宣称已安装组件状态。已验收 0.4.0 候选固定于 `2a7a98d1932c404e3a7abc2c11233d9c0b8780d9`，最新正式发布仍是 v0.3.3。参见[产品状态](project-status.zh-CN.md)、[安全模型](safety-model.zh-CN.md)和 [Agent 指南](agent-playbook.zh-CN.md)。
+协议版本保持 `1`；`0.5.0` Voyager 开发接口面向 DSP `0.10.35.29151`，保留 `0.4` 协议接口。本文描述当前维护的源码，不宣称已安装组件或 Voyager 实机验收。正式 `v0.4.0` tag 指向 `b7c0002dbe2e8f5608c5ca140b0c6326a1818021`，旧生产验收仍固定于 `2a7a98d1932c404e3a7abc2c11233d9c0b8780d9`。参见[产品状态](project-status.zh-CN.md)、[原生验证](validation/native-29151-preflight.zh-CN.md)、[安全模型](safety-model.zh-CN.md)和 [Agent 指南](agent-playbook.zh-CN.md)。
 
 <a id="framing-and-authentication"></a>
 ## 帧与认证
@@ -24,6 +24,8 @@ spherewright_get_player_state
 spherewright_get_progression_state
 spherewright_get_gameplay_journal
 spherewright_get_local_star_system
+spherewright_get_voyager_star_catalog
+spherewright_preview_voyager_route
 spherewright_get_recipe_catalog
 spherewright_get_build_catalog
 spherewright_get_foundry_plan
@@ -108,6 +110,25 @@ spherewright_commit_reload_flight_checkpoint
 `STALE_SESSION`、`SESSION_NOT_OWNED`、`STALE_STATE` 区分过期会话、所有权和状态。请求或哈希域错误可为 `INVALID_REQUEST`。模式证据缺失或战斗模式阻止游戏 commit；沙盒、资源设置保持显式，但不扩大能力。
 
 列表使用有界不可变分页及不透明、绑定会话、星球、过滤器、分页大小的 cursor。保留采集 tick，读完一个快照；独立调用不是事务。禁止发布能力字段、原始请求、描述文件或私有路径。
+
+<a id="voyager-visibility-and-route-previews"></a>
+## Voyager 可见信息与航线预览
+
+`0.5` 只读工具 `spherewright_get_voyager_star_catalog` 和 `spherewright_preview_voyager_route` 分别映射 Bridge 方法 `get_voyager_star_catalog`、`preview_voyager_route`，均要求当前受管 session 和出发行星。它们观察原生探索可见性并计算有限航线预览；对许可视图，目录可沿正常星图路径请求 `StarData.RunScanningThread` / `PlanetData.RunScanThread`，可能生成合法可见扫描缓存，扫描未就绪仍保持未知。它不调用任意生成器，不创建远端工厂。这些读取不起飞、进入曲速、消耗燃料/翘曲器、保存、创建 checkpoint、读档或创建游戏 action。预览无 token，保持 `executable=false`；预算通过不代表飞行 commit 或实机验收。
+
+目录输入为 `sessionId`、`planetId`、可选 `limit`（1–32 颗恒星，默认 16）及 `stateHashVersion`（1）。航线额外要求 `destinationPlanetId`、`expectedPlayerStateHash` 和 `expectedCatalogStateHash`；默认 `maximumFlightGameTicks=36000`、`returnReserveGameTicks=18000`、`minimumCoreEnergyRatio=0.8`、`extraWarperReserve=1`。最大窗口是整个往返（7200–108000 游戏 tick），返程窗从中预留，去返程各须至少 3600 tick。核心比例须为 0.8–1.0 的有限值；额外翘曲器为 0–18 枚，在原生往返两枚之外预留。能量字段使用焦耳，功率使用瓦，距离明确分别给出米和光年；这些是保守预算边界，不是实测航时或消耗。
+
+两结果均保持 `prepared=false`、`executable=false`、`commitAllowedNow=false`，不含 `planToken`；MCP 拒绝声称执行权限的响应。`resourceVisibility=unknown`、null `resources` 或 null `planets` 不能转成已观察空集合/零；`resourceSummaryComplete` 和 `scanReady` 限定证据范围，显式观察到零仍保留零。`budgetComputed=false` 表示数值预算不可用，不是零成本航线；`budgetBasis` 标明保守计算依据，`budgetSufficient` 与执行权限分开。须保留独立能量/科技/可见性/翘曲器检查及结构化 `blockers`。
+
+已观察恒星/行星汇总声明 `resourceSummaryScope=remaining_veins_and_native_gas_oceans`，范围包括剩余矿脉及合法可见的原生气体/海洋来源。某矿脉行归零不能证明该物品在整个星系缺失；须检查所有相关行星的完整可见汇总及全部原生来源类型，该星系覆盖未知、不完整或截断都不能证明全系缺失。无关恒星目录条目被截断，不使已完整呈现的目标星系证据失效。`expectedPlayerStateHash` 绑定完整玩家快照的 `stateHash`，不是更窄的玩家 action 哈希域。
+
+资源可见性及预算字段的未知必须保留。隐藏或未观察资源不等于缺失，主题潜在资源不是已勘探矿脉；“出发星系缺失资源”须有合法完整探索证据。使用 fresh 目录/玩家绑定及当前原生科技、单位、距离、核心/燃料、翘曲器消耗和去返程储备。不可用证据应报阻塞或未知，不能作为零消耗或剩余容量；航线预览不能证明目的地可以安全落地。
+
+既有 flight/checkpoint 安全规则继续适用：取消、超时或断线后核销原 action，结果未知不得换键重放。飞行 checkpoint 只属于精确且符合条件的中断航程，成功到达或 primary 覆盖进度即退役，不得回滚较新主档已覆盖的进度。这些读取不授予恢复权限，也不增加跨星 commit；新增星际执行仍需单独实现原生控制器和 fresh prepare/commit/readback 门。
+
+飞行 checkpoint ticket v2 复用受保护 `OwnedSaveRecoveryLease`，记录 `CheckpointFileFingerprint`，绑定完整文件及精确内嵌 owned 身份、原生版本、和平模式和保存 tick。Prepare 与 commit 均 fresh 重验，tick/mtime 相同不足以放行。Commit 持只读 lease 贯穿原生异步认领，最多五分钟，成功、失败、取消或 dispose 均释放。缺少此强证据的旧 v1 flight 票据拒绝使用，不会提升为新恢复权限；protected-primary 的确认/迁移门不变，也不声明已通过原生失败飞行验收。
+
+原生 dispatch 前先登记原 action/key，并持久记录 `ReloadPending` / `ReloadActionId`。进入原生加载后抛异常时，保留原 accepted action 为 `outcome_unknown` 及其 source lease/expectation，只核销原 action，不得换键。持久 pending 阻止新 reload 和普通写入。成功须证明精确 checkpoint 已在不同于 dispatch 来源的新 session 中认领，旧 checkpoint 标志不足以证明完成。核销后票据标记 `recovered` 并保留原完成结果；再次 reload 须有新一次绑定航程失败。
 
 <a id="detail-only-belt-cargo-observation-04-development-slice"></a>
 <a id="factory-cargo-material-and-fuel-observations"></a>

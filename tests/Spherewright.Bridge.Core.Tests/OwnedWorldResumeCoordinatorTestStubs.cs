@@ -29,20 +29,21 @@ internal static class GameSave
     internal sealed class Header { internal long gameTick; }
 }
 
-internal static class DSPGame
+internal static partial class DSPGame
 {
     internal static int LoadCalls;
     internal static string? LoadedName;
     internal static Action? BeforeLoad;
     internal static void StartGame(string name)
     {
+        DispatchCalls++;
         BeforeLoad?.Invoke();
         LoadedName = name;
         LoadCalls++;
     }
 }
 
-internal sealed class GameSessionTracker : IDisposable
+internal sealed partial class GameSessionTracker : IDisposable
 {
     internal bool IsCurrentSessionOwned { get; set; }
     internal string? OwnedSaveName { get; set; }
@@ -70,6 +71,7 @@ internal sealed class GameSessionTracker : IDisposable
     internal void CancelExpectedResumedSession() => Dispose();
     public void Dispose()
     {
+        DisposeFlightCheckpointExpectation();
         SourceLease?.Dispose();
         SourceLease = null;
         JournalLease?.Dispose();
