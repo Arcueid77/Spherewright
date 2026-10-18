@@ -87,7 +87,7 @@ internal sealed partial class NormalGameActionCoordinator
             ? Stale("Another active journey already owns the finite return reserve.") : null;
     }
 
-    private void StartVoyagerFlightOnMainThread(ActionRecord action)
+    private void InitializeVoyagerFlightNavigationOnMainThread(ActionRecord action)
     {
         var plan = action.Plan;
         var budget = plan.VoyagerBudget!;
@@ -100,40 +100,6 @@ internal sealed partial class NormalGameActionCoordinator
                 * Math.Max(200000d, targetStar.viewRadius + 50000d)
             : GameMain.galaxy.PlanetById(budget.DestinationPlanetId).uPosition;
         action.VoyagerPhase = "checkpoint";
-        if (!EnsureFlightCheckpointOnMainThread(action)) return;
-        var journey = plan.VoyagerReturnLeg ? _flightCheckpoints.VoyagerJourney! : new VoyagerJourneyRecord
-        {
-            JourneyId = plan.VoyagerJourneyId!, OwnedSaveName = _sessions.CaptureOnMainThread().SaveName!,
-            GameVersion = _sessions.CaptureOnMainThread().GameVersion, HomePlanetId = plan.PlanetId,
-            HomeStarId = budget.OriginStarId, DestinationStarId = budget.DestinationStarId,
-            StartedAtGameTick = GameMain.gameTick, MaximumGameTicks = budget.MaximumFlightGameTicks,
-            ReturnReserveGameTicks = budget.ReturnReserveGameTicks,
-            ReturnEnergyFloorJoules = budget.ReturnEnergyBudgetJoules + budget.WithdrawalReserveJoules,
-            WithdrawalReserveJoules = budget.WithdrawalReserveJoules,
-            ReturnCoreEnergyMinimumJoules = budget.ReturnCoreEnergyMinimumJoules,
-            ExtraWarperReserve = plan.VoyagerRequest!.ExtraWarperReserve,
-            IssuedAtUtc = DateTimeOffset.UtcNow,
-            DeadlineUtc = DateTimeOffset.UtcNow.AddSeconds(budget.MaximumFlightGameTicks / 60d * 2d + 120d),
-        };
-        if (plan.VoyagerReturnLeg && journey.LastLandedGameTick.HasValue)
-            journey.SpentGameTicks += Math.Max(0L, GameMain.gameTick - journey.LastLandedGameTick.Value);
-        journey.ReturnLeg = plan.VoyagerReturnLeg;
-        journey.Phase = plan.VoyagerReturnLeg ? "return" : "outbound";
-        journey.ActiveActionId = action.ActionId;
-        journey.ActiveCheckpointId = action.FlightCheckpointId!;
-        action.VoyagerJourney = journey;
-        var legTicks = plan.VoyagerReturnLeg ? journey.ReturnReserveGameTicks
-            : Math.Min(budget.OutboundMaximumGameTicks, journey.MaximumGameTicks - journey.SpentGameTicks - journey.ReturnReserveGameTicks);
-        var rejection = string.Empty;
-        if (legTicks < 3600 || !_flightCheckpoints.TryPersistVoyagerJourney(journey, out rejection))
-        {
-            RequestVoyagerStop(action, legTicks < 3600 ? "The whole journey no longer reserves a finite return leg." : rejection);
-            return;
-        }
-        action.VoyagerDeadlineGameTick = GameMain.gameTick + legTicks;
-        action.VoyagerPhase = "launch";
-        StartInterplanetaryFlightOnMainThread(action);
-        CaptureVoyagerReadback(action);
     }
 
     // Called only by the audited GameLogic.onFactoryFrameBegin after native Player.GameTick.

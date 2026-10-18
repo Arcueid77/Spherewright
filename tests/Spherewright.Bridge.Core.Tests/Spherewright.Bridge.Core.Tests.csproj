@@ -19,6 +19,7 @@
     <Compile Include="..\..\src\Spherewright.Plugin\Game\BlueprintBuildStore.cs" Link="PluginGame\BlueprintBuildStore.cs" />
     <Compile Include="..\..\src\Spherewright.Plugin\Game\OwnedWorldResumeCoordinator.cs" Link="PluginGame\OwnedWorldResumeCoordinator.cs" />
     <Compile Include="..\..\src\Spherewright.Plugin\Game\FlightCheckpointReloadCoordinator.cs" Link="PluginGame\FlightCheckpointReloadCoordinator.cs" />
+    <Compile Include="..\..\src\Spherewright.Plugin\Game\NormalGameActionCoordinator.FlightStart.cs" Link="PluginGame\NormalGameActionCoordinator.FlightStart.cs" />
     <Compile Include="..\..\src\Spherewright.Plugin\RuntimeDescriptor\OwnedWorldResumeTicketStore.cs" Link="PluginRuntimeDescriptor\OwnedWorldResumeTicketStore.cs" />
     <Compile Include="..\..\src\Spherewright.Plugin\RuntimeDescriptor\FlightCheckpointStore.cs" Link="PluginRuntimeDescriptor\FlightCheckpointStore.cs" />
     <Compile Include="..\..\src\Spherewright.Plugin\RuntimeDescriptor\FlightCheckpointStore.Voyager.cs" Link="PluginRuntimeDescriptor\FlightCheckpointStore.Voyager.cs" />

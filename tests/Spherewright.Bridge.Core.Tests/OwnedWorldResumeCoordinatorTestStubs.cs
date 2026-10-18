@@ -13,7 +13,7 @@ internal static class TestWorldCoordinator
     internal static BridgeError? ValidateMainMenuReady() => ReadinessError;
 }
 
-internal static class GameSave
+internal static partial class GameSave
 {
     internal const string LastExit = "_lastexit_";
     internal const string AutoSave0 = "_autosave_0";

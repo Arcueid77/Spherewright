@@ -76,7 +76,7 @@ internal sealed partial class GameSessionTracker
     }
 }
 
-internal sealed class NormalGameActionCoordinator
+internal sealed partial class NormalGameActionCoordinator
 {
     internal bool ReloadAllowed { get; set; } = true;
     internal bool HasFailedFlight { get; set; } = true;
