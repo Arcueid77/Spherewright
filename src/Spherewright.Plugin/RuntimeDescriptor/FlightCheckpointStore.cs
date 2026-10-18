@@ -9,7 +9,7 @@ using Spherewright.Plugin.Transport;
 
 namespace Spherewright.Plugin.RuntimeDescriptor;
 
-internal sealed class FlightCheckpointStore
+internal sealed partial class FlightCheckpointStore
 {
     private const int TicketVersion = 2;
     private static readonly TimeSpan TicketLifetime = TimeSpan.FromHours(24);
@@ -39,6 +39,7 @@ internal sealed class FlightCheckpointStore
         _gameVersion = gameVersion;
         _logger = logger;
         _currentTicket = ReadFromDisk();
+        ReadVoyagerJourneyFromDisk();
         RetireIfCoveredByNewerPrimarySave();
         _logger.LogInfo("Spherewright initialized the protected reusable flight-checkpoint store");
     }
@@ -94,19 +95,27 @@ internal sealed class FlightCheckpointStore
         int originPlanetId,
         int destinationPlanetId,
         string playerStateHash,
-        string starSystemStateHash)
+        string starSystemStateHash,
+        int originStarId = 0,
+        int destinationStarId = 0,
+        string? voyagerJourneyId = null)
     {
         if (string.IsNullOrWhiteSpace(ownedSaveName)
             || string.IsNullOrWhiteSpace(sourceSessionId)
             || sourceRevision < 1
             || originPlanetId <= 0
-            || destinationPlanetId <= 0
+            || (destinationPlanetId <= 0 && !(destinationPlanetId == 0
+                && originStarId > 0 && destinationStarId > 0 && originStarId != destinationStarId
+                && !string.IsNullOrWhiteSpace(voyagerJourneyId)))
             || originPlanetId == destinationPlanetId
             || string.IsNullOrWhiteSpace(playerStateHash)
             || string.IsNullOrWhiteSpace(starSystemStateHash))
         {
             throw new InvalidOperationException("A complete owned flight identity is required to create a checkpoint.");
         }
+
+        if (voyagerJourneyId is not null && !Guid.TryParse(voyagerJourneyId, out _))
+            throw new InvalidOperationException("A Voyager checkpoint requires its exact UUID journey identity.");
 
         var checkpointId = Guid.NewGuid().ToString("N");
         var issuedAt = DateTimeOffset.UtcNow;
@@ -124,6 +133,9 @@ internal sealed class FlightCheckpointStore
             GameVersion = _gameVersion,
             OriginPlanetId = originPlanetId,
             DestinationPlanetId = destinationPlanetId,
+            OriginStarId = originStarId,
+            DestinationStarId = destinationStarId,
+            VoyagerJourneyId = voyagerJourneyId,
             PlayerStateHash = playerStateHash,
             StarSystemStateHash = starSystemStateHash,
             IssuedAtUtc = issuedAt,
@@ -179,6 +191,7 @@ internal sealed class FlightCheckpointStore
         ticket.LifecycleState = FlightCheckpointLifecycleStates.Active;
         ticket.LastAttemptActionId = actionId;
         ticket.LastAttemptStartedAtGameTick = gameTick;
+        ticket.NativeLaunchArmed = false;
         ticket.RecoveryRequiredAtGameTick = null;
         ticket.SuccessfulFlightAtGameTick = null;
         return TryPersistLifecycle(ticket, "start the bound flight attempt", out rejection);
@@ -219,6 +232,11 @@ internal sealed class FlightCheckpointStore
     {
         rejection = string.Empty;
         var ticket = _currentTicket;
+        if (ticket is not null && IsStructurallyValid(ticket) && !ticket.ReloadPending
+            && ticket.CheckpointId == checkpointId && ticket.LastAttemptActionId == actionId
+            && ticket.LifecycleState == FlightCheckpointLifecycleStates.FlightSucceeded
+            && ticket.SuccessfulFlightAtGameTick.HasValue && gameTick >= ticket.SuccessfulFlightAtGameTick.Value)
+            return TryPersistLifecycle(ticket, "reconcile the original successful-flight seal", out rejection);
         if (!IsStructurallyValid(ticket)
             || ticket is null
             || ticket.ReloadPending
@@ -374,7 +392,9 @@ internal sealed class FlightCheckpointStore
         && !string.IsNullOrWhiteSpace(ticket.SourceSessionId)
         && ticket.SourceRevision >= 1
         && ticket.OriginPlanetId > 0
-        && ticket.DestinationPlanetId > 0
+        && (ticket.DestinationPlanetId > 0 || (ticket.DestinationPlanetId == 0
+            && ticket.OriginStarId > 0 && ticket.DestinationStarId > 0
+            && ticket.OriginStarId != ticket.DestinationStarId && !string.IsNullOrWhiteSpace(ticket.VoyagerJourneyId)))
         && ticket.OriginPlanetId != ticket.DestinationPlanetId
         && ticket.SavedGameTick >= 0
         && !string.IsNullOrWhiteSpace(ticket.CheckpointFileFingerprint)
@@ -382,7 +402,8 @@ internal sealed class FlightCheckpointStore
         && (ticket.ExpiresAtUtc == default || ticket.ExpiresAtUtc > ticket.IssuedAtUtc)
         && IsKnownLifecycle(ticket.LifecycleState)
         && !string.IsNullOrWhiteSpace(ticket.PlayerStateHash)
-        && !string.IsNullOrWhiteSpace(ticket.StarSystemStateHash);
+        && !string.IsNullOrWhiteSpace(ticket.StarSystemStateHash)
+        && (ticket.VoyagerJourneyId is null || Guid.TryParse(ticket.VoyagerJourneyId, out _));
 
     private bool IsReloadEligible(FlightCheckpointTicket? ticket) =>
         IsStructurallyValid(ticket)
@@ -631,6 +652,9 @@ internal sealed class FlightCheckpointTicket
     public int OriginPlanetId { get; set; }
 
     public int DestinationPlanetId { get; set; }
+    public int OriginStarId { get; set; }
+    public int DestinationStarId { get; set; }
+    public string? VoyagerJourneyId { get; set; }
 
     public long SavedGameTick { get; set; }
 
@@ -639,6 +663,7 @@ internal sealed class FlightCheckpointTicket
     public string ReloadActionId { get; set; } = string.Empty;
 
     public bool ReloadPending { get; set; }
+    public bool NativeLaunchArmed { get; set; }
 
     public string PlayerStateHash { get; set; } = string.Empty;
 

@@ -133,6 +133,26 @@ public interface IBridgeClient
         CommitNormalActionRequest request,
         CancellationToken cancellationToken);
 
+    Task<BridgeCallResult<PreparedNormalAction>> PrepareVoyagerFlightAsync(
+        string sessionId,
+        PrepareVoyagerFlightRequest request,
+        CancellationToken cancellationToken);
+
+    Task<BridgeCallResult<NormalActionCommitResult>> CommitVoyagerFlightAsync(
+        string sessionId,
+        CommitNormalActionRequest request,
+        CancellationToken cancellationToken);
+
+    Task<BridgeCallResult<PreparedNormalAction>> PrepareCancelVoyagerFlightAsync(
+        string sessionId,
+        PrepareCancelVoyagerFlightRequest request,
+        CancellationToken cancellationToken);
+
+    Task<BridgeCallResult<NormalActionCommitResult>> CommitCancelVoyagerFlightAsync(
+        string sessionId,
+        CommitNormalActionRequest request,
+        CancellationToken cancellationToken);
+
     Task<BridgeCallResult<PreparedNormalAction>> PrepareHarvestAsync(
         string sessionId,
         PrepareHarvestRequest request,
@@ -219,6 +239,16 @@ public interface IBridgeClient
         CancellationToken cancellationToken);
 
     Task<BridgeCallResult<NormalActionCommitResult>> CommitRefuelAsync(
+        string sessionId,
+        CommitNormalActionRequest request,
+        CancellationToken cancellationToken);
+
+    Task<BridgeCallResult<PreparedNormalAction>> PrepareSupplyMechaWarpersAsync(
+        string sessionId,
+        PrepareSupplyMechaWarpersRequest request,
+        CancellationToken cancellationToken);
+
+    Task<BridgeCallResult<NormalActionCommitResult>> CommitSupplyMechaWarpersAsync(
         string sessionId,
         CommitNormalActionRequest request,
         CancellationToken cancellationToken);

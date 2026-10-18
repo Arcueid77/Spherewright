@@ -76,6 +76,7 @@ public sealed class VoyagerToolsTests
         var result = await SpherewrightTools.PreviewVoyagerRouteAsync(bridge, "owned-session", 101, 201,
             "player-hash", "catalog-hash", stateHashVersion: 1, maximumFlightGameTicks: 90000,
             returnReserveGameTicks: 30000, minimumCoreEnergyRatio: 0.95d, extraWarperReserve: 4,
+            destinationStarId: 2, maximumWarpGameTicksPerLeg: 900, maximumArrivalOffsetMeters: 500000,
             cancellationToken: cancellation.Token);
 
         Assert.False(result.IsError);
@@ -85,6 +86,7 @@ public sealed class VoyagerToolsTests
         var request = Assert.IsType<PreviewVoyagerRouteRequest>(proxy.LastRequest);
         Assert.Equal(101, request.PlanetId);
         Assert.Equal(201, request.DestinationPlanetId);
+        Assert.Equal(2, request.DestinationStarId);
         Assert.Equal("player-hash", request.ExpectedPlayerStateHash);
         Assert.Equal("catalog-hash", request.ExpectedCatalogStateHash);
         Assert.Equal(1, request.StateHashVersion);
@@ -92,6 +94,9 @@ public sealed class VoyagerToolsTests
         Assert.Equal(30000, request.ReturnReserveGameTicks);
         Assert.Equal(0.95d, request.MinimumCoreEnergyRatio);
         Assert.Equal(4, request.ExtraWarperReserve);
+        Assert.Equal(900, request.MaximumWarpGameTicksPerLeg);
+        Assert.Equal(500000d, request.MaximumArrivalOffsetMeters);
+        Assert.Null(request.JourneyId);
         var budget = result.StructuredContent!.Value.GetProperty("result");
         Assert.True(budget.GetProperty("budgetComputed").GetBoolean());
         Assert.True(budget.GetProperty("budgetSufficient").GetBoolean());
@@ -180,11 +185,16 @@ public sealed class VoyagerToolsTests
                 Assert.Contains("expectedCatalogStateHash", required);
                 Assert.Equal("integer", properties.GetProperty("maximumFlightGameTicks").GetProperty("type").GetString());
                 Assert.Equal("integer", properties.GetProperty("returnReserveGameTicks").GetProperty("type").GetString());
+                Assert.Equal("integer", properties.GetProperty("destinationStarId").GetProperty("type").GetString());
+                Assert.Equal("integer", properties.GetProperty("maximumWarpGameTicksPerLeg").GetProperty("type").GetString());
+                Assert.Equal("number", properties.GetProperty("maximumArrivalOffsetMeters").GetProperty("type").GetString());
+                Assert.DoesNotContain("journeyId", required);
+                Assert.True(properties.TryGetProperty("journeyId", out _));
                 Assert.Equal("number", properties.GetProperty("minimumCoreEnergyRatio").GetProperty("type").GetString());
             }
         }
-        Assert.DoesNotContain(tools, tool => tool.Name.Contains("commit_voyager", StringComparison.Ordinal));
-        Assert.DoesNotContain(tools, tool => tool.Name.Contains("prepare_voyager", StringComparison.Ordinal));
+        Assert.Contains(tools, tool => tool.Name == "spherewright_prepare_voyager_flight");
+        Assert.Contains(tools, tool => tool.Name == "spherewright_commit_voyager_flight");
     }
 
     [Fact]
@@ -200,6 +210,49 @@ public sealed class VoyagerToolsTests
         {
             Assert.Contains(rule, guide);
         }
+    }
+
+    [Fact]
+    public async Task StarMarkerPreviewNeedsNoInventedPlanetAndKeepsReturnRechargeEvidence()
+    {
+        var bridge = NewBridge(); var proxy = Proxy(bridge);
+        proxy.Budget = new VoyagerRouteBudgetSnapshot
+        {
+            DestinationPlanetId = 0, DestinationStarId = 3, DestinationIsStarOnly = true,
+            RequiresReturnCoreRecharge = true, ReturnCoreEnergyMinimumJoules = 120000,
+        };
+        var result = await SpherewrightTools.PreviewVoyagerRouteAsync(bridge, "owned-session", 101, 0,
+            "player-hash", "catalog-hash", destinationStarId: 3);
+        Assert.False(result.IsError);
+        var request = Assert.IsType<PreviewVoyagerRouteRequest>(proxy.LastRequest);
+        Assert.Equal(0, request.DestinationPlanetId); Assert.Equal(3, request.DestinationStarId);
+        Assert.Equal(1800, request.MaximumWarpGameTicksPerLeg); Assert.Equal(3000000d, request.MaximumArrivalOffsetMeters);
+        var budget = result.StructuredContent!.Value.GetProperty("result");
+        Assert.True(budget.GetProperty("destinationIsStarOnly").GetBoolean());
+        Assert.True(budget.GetProperty("requiresReturnCoreRecharge").GetBoolean());
+        Assert.Equal(120000d, budget.GetProperty("returnCoreEnergyMinimumJoules").GetDouble());
+        Assert.Equal("finite_native_warp_duration_and_explicit_return_recharge_v2", budget.GetProperty("budgetBasis").GetString());
+        Assert.False(budget.GetProperty("prepared").GetBoolean());
+        Assert.False(budget.GetProperty("executable").GetBoolean());
+        Assert.False(budget.GetProperty("commitAllowedNow").GetBoolean());
+    }
+
+    [Fact]
+    public async Task HomeboundPreviewMapsOriginalJourneyWithoutStartingAnotherRoundTrip()
+    {
+        var bridge = NewBridge(); var proxy = Proxy(bridge);
+        proxy.Budget = new VoyagerRouteBudgetSnapshot { IsReturnLeg = true, RequiredWarpers = 2 };
+        var result = await SpherewrightTools.PreviewVoyagerRouteAsync(bridge, "owned-session", 201, 101,
+            "player-hash", "catalog-hash", destinationStarId: 1, journeyId: "original-journey");
+        Assert.False(result.IsError);
+        var request = Assert.IsType<PreviewVoyagerRouteRequest>(proxy.LastRequest);
+        Assert.Equal("original-journey", request.JourneyId);
+        Assert.Equal(201, request.PlanetId); Assert.Equal(101, request.DestinationPlanetId);
+        var budget = result.StructuredContent!.Value.GetProperty("result");
+        Assert.True(budget.GetProperty("isReturnLeg").GetBoolean());
+        Assert.Equal(2, budget.GetProperty("requiredWarpers").GetInt32());
+        Assert.False(budget.GetProperty("prepared").GetBoolean());
+        Assert.False(budget.GetProperty("executable").GetBoolean());
     }
 
     private static IBridgeClient NewBridge() => DispatchProxy.Create<IBridgeClient, VoyagerBridgeProxy>();

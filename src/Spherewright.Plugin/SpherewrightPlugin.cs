@@ -62,6 +62,11 @@ public sealed class SpherewrightPlugin : BaseUnityPlugin
         StopHost();
     }
 
+    private void OnDisable()
+    {
+        StopHost();
+    }
+
     private void StopHost()
     {
         // Do not release the installer lease until the pipe/descriptor host is gone.

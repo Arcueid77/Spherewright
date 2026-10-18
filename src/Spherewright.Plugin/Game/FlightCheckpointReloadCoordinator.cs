@@ -179,6 +179,7 @@ internal sealed class FlightCheckpointReloadCoordinator
             ActionId = Guid.NewGuid().ToString("D"),
             Ticket = current,
             SourceSessionId = _sessions.CaptureOnMainThread().SessionId,
+            SourceGameTick = _sessions.CaptureOnMainThread().GameTick,
             IdempotencyKey = request.IdempotencyKey,
         };
         OwnedSaveRecoveryLease? checkpointLease = null;
@@ -297,6 +298,15 @@ internal sealed class FlightCheckpointReloadCoordinator
                 action.DispatchOutcomeUnknown = true;
                 action.UnknownReason ??= reconciliationRejection
                     + " Preserve the original action; do not replay the native load.";
+                result.State = NormalActionStates.OutcomeUnknown;
+                result.Message = action.UnknownReason;
+                _sessions.QuarantineWritesOnMainThread(action.ActionId, action.UnknownReason);
+                return true;
+            }
+            if (!_tickets.TryReconcileVoyagerRecovery(action.Ticket, out var journeyRejection, action.SourceGameTick))
+            {
+                action.DispatchOutcomeUnknown = true;
+                action.UnknownReason ??= journeyRejection;
                 result.State = NormalActionStates.OutcomeUnknown;
                 result.Message = action.UnknownReason;
                 _sessions.QuarantineWritesOnMainThread(action.ActionId, action.UnknownReason);
@@ -426,6 +436,10 @@ internal sealed class FlightCheckpointReloadCoordinator
                 ticket.GameVersion,
                 ticket.OriginPlanetId,
                 ticket.DestinationPlanetId,
+                ticket.OriginStarId,
+                ticket.DestinationStarId,
+                ticket.VoyagerJourneyId,
+                ticket.NativeLaunchArmed,
                 ticket.SavedGameTick,
                 ticket.CheckpointFileFingerprint,
                 ticket.LifecycleState,
@@ -449,6 +463,7 @@ internal sealed class FlightCheckpointReloadCoordinator
         public FlightCheckpointTicket Ticket { get; set; } = null!;
 
         public string? SourceSessionId { get; set; }
+        public long? SourceGameTick { get; set; }
         public string IdempotencyKey { get; set; } = string.Empty;
         public bool DispatchEntered { get; set; }
         public bool DispatchOutcomeUnknown { get; set; }

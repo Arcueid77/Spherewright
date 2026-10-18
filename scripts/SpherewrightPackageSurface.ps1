@@ -215,7 +215,9 @@ function Assert-SpherewrightPackageSurface {
                 $shape += ,@('limit','integer')
             } else {
                 $shape += @(@('destinationPlanetId','integer'), @('expectedPlayerStateHash','string'), @('expectedCatalogStateHash','string'),
-                    @('maximumFlightGameTicks','integer'), @('returnReserveGameTicks','integer'), @('minimumCoreEnergyRatio','number'), @('extraWarperReserve','integer'))
+                    @('destinationStarId','integer'), @('maximumFlightGameTicks','integer'), @('returnReserveGameTicks','integer'),
+                    @('maximumWarpGameTicksPerLeg','integer'), @('maximumArrivalOffsetMeters','number'),
+                    @('minimumCoreEnergyRatio','number'), @('extraWarperReserve','integer'), @('journeyId','string'))
                 $requiredFields += @('destinationPlanetId','expectedPlayerStateHash','expectedCatalogStateHash')
             }
             foreach ($entry in $shape) {
@@ -228,12 +230,79 @@ function Assert-SpherewrightPackageSurface {
                 }
             }
         }
+        foreach ($suffix in @('supply_mecha_warpers','voyager_flight','cancel_voyager_flight')) {
+            foreach ($verb in @('prepare','commit')) {
+                $name = 'spherewright_' + $verb + '_' + $suffix
+                $actionTools = @($Tools | Where-Object { $_.name -ceq $name })
+                if ($actionTools.Count -ne 1) { throw "The Voyager package requires exactly one action tool named $name." }
+                $tool = $actionTools[0]
+                $annotations = $tool.PSObject.Properties['annotations']
+                foreach ($annotation in @(@('readOnlyHint',$false), @('destructiveHint',($verb -ceq 'commit')),
+                        @('idempotentHint',($verb -ceq 'commit')), @('openWorldHint',$false))) {
+                    $member = if ($annotations) { $annotations.Value.PSObject.Properties[$annotation[0]] } else { $null }
+                    if (-not $member -or $member.Value -isnot [bool] -or $member.Value -ne $annotation[1]) {
+                        throw "The Voyager action has missing/incorrect metadata for $name`: $($annotation[0])."
+                    }
+                }
+                $schemaProperty = $tool.PSObject.Properties['inputSchema']
+                if (-not $schemaProperty) { throw "The Voyager package lacks the native action schema for $name." }
+                $schema = $schemaProperty.Value
+                $shape = @(@('sessionId','string'), @('planetId','integer'))
+                $requiredFields = @('sessionId','planetId')
+                if ($verb -ceq 'commit') {
+                    $shape += @(@('planToken','string'), @('idempotencyKey','string'))
+                    $requiredFields += @('planToken','idempotencyKey')
+                } else {
+                    $shape += ,@('stateHashVersion','integer')
+                    if ($suffix -ceq 'cancel_voyager_flight') {
+                        $shape += ,@('actionId','string'); $requiredFields += 'actionId'
+                    } else {
+                        $shape += ,@('expectedPlayerStateHash','string'); $requiredFields += 'expectedPlayerStateHash'
+                        if ($suffix -ceq 'supply_mecha_warpers') { $shape += ,@('count','integer') }
+                        else {
+                            $shape += @(@('expectedRouteStateHash','string'), @('journeyId','string'))
+                            $requiredFields += 'expectedRouteStateHash'
+                        }
+                    }
+                }
+                foreach ($entry in $shape) { $null = Get-RequiredPackageSchemaNode $schema $entry[0] $entry[1] 'Voyager native action' }
+                $required = $schema.PSObject.Properties['required']
+                foreach ($field in $requiredFields) {
+                    if (-not $required -or @($required.Value) -cnotcontains $field) {
+                        throw "The Voyager action makes a bound parameter optional: $name.$field."
+                    }
+                }
+                foreach ($field in @('autoReplenishWarper','itemId','userConfirmedInConversation','recoveryMode')) {
+                    if ($schema.properties.PSObject.Properties[$field]) {
+                        throw "The Voyager action exposes an unsupported native override: $name.$field."
+                    }
+                }
+                $description = $tool.PSObject.Properties['description']
+                $rules = if ($verb -ceq 'commit') {
+                    if ($suffix -ceq 'supply_mecha_warpers') { @('Mecha.AutoReplenishWarper','mechaWarperSupplyReadback','nativeReturnedSuccess','readbackComplete','original action') }
+                    elseif ($suffix -ceq 'voyager_flight') { @('voyagerFlightReadback','nativeExitObserved','original action','return reserves') }
+                    else { @('stopRequested','original flight','never repeat') }
+                } elseif ($suffix -ceq 'supply_mecha_warpers') { @('min(20','Filtered','autoReplenishWarper','original action') }
+                elseif ($suffix -ceq 'voyager_flight') { @('routeStateHash','journeyId','return reserves') }
+                else { @('original active Voyager','origin planetId') }
+                foreach ($rule in $rules) {
+                    if (-not $description -or ([string]$description.Value).IndexOf($rule,[StringComparison]::Ordinal) -lt 0) {
+                        throw "The Voyager action lacks its native/original-action contract for $name`: $rule."
+                    }
+                }
+            }
+        }
         $playbookResources = @($Resources | Where-Object { $_ -and $_.PSObject.Properties['uri'] -and $_.uri -ceq 'spherewright://agent/playbooks/opening-movement-v1' })
         if ($playbookResources.Count -ne 1 -or -not $playbookResources[0].PSObject.Properties['mimeType'] -or $playbookResources[0].mimeType -cne 'text/markdown') {
             throw 'The Voyager package requires the stable Markdown Agent playbook resource exactly once.'
         }
         foreach ($rule in @('spherewright_get_voyager_star_catalog', 'spherewright_preview_voyager_route',
-                'maximumFlightGameTicks', 'returnReserveGameTicks', 'tokenless', 'executable=false', 'newer primary')) {
+                'maximumFlightGameTicks', 'returnReserveGameTicks', 'maximumWarpGameTicksPerLeg', 'maximumArrivalOffsetMeters',
+                'destinationStarId', 'returnCoreEnergyMinimumJoules', 'journeyId', 'isReturnLeg', 'tokenless', 'executable=false', 'newer primary',
+                'spherewright_prepare_supply_mecha_warpers', 'spherewright_commit_supply_mecha_warpers',
+                'mechaWarperSupplyReadback', 'nativeReturnedSuccess', 'readbackComplete',
+                'spherewright_prepare_voyager_flight', 'spherewright_commit_voyager_flight',
+                'spherewright_prepare_cancel_voyager_flight', 'spherewright_commit_cancel_voyager_flight', 'nativeExitObserved')) {
             if ($ResourcePlaybook.IndexOf($rule,[StringComparison]::Ordinal) -lt 0) {
                 throw "The Voyager playbook lacks the visibility/budget/recovery rule: $rule."
             }

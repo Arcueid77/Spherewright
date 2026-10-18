@@ -6,9 +6,38 @@ namespace Spherewright.Plugin.Game;
 
 internal sealed partial class GameStateReader
 {
+    internal Spherewright.Plugin.RuntimeDescriptor.FlightCheckpointStore? VoyagerCheckpoints { get; set; }
     private VoyagerStarCatalogSnapshot? _lastVoyagerCatalog;
     private int _lastVoyagerCatalogLimit;
     private DateTimeOffset _lastVoyagerCatalogAtUtc;
+    private PreviewVoyagerRouteRequest? _lastVoyagerRouteRequest;
+    private VoyagerRouteBudgetSnapshot? _lastVoyagerRouteBudget;
+    private DateTimeOffset _lastVoyagerRouteAtUtc;
+
+    internal bool TryGetVoyagerRouteAnchor(string sessionId, int originPlanetId, string routeHash,
+        out PreviewVoyagerRouteRequest? request, out VoyagerRouteBudgetSnapshot? budget)
+    {
+        request = _lastVoyagerRouteRequest;
+        budget = _lastVoyagerRouteBudget;
+        return request is not null && budget is not null && budget.BudgetSufficient
+            && budget.SessionId == sessionId && budget.OriginPlanetId == originPlanetId
+            && !string.IsNullOrWhiteSpace(routeHash) && budget.RouteStateHash == routeHash
+            && DateTimeOffset.UtcNow - _lastVoyagerRouteAtUtc <= TimeSpan.FromSeconds(30);
+    }
+
+    internal GameCallResult<VoyagerRouteBudgetSnapshot> RefreshVoyagerBudgetOnMainThread(string sessionId,
+        PreviewVoyagerRouteRequest inspected)
+    {
+        var request = CopyVoyagerRequest(inspected);
+        var catalog = GetVoyagerStarCatalogOnMainThread(sessionId,
+            new GetVoyagerStarCatalogRequest { PlanetId = request.PlanetId, Limit = 32 });
+        if (!catalog.Success || catalog.Value is null) return GameCallResult<VoyagerRouteBudgetSnapshot>.Failed(catalog.Error!);
+        var player = GetPlayerStateOnMainThread(sessionId, new Spherewright.Contracts.Sessions.LocalPlanetRequest { PlanetId = request.PlanetId });
+        if (!player.Success || player.Value is null) return GameCallResult<VoyagerRouteBudgetSnapshot>.Failed(player.Error!);
+        request.ExpectedCatalogStateHash = catalog.Value.StateHash;
+        request.ExpectedPlayerStateHash = player.Value.StateHash;
+        return PreviewVoyagerRouteOnMainThread(sessionId, request);
+    }
 
     public GameCallResult<VoyagerStarCatalogSnapshot> GetVoyagerStarCatalogOnMainThread(
         string? requestedSessionId,
@@ -69,6 +98,9 @@ internal sealed partial class GameStateReader
         var snapshot = new VoyagerStarSnapshot
         {
             StarId = star.id, Name = star.displayName, StarType = star.type.ToString(),
+            UniversalPosition = new Spherewright.Contracts.Celestial.UniversalPositionSnapshot
+                { X = star.uPosition.x, Y = star.uPosition.y, Z = star.uPosition.z },
+            VisibleStarRadiusMeters = star.viewRadius,
             DistanceMeters = distance, DistanceLightYears = distance / 2400000d,
             RequiredObserveLevel = visibility.RequiredObserveLevel, PlanetsVisible = visible,
             ScanReady = observed && star.scanned,
@@ -193,10 +225,13 @@ internal sealed partial class GameStateReader
 
         var player = GameMain.mainPlayer;
         var mecha = player.mecha;
-        var destination = GameMain.galaxy?.PlanetById(request.DestinationPlanetId);
         var mappedDestination = catalogue.Value.Stars.Where(star => star.PlanetsVisible)
             .SelectMany(star => star.Planets ?? new List<VoyagerPlanetSnapshot>())
             .FirstOrDefault(planet => planet.PlanetId == request.DestinationPlanetId);
+        var mappedStar = request.DestinationPlanetId == 0
+            ? catalogue.Value.Stars.FirstOrDefault(star => star.StarId == request.DestinationStarId) : null;
+        var destination = mappedDestination is null ? null : GameMain.galaxy?.PlanetById(mappedDestination.PlanetId);
+        var destinationStar = mappedStar is null ? null : GameMain.galaxy?.StarById(mappedStar.StarId);
         var fuelEnergy = 0d;
         var minimumFuelRatio = 1d;
         var fuelAvailable = mecha.reactorEnergy > 0d;
@@ -225,11 +260,14 @@ internal sealed partial class GameStateReader
             SessionId = _sessions.SessionId!, OriginPlanetId = request.PlanetId,
             NativeVersion = _sessions.CaptureOnMainThread().GameVersion,
             OriginStarId = GameMain.localStar?.id ?? 0, DestinationPlanetId = request.DestinationPlanetId,
-            DestinationStarId = mappedDestination?.StarId ?? 0, CapturedAtGameTick = GameMain.gameTick,
+            DestinationStarId = mappedDestination?.StarId ?? mappedStar?.StarId ?? 0, CapturedAtGameTick = GameMain.gameTick,
             PlayerStateHash = observedPlayer.Value.StateHash, CatalogStateHash = catalogue.Value.StateHash,
-            DestinationVisible = mappedDestination is not null, DestinationIsGasGiant = mappedDestination?.IsGasGiant ?? false,
+            DestinationVisible = mappedDestination is not null || mappedStar is not null,
+            DestinationIsStarOnly = request.DestinationPlanetId == 0,
+            DestinationIsGasGiant = mappedDestination?.IsGasGiant ?? false,
             DistanceMeters = mappedDestination is not null && destination is not null
-                ? Math.Max(0d, (destination.uPosition - player.uPosition).magnitude - destination.realRadius) : 0d,
+                ? Math.Max(0d, (destination.uPosition - player.uPosition).magnitude - destination.realRadius)
+                : destinationStar is not null ? (destinationStar.uPosition - player.uPosition).magnitude : 0d,
             IsAlive = player.isAlive, IsGrounded = player.movementState == EMovementState.Walk && player.planetId == request.PlanetId,
             ControllerEnabled = player.controller is not null && GameMain.data is not null && !GameMain.data.disableController,
             PlayerOrderIdle = player.currentOrder is null,
@@ -248,8 +286,42 @@ internal sealed partial class GameStateReader
             PackageWarperCount = CountVoyagerItem(player.package, 1210),
             AutoReplenishWarper = mecha.autoReplenishWarper,
         };
-        return GameCallResult<VoyagerRouteBudgetSnapshot>.Succeeded(VoyagerRouteBudgetPolicy.Evaluate(input, request));
+        if (!string.IsNullOrWhiteSpace(request.JourneyId))
+        {
+            var journey = VoyagerCheckpoints?.VoyagerJourney;
+            var session = _sessions.CaptureOnMainThread();
+            input.ReturnJourneyVerified = journey is not null && journey.JourneyId == request.JourneyId
+                && journey.Phase == "remote_landed" && journey.OwnedSaveName == session.SaveName
+                && journey.GameVersion == session.GameVersion && DateTimeOffset.UtcNow < journey.DeadlineUtc
+                && journey.RemotePlanetId == request.PlanetId && journey.HomePlanetId == request.DestinationPlanetId
+                && journey.HomeStarId == input.DestinationStarId && journey.DestinationStarId == input.OriginStarId
+                && journey.LastLandedGameTick.HasValue && GameMain.gameTick >= journey.LastLandedGameTick.Value;
+            if (input.ReturnJourneyVerified)
+            {
+                input.ReturnJourneyId = journey!.JourneyId;
+                input.ReturnLegMaximumGameTicks = journey.ReturnReserveGameTicks;
+                input.RemainingJourneyGameTicks = journey.MaximumGameTicks - journey.SpentGameTicks
+                    - (GameMain.gameTick - journey.LastLandedGameTick!.Value);
+                input.LockedReturnEnergyFloorJoules = journey.ReturnEnergyFloorJoules;
+                input.LockedWithdrawalReserveJoules = journey.WithdrawalReserveJoules;
+                input.LockedReturnCoreMinimumJoules = journey.ReturnCoreEnergyMinimumJoules;
+                input.OriginalExtraWarperReserve = journey.ExtraWarperReserve;
+            }
+        }
+        var evaluated = VoyagerRouteBudgetPolicy.Evaluate(input, request);
+        _lastVoyagerRouteRequest = CopyVoyagerRequest(request);
+        _lastVoyagerRouteBudget = evaluated;
+        _lastVoyagerRouteAtUtc = DateTimeOffset.UtcNow;
+        return GameCallResult<VoyagerRouteBudgetSnapshot>.Succeeded(evaluated);
     }
+
+    internal static PreviewVoyagerRouteRequest CopyVoyagerRequest(PreviewVoyagerRouteRequest request) =>
+        new PreviewVoyagerRouteRequest { JourneyId = request.JourneyId, PlanetId = request.PlanetId, DestinationPlanetId = request.DestinationPlanetId,
+            DestinationStarId = request.DestinationStarId, StateHashVersion = request.StateHashVersion,
+            ExpectedPlayerStateHash = request.ExpectedPlayerStateHash, ExpectedCatalogStateHash = request.ExpectedCatalogStateHash,
+            MaximumFlightGameTicks = request.MaximumFlightGameTicks, ReturnReserveGameTicks = request.ReturnReserveGameTicks,
+            MaximumWarpGameTicksPerLeg = request.MaximumWarpGameTicksPerLeg, MaximumArrivalOffsetMeters = request.MaximumArrivalOffsetMeters,
+            MinimumCoreEnergyRatio = request.MinimumCoreEnergyRatio, ExtraWarperReserve = request.ExtraWarperReserve };
 
     private static BridgeError VoyagerStaleObservation(string message) => BridgeError.Create(
         BridgeErrorCodes.StaleState, message, true, "Inspect the current player and catalogue; do not reuse the stale observation.");

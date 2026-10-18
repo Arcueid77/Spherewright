@@ -215,6 +215,26 @@ internal sealed class NamedPipeBridgeClient : IBridgeClient
             request,
             cancellationToken);
 
+    public Task<BridgeCallResult<PreparedNormalAction>> PrepareVoyagerFlightAsync(
+        string sessionId, PrepareVoyagerFlightRequest request, CancellationToken cancellationToken) =>
+        CallAsync<PrepareVoyagerFlightRequest, PreparedNormalAction>(
+            BridgeMethods.PrepareVoyagerFlight, sessionId, request, cancellationToken);
+
+    public Task<BridgeCallResult<NormalActionCommitResult>> CommitVoyagerFlightAsync(
+        string sessionId, CommitNormalActionRequest request, CancellationToken cancellationToken) =>
+        CallAsync<CommitNormalActionRequest, NormalActionCommitResult>(
+            BridgeMethods.CommitVoyagerFlight, sessionId, request, cancellationToken);
+
+    public Task<BridgeCallResult<PreparedNormalAction>> PrepareCancelVoyagerFlightAsync(
+        string sessionId, PrepareCancelVoyagerFlightRequest request, CancellationToken cancellationToken) =>
+        CallAsync<PrepareCancelVoyagerFlightRequest, PreparedNormalAction>(
+            BridgeMethods.PrepareCancelVoyagerFlight, sessionId, request, cancellationToken);
+
+    public Task<BridgeCallResult<NormalActionCommitResult>> CommitCancelVoyagerFlightAsync(
+        string sessionId, CommitNormalActionRequest request, CancellationToken cancellationToken) =>
+        CallAsync<CommitNormalActionRequest, NormalActionCommitResult>(
+            BridgeMethods.CommitCancelVoyagerFlight, sessionId, request, cancellationToken);
+
     public Task<BridgeCallResult<PreparedNormalAction>> PrepareHarvestAsync(
         string sessionId,
         PrepareHarvestRequest request,
@@ -338,6 +358,20 @@ internal sealed class NamedPipeBridgeClient : IBridgeClient
         CommitNormalActionRequest request,
         CancellationToken cancellationToken) =>
         CallAsync<CommitNormalActionRequest, NormalActionCommitResult>(BridgeMethods.CommitRefuel, sessionId, request, cancellationToken);
+
+    public Task<BridgeCallResult<PreparedNormalAction>> PrepareSupplyMechaWarpersAsync(
+        string sessionId,
+        PrepareSupplyMechaWarpersRequest request,
+        CancellationToken cancellationToken) =>
+        CallAsync<PrepareSupplyMechaWarpersRequest, PreparedNormalAction>(
+            BridgeMethods.PrepareSupplyMechaWarpers, sessionId, request, cancellationToken);
+
+    public Task<BridgeCallResult<NormalActionCommitResult>> CommitSupplyMechaWarpersAsync(
+        string sessionId,
+        CommitNormalActionRequest request,
+        CancellationToken cancellationToken) =>
+        CallAsync<CommitNormalActionRequest, NormalActionCommitResult>(
+            BridgeMethods.CommitSupplyMechaWarpers, sessionId, request, cancellationToken);
 
     public Task<BridgeCallResult<PreparedNormalAction>> PrepareSaveAsync(
         string sessionId,

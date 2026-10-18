@@ -53,6 +53,10 @@ spherewright_prepare_move
 spherewright_commit_move
 spherewright_prepare_interplanetary_flight
 spherewright_commit_interplanetary_flight
+spherewright_prepare_voyager_flight
+spherewright_commit_voyager_flight
+spherewright_prepare_cancel_voyager_flight
+spherewright_commit_cancel_voyager_flight
 spherewright_prepare_harvest
 spherewright_commit_harvest
 spherewright_prepare_handcraft
@@ -73,6 +77,8 @@ spherewright_prepare_logistics_station_fleet_transfer
 spherewright_commit_logistics_station_fleet_transfer
 spherewright_prepare_refuel
 spherewright_commit_refuel
+spherewright_prepare_supply_mecha_warpers
+spherewright_commit_supply_mecha_warpers
 spherewright_prepare_save
 spherewright_commit_save
 spherewright_prepare_quarantine_reconciliation
@@ -87,7 +93,7 @@ The text resource `spherewright://agent/playbooks/opening-movement-v1` is availa
 
 ## Request rules
 
-Owned save/player/factory reads require active `sessionId`; planet-bound requests also require `planetId`. Normal actions remain local-planet-only. Entity inspection additionally permits an explicitly selected, already-created, identity-verified simulation-resident factory on the current owned star; it never creates/loads one. Player reads still use current `localPlanetId`.
+Owned save/player/factory reads require active `sessionId`; planet-bound requests also require `planetId`. Ordinary ground actions remain local-planet-only; flight and flight-stop requests retain their documented origin binding during space transit. Entity inspection additionally permits an explicitly selected, already-created, identity-verified simulation-resident factory on the current owned star; it never creates/loads one. Player reads still use current `localPlanetId`.
 
 Inspection uses `objectId`, positive for a built entity and negative for a prebuild. Zero/missing and `Int32.MinValue` reject; another tool's `entityId` or `storageEntityId` is not interchangeable. Incomplete/expired pagination cannot prove absence.
 
@@ -109,9 +115,17 @@ Lists use bounded immutable pages and opaque session/planet/filter/page-size cur
 
 ## Voyager visibility and route previews
 
+The native supply methods `spherewright_prepare_supply_mecha_warpers` / `spherewright_commit_supply_mecha_warpers` map to `prepare_supply_mecha_warpers` / `commit_supply_mecha_warpers`. Prepare uses `PrepareSupplyMechaWarpersRequest`: current owned `sessionId` / `planetId`, fresh complete-player `expectedPlayerStateHash`, `count` (default20) and `stateHashVersion=1`. Count must equal `min(20, fresh package count of item1210)>0`. The owned player must be alive, grounded and idle; the native chamber must be one empty `Filtered` slot, filter1210 / stack20, zero count/inc and no banned grids. Preparation binds exact player/package/chamber identities, count/inc and the current automatic setting without moving stock.
+
+Supply commit uses existing `CommitNormalActionRequest` and the shared coordinator, with exact `planToken` and UUID `idempotencyKey`; there is no public generic `commit_normal_action`. It calls `Mecha.AutoReplenishWarper` once, preserves `autoReplenishWarper`, and never calls `UseWarper`. Poll the original action for `mechaWarperSupplyReadback`: bilateral count/inc, automatic setting, nullable after fields / `actualStored` / `nativeReturnedSuccess`, `readbackComplete` and `conservationVerified`. This is the synchronous native-call boundary before later ordinary consumption. Missing proof stays unknown; accepted, timed-out or outcome-unknown calls must not be repeated under another key.
+
 The `0.5` read-only tools `spherewright_get_voyager_star_catalog` and `spherewright_preview_voyager_route` map to Bridge methods `get_voyager_star_catalog` and `preview_voyager_route`. Both require the current owned session and origin planet. They observe native exploration visibility and calculate a finite route preview. For permitted views, the catalog may request `StarData.RunScanningThread` / `PlanetData.RunScanThread` through the normal star-map path; this can populate legitimate visible scan caches, while pending scans stay unknown. It never invokes arbitrary generators or creates a remote factory. These reads do not launch, enter warp, consume fuel/warpers, save, create a checkpoint, load a save or create a gameplay action. The preview is tokenless and `executable=false`. A positive budget is not a flight commit or live acceptance.
 
 Catalog input is `sessionId`, `planetId`, optional `limit` (1–32 stars, default 16) and `stateHashVersion` (1). Route input additionally requires `destinationPlanetId`, `expectedPlayerStateHash` and `expectedCatalogStateHash`. Defaults are `maximumFlightGameTicks=36000`, `returnReserveGameTicks=18000`, `minimumCoreEnergyRatio=0.8` and `extraWarperReserve=1`. The maximum is the whole round trip (7200–108000 game ticks); the return window is reserved within it and must leave at least 3600 ticks for each leg. The finite core ratio is 0.8–1.0; extra warpers are 0–18, above the two native round-trip warpers. Energy fields use joules, power fields watts, and distances explicitly provide metres and light years. These are conservative budget bounds, not measured flight duration or consumption.
+
+A legitimately visible star marker may use `destinationPlanetId=0` with explicit `destinationStarId` while its planets/resources remain unknown. `maximumWarpGameTicksPerLeg` defaults to1800, is at least180 and cannot exceed either leg's reserved window. Finite `maximumArrivalOffsetMeters` is100000–3000000, default3000000. Star-only distance budgets include this offset; a selected visible planet uses its actual known distance. `budgetBasis=finite_native_warp_duration_and_explicit_return_recharge_v2` budgets finite warp duration separately from total flight windows. `requiresReturnCoreRecharge=true` requires a fresh return-departure core read at or above `returnCoreEnergyMinimumJoules`, while preserving loaded-fuel/warper reserves. A single-leg buffer does not prove future charging or landing.
+
+An optional nonempty preview `journeyId` selects the homebound leg of that exact protected journey and returns `isReturnLeg=true`. Its destination must point home. Validate the remaining single leg against the original reserve, including one native entry plus `extraWarperReserve`; do not require a second new home-to-remote round trip. Omitting `journeyId` requests the outbound round-trip budget. Return preparation also names the same original `journeyId`.
 
 Both results keep `prepared=false`, `executable=false` and `commitAllowedNow=false`, with no `planToken`; MCP rejects a response that advertises execution authority. `resourceVisibility=unknown`, null `resources` or null `planets` must not become observed empty/zero. `resourceSummaryComplete` and `scanReady` delimit the evidence, and explicit observed zero remains zero. `budgetComputed=false` means the numeric budget is unavailable, not a zero-cost route. `budgetBasis` names the conservative calculation; `budgetSufficient` is separate from execution permission. Retain the individual energy/technology/visibility/warper checks and structured `blockers`.
 
@@ -119,11 +133,21 @@ Observed star/planet summaries declare `resourceSummaryScope=remaining_veins_and
 
 Preserve unknown resource visibility and budget fields. A hidden or unobserved resource is not absent; theme-based potential is not a surveyed vein. A departure-system-missing-resource claim requires legitimate complete exploration evidence. Use fresh catalog/player bindings and current native technology, units, distance, core/fuel, warper consumption and outbound/return reserves. Report a blocker or unknown instead of treating unavailable evidence as zero consumption or spare capacity. Do not infer that a destination is safe to land from a route preview.
 
-Existing flight/checkpoint safety still applies: reconcile the original action after cancellation, timeout or disconnect; a result-unknown action must not be repeated under another key. A flight checkpoint belongs to its exact eligible interrupted flight, retires after successful arrival or covering primary progress, and cannot roll back progress covered by a newer primary save. These reads never grant recovery authority or add a cross-star commit. New interstellar execution requires its separately implemented native controller and fresh prepare/commit/readback gates.
+Existing flight/checkpoint safety still applies: reconcile the original action after cancellation, timeout or disconnect; a result-unknown action must not be repeated under another key. A flight checkpoint belongs to its exact eligible interrupted flight, retires after successful arrival or covering primary progress, and cannot roll back progress covered by a newer primary save. These reads never grant recovery authority or perform a cross-star commit. Bounded execution uses the separate native methods below with fresh prepare/commit/readback gates.
 
 Flight-checkpoint ticket v2 records `CheckpointFileFingerprint` from the existing protected `OwnedSaveRecoveryLease`, binding the entire file plus its exact embedded owned identity, native version, peaceful mode and saved tick. Prepare and commit freshly revalidate this evidence; matching tick/mtime alone is insufficient. Commit keeps a read-only lease through asynchronous native adoption, with a five-minute upper bound and release on success, failure, cancellation or disposal. A legacy v1 flight ticket without this strong evidence is rejected; it is never promoted into new recovery authority. This does not change protected-primary confirmation/migration gates or claim a native failed-flight acceptance.
 
 Before native dispatch, reload registers the original action/key and durably records `ReloadPending` / `ReloadActionId`. An exception after entering native loading retains that original accepted action as `outcome_unknown`, with its source lease/expectation; reconcile only that action, never rekey. Durable pending state blocks fresh reloads and ordinary writes. Success requires exact checkpoint adoption in a new session distinct from the dispatch source; old checkpoint flags are insufficient. Reconciliation marks the ticket `recovered` and preserves the original completion result; another reload requires a newly failed bound flight attempt.
+
+## Bounded Voyager execution and stop
+
+Development methods `prepare_voyager_flight` / `commit_voyager_flight` reuse the existing interplanetary-flight coordinator/checkpoint. Prepare binds `PrepareVoyagerFlightRequest` (`planetId`, `expectedRouteStateHash`, fresh complete-player `expectedPlayerStateHash`, `stateHashVersion=1`, optional `journeyId`) to one inspected current route and native reserve checks. Empty `journeyId` starts a bounded outbound journey; return must name that same protected journey. Commit uses `CommitNormalActionRequest` with Voyager mode explicitly required. Ordinary interplanetary commit explicitly requires ordinary mode and keeps its same-star guard; neither route consumes the other's plans.
+
+The native control hook must have observed a tick within two seconds at prepare and commit. Poll the original flight at intervals shorter than its 30-second control lease; only a bound original-action read renews that lease. Lease expiry or an interrupted native tick requests a sticky stop. Native warp exit and ordinary braking must settle within the original 1,800-tick / 30-second cleanup bound; pausing does not extend its wall-clock deadline, and an unproved stop remains unknown. A same-process checkpoint recovery charges elapsed ticks through the captured pre-load source tick. If a real process exit leaves that source tick unknown, exact recovery conservatively forfeits all remaining original journey time, marks the accounting as conservative and cannot authorize another return leg. The original deadline and material floors remain unchanged.
+
+Poll the original action's `voyagerFlightReadback`: `journeyId`, `phase`, origin/destination, nullable selected/actual planet and actual star, native warp state/command, `entryAttempted`, `nativeExitObserved`, native/package/consumed warpers, joule reserves, `flightDeadlineGameTick` and `journeyDeadlineUtc`. The root action `planetId` remains its origin, including without a local planet. A visible-star arrival envelope does not prove landing; one successful leg is not complete round-trip/resource/logistics/failure acceptance. Preserve persistent return reserves and the absolute journey deadline across actions/sessions; Host interruption does not reset them.
+
+`prepare_cancel_voyager_flight` uses `PrepareCancelVoyagerFlightRequest` with the original flight's origin `planetId`, exact `actionId` and `stateHashVersion=1`; `commit_cancel_voyager_flight` uses the same shared commit contract. It latches `stopRequested` on that original flight without creating another movement writer. Poll the original flight through native warp exit, braking and its actual terminal outcome. Stop acknowledgement alone proves neither settled flight nor recovery completion. Unknown results retain the original key/action; checkpoint reload is separately protected and cannot roll back a newer primary.
 
 <a id="detail-only-belt-cargo-observation-04-development-slice"></a>
 ## Factory, cargo, material and fuel observations

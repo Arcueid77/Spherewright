@@ -1492,6 +1492,7 @@ public sealed class SpherewrightToolsTests
                 "spherewright_commit_blueprint_build",
                 "spherewright_commit_build",
                 "spherewright_commit_cancel_blueprint",
+                "spherewright_commit_cancel_voyager_flight",
                 "spherewright_commit_configure_building",
                 "spherewright_commit_dismantle",
                 "spherewright_commit_handcraft",
@@ -1507,8 +1508,10 @@ public sealed class SpherewrightToolsTests
                 "spherewright_commit_save",
                 "spherewright_commit_save_import",
                 "spherewright_commit_select_research",
+                "spherewright_commit_supply_mecha_warpers",
                 "spherewright_commit_transfer",
                 "spherewright_commit_upgrade",
+                "spherewright_commit_voyager_flight",
                 "spherewright_export_blueprint",
                 "spherewright_get_action_result",
                 "spherewright_get_blueprint_builds",
@@ -1537,6 +1540,7 @@ public sealed class SpherewrightToolsTests
                 "spherewright_prepare_blueprint_build",
                 "spherewright_prepare_build",
                 "spherewright_prepare_cancel_blueprint",
+                "spherewright_prepare_cancel_voyager_flight",
                 "spherewright_prepare_configure_building",
                 "spherewright_prepare_dismantle",
                 "spherewright_prepare_handcraft",
@@ -1552,8 +1556,10 @@ public sealed class SpherewrightToolsTests
                 "spherewright_prepare_save",
                 "spherewright_prepare_save_import",
                 "spherewright_prepare_select_research",
+                "spherewright_prepare_supply_mecha_warpers",
                 "spherewright_prepare_transfer",
                 "spherewright_prepare_upgrade",
+                "spherewright_prepare_voyager_flight",
                 "spherewright_preview_voyager_route",
             },
             tools.Select(tool => tool.ProtocolTool.Name).OrderBy(name => name).ToArray());
@@ -3149,6 +3155,22 @@ public sealed class SpherewrightToolsTests
             CommitNormalActionRequest request,
             CancellationToken cancellationToken) => Committed(sessionId, request, NormalActionKinds.InterplanetaryFlight);
 
+        public Task<BridgeCallResult<PreparedNormalAction>> PrepareVoyagerFlightAsync(
+            string sessionId, PrepareVoyagerFlightRequest request, CancellationToken cancellationToken) =>
+            Prepared(sessionId, NormalActionKinds.InterplanetaryFlight);
+
+        public Task<BridgeCallResult<NormalActionCommitResult>> CommitVoyagerFlightAsync(
+            string sessionId, CommitNormalActionRequest request, CancellationToken cancellationToken) =>
+            Committed(sessionId, request, NormalActionKinds.InterplanetaryFlight);
+
+        public Task<BridgeCallResult<PreparedNormalAction>> PrepareCancelVoyagerFlightAsync(
+            string sessionId, PrepareCancelVoyagerFlightRequest request, CancellationToken cancellationToken) =>
+            Prepared(sessionId, NormalActionKinds.CancelVoyagerFlight);
+
+        public Task<BridgeCallResult<NormalActionCommitResult>> CommitCancelVoyagerFlightAsync(
+            string sessionId, CommitNormalActionRequest request, CancellationToken cancellationToken) =>
+            Committed(sessionId, request, NormalActionKinds.CancelVoyagerFlight);
+
         public Task<BridgeCallResult<PreparedNormalAction>> PrepareHarvestAsync(
             string sessionId,
             PrepareHarvestRequest request,
@@ -3303,6 +3325,16 @@ public sealed class SpherewrightToolsTests
             string sessionId,
             CommitNormalActionRequest request,
             CancellationToken cancellationToken) => Committed(sessionId, request, NormalActionKinds.Refuel);
+
+        public Task<BridgeCallResult<PreparedNormalAction>> PrepareSupplyMechaWarpersAsync(
+            string sessionId,
+            PrepareSupplyMechaWarpersRequest request,
+            CancellationToken cancellationToken) => Prepared(sessionId, NormalActionKinds.SupplyMechaWarpers);
+
+        public Task<BridgeCallResult<NormalActionCommitResult>> CommitSupplyMechaWarpersAsync(
+            string sessionId,
+            CommitNormalActionRequest request,
+            CancellationToken cancellationToken) => Committed(sessionId, request, NormalActionKinds.SupplyMechaWarpers);
 
         public Task<BridgeCallResult<PreparedNormalAction>> PrepareSaveAsync(
             string sessionId,

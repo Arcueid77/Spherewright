@@ -21,5 +21,6 @@
     <Compile Include="..\..\src\Spherewright.Plugin\Game\FlightCheckpointReloadCoordinator.cs" Link="PluginGame\FlightCheckpointReloadCoordinator.cs" />
     <Compile Include="..\..\src\Spherewright.Plugin\RuntimeDescriptor\OwnedWorldResumeTicketStore.cs" Link="PluginRuntimeDescriptor\OwnedWorldResumeTicketStore.cs" />
     <Compile Include="..\..\src\Spherewright.Plugin\RuntimeDescriptor\FlightCheckpointStore.cs" Link="PluginRuntimeDescriptor\FlightCheckpointStore.cs" />
+    <Compile Include="..\..\src\Spherewright.Plugin\RuntimeDescriptor\FlightCheckpointStore.Voyager.cs" Link="PluginRuntimeDescriptor\FlightCheckpointStore.Voyager.cs" />
   </ItemGroup>
 </Project>

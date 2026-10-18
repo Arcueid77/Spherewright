@@ -33,6 +33,10 @@ public static class BridgeMethods
     public const string CommitMove = "commit_move";
     public const string PrepareInterplanetaryFlight = "prepare_interplanetary_flight";
     public const string CommitInterplanetaryFlight = "commit_interplanetary_flight";
+    public const string PrepareVoyagerFlight = "prepare_voyager_flight";
+    public const string CommitVoyagerFlight = "commit_voyager_flight";
+    public const string PrepareCancelVoyagerFlight = "prepare_cancel_voyager_flight";
+    public const string CommitCancelVoyagerFlight = "commit_cancel_voyager_flight";
     public const string PrepareHarvest = "prepare_harvest";
     public const string CommitHarvest = "commit_harvest";
     public const string PrepareHandcraft = "prepare_handcraft";
@@ -60,6 +64,8 @@ public static class BridgeMethods
     public const string CommitLogisticsStationFleetTransfer = "commit_logistics_station_fleet_transfer";
     public const string PrepareRefuel = "prepare_refuel";
     public const string CommitRefuel = "commit_refuel";
+    public const string PrepareSupplyMechaWarpers = "prepare_supply_mecha_warpers";
+    public const string CommitSupplyMechaWarpers = "commit_supply_mecha_warpers";
     public const string PrepareSave = "prepare_save";
     public const string CommitSave = "commit_save";
     public const string PrepareQuarantineReconciliation = "prepare_quarantine_reconciliation";

@@ -465,7 +465,8 @@ internal sealed partial class NormalGameActionCoordinator
     public GameCallResult<NormalActionCommitResult> CommitOnMainThread(
         string expectedActionKind,
         string? requestedSessionId,
-        CommitNormalActionRequest request)
+        CommitNormalActionRequest request,
+        bool? expectedVoyagerMode = null)
     {
         if (!Guid.TryParse(request.IdempotencyKey, out _))
         {
@@ -486,7 +487,8 @@ internal sealed partial class NormalGameActionCoordinator
         }
 
         var fingerprint = CanonicalStateHash.Combine(
-            "commit-" + expectedActionKind,
+            expectedActionKind == NormalActionKinds.InterplanetaryFlight && expectedVoyagerMode == true
+                ? "commit-voyager-flight" : "commit-" + expectedActionKind,
             request.SessionId,
             request.PlanetId,
             request.PlanToken);
@@ -534,6 +536,12 @@ internal sealed partial class NormalGameActionCoordinator
                 "Commit the plan through its matching action method."));
         }
 
+        if (expectedActionKind == NormalActionKinds.InterplanetaryFlight
+            && expectedVoyagerMode.HasValue && expectedVoyagerMode.Value != (plan.VoyagerBudget is not null))
+            return GameCallResult<NormalActionCommitResult>.Failed(BridgeError.Create(
+                BridgeErrorCodes.InvalidRequest, "The flight token belongs to the other flight mode.", false,
+                "Use the exact matching same-star or Voyager commit method."));
+
         var session = _sessions.CaptureOnMainThread();
         var accessError = ValidateCommitCommon(session, plan, request);
         if (accessError is not null)
@@ -552,6 +560,9 @@ internal sealed partial class NormalGameActionCoordinator
         {
             return GameCallResult<NormalActionCommitResult>.Failed(staleError);
         }
+
+        var journeyError = ValidateVoyagerJourneyLocalCommit(plan);
+        if (journeyError is not null) return GameCallResult<NormalActionCommitResult>.Failed(journeyError);
 
         var activePlayerOrder = _actions.ActiveValues.FirstOrDefault(action =>
             !action.Terminal && IsPlayerOrderAction(action.ActionKind));
@@ -649,8 +660,11 @@ internal sealed partial class NormalGameActionCoordinator
 
     public void UpdateOnMainThread()
     {
+        CheckVoyagerControlWatchdogOnMainThread();
         foreach (var action in _actions.ActiveValues.ToArray())
         {
+            // Voyager control runs at the audited native tick hook, never at render cadence.
+            if (action.Plan.VoyagerBudget is not null) continue;
             UpdateActionOnMainThread(action);
         }
         _actions.RefreshTerminals();
@@ -664,6 +678,11 @@ internal sealed partial class NormalGameActionCoordinator
             return false;
         }
 
+        if (!action.Terminal && action.Plan.VoyagerBudget is not null && VoyagerBindingMatches(action.Plan))
+            action.VoyagerControlLeaseExpiresAtUtc = DateTimeOffset.UtcNow.AddSeconds(VoyagerControlLeaseSeconds);
+        if (action.VoyagerLandingPendingPersistence) CompleteVoyagerLanding(action, action.VoyagerLandingCompletionMessage!);
+        if (action.VoyagerCoverSaveProof is not null && action.State == NormalActionStates.OutcomeUnknown)
+            ReconcileVoyagerCoverSave(action);
         result = CreateActionSnapshot(action);
         return true;
     }
@@ -727,7 +746,11 @@ internal sealed partial class NormalGameActionCoordinator
                 action.Message = "DSP accepted a normal player movement order.";
                 break;
             case NormalActionKinds.InterplanetaryFlight:
-                StartInterplanetaryFlightOnMainThread(action);
+                if (plan.VoyagerBudget is not null) StartVoyagerFlightOnMainThread(action);
+                else StartInterplanetaryFlightOnMainThread(action);
+                break;
+            case NormalActionKinds.CancelVoyagerFlight:
+                ExecuteCancelVoyagerFlightOnMainThread(action);
                 break;
             case NormalActionKinds.Harvest:
                 var objectType = plan.ResourceKind == ResourceNodeKinds.Vein
@@ -806,6 +829,9 @@ internal sealed partial class NormalGameActionCoordinator
                 break;
             case NormalActionKinds.Refuel:
                 ExecuteRefuelOnMainThread(action);
+                break;
+            case NormalActionKinds.SupplyMechaWarpers:
+                ExecuteSupplyMechaWarpersOnMainThread(action);
                 break;
             case NormalActionKinds.Save:
                 ExecuteSaveOnMainThread(action);
@@ -894,6 +920,7 @@ internal sealed partial class NormalGameActionCoordinator
             return;
         }
 
+        if (!GuardVoyagerLocalAction(action)) return;
         switch (action.ActionKind)
         {
             case NormalActionKinds.Move:
@@ -1194,7 +1221,11 @@ internal sealed partial class NormalGameActionCoordinator
         switch (plan.ActionKind)
         {
             case NormalActionKinds.InterplanetaryFlight:
-                return RevalidateInterplanetaryFlightPlanOnMainThread(plan);
+                return plan.VoyagerBudget is not null
+                    ? RevalidateVoyagerFlightOnMainThread(plan)
+                    : RevalidateInterplanetaryFlightPlanOnMainThread(plan);
+            case NormalActionKinds.CancelVoyagerFlight:
+                return RevalidateCancelVoyagerFlightOnMainThread(plan);
             case NormalActionKinds.Move:
             case NormalActionKinds.Handcraft:
                 var player = _reader.GetPlayerStateOnMainThread(
@@ -1284,6 +1315,8 @@ internal sealed partial class NormalGameActionCoordinator
                 return RevalidateStationFleetTransferOnMainThread(plan);
             case NormalActionKinds.Refuel:
                 return RevalidateRefuelOnMainThread(plan);
+            case NormalActionKinds.SupplyMechaWarpers:
+                return RevalidateSupplyMechaWarpersOnMainThread(plan);
             case NormalActionKinds.Save:
                 return RevalidateSaveOnMainThread(plan);
             case NormalActionKinds.ConfigureBuilding:
@@ -1390,7 +1423,8 @@ internal sealed partial class NormalGameActionCoordinator
                 "Inspect the current session and prepare a fresh action.");
         }
 
-        if (request.PlanetId != plan.PlanetId || session.LocalPlanetId != plan.PlanetId)
+        if (request.PlanetId != plan.PlanetId || (plan.ActionKind != NormalActionKinds.CancelVoyagerFlight
+            && session.LocalPlanetId != plan.PlanetId))
         {
             return BridgeError.Create(
                 BridgeErrorCodes.StaleState,
@@ -1451,6 +1485,11 @@ internal sealed partial class NormalGameActionCoordinator
 
     private void Complete(ActionRecord action, string message)
     {
+        if (action.Plan.VoyagerBudget is not null)
+        {
+            CompleteVoyagerLanding(action, message);
+            return;
+        }
         if (action.ActionKind == NormalActionKinds.InterplanetaryFlight)
         {
             AbortPlayerOrderIfOwned(action);
@@ -1489,6 +1528,16 @@ internal sealed partial class NormalGameActionCoordinator
 
     private void Fail(ActionRecord action, string message)
     {
+        if (action.Plan.VoyagerBudget is not null && !action.VoyagerNativeLaunchStarted)
+        {
+            FinishVoyagerBeforeLaunchFailure(action, message);
+            return;
+        }
+        if (action.Plan.VoyagerBudget is not null && !action.VoyagerStopSettled)
+        {
+            RequestVoyagerStop(action, message);
+            return;
+        }
         if (action.ActionKind == NormalActionKinds.InterplanetaryFlight)
         {
             AbortPlayerOrderIfOwned(action);
@@ -1540,7 +1589,7 @@ internal sealed partial class NormalGameActionCoordinator
         return player.Value?.StateHash;
     }
 
-    private static ActionResultSnapshot CreateActionSnapshot(ActionRecord action)
+    private ActionResultSnapshot CreateActionSnapshot(ActionRecord action)
     {
         var result = new ActionResultSnapshot
         {
@@ -1566,6 +1615,8 @@ internal sealed partial class NormalGameActionCoordinator
             UpgradeReadback = action.UpgradeReadback,
             ResearchQueueReadback = action.ResearchQueueReadback,
             StorageConfigurationReadback = action.StorageConfigurationReadback,
+            MechaWarperSupplyReadback = action.MechaWarperSupplyReadback,
+            VoyagerFlightReadback = action.VoyagerFlightReadback,
             BlueprintBuildId = action.BlueprintBuild?.BuildId,
             BlueprintBuildPhase = action.BlueprintBuild?.Phase,
             BlueprintObjects = action.BlueprintBuild is null ? null : CloneBlueprintObjects(action.BlueprintBuild.Objects),
@@ -1585,6 +1636,8 @@ internal sealed partial class NormalGameActionCoordinator
             OrthogonalProbeDistanceMeters = action.OrthogonalProbeDistanceMeters,
             MaximumOrthogonalProbeAttempts = action.MaximumOrthogonalProbeAttempts,
         };
+        if (action.Plan.VoyagerBudget is not null && !VoyagerBindingMatches(action.Plan) && action.AfterInventory is null)
+            return result; // No current-world inventory is evidence for an ended original binding.
         var after = action.AfterInventory ?? CaptureInventory(GameMain.mainPlayer);
         foreach (var itemId in action.BeforeInventory.Keys.Concat(after.Keys).Distinct().OrderBy(id => id))
         {
@@ -2271,7 +2324,7 @@ internal sealed partial class NormalGameActionCoordinator
         public static CommonPrepareResult Failed(BridgeError error) => new CommonPrepareResult(null, error);
     }
 
-    private sealed class ActionRecord
+    private sealed partial class ActionRecord
     {
         public string ActionId { get; set; } = string.Empty;
         public string ActionKind { get; set; } = string.Empty;
@@ -2294,6 +2347,7 @@ internal sealed partial class NormalGameActionCoordinator
         public UpgradeReadback? UpgradeReadback { get; set; }
         public ResearchQueueReadback? ResearchQueueReadback { get; set; }
         public StorageConfigurationReadback? StorageConfigurationReadback { get; set; }
+        public MechaWarperSupplyReadback? MechaWarperSupplyReadback { get; set; }
         public Spherewright.Bridge.Core.Factory.BlueprintBuildState? BlueprintBuild { get; set; }
         public long LastBlueprintPollTick { get; set; }
         public string? Message { get; set; }

@@ -59,6 +59,8 @@ public sealed class ActionResultSnapshot
     public UpgradeReadback? UpgradeReadback { get; set; }
     public ResearchQueueReadback? ResearchQueueReadback { get; set; }
     public StorageConfigurationReadback? StorageConfigurationReadback { get; set; }
+    public MechaWarperSupplyReadback? MechaWarperSupplyReadback { get; set; }
+    public VoyagerFlightReadback? VoyagerFlightReadback { get; set; }
     public string? BlueprintBuildId { get; set; }
     public string? BlueprintBuildPhase { get; set; }
     public List<Spherewright.Contracts.Factory.BlueprintObjectProgress>? BlueprintObjects { get; set; }

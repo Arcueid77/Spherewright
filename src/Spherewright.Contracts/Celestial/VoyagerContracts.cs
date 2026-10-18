@@ -32,6 +32,8 @@ public sealed class VoyagerStarSnapshot
     public string StarType { get; set; } = string.Empty;
     public double DistanceMeters { get; set; }
     public double DistanceLightYears { get; set; }
+    public UniversalPositionSnapshot UniversalPosition { get; set; } = new UniversalPositionSnapshot();
+    public double VisibleStarRadiusMeters { get; set; }
     public int RequiredObserveLevel { get; set; }
     public bool PlanetsVisible { get; set; }
     public string ResourceVisibility { get; set; } = VoyagerResourceVisibility.Unknown;
@@ -87,13 +89,17 @@ public sealed class VoyagerResourceSummary
 
 public sealed class PreviewVoyagerRouteRequest
 {
+    public string? JourneyId { get; set; }
     public int PlanetId { get; set; }
     public int DestinationPlanetId { get; set; }
+    public int DestinationStarId { get; set; }
     public string ExpectedPlayerStateHash { get; set; } = string.Empty;
     public string ExpectedCatalogStateHash { get; set; } = string.Empty;
     public int StateHashVersion { get; set; } = 1;
     public long MaximumFlightGameTicks { get; set; } = 36000;
     public long ReturnReserveGameTicks { get; set; } = 18000;
+    public long MaximumWarpGameTicksPerLeg { get; set; } = 1800;
+    public double MaximumArrivalOffsetMeters { get; set; } = 3000000d;
     public double MinimumCoreEnergyRatio { get; set; } = 0.8d;
     public int ExtraWarperReserve { get; set; } = 1;
 }
@@ -115,7 +121,7 @@ public sealed class VoyagerRouteBudgetSnapshot
     public bool Executable { get; set; }
     public bool CommitAllowedNow { get; set; }
     public bool BudgetComputed { get; set; }
-    public string BudgetBasis { get; set; } = "finite_horizon_native_warp_upper_bound_with_local_reserves_v1";
+    public string BudgetBasis { get; set; } = "finite_native_warp_duration_and_explicit_return_recharge_v2";
     public bool BudgetSufficient { get; set; }
     public bool TechnologyAllowsWarp { get; set; }
     public bool DestinationVisible { get; set; }
@@ -123,6 +129,10 @@ public sealed class VoyagerRouteBudgetSnapshot
     public bool WarperReserveSufficient { get; set; }
     public bool StoredEnergySufficient { get; set; }
     public bool CoreBufferSufficient { get; set; }
+    public bool RequiresReturnCoreRecharge { get; set; } = true;
+    public double ReturnCoreEnergyMinimumJoules { get; set; }
+    public bool DestinationIsStarOnly { get; set; }
+    public bool IsReturnLeg { get; set; }
     public double DistanceMeters { get; set; }
     public double DistanceLightYears { get; set; }
     public int ThrusterLevel { get; set; }
@@ -152,6 +162,8 @@ public sealed class VoyagerRouteBudgetSnapshot
     public long MaximumFlightGameTicks { get; set; }
     public long OutboundMaximumGameTicks { get; set; }
     public long ReturnReserveGameTicks { get; set; }
+    public long MaximumWarpGameTicksPerLeg { get; set; }
+    public double MaximumArrivalOffsetMeters { get; set; }
     public long? MinimumFlightGameTicksAtMaximumSpeed { get; set; }
     public List<VoyagerRouteBlocker> Blockers { get; set; } = new List<VoyagerRouteBlocker>();
 }

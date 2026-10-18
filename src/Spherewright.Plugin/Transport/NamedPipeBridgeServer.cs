@@ -575,6 +575,40 @@ internal sealed class NamedPipeBridgeServer : IDisposable
                         header,
                         requestJson,
                         NormalActionKinds.InterplanetaryFlight,
+                        cancellationToken, expectedVoyagerMode: false).ConfigureAwait(false);
+                    break;
+                case BridgeMethods.PrepareVoyagerFlight:
+                    {
+                        var request = PluginJson.Deserialize<BridgeRequestEnvelope<PrepareVoyagerFlightRequest>>(requestJson);
+                        if (request?.Payload is null)
+                        {
+                            await WriteInvalidPayloadAsync(pipe, header.RequestId, cancellationToken).ConfigureAwait(false);
+                            break;
+                        }
+                        await DispatchAndWriteAsync(pipe, header.RequestId, header.SessionId,
+                            () => _normalActionCoordinator.PrepareVoyagerFlightOnMainThread(header.SessionId, request.Payload),
+                            cancellationToken).ConfigureAwait(false);
+                        break;
+                    }
+                case BridgeMethods.CommitVoyagerFlight:
+                    await DispatchNormalCommitAsync(pipe, header, requestJson, NormalActionKinds.InterplanetaryFlight,
+                        cancellationToken, expectedVoyagerMode: true).ConfigureAwait(false);
+                    break;
+                case BridgeMethods.PrepareCancelVoyagerFlight:
+                    {
+                        var request = PluginJson.Deserialize<BridgeRequestEnvelope<PrepareCancelVoyagerFlightRequest>>(requestJson);
+                        if (request?.Payload is null)
+                        {
+                            await WriteInvalidPayloadAsync(pipe, header.RequestId, cancellationToken).ConfigureAwait(false);
+                            break;
+                        }
+                        await DispatchAndWriteAsync(pipe, header.RequestId, header.SessionId,
+                            () => _normalActionCoordinator.PrepareCancelVoyagerFlightOnMainThread(header.SessionId, request.Payload),
+                            cancellationToken).ConfigureAwait(false);
+                        break;
+                    }
+                case BridgeMethods.CommitCancelVoyagerFlight:
+                    await DispatchNormalCommitAsync(pipe, header, requestJson, NormalActionKinds.CancelVoyagerFlight,
                         cancellationToken).ConfigureAwait(false);
                     break;
                 case BridgeMethods.PrepareHarvest:
@@ -777,6 +811,27 @@ internal sealed class NamedPipeBridgeServer : IDisposable
                     }
                 case BridgeMethods.CommitRefuel:
                     await DispatchNormalCommitAsync(pipe, header, requestJson, NormalActionKinds.Refuel, cancellationToken).ConfigureAwait(false);
+                    break;
+                case BridgeMethods.PrepareSupplyMechaWarpers:
+                    {
+                        var request = PluginJson.Deserialize<BridgeRequestEnvelope<PrepareSupplyMechaWarpersRequest>>(requestJson);
+                        if (request?.Payload is null)
+                        {
+                            await WriteInvalidPayloadAsync(pipe, header.RequestId, cancellationToken).ConfigureAwait(false);
+                            break;
+                        }
+
+                        await DispatchAndWriteAsync(
+                            pipe,
+                            header.RequestId,
+                            header.SessionId,
+                            () => _normalActionCoordinator.PrepareSupplyMechaWarpersOnMainThread(header.SessionId, request.Payload),
+                            cancellationToken).ConfigureAwait(false);
+                        break;
+                    }
+                case BridgeMethods.CommitSupplyMechaWarpers:
+                    await DispatchNormalCommitAsync(
+                        pipe, header, requestJson, NormalActionKinds.SupplyMechaWarpers, cancellationToken).ConfigureAwait(false);
                     break;
                 case BridgeMethods.PrepareSave:
                     {
@@ -1102,7 +1157,8 @@ internal sealed class NamedPipeBridgeServer : IDisposable
         BridgeEnvelopeHeader header,
         string requestJson,
         string actionKind,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        bool? expectedVoyagerMode = null)
     {
         var request = PluginJson.Deserialize<BridgeRequestEnvelope<CommitNormalActionRequest>>(requestJson);
         if (request?.Payload is null)
@@ -1115,7 +1171,7 @@ internal sealed class NamedPipeBridgeServer : IDisposable
             pipe,
             header.RequestId,
             header.SessionId,
-            () => _normalActionCoordinator.CommitOnMainThread(actionKind, header.SessionId, request.Payload),
+            () => _normalActionCoordinator.CommitOnMainThread(actionKind, header.SessionId, request.Payload, expectedVoyagerMode),
             cancellationToken).ConfigureAwait(false);
     }
 

@@ -250,6 +250,15 @@ internal sealed partial class NormalGameActionCoordinator
         // blueprint mode is retained. This is the same public setter the
         // current-version native sail-entry branch uses before switching modes.
         player.controller.actionBuild.blueprintMode = EBlueprintMode.None;
+        if (action.Plan.VoyagerBudget is not null)
+        {
+            if (!_flightCheckpoints.TryArmVoyagerNativeLaunch(action.FlightCheckpointId!, action.ActionId, out var armRejection))
+            {
+                Fail(action, armRejection);
+                return;
+            }
+            action.VoyagerNativeLaunchStarted = true;
+        }
         EnterNativeFlight(player);
         action.State = NormalActionStates.WaitingForGame;
         action.Message = $"A separate pre-flight checkpoint was confirmed at tick {action.FlightCheckpointGameTick}; DSP then accepted native launch toward planet {action.Plan.DestinationPlanetId}.";
@@ -261,6 +270,7 @@ internal sealed partial class NormalGameActionCoordinator
         if (existing is not null
             && existing.OriginPlanetId == action.PlanetId
             && existing.DestinationPlanetId == action.Plan.DestinationPlanetId
+            && existing.VoyagerJourneyId == action.Plan.VoyagerJourneyId
             && _sessions.CanReuseFlightCheckpointForCurrentSession(existing)
             && _flightCheckpoints.TryValidateCheckpointFile(existing, out _))
         {
@@ -287,7 +297,10 @@ internal sealed partial class NormalGameActionCoordinator
                 action.PlanetId,
                 action.Plan.DestinationPlanetId,
                 action.Plan.PlayerStateHash,
-                action.Plan.StarSystemStateHash);
+                action.Plan.StarSystemStateHash,
+                action.Plan.VoyagerBudget?.OriginStarId ?? 0,
+                action.Plan.VoyagerBudget?.DestinationStarId ?? 0,
+                action.Plan.VoyagerJourneyId);
             GameMain.gameName = session.SaveName;
             if (!GameSave.SaveCurrentGame(ticket.CheckpointSaveName))
             {
@@ -325,7 +338,7 @@ internal sealed partial class NormalGameActionCoordinator
     private void UpdateInterplanetaryFlight(ActionRecord action)
     {
         var player = GameMain.mainPlayer;
-        var destination = GameMain.galaxy?.PlanetById(action.Plan.DestinationPlanetId);
+        var destination = GetEffectiveFlightDestination(action);
         if (player?.mecha is null || player.controller is null || destination is null || !player.isAlive)
         {
             Fail(action, "The player or bound destination became unavailable during interplanetary flight.");
@@ -416,11 +429,101 @@ internal sealed partial class NormalGameActionCoordinator
             action.FlightStableLandingAtGameTick = -1L;
         }
 
+        if (player.movementState == EMovementState.Walk || player.movementState == EMovementState.Fly)
+        {
+            UpdateNativeFlightLaunch(action, player, destination, destination.uPosition);
+            return;
+        }
+
+        if (player.movementState < EMovementState.Sail)
+        {
+            if (atDestination && GameMain.gameTick % 120L == 0L)
+            {
+                action.Message = $"Native landing has contacted planet {destination.id} in {player.movementState} state and is waiting for a stable grounded Walk state.";
+            }
+
+            return;
+        }
+
+        ReleaseNativeAscentInput(action);
+        var origin = GameMain.galaxy?.PlanetById(action.PlanetId);
+        var navigationTarget = destination.uPosition;
+        var detour = default(FlightPathDetour);
+        var detourSelected = action.Plan.VoyagerBudget is not null
+            ? TrySelectVoyagerVisibleDetour(player, destination.uPosition, destination.id, out detour)
+            : origin is not null && TrySelectNativeSailDetour(player, origin, destination, out detour);
+        if (detourSelected)
+        {
+            navigationTarget = ToVectorLf3(detour.AimPoint);
+        }
+
+        if (origin is not null
+            && ControlNativeSailDeparture(
+                player,
+                origin,
+                navigationTarget,
+                out var departureSurfaceDistance,
+                out var departureSpeed))
+        {
+            action.Message = detourSelected
+                ? $"Native sail is clearing the origin planet at {departureSurfaceDistance:F0} m above its surface and {departureSpeed:F1} m/s relative speed toward a verified detour around body {detour.ObstacleBodyId}."
+                : $"Native sail is clearing the origin planet at {departureSurfaceDistance:F0} m above its surface and {departureSpeed:F1} m/s relative speed before turning toward planet {destination.id}.";
+            return;
+        }
+
+        var surfaceDistance = Math.Max(0d, (destination.uPosition - player.uPosition).magnitude - destination.realRadius);
+        double relativeSpeed;
+        double waypointDistance = 0d;
+        if (detourSelected)
+        {
+            ControlNativeSailTowardDetour(player, detour, out waypointDistance, out relativeSpeed,
+                action.Plan.VoyagerBudget is not null ? player.mecha.maxSailSpeed : FlightDetourMaximumRelativeSpeed);
+        }
+        else
+        {
+            ControlNativeSailTowardPlanet(player, destination, out surfaceDistance, out relativeSpeed);
+        }
+
+        if (surfaceDistance + 1d < action.FlightBestDistance)
+        {
+            action.FlightBestDistance = surfaceDistance;
+            action.FlightBestDistanceAtGameTick = GameMain.gameTick;
+        }
+
+        if (GameMain.gameTick % 300L == 0L)
+        {
+            action.Message = detourSelected
+                ? $"Native sail is taking a {waypointDistance:F0} m waypoint around body {detour.ObstacleBodyId}; its direct route clearance was {detour.DirectClearance:F0}/{detour.RequiredClearance:F0} m, destination surface distance is {surfaceDistance:F0} m, and relative speed is {relativeSpeed:F1} m/s."
+                : $"Native sail is {surfaceDistance:F0} m from planet {destination.id}'s surface at {relativeSpeed:F1} m/s; core energy {player.mecha.coreEnergy:F0}/{player.mecha.coreEnergyCap:F0} J.";
+        }
+
+        if (action.Plan.VoyagerBudget is not null) return;
+
+        var timeout = Math.Max(MinimumFlightTimeoutTicks, action.Plan.EstimatedTicks * 6L);
+        if (GameMain.gameTick > action.StartedAtGameTick + timeout)
+        {
+            action.Stalled = true;
+            Fail(action, $"Native sail exceeded its bounded timeout at {surfaceDistance:F0} m from planet {destination.id}; the bound checkpoint must be reloaded before another attempt.");
+            return;
+        }
+
+        var progressStallWindow = Math.Max(MinimumFlightProgressStallTicks, action.Plan.EstimatedTicks * 2L);
+        if (surfaceDistance > destination.realRadius
+            && GameMain.gameTick > action.FlightBestDistanceAtGameTick + progressStallWindow)
+        {
+            action.Stalled = true;
+            Fail(action, $"Native sail made no new best-distance progress for {progressStallWindow} game ticks while {surfaceDistance:F0} m from planet {destination.id}; the bound checkpoint must be reloaded before another attempt.");
+        }
+    }
+
+    private void UpdateNativeFlightLaunch(ActionRecord action, Player player, PlanetData? destination, VectorLF3 navigationTarget)
+    {
+        var localPlanet = GameMain.localPlanet;
         if (player.movementState == EMovementState.Walk)
         {
             if (localPlanet is not null
                 && localPlanet.id != action.PlanetId
-                && localPlanet.id != destination.id)
+                && localPlanet.id != destination?.id)
             {
                 Fail(action, $"Native flight landed on unexpected planet {localPlanet.id}; reload the bound pre-flight checkpoint before retrying.");
                 return;
@@ -438,7 +541,7 @@ internal sealed partial class NormalGameActionCoordinator
 
         if (player.movementState == EMovementState.Fly)
         {
-            if (localPlanet?.id == destination.id || player.planetId == destination.id)
+            if (destination is not null && (localPlanet?.id == destination.id || player.planetId == destination.id))
             {
                 ReleaseNativeAscentInput(action);
                 player.controller.actionFly.targetAltitude = 1f;
@@ -474,9 +577,9 @@ internal sealed partial class NormalGameActionCoordinator
                 {
                     ReleaseNativeAscentInput(action);
                     var originPlanet = GameMain.galaxy?.PlanetById(action.PlanetId);
-                    var initialNavigationTarget = destination.uPosition;
+                    var initialNavigationTarget = navigationTarget;
                     var initialDetour = default(FlightPathDetour);
-                    var initialDetourSelected = originPlanet is not null
+                    var initialDetourSelected = originPlanet is not null && destination is not null
                                                 && TrySelectNativeSailDetour(
                                                     player,
                                                     originPlanet,
@@ -509,81 +612,6 @@ internal sealed partial class NormalGameActionCoordinator
             return;
         }
 
-        if (player.movementState < EMovementState.Sail)
-        {
-            if (atDestination && GameMain.gameTick % 120L == 0L)
-            {
-                action.Message = $"Native landing has contacted planet {destination.id} in {player.movementState} state and is waiting for a stable grounded Walk state.";
-            }
-
-            return;
-        }
-
-        ReleaseNativeAscentInput(action);
-        var origin = GameMain.galaxy?.PlanetById(action.PlanetId);
-        var navigationTarget = destination.uPosition;
-        var detour = default(FlightPathDetour);
-        var detourSelected = origin is not null
-                             && TrySelectNativeSailDetour(player, origin, destination, out detour);
-        if (detourSelected)
-        {
-            navigationTarget = ToVectorLf3(detour.AimPoint);
-        }
-
-        if (origin is not null
-            && ControlNativeSailDeparture(
-                player,
-                origin,
-                navigationTarget,
-                out var departureSurfaceDistance,
-                out var departureSpeed))
-        {
-            action.Message = detourSelected
-                ? $"Native sail is clearing the origin planet at {departureSurfaceDistance:F0} m above its surface and {departureSpeed:F1} m/s relative speed toward a verified detour around body {detour.ObstacleBodyId}."
-                : $"Native sail is clearing the origin planet at {departureSurfaceDistance:F0} m above its surface and {departureSpeed:F1} m/s relative speed before turning toward planet {destination.id}.";
-            return;
-        }
-
-        var surfaceDistance = Math.Max(0d, (destination.uPosition - player.uPosition).magnitude - destination.realRadius);
-        double relativeSpeed;
-        double waypointDistance = 0d;
-        if (detourSelected)
-        {
-            ControlNativeSailTowardDetour(player, detour, out waypointDistance, out relativeSpeed);
-        }
-        else
-        {
-            ControlNativeSailTowardPlanet(player, destination, out surfaceDistance, out relativeSpeed);
-        }
-
-        if (surfaceDistance + 1d < action.FlightBestDistance)
-        {
-            action.FlightBestDistance = surfaceDistance;
-            action.FlightBestDistanceAtGameTick = GameMain.gameTick;
-        }
-
-        if (GameMain.gameTick % 300L == 0L)
-        {
-            action.Message = detourSelected
-                ? $"Native sail is taking a {waypointDistance:F0} m waypoint around body {detour.ObstacleBodyId}; its direct route clearance was {detour.DirectClearance:F0}/{detour.RequiredClearance:F0} m, destination surface distance is {surfaceDistance:F0} m, and relative speed is {relativeSpeed:F1} m/s."
-                : $"Native sail is {surfaceDistance:F0} m from planet {destination.id}'s surface at {relativeSpeed:F1} m/s; core energy {player.mecha.coreEnergy:F0}/{player.mecha.coreEnergyCap:F0} J.";
-        }
-
-        var timeout = Math.Max(MinimumFlightTimeoutTicks, action.Plan.EstimatedTicks * 6L);
-        if (GameMain.gameTick > action.StartedAtGameTick + timeout)
-        {
-            action.Stalled = true;
-            Fail(action, $"Native sail exceeded its bounded timeout at {surfaceDistance:F0} m from planet {destination.id}; the bound checkpoint must be reloaded before another attempt.");
-            return;
-        }
-
-        var progressStallWindow = Math.Max(MinimumFlightProgressStallTicks, action.Plan.EstimatedTicks * 2L);
-        if (surfaceDistance > destination.realRadius
-            && GameMain.gameTick > action.FlightBestDistanceAtGameTick + progressStallWindow)
-        {
-            action.Stalled = true;
-            Fail(action, $"Native sail made no new best-distance progress for {progressStallWindow} game ticks while {surfaceDistance:F0} m from planet {destination.id}; the bound checkpoint must be reloaded before another attempt.");
-        }
     }
 
     private void UpdateNativeShoreLanding(ActionRecord action, Player player, PlanetData destination)
@@ -850,7 +878,7 @@ internal sealed partial class NormalGameActionCoordinator
         out FlightPathDetour detour)
     {
         detour = default;
-        var planets = origin.star?.planets;
+        var planets = (destination.star?.id == GameMain.localStar?.id ? destination.star : origin.star)?.planets;
         if (planets is null)
         {
             return false;
@@ -907,7 +935,8 @@ internal sealed partial class NormalGameActionCoordinator
         Player player,
         FlightPathDetour detour,
         out double waypointDistance,
-        out double relativeSpeed)
+        out double relativeSpeed,
+        double maximumRelativeSpeed = FlightDetourMaximumRelativeSpeed)
     {
         var sail = player.controller.actionSail;
         var aimPoint = ToVectorLf3(detour.AimPoint);
@@ -934,7 +963,9 @@ internal sealed partial class NormalGameActionCoordinator
             relativeSpeed = relativeVelocity.magnitude;
         }
 
-        if (relativeSpeed > FlightDetourMaximumRelativeSpeed * 1.05d)
+        var speedLimit = waypointDistance > Math.Max(1500d, relativeSpeed * 6d)
+            ? Math.Max(FlightDetourMaximumRelativeSpeed, maximumRelativeSpeed) : FlightDetourMaximumRelativeSpeed;
+        if (relativeSpeed > speedLimit * 1.05d)
         {
             var brakingDelta = relativeVelocity * 0.008d;
             sail.UseSailEnergy(ref brakingDelta, 1.5d);
@@ -943,11 +974,11 @@ internal sealed partial class NormalGameActionCoordinator
             return;
         }
 
-        if (relativeSpeed < FlightDetourMaximumRelativeSpeed)
+        if (relativeSpeed < speedLimit)
         {
             var acceleration = Math.Min(
                 7d,
-                FlightDetourMaximumRelativeSpeed - relativeSpeed);
+                speedLimit - relativeSpeed);
             if (acceleration > 0d)
             {
                 var ratio = sail.UseSailEnergy(acceleration);

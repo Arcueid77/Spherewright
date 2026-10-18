@@ -1288,6 +1288,9 @@ internal sealed class GameSessionTracker : IDisposable
     private List<WriteBlocker> CreateWriteBlockers(string peacefulState)
     {
         var blockers = new List<WriteBlocker>();
+        if (!string.IsNullOrEmpty(_flightCheckpoints.VoyagerJourneyLoadError))
+            blockers.Add(new WriteBlocker { Code = BridgeErrorCodes.WriteSubsystemQuarantined,
+                Message = _flightCheckpoints.VoyagerJourneyLoadError! });
         if (_flightCheckpoints.HasUnreconciledReload)
             blockers.Add(new WriteBlocker { Code = BridgeErrorCodes.ServerBusy,
                 Message = "The original checkpoint reload is unresolved; poll its exact action before any new write." });

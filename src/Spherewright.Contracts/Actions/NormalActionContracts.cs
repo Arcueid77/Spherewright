@@ -19,6 +19,8 @@ public static class NormalActionKinds
     public const string LogisticsStationFleetTransfer = "logistics-station-fleet-transfer";
     public const string ConfigureBuilding = "configure-building";
     public const string Refuel = "refuel";
+    public const string SupplyMechaWarpers = "supply_mecha_warpers";
+    public const string CancelVoyagerFlight = "cancel_voyager_flight";
     public const string Save = "save";
     public const string ReconcileQuarantine = "reconcile-quarantine";
     public const string UserSaveImport = "user-save-import";

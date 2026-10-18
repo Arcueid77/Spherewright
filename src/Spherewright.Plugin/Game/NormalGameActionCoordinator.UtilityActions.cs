@@ -313,6 +313,8 @@ internal sealed partial class NormalGameActionCoordinator
             throw new InvalidOperationException("The owned save completed without a recorded game tick.");
         }
 
+        CloseVoyagerAfterNormalSave(action, session);
+
         action.State = NormalActionStates.Completed;
         action.Terminal = true;
         action.Succeeded = true;

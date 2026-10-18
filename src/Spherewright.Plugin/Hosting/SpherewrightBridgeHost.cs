@@ -27,6 +27,11 @@ internal sealed class SpherewrightBridgeHost : IDisposable
     private bool _started;
     private bool _pumpLogged;
     private int _framesSinceVersionRefresh;
+    private GameLogic? _voyagerTickLogic;
+    private Action? _voyagerTickHandler;
+    private readonly int _unityThreadId = System.Threading.Thread.CurrentThread.ManagedThreadId;
+    private bool _voyagerStopping;
+    private bool _gameEndHooked;
 
     private SpherewrightBridgeHost(
         SpherewrightConfiguration configuration,
@@ -99,6 +104,7 @@ internal sealed class SpherewrightBridgeHost : IDisposable
             logger);
         var gameStateReader = new GameStateReader(sessionTracker, overseerLogisticsProgressStore,
             new GovernorDeclarationStore(configuration.RuntimeDescriptorDirectory, gameVersion, sessionTracker, logger));
+        gameStateReader.VoyagerCheckpoints = flightCheckpoints;
         var gameplayJournalManager = new GameplayJournalManager(
             configuration.RuntimeDescriptorDirectory,
             gameVersion,
@@ -196,6 +202,8 @@ internal sealed class SpherewrightBridgeHost : IDisposable
         {
             _pipeServer.Start();
             _descriptorPublisher.Publish(_descriptor);
+            GameMain.onGameEnded += OnNativeGameEnded;
+            _gameEndHooked = true;
             _started = true;
         }
         catch
@@ -213,6 +221,7 @@ internal sealed class SpherewrightBridgeHost : IDisposable
             return;
         }
 
+        RefreshVoyagerNativeTickBinding();
         _sessionTracker.UpdateOnMainThread();
         _statusProvider.UpdateGameLoadedOnMainThread(_sessionTracker.GameLoaded);
         _gameplayJournalManager.UpdateOnMainThread();
@@ -239,6 +248,12 @@ internal sealed class SpherewrightBridgeHost : IDisposable
 
     public void Dispose()
     {
+        StopVoyagerNativeControl();
+        if (_gameEndHooked)
+        {
+            GameMain.onGameEnded -= OnNativeGameEnded;
+            _gameEndHooked = false;
+        }
         _sessionTracker.Dispose();
         if (!_started)
         {
@@ -251,5 +266,62 @@ internal sealed class SpherewrightBridgeHost : IDisposable
         _pipeServer.Dispose();
         _descriptorPublisher.Dispose();
         _dispatcher.Dispose();
+    }
+
+    private void RefreshVoyagerNativeTickBinding()
+    {
+        var next = GameMain.isRunning ? GameMain.logic : null;
+        if (ReferenceEquals(next, _voyagerTickLogic)) return;
+        StopVoyagerNativeControl();
+        _voyagerStopping = false;
+        if (next is null) return;
+        var captured = next;
+        _voyagerTickHandler = () => OnVoyagerNativePlayerTick(captured);
+        _voyagerTickLogic = captured;
+        captured.onFactoryFrameBegin += _voyagerTickHandler;
+    }
+
+    private void OnVoyagerNativePlayerTick(GameLogic source)
+    {
+        if (_voyagerStopping || System.Threading.Thread.CurrentThread.ManagedThreadId != _unityThreadId
+            || !ReferenceEquals(source, GameMain.logic) || !ReferenceEquals(source.data, GameMain.data)) return;
+        // The event follows native Player.GameTick in each logic frame, including
+        // multiple FixedUpdates in one rendered frame. Do not pump RPCs or save here.
+        try
+        {
+            _normalActionCoordinator.VoyagerNativeTickAvailable = true;
+            _normalActionCoordinator.VoyagerLastNativeTickObservedAtUtc = DateTimeOffset.UtcNow;
+            _normalActionCoordinator.UpdateVoyagerNativeTickOnMainThread();
+        }
+        catch (Exception exception)
+        {
+            // Never let our event subscriber interrupt native factory/game ticks.
+            StopVoyagerNativeControl();
+            LogVoyagerStopFailure(exception);
+        }
+    }
+
+    private void OnNativeGameEnded() => StopVoyagerNativeControl();
+
+    private void StopVoyagerNativeControl()
+    {
+        _voyagerStopping = true;
+        // Original session/player/controller bindings must still exist when owned
+        // commands are released. A command release is not proof of native exit.
+        try { _normalActionCoordinator.StopVoyagerForHostShutdownOnMainThread(); }
+        catch (Exception exception) { LogVoyagerStopFailure(exception); }
+        finally
+        {
+            if (_voyagerTickLogic is not null && _voyagerTickHandler is not null)
+                _voyagerTickLogic.onFactoryFrameBegin -= _voyagerTickHandler;
+            _voyagerTickLogic = null;
+            _voyagerTickHandler = null;
+        }
+    }
+
+    private void LogVoyagerStopFailure(Exception exception)
+    {
+        try { _logger.LogError("Voyager control stopped after " + exception.GetType().Name + "; preserve the original action and checkpoint."); }
+        catch (Exception) { /* A logging failure must not escape a native event subscriber. */ }
     }
 }

@@ -77,7 +77,7 @@ function Test-Surface([object[]]$Surface, [string]$Text=$playbook) {
     Assert-SpherewrightPackageSurface -Version '0.4.0.0' -Tools $Surface -Resources $resources -PackagedPlaybook $Text -ResourcePlaybook $Text
 }
 
-$voyagerPlaybook = $playbook + ' spherewright_get_voyager_star_catalog spherewright_preview_voyager_route maximumFlightGameTicks returnReserveGameTicks tokenless executable=false newer primary'
+$voyagerPlaybook = $playbook + ' spherewright_get_voyager_star_catalog spherewright_preview_voyager_route maximumFlightGameTicks returnReserveGameTicks maximumWarpGameTicksPerLeg maximumArrivalOffsetMeters destinationStarId returnCoreEnergyMinimumJoules journeyId isReturnLeg tokenless executable=false newer primary spherewright_prepare_supply_mecha_warpers spherewright_commit_supply_mecha_warpers mechaWarperSupplyReadback nativeReturnedSuccess readbackComplete spherewright_prepare_voyager_flight spherewright_commit_voyager_flight spherewright_prepare_cancel_voyager_flight spherewright_commit_cancel_voyager_flight nativeExitObserved'
 function New-TestVoyagerSurface {
     New-TestSurface
     foreach ($name in @('spherewright_get_voyager_star_catalog','spherewright_preview_voyager_route')) {
@@ -86,14 +86,41 @@ function New-TestVoyagerSurface {
         if ($name -ceq 'spherewright_get_voyager_star_catalog') {
             $properties['limit'] = [pscustomobject]@{type='integer'}
         } else {
-            foreach ($field in @('destinationPlanetId','maximumFlightGameTicks','returnReserveGameTicks','extraWarperReserve')) { $properties[$field]=[pscustomobject]@{type='integer'} }
+            foreach ($field in @('destinationPlanetId','destinationStarId','maximumFlightGameTicks','returnReserveGameTicks','maximumWarpGameTicksPerLeg','extraWarperReserve')) { $properties[$field]=[pscustomobject]@{type='integer'} }
             foreach ($field in @('expectedPlayerStateHash','expectedCatalogStateHash')) { $properties[$field]=[pscustomobject]@{type='string'} }
             $properties['minimumCoreEnergyRatio'] = [pscustomobject]@{type='number'}
+            $properties['maximumArrivalOffsetMeters'] = [pscustomobject]@{type='number'}
+            $properties['journeyId'] = [pscustomobject]@{type=@('string','null')}
             $required += @('destinationPlanetId','expectedPlayerStateHash','expectedCatalogStateHash')
         }
         [pscustomobject]@{name=$name;description='READ-ONLY tokenless executable=false commitAllowedNow=false';
             annotations=[pscustomobject]@{readOnlyHint=$true;destructiveHint=$false;idempotentHint=$true;openWorldHint=$false};
             inputSchema=[pscustomobject]@{type='object';properties=[pscustomobject]$properties;required=$required}}
+    }
+    foreach ($suffix in @('supply_mecha_warpers','voyager_flight','cancel_voyager_flight')) {
+        foreach ($verb in @('prepare','commit')) {
+            $properties = [ordered]@{sessionId=[pscustomobject]@{type='string'};planetId=[pscustomobject]@{type='integer'}}
+            $required = @('sessionId','planetId')
+            if ($verb -ceq 'commit') {
+                foreach ($field in @('planToken','idempotencyKey')) { $properties[$field]=[pscustomobject]@{type='string'} }
+                $required += @('planToken','idempotencyKey')
+            } else {
+                $properties['stateHashVersion']=[pscustomobject]@{type='integer'}
+                if ($suffix -ceq 'cancel_voyager_flight') { $properties['actionId']=[pscustomobject]@{type='string'}; $required += 'actionId' }
+                else {
+                    $properties['expectedPlayerStateHash']=[pscustomobject]@{type='string'}; $required += 'expectedPlayerStateHash'
+                    if ($suffix -ceq 'supply_mecha_warpers') { $properties['count']=[pscustomobject]@{type='integer'} }
+                    else {
+                        $properties['expectedRouteStateHash']=[pscustomobject]@{type='string'}; $required += 'expectedRouteStateHash'
+                        $properties['journeyId']=[pscustomobject]@{type=@('string','null')}
+                    }
+                }
+            }
+            [pscustomobject]@{name=('spherewright_'+$verb+'_'+$suffix);
+                description='min(20 Filtered autoReplenishWarper original action Mecha.AutoReplenishWarper mechaWarperSupplyReadback nativeReturnedSuccess readbackComplete voyagerFlightReadback nativeExitObserved return reserves stopRequested original flight never repeat routeStateHash journeyId original active Voyager origin planetId';
+                annotations=[pscustomobject]@{readOnlyHint=$false;destructiveHint=($verb -ceq 'commit');idempotentHint=($verb -ceq 'commit');openWorldHint=$false};
+                inputSchema=[pscustomobject]@{type='object';properties=[pscustomobject]$properties;required=$required}}
+        }
     }
 }
 function Test-VoyagerSurface([object[]]$Surface, [string]$Text=$voyagerPlaybook, [object[]]$ResourceList=$resources) {
@@ -239,7 +266,7 @@ foreach ($invalidResources in @(
 Test-VoyagerSurface @(New-TestVoyagerSurface); $cases++
 $caseTools = @(New-TestVoyagerSurface)
 $caseTools += [pscustomobject]@{name='spherewright_future_read_only_tool'}
-Test-VoyagerSurface $caseTools; $cases++ # More than the current surface is permitted; no 66-tool ceiling.
+Test-VoyagerSurface $caseTools; $cases++ # Future capabilities remain permitted; no tool-count ceiling.
 Assert-Rejects { Test-VoyagerSurface @(New-TestSurface) } 'Voyager package requires exactly one tool'; $cases++
 foreach ($name in @('spherewright_get_voyager_star_catalog','spherewright_preview_voyager_route')) {
     Assert-Rejects { Test-VoyagerSurface @(New-TestVoyagerSurface | Where-Object name -cne $name) } 'Voyager package requires exactly one tool'; $cases++
@@ -266,13 +293,13 @@ foreach ($name in @('spherewright_get_voyager_star_catalog','spherewright_previe
         Assert-Rejects { Test-VoyagerSurface $caseTools } 'read-only Voyager schema'; $cases++
     }
 }
-foreach ($field in @('destinationPlanetId','expectedPlayerStateHash','expectedCatalogStateHash','maximumFlightGameTicks','returnReserveGameTicks','minimumCoreEnergyRatio','extraWarperReserve')) {
+foreach ($field in @('destinationPlanetId','destinationStarId','expectedPlayerStateHash','expectedCatalogStateHash','maximumFlightGameTicks','returnReserveGameTicks','maximumWarpGameTicksPerLeg','maximumArrivalOffsetMeters','minimumCoreEnergyRatio','extraWarperReserve','journeyId')) {
     $caseTools = @(New-TestVoyagerSurface)
     $tool = @($caseTools | Where-Object name -ceq 'spherewright_preview_voyager_route')[0]
     $tool.inputSchema.properties.PSObject.Properties.Remove($field)
     Assert-Rejects { Test-VoyagerSurface $caseTools } 'read-only Voyager schema'; $cases++
 }
-foreach ($field in @('maximumFlightGameTicks','returnReserveGameTicks','minimumCoreEnergyRatio')) {
+foreach ($field in @('maximumFlightGameTicks','returnReserveGameTicks','maximumWarpGameTicksPerLeg','maximumArrivalOffsetMeters','minimumCoreEnergyRatio')) {
     $caseTools = @(New-TestVoyagerSurface)
     $tool = @($caseTools | Where-Object name -ceq 'spherewright_preview_voyager_route')[0]
     $tool.inputSchema.properties.$field.type = 'string'
@@ -287,4 +314,34 @@ foreach ($rule in @('spherewright_get_voyager_star_catalog','spherewright_previe
     Assert-Rejects { Test-VoyagerSurface @(New-TestVoyagerSurface) ($voyagerPlaybook.Replace($rule,'')) } 'Voyager playbook lacks'; $cases++
 }
 Assert-Rejects { Test-VoyagerSurface @(New-TestVoyagerSurface) $voyagerPlaybook @() } 'stable Markdown Agent playbook'; $cases++
+foreach ($suffix in @('supply_mecha_warpers','voyager_flight','cancel_voyager_flight')) {
+    foreach ($verb in @('prepare','commit')) {
+        $name='spherewright_'+$verb+'_'+$suffix
+        Assert-Rejects { Test-VoyagerSurface @(New-TestVoyagerSurface | Where-Object name -cne $name) } 'requires exactly one action tool'; $cases++
+        foreach ($field in @('readOnlyHint','destructiveHint','idempotentHint','openWorldHint')) {
+            $caseTools=@(New-TestVoyagerSurface);$tool=@($caseTools|Where-Object name -ceq $name)[0];$tool.annotations.$field=-not$tool.annotations.$field
+            Assert-Rejects { Test-VoyagerSurface $caseTools } 'action has missing/incorrect metadata'; $cases++
+        }
+        $caseTools=@(New-TestVoyagerSurface);$tool=@($caseTools|Where-Object name -ceq $name)[0];$tool.inputSchema.required=@('sessionId')
+        Assert-Rejects { Test-VoyagerSurface $caseTools } 'makes a bound parameter optional'; $cases++
+        $caseTools=@(New-TestVoyagerSurface);$tool=@($caseTools|Where-Object name -ceq $name)[0];$tool.description='omitted native proof'
+        Assert-Rejects { Test-VoyagerSurface $caseTools } 'lacks its native/original-action contract'; $cases++
+        foreach ($field in @('autoReplenishWarper','itemId','userConfirmedInConversation','recoveryMode')) {
+            $caseTools=@(New-TestVoyagerSurface);$tool=@($caseTools|Where-Object name -ceq $name)[0]
+            $tool.inputSchema.properties|Add-Member -NotePropertyName $field -NotePropertyValue ([pscustomobject]@{type='boolean'})
+            Assert-Rejects { Test-VoyagerSurface $caseTools } 'unsupported native override'; $cases++
+        }
+        $fields=if($verb -ceq 'commit'){@('sessionId','planetId','planToken','idempotencyKey')}
+            elseif($suffix -ceq 'supply_mecha_warpers'){@('sessionId','planetId','stateHashVersion','expectedPlayerStateHash','count')}
+            elseif($suffix -ceq 'voyager_flight'){@('sessionId','planetId','stateHashVersion','expectedPlayerStateHash','expectedRouteStateHash','journeyId')}
+            else{@('sessionId','planetId','stateHashVersion','actionId')}
+        foreach($field in $fields){
+            $caseTools=@(New-TestVoyagerSurface);$tool=@($caseTools|Where-Object name -ceq $name)[0];$tool.inputSchema.properties.PSObject.Properties.Remove($field)
+            Assert-Rejects { Test-VoyagerSurface $caseTools } 'Voyager native action schema';$cases++
+        }
+    }
+}
+foreach($rule in @('spherewright_prepare_supply_mecha_warpers','mechaWarperSupplyReadback','nativeReturnedSuccess','readbackComplete','spherewright_prepare_voyager_flight','spherewright_commit_voyager_flight','spherewright_prepare_cancel_voyager_flight','spherewright_commit_cancel_voyager_flight','returnCoreEnergyMinimumJoules','maximumWarpGameTicksPerLeg')){
+    Assert-Rejects { Test-VoyagerSurface @(New-TestVoyagerSurface) ($voyagerPlaybook.Replace($rule,'')) } 'Voyager playbook lacks';$cases++
+}
 [pscustomobject]@{passed=$cases;failed=0;scope='offline 0.4/0.5 package surface policy only; no game or ZIP validation'} | ConvertTo-Json

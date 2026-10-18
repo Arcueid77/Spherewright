@@ -56,6 +56,10 @@ spherewright_prepare_move
 spherewright_commit_move
 spherewright_prepare_interplanetary_flight
 spherewright_commit_interplanetary_flight
+spherewright_prepare_voyager_flight
+spherewright_commit_voyager_flight
+spherewright_prepare_cancel_voyager_flight
+spherewright_commit_cancel_voyager_flight
 spherewright_prepare_harvest
 spherewright_commit_harvest
 spherewright_prepare_handcraft
@@ -76,6 +80,8 @@ spherewright_prepare_logistics_station_fleet_transfer
 spherewright_commit_logistics_station_fleet_transfer
 spherewright_prepare_refuel
 spherewright_commit_refuel
+spherewright_prepare_supply_mecha_warpers
+spherewright_commit_supply_mecha_warpers
 spherewright_prepare_save
 spherewright_commit_save
 spherewright_prepare_quarantine_reconciliation
@@ -91,7 +97,7 @@ spherewright_commit_reload_flight_checkpoint
 <a id="request-rules"></a>
 ## 请求规则
 
-受管存档、玩家、工厂读取要求活动 `sessionId`，绑定星球的请求还要求 `planetId`。正常操作始终限当前本地星球。实体检查额外允许明确选择当前受管恒星中已创建、身份验证的模拟驻留工厂，但从不创建或加载工厂。玩家读取仍使用当前 `localPlanetId`。
+受管存档、玩家、工厂读取要求活动 `sessionId`，绑定星球的请求还要求 `planetId`。普通地面操作限当前本地星球；飞行及停止飞行请求在太空过渡中保留各自约定的出发地绑定。实体检查额外允许明确选择当前受管恒星中已创建、身份验证的模拟驻留工厂，但从不创建或加载工厂。玩家读取仍使用当前 `localPlanetId`。
 
 检查使用 `objectId`，正数为已建实体，负数为预建造。零、缺失及 `Int32.MinValue` 拒绝；其他工具的 `entityId` 或 `storageEntityId` 不能替代。未完成或过期分页不证明不存在。
 
@@ -114,9 +120,17 @@ spherewright_commit_reload_flight_checkpoint
 <a id="voyager-visibility-and-route-previews"></a>
 ## Voyager 可见信息与航线预览
 
+原生补给方法 `spherewright_prepare_supply_mecha_warpers` / `spherewright_commit_supply_mecha_warpers` 映射到 `prepare_supply_mecha_warpers` / `commit_supply_mecha_warpers`。Prepare 使用 `PrepareSupplyMechaWarpersRequest`：当前受管 `sessionId` / `planetId`、完整玩家快照的新鲜 `expectedPlayerStateHash`、`count`（默认20）和 `stateHashVersion=1`。Count 必须等于 `min(20, fresh 包内 item1210 数量)>0`。受管玩家须存活、着地且空闲；原生舱须为单个空 `Filtered` 格，filter1210 / stack20，count/inc 为零且无禁用格。Prepare 绑定精确玩家/背包/舱身份、count/inc 与当前自动设置，不移动库存。
+
+补给 commit 复用 `CommitNormalActionRequest` 与既有协调器，使用精确 `planToken` 和 UUID `idempotencyKey`；没有公开通用 `commit_normal_action`。它只调用一次 `Mecha.AutoReplenishWarper`，保持 `autoReplenishWarper`，不调用 `UseWarper`。查询原 action 的 `mechaWarperSupplyReadback`：背包/舱 count/inc、自动设置、可空 after 字段 / `actualStored` / `nativeReturnedSuccess`、`readbackComplete` 和 `conservationVerified`。这是后续正常消耗前的原生同步调用边界；缺失证明保持未知，已接受、超时或结果未知的调用不得换键重做。
+
 `0.5` 只读工具 `spherewright_get_voyager_star_catalog` 和 `spherewright_preview_voyager_route` 分别映射 Bridge 方法 `get_voyager_star_catalog`、`preview_voyager_route`，均要求当前受管 session 和出发行星。它们观察原生探索可见性并计算有限航线预览；对许可视图，目录可沿正常星图路径请求 `StarData.RunScanningThread` / `PlanetData.RunScanThread`，可能生成合法可见扫描缓存，扫描未就绪仍保持未知。它不调用任意生成器，不创建远端工厂。这些读取不起飞、进入曲速、消耗燃料/翘曲器、保存、创建 checkpoint、读档或创建游戏 action。预览无 token，保持 `executable=false`；预算通过不代表飞行 commit 或实机验收。
 
 目录输入为 `sessionId`、`planetId`、可选 `limit`（1–32 颗恒星，默认 16）及 `stateHashVersion`（1）。航线额外要求 `destinationPlanetId`、`expectedPlayerStateHash` 和 `expectedCatalogStateHash`；默认 `maximumFlightGameTicks=36000`、`returnReserveGameTicks=18000`、`minimumCoreEnergyRatio=0.8`、`extraWarperReserve=1`。最大窗口是整个往返（7200–108000 游戏 tick），返程窗从中预留，去返程各须至少 3600 tick。核心比例须为 0.8–1.0 的有限值；额外翘曲器为 0–18 枚，在原生往返两枚之外预留。能量字段使用焦耳，功率使用瓦，距离明确分别给出米和光年；这些是保守预算边界，不是实测航时或消耗。
+
+合法可见恒星标记可使用 `destinationPlanetId=0` 和明确 `destinationStarId`，其行星/资源仍保持未知。`maximumWarpGameTicksPerLeg` 默认1800，至少180且不能超过任一单程预留窗口；`maximumArrivalOffsetMeters` 须为100000–3000000有限值，默认3000000。仅恒星距离预算包含该偏移，明确可见行星使用实际已知距离。`budgetBasis=finite_native_warp_duration_and_explicit_return_recharge_v2` 将有限曲速时长与总飞行窗口分开预算。`requiresReturnCoreRecharge=true` 要求返程出发前 fresh 读回核心达到 `returnCoreEnergyMinimumJoules`，同时保留已装燃料/翘曲器储备；单程缓冲不证明之后能充电或落地。
+
+预览可选非空 `journeyId` 选择精确受保护航程的回家单腿，并返回 `isReturnLeg=true`；目的地必须朝向原出发地。从原储备校核剩余单腿，包括一次原生进入曲速及 `extraWarperReserve`，不得要求再预留一轮母星至远端的新往返。不传 `journeyId` 则请求去程的往返预算；返程 prepare 同样须指定原 `journeyId`。
 
 两结果均保持 `prepared=false`、`executable=false`、`commitAllowedNow=false`，不含 `planToken`；MCP 拒绝声称执行权限的响应。`resourceVisibility=unknown`、null `resources` 或 null `planets` 不能转成已观察空集合/零；`resourceSummaryComplete` 和 `scanReady` 限定证据范围，显式观察到零仍保留零。`budgetComputed=false` 表示数值预算不可用，不是零成本航线；`budgetBasis` 标明保守计算依据，`budgetSufficient` 与执行权限分开。须保留独立能量/科技/可见性/翘曲器检查及结构化 `blockers`。
 
@@ -124,11 +138,22 @@ spherewright_commit_reload_flight_checkpoint
 
 资源可见性及预算字段的未知必须保留。隐藏或未观察资源不等于缺失，主题潜在资源不是已勘探矿脉；“出发星系缺失资源”须有合法完整探索证据。使用 fresh 目录/玩家绑定及当前原生科技、单位、距离、核心/燃料、翘曲器消耗和去返程储备。不可用证据应报阻塞或未知，不能作为零消耗或剩余容量；航线预览不能证明目的地可以安全落地。
 
-既有 flight/checkpoint 安全规则继续适用：取消、超时或断线后核销原 action，结果未知不得换键重放。飞行 checkpoint 只属于精确且符合条件的中断航程，成功到达或 primary 覆盖进度即退役，不得回滚较新主档已覆盖的进度。这些读取不授予恢复权限，也不增加跨星 commit；新增星际执行仍需单独实现原生控制器和 fresh prepare/commit/readback 门。
+既有 flight/checkpoint 安全规则继续适用：取消、超时或断线后核销原 action，结果未知不得换键重放。飞行 checkpoint 只属于精确且符合条件的中断航程，成功到达或 primary 覆盖进度即退役，不得回滚较新主档已覆盖的进度。这些读取不授予恢复权限，也不执行跨星 commit；有限执行使用下述独立原生方法及 fresh prepare/commit/readback 门。
 
 飞行 checkpoint ticket v2 复用受保护 `OwnedSaveRecoveryLease`，记录 `CheckpointFileFingerprint`，绑定完整文件及精确内嵌 owned 身份、原生版本、和平模式和保存 tick。Prepare 与 commit 均 fresh 重验，tick/mtime 相同不足以放行。Commit 持只读 lease 贯穿原生异步认领，最多五分钟，成功、失败、取消或 dispose 均释放。缺少此强证据的旧 v1 flight 票据拒绝使用，不会提升为新恢复权限；protected-primary 的确认/迁移门不变，也不声明已通过原生失败飞行验收。
 
 原生 dispatch 前先登记原 action/key，并持久记录 `ReloadPending` / `ReloadActionId`。进入原生加载后抛异常时，保留原 accepted action 为 `outcome_unknown` 及其 source lease/expectation，只核销原 action，不得换键。持久 pending 阻止新 reload 和普通写入。成功须证明精确 checkpoint 已在不同于 dispatch 来源的新 session 中认领，旧 checkpoint 标志不足以证明完成。核销后票据标记 `recovered` 并保留原完成结果；再次 reload 须有新一次绑定航程失败。
+
+<a id="bounded-voyager-execution-and-stop"></a>
+## 有限 Voyager 执行与停止
+
+开发方法 `prepare_voyager_flight` / `commit_voyager_flight` 复用既有行星间飞行协调器/checkpoint。Prepare 通过 `PrepareVoyagerFlightRequest`（`planetId`、`expectedRouteStateHash`、完整玩家快照的新鲜 `expectedPlayerStateHash`、`stateHashVersion=1`、可选 `journeyId`）绑定当前已审阅的一条航线及原生储备检查。空 `journeyId` 开始有限去程，返程必须指定同一受保护航程。Commit 使用 `CommitNormalActionRequest` 并明确要求 Voyager 模式；普通行星间 commit 明确要求普通模式且保留同星系守卫，两路由不能使用对方计划。
+
+prepare/commit 时原生控制钩子必须在过去两秒内观察到 tick。以短于 30 秒控制租约的间隔查询原飞行 action；只有绑定原 action 的读取才续此租约。租约到期或原生 tick 中断会锁定停止请求。原生退出曲速与普通制动须在原定 1,800 tick／30 秒清理上限内收敛，暂停不延长墙钟期限，停止未获证明仍是未知。同进程检查点恢复计入加载前捕获的 source tick 之前的实际耗时；真实进程退出后若 source tick 未知，精确恢复会保守核销原航程全部剩余时间、标明保守计账，并禁止据此再开返程。原绝对期限与物料底线不变。
+
+查询原 action 的 `voyagerFlightReadback`：`journeyId`、`phase`、起终点、可空所选/实际行星及实际恒星、原生曲速状态/命令、`entryAttempted`、`nativeExitObserved`、舱内/包内/已消耗翘曲器、焦耳储备、`flightDeadlineGameTick` 和 `journeyDeadlineUtc`。根 action 的 `planetId` 始终保留出发地，包括无本地行星时。到达可见恒星范围不证明落地；单程成功不等于完整往返/资源/物流/故障验收。跨 action/session 保留持久返程储备与绝对航程期限；Host 中断不使它们重置。
+
+`prepare_cancel_voyager_flight` 使用 `PrepareCancelVoyagerFlightRequest`，绑定原飞行出发地 `planetId`、精确 `actionId` 和 `stateHashVersion=1`；`commit_cancel_voyager_flight` 使用同一提交合约。它在原航程锁存 `stopRequested`，不创建第二个移动 writer。查询原飞行，核原生退出曲速、刹停及真实终态；停止回执本身不证明飞行稳定或恢复完成。未知结果保留原 key/action；checkpoint reload 为独立受保护操作，不得回滚较新主档。
 
 <a id="detail-only-belt-cargo-observation-04-development-slice"></a>
 <a id="factory-cargo-material-and-fuel-observations"></a>
