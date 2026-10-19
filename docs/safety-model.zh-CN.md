@@ -58,7 +58,15 @@ Move 校验有限地表目标，不证明路径无碰撞。有电移动在 180 �
 
 只中止自己拥有的精确原生命令。恢复使用新结构化障碍证据、一次有界短逃逸或最多四个正交探针，每次都独立 prepare/commit/终态校验。禁止原目标重放、内部寻路、传送或注入恢复燃料。到达必须证明要求的原生移动状态，不能只靠距离。
 
-`allowPassiveDrift` 仅用于 Move，默认 false。它使用最近可信外部检查，要求闲置、存活、在星球上的 Drift，速度 ≤0.15 m/s，核心容量与既有哈希状态完全不变，在两单调秒内总位移 ≤0.05 m。它不刷新基线；另一次外部玩家读取使绑定失效。原生地表、能量、命令、停滞及干地 Walk 证明仍必须满足。
+`allowPassiveDrift` 仅用于 Move，默认 false。它使用最近可信外部检查，要求闲置、存活、在星球上的 Drift，速度 ≤0.15 m/s，核心容量与既有哈希状态完全不变，在两单调秒内总位移 ≤0.05 m。它不刷新基线；另一次外部玩家读取使绑定失效。原生地表、能量、命令、停滞及干地 Walk 证明仍必须满足。此准入选项与下述运行中有界 Walk/Drift 分支分开。
+
+Voyager 本地 Move/Harvest 复用普通 RTS 并保留无水快路；有限能耗分支允许运行中有界 Walk/Drift，仍拒绝手动输入/惯性、排队订单、待跳跃、导航、快速旅行、曲速及 Fly。精确 owned 绑定与 Native pre-player 钩子继续必需。水平、推力及后台能量覆盖有限工作与13个付费 Native 游戏停止 tick，保留原核心、loaded 返程、原生翘曲器、UTC/tick 和观察租约储备。Move/Harvest 停止上限为13个付费游戏 tick 或独立1秒墙钟，先到为止；UTC 准入留至少1秒清理余量。墙钟上限只是等待期限，不是物理停稳定理，也不折算成60个付费 tick；原 action/journey 期限绝不重开。正常成功要求实际干地 Walk 和真实 Native 零速度，RTS 归零或 Pause 不足。这是在该分支内以有限能耗替代海洋排除门，不是采样或全域干地几何证书；`nativePhysics` 仍为 safetyCertified=false 的只读观察，不选择或授权该分支。
+
+成功远端落地后，同一原 journey 继续守护闲置能耗与原返程时钟，直至已预算的本地动作、受控施工或真实返航接管。失去闲置 Walk、成本或原返程时钟证据时，走精确 owned 绑定的 Pause/quarantine 分支；已成功的飞行或 Move 仍保留成功，后续闲置保护不改写其原结果。 Host 卸载或默认 Save 重载若丢失内存中的 landed-controller 绑定，不得静默重建资格；只对同一 owned 世界 Pause/quarantine，并拒绝本地/结构化施工，保留 checkpoint 与确认门。本子集支持同一 Host 内出航、本地作业和正常返航；物流保存恢复续运安排在回母星且 journey 闭合后，远端在途冷恢复尚未验证。
+
+守卫失败、停止/尾返上限到期或调用者/Host 观察丢失时，有限能耗的失败保护仅在原 owned 绑定仍精确匹配时调用正常 GameMain.Pause。当前 LogicFrame 仍可能跑完 player 与无人机的一整个 tick，因此必须支付并保留该整 tick 的储备；只有后续 Native 游戏能耗/派发 tick 冻结。Pause 不证明物理空闲或尾返成功。保留未核销的 outcome_unknown、quarantine 及精确原 action/build/checkpoint，不自动恢复、Load 或重放；绝不暂停替换后的另一世界。Host 真正卸载时先暂停精确 owned 的受保护世界，再拆除钩子；普通 MCP 断线不卸载 DSP 内常驻 Plugin，租约检查继续。暂停不续原墙钟期限。新源码仍须完整 Plugin/回归、准确 SHA CI、Lab 锁/采用、冷部署及实机检查后才计运行信用；不新增公开工具或协议版本。
+
+受控施工仍在固定锚点保持 Walk，并保留独立原生无人机尾部预算；Drift/锚损失停派发并走 Pause/unknown，不声称尾返成功。已知的正常尾返仍须精确工厂后续 Native 轮次、原预发缓存为空及全部 owned 无人机空闲证据。本维护源码适配仍待完整 Plugin/回归、准确 SHA CI、Lab 采用、冷安装与实机资格，历史2/3验收及72工具/1资源接口不变。
 
 <a id="ownership-creation-import-and-journal"></a>
 ## 所有权、创建、导入与 Journal

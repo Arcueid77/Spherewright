@@ -522,6 +522,11 @@ internal sealed partial class NormalGameActionCoordinator
 
     private void MarkVoyagerOutcomeUnknown(ActionRecord action, string message)
     {
+        // A rejected return launch may leave durable phase=return before any
+        // Native controller took over. The remote idle owner cannot guard that
+        // anomalous phase; freeze before further checkpoint/accounting I/O.
+        if (action.Plan.VoyagerReturnLeg && !action.VoyagerNativeLaunchStarted)
+            message += FreezeNativeLocalFailureEnergy(VoyagerBindingMatches(action.Plan));
         action.VoyagerOutcomeUnknown = true;
         action.State = NormalActionStates.OutcomeUnknown;
         action.Terminal = true;
@@ -638,6 +643,8 @@ internal sealed partial class NormalGameActionCoordinator
         if (journey.Phase == "home_awaiting_save" && plan.ActionKind == NormalActionKinds.Save) return null;
         if (journey.Phase != "remote_landed" || journey.RemotePlanetId != plan.PlanetId)
             return Stale("The active Voyager action/checkpoint must be reconciled before unrelated writes.");
+        if (!VoyagerRemoteIdleBindingMatches())
+            return Stale("Remote local work requires this live landed-controller idle binding; a remote Host/save reload is not silently recertified.");
         if (plan.ActionKind == NormalActionKinds.Refuel || plan.ActionKind == NormalActionKinds.Save) return null;
         var immediate = plan.ActionKind == NormalActionKinds.Transfer || plan.ActionKind == NormalActionKinds.LogisticsStationFleetTransfer
             || plan.ActionKind == NormalActionKinds.ConfigureBuilding
@@ -667,7 +674,11 @@ internal sealed partial class NormalGameActionCoordinator
             tailEnergy = walk.StopEnergyJoules!.Value;
         }
         var nowUtc = DateTimeOffset.UtcNow;
-        var localDeadlineUtc = VoyagerLocalActionBudgetPolicy.WorkDeadlineUtc(nowUtc, journey.DeadlineUtc,
+        // Native movement energy is counted in ticks; dynamic UPS means its
+        // cleanup wall allowance must be reserved independently, not as13/60s.
+        var cleanupWallSlack = Math.Max(0d, VoyagerLocalStopWallSeconds - tailTicks / 60d);
+        var localDeadlineUtc = VoyagerLocalActionBudgetPolicy.WorkDeadlineUtc(nowUtc,
+            journey.DeadlineUtc.AddSeconds(-cleanupWallSlack),
             workTicks, journey.ReturnReserveGameTicks, tailTicks);
         if (!localDeadlineUtc.HasValue) return Stale("The original return wall-time reserve leaves no finite local work window.");
         var budget = VoyagerLocalActionBudgetPolicy.Evaluate(new VoyagerLocalActionBudgetFacts
@@ -836,6 +847,12 @@ internal sealed partial class NormalGameActionCoordinator
             action.ReconciledFromOutcomeUnknown = true;
             action.ReconciledAtGameTick = GameMain.gameTick;
         }
+        if (!action.Plan.VoyagerReturnLeg)
+        {
+            _voyagerRemoteIdleOwner = action;
+            _voyagerRemoteIdleScene = CaptureNativeLocalWalkScene();
+        }
+        else { _voyagerRemoteIdleOwner = null; _voyagerRemoteIdleScene = null; }
         action.VoyagerLandingPendingPersistence = false;
         action.State = NormalActionStates.Completed;
         action.Terminal = true;

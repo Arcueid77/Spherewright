@@ -86,6 +86,8 @@ internal sealed partial class NormalGameActionCoordinator
 
     private BridgeError? ValidateStructuredConstructionBudget(NormalActionPlanPayload plan)
     {
+        if (!VoyagerRemoteIdleBindingMatches())
+            return Stale("Structured remote work requires this live landed-controller idle binding; a remote Host/save reload is not silently recertified.");
         var build = plan.BlueprintState!;
         var journey = _flightCheckpoints.VoyagerJourney;
         var player = GameMain.mainPlayer;
@@ -188,7 +190,8 @@ internal sealed partial class NormalGameActionCoordinator
         var build = CloneBlueprintState(action.Plan.BlueprintState!);
         var player = GameMain.mainPlayer;
         var factory = GameMain.data.localLoadedPlanetFactory;
-        if (!ConstructionPlayerIdle(player) || !NativeLocalWalkSceneProved(player, action.Plan.VoyagerLocalWalkScene))
+        if (!ConstructionPlayerIdle(player) || !NativeLocalWalkSceneProved(player, action.Plan.VoyagerLocalWalkScene,
+                finiteWaterCostWithNativePause: true))
         { Fail(action, "The exact Native stationary/pending-jump condition changed before structured start; no create occurred."); return; }
         var reserve = action.Plan.ConstructionReserve!;
         var oldControl = build.ConstructionControl;
@@ -279,7 +282,8 @@ internal sealed partial class NormalGameActionCoordinator
         foreach (var action in _actions.ActiveValues.Where(a => !a.Terminal && IsStructuredConstruction(a.Plan)
                      && a.Plan.ActionKind != NormalActionKinds.CancelBlueprintBuild).ToArray())
         {
-            if (ConstructionReferencesMatch(action) && NativeWalkModeIsBounded(action.ConstructionBinding!.Player, stationary: true, action.Plan.VoyagerLocalWalkScene)
+            if (ConstructionReferencesMatch(action) && NativeWalkModeIsBounded(action.ConstructionBinding!.Player, stationary: true, action.Plan.VoyagerLocalWalkScene,
+                    finiteWaterCostWithNativePause: true)
                 && ConstructionHoldOwned(action)) continue;
             // Catch an already scheduled jump before Player.GameTick can debit
             // it. Never clear user input/Native jump or claim that an external
@@ -341,9 +345,11 @@ internal sealed partial class NormalGameActionCoordinator
                 else if (build.Objects.All(o => o.State == BlueprintObjectStates.Completed))
                     RequestStructuredConstructionStop(action, "construction_complete_draining", false, false);
             }
+            if (action.Terminal) return;
             if (control.StopReason is not null)
             {
                 VerifyStructuredConstructionDrain(action);
+                if (action.Terminal) return;
                 if (!TryObserveOwnedConstructionDrones(factory, player.mecha.constructionModule, out var idle, out _))
                 { action.ConstructionStopUnknown = true; idle = false; }
                 if (idle && !player.mecha.constructionModule.droneEnabled && blockers.Count == 0
@@ -410,14 +416,20 @@ internal sealed partial class NormalGameActionCoordinator
 
     private void RequestStructuredConstructionStop(ActionRecord action, string reason, bool unknown, bool bindingLost)
     {
-        if (action.BlueprintBuild?.ConstructionControl is not { } control) return;
+        if (action.Terminal || action.BlueprintBuild?.ConstructionControl is not { } control) return;
         action.ConstructionStopUnknown |= unknown;
         control.BindingLost |= bindingLost;
         if (bindingLost) action.ConstructionReserveProofValid = false;
+        // A lost anchor/mode cannot inherit the fixed-anchor drone tail.
+        // Freeze first, before dispatch bookkeeping or persistence can fail.
+        if (bindingLost) FreezeNativeLocalFailureEnergy(ConstructionReferencesMatch(action));
         var stopTick = ConstructionReferencesMatch(action) && GameMain.gameTick >= control.StartedAtGameTick
             ? GameMain.gameTick : action.ConstructionLastNativeTick;
         if (!control.RequestStop(reason, Math.Max(control.StartedAtGameTick, stopTick), DateTimeOffset.UtcNow, bindingLost))
+        {
+            if (bindingLost) FinishStructuredConstructionUnknown(action);
             return; // Original cleanup limits never renew.
+        }
         if (ConstructionReferencesMatch(action))
         {
             var binding = action.ConstructionBinding!;
@@ -431,6 +443,7 @@ internal sealed partial class NormalGameActionCoordinator
         if (!_blueprints.TryPut(action.BlueprintBuild)) action.ConstructionStopUnknown = true;
         action.State = NormalActionStates.WaitingForGame;
         action.Message = "The original structured batch stopped new submissions/ordinary drone dispatch; physical idle and exact topology are still pending: " + reason;
+        if (bindingLost) FinishStructuredConstructionUnknown(action);
     }
 
     private void FinishStructuredConstructionIdle(ActionRecord action)
@@ -472,12 +485,14 @@ internal sealed partial class NormalGameActionCoordinator
     {
         if (action.Terminal) return;
         var build = action.BlueprintBuild!; var control = build.ConstructionControl!;
+        var exact = ConstructionReferencesMatch(action);
+        var freeze = FreezeNativeLocalFailureEnergy(exact);
         if (control.Phase != "interrupted") control.Phase = "quarantined";
         action.ConstructionReserveProofValid = false;
         build.Stop("outcome_unknown"); _blueprints.TryPut(build);
         action.State = NormalActionStates.OutcomeUnknown; action.Terminal = true; action.Succeeded = false;
         action.CompletedAtGameTick = action.ConstructionLastNativeTick;
-        action.Message = "The original structured batch has not proved finite physical drain/reserve/binding. Keep its exact build/action; no pending object may be recreated. " + control.StopReason;
+        action.Message = "The original structured batch has not proved finite physical drain/reserve/binding. Keep its exact build/action; no pending object may be recreated. " + control.StopReason + freeze;
         action.OriginalOutcomeMessage = action.Message;
         if (ConstructionReferencesMatch(action))
         {
@@ -518,7 +533,7 @@ internal sealed partial class NormalGameActionCoordinator
 
     private void CheckStructuredConstructionWatchdogOnMainThread()
     {
-        foreach (var action in _actions.ActiveValues.Where(a => IsStructuredConstruction(a.Plan)
+        foreach (var action in _actions.ActiveValues.Where(a => !a.Terminal && IsStructuredConstruction(a.Plan)
                      && a.Plan.ActionKind != NormalActionKinds.CancelBlueprintBuild).ToArray())
         {
             if (action.Terminal || action.BlueprintBuild?.ConstructionControl is not { } control) continue;
@@ -538,7 +553,7 @@ internal sealed partial class NormalGameActionCoordinator
 
     public void StopStructuredConstructionForHostShutdownOnMainThread()
     {
-        foreach (var action in _actions.ActiveValues.Where(a => IsStructuredConstruction(a.Plan)
+        foreach (var action in _actions.ActiveValues.Where(a => !a.Terminal && IsStructuredConstruction(a.Plan)
                      && a.Plan.ActionKind != NormalActionKinds.CancelBlueprintBuild).ToArray())
         {
             RequestStructuredConstructionStop(action, "construction_host_shutdown_pending", true, true);
@@ -579,7 +594,11 @@ internal sealed partial class NormalGameActionCoordinator
             && NativeConstructionDroneReservePolicy.CanFundNativeTail(player.mecha.coreEnergy,
                 CalculateAvailableFlightEnergy(player.mecha), journey.ReturnEnergyFloorJoules, remainingEnergy)
             && CountVoyagerWarpers(player.mecha.warpStorage) >= 1 + journey.ExtraWarperReserve;
-        if (!valid) { action.ConstructionStopUnknown = true; control.BindingLost = true; }
+        if (!valid)
+        {
+            action.ConstructionStopUnknown = true; control.BindingLost = true;
+            FinishStructuredConstructionUnknown(action);
+        }
         action.ConstructionReserveProofValid &= valid;
     }
 

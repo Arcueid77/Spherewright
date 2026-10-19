@@ -16,7 +16,8 @@ internal sealed partial class NormalGameActionCoordinator
         return new NativeLocalWalkSceneBinding(planet, planet.physics, simulator);
     }
 
-    private static bool NativeLocalWalkSceneProved(Player player, NativeLocalWalkSceneBinding? expected)
+    private static bool NativeLocalWalkSceneProved(Player player, NativeLocalWalkSceneBinding? expected,
+        bool finiteWaterCostWithNativePause = false)
     {
         var b = expected ?? CaptureNativeLocalWalkScene();
         if (b is null || !b.MatchesCurrent() || !ReferenceEquals(player.planetData, b.Planet)
@@ -24,6 +25,11 @@ internal sealed partial class NormalGameActionCoordinator
             || !player.gameObject.scene.IsValid() || !player.gameObject.scene.isLoaded
             || !player.gameObject.scene.GetPhysicsScene().Equals(UnityEngine.Physics.defaultPhysicsScene)
             || !VoyagerLocalWalkReservePolicy.WaterRayFitsQueriedBall(b.Radius, player.position.magnitude)) return false;
+        // This alternative does not certify dry terrain or a stop-position
+        // region. Its callers must pay the entire possible Walk/Drift tick,
+        // including thrust, and freeze future Native energy on an unproved
+        // tail with Pause. Successful completion still requires actual Walk.
+        if (finiteWaterCostWithNativePause) return true;
         // The Native local planet's own water collider is either absent or
         // ice layer9. Refuse an ordinary layer4 ocean even while disabled;
         // its normal local-planet lifecycle can enable it later. An Ice name
@@ -33,6 +39,46 @@ internal sealed partial class NormalGameActionCoordinator
         // Repeat at every pre-player/tail observation; no loaded-null shortcut,
         // position prediction, scene mutation, scan or Native update occurs.
         return !Physics.CheckSphere(Vector3.zero, b.Radius + 40f, 16, QueryTriggerInteraction.Collide);
+    }
+
+    private static double? NativeLocalGravityUpperBound(Player player)
+    {
+        var star = GameMain.localStar;
+        if (star?.planets is null || star.planetCount < 1 || star.planetCount > 64
+            || star.planets.Length < star.planetCount || !ReferenceEquals(player.planetData?.star, star)
+            || !FiniteNativePosition(player.uPosition) || !FiniteNativePosition(star.uPosition)) return null;
+        var radii = new double[star.planetCount];
+        for (var i = 0; i < radii.Length; i++)
+        {
+            var planet = star.planets[i];
+            if (planet is null || !ReferenceEquals(planet.star, star) || !FiniteNativePosition(planet.uPosition)) return null;
+            radii[i] = planet.realRadius;
+        }
+        return VoyagerLocalWalkReservePolicy.CalculateNativeGravityUpperBound(radii, star.mass, star.physicsRadius);
+    }
+
+    private static bool FiniteNativePosition(VectorLF3 p) =>
+        !double.IsNaN(p.x) && !double.IsInfinity(p.x) && Math.Abs(p.x) <= 1e15d
+        && !double.IsNaN(p.y) && !double.IsInfinity(p.y) && Math.Abs(p.y) <= 1e15d
+        && !double.IsNaN(p.z) && !double.IsInfinity(p.z) && Math.Abs(p.z) <= 1e15d;
+
+    private static string FreezeNativeLocalFailureEnergy(bool exactOwnedBinding)
+    {
+        // Pause is an ordinary DSP control, never a velocity write or a
+        // physical-stop certificate. At task501 this LogicFrame may still
+        // finish: admission reserves that whole Player/construction tick.
+        // Subsequent FixedUpdate calls return before another LogicFrame.
+        // Never pause a replacement world or automatically Resume it.
+        if (!exactOwnedBinding || !GameMain.isRunning) return string.Empty;
+        try
+        {
+            GameMain.Pause();
+            return GameMain.isPaused
+                ? " Native Pause is verified; this LogicFrame may finish, then further Native energy is frozen. Physical idle remains unproved; do not automatically Resume or replay."
+                : " Native Pause could not be verified; preserve the original failure for intervention.";
+        }
+        catch (Exception)
+        { return " Native Pause failed; preserve the original failure for intervention."; }
     }
 
     private sealed class NativeLocalWalkSceneBinding

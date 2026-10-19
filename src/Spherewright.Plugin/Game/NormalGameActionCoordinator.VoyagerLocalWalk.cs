@@ -8,6 +8,83 @@ internal sealed partial class NormalGameActionCoordinator
 {
     public bool VoyagerLocalPrePlayerTickAvailable { get; set; }
     public DateTimeOffset VoyagerLocalPrePlayerObservedAtUtc { get; set; }
+    private ActionRecord? _voyagerRemoteIdleOwner;
+    private NativeLocalWalkSceneBinding? _voyagerRemoteIdleScene;
+    // A separate patience bound, not a 13/60s prediction of physics motion.
+    private const double VoyagerLocalStopWallSeconds = 1d;
+
+    private bool VoyagerRemoteIdleBindingMatches()
+    {
+        var owner = _voyagerRemoteIdleOwner;
+        var journey = _flightCheckpoints.VoyagerJourney;
+        var b = owner?.Plan.VoyagerBinding;
+        return owner is not null && b is not null && journey?.Phase == "remote_landed"
+            && journey.JourneyId == owner.Plan.VoyagerJourneyId
+            && VoyagerOwnedJourneyMatchesCurrentSession(journey, owner.SessionId)
+            && ReferenceEquals(GameMain.data, b.World) && ReferenceEquals(GameMain.mainPlayer, b.Player)
+            && ReferenceEquals(b.Player.controller, b.Controller) && ReferenceEquals(b.Player.mecha, b.Mecha)
+            && GameMain.localPlanet is { } planet && planet.id == journey.RemotePlanetId
+            && ReferenceEquals(b.Player.planetData, planet) && ReferenceEquals(b.Player.factory, planet.factory);
+    }
+
+    private void GuardVoyagerRemoteIdleOnMainThread(bool stoppingHost = false)
+    {
+        // The successful outbound remains successful. Its existing journey
+        // continues owning idle energy until a budgeted controller takes over.
+        // A terminal local order alone cannot guarantee the next tick stays dry.
+        if (GameMain.isPaused) return;
+        if (!VoyagerRemoteIdleBindingMatches())
+        {
+            // A remote primary/Host reload has no in-memory landed-controller
+            // handoff. Do not silently recertify it or borrow an old action.
+            var retained = _flightCheckpoints.VoyagerJourney;
+            if (retained?.Phase == "remote_landed" && _sessions.SessionId is { } sessionId
+                && VoyagerOwnedJourneyMatchesCurrentSession(retained, sessionId)
+                && GameMain.mainPlayer?.planetId == retained.RemotePlanetId
+                && !string.IsNullOrEmpty(retained.ActiveActionId))
+            {
+                var reason = "The original remote journey has no current landed-controller idle binding; remote local work is not recertified after reload."
+                    + FreezeNativeLocalFailureEnergy(true);
+                _sessions.QuarantineWritesOnMainThread(retained.ActiveActionId, reason);
+            }
+            return;
+        }
+        var owner = _voyagerRemoteIdleOwner!;
+        var journey = _flightCheckpoints.VoyagerJourney!;
+        if (!stoppingHost && _actions.ActiveValues.Any(a => !a.Terminal
+            && (IsVoyagerLocalOrder(a) && a.Plan.VoyagerLocalJourneyId == journey.JourneyId
+                || IsStructuredConstruction(a.Plan) && a.Plan.BlueprintState?.StructuredConstruction?.JourneyId == journey.JourneyId)))
+            return; // Only controllers with the full current-tick reserve.
+        var ready = false;
+        // Host teardown must attempt Pause before any cost capture can throw.
+        if (!stoppingHost) try
+        {
+        var player = owner.Plan.VoyagerBinding!.Player;
+        var reserve = CaptureVoyagerLocalWalkReserve(player, player.currentOrder is null, _voyagerRemoteIdleScene);
+        ready = reserve.Proved && player.currentOrder is null
+            && player.movementState == EMovementState.Walk && player.speed <= .1f
+            && (journey.DeadlineUtc - DateTimeOffset.UtcNow).TotalSeconds
+                > journey.ReturnReserveGameTicks / 60d + VoyagerLocalStopWallSeconds + 1d / 60d
+            && VoyagerLocalWalkReservePolicy.CanFund(player.mecha.coreEnergy, CalculateAvailableFlightEnergy(player.mecha),
+                journey.ReturnEnergyFloorJoules, reserve.PerNativeTickEnergyJoules, VoyagerLocalWalkReservePolicy.StopGameTicks)
+            && VoyagerLocalActionBudgetPolicy.Evaluate(new VoyagerLocalActionBudgetFacts
+            {
+                ExactRemoteBinding = true, NativePlayerIdle = true, CurrentGameTick = GameMain.gameTick,
+                LastLandedGameTick = journey.LastLandedGameTick, SpentGameTicks = journey.SpentGameTicks,
+                MaximumGameTicks = journey.MaximumGameTicks, ReturnReserveGameTicks = journey.ReturnReserveGameTicks,
+                WorkGameTicks = 1, TailGameTicks = VoyagerLocalWalkReservePolicy.StopGameTicks,
+                NowUtc = DateTimeOffset.UtcNow, JourneyDeadlineUtc = journey.DeadlineUtc,
+                AvailableLoadedEnergyJoules = CalculateAvailableFlightEnergy(player.mecha), LockedReturnFloorJoules = journey.ReturnEnergyFloorJoules,
+                WorkPowerUpperWatts = reserve.WorkPowerUpperWatts, TailAndNextTickEnergyJoules = reserve.StopEnergyJoules ?? double.NaN,
+                NativeWarperCount = CountVoyagerWarpers(player.mecha.warpStorage), OriginalExtraWarperReserve = journey.ExtraWarperReserve,
+            }).Proved;
+        }
+        catch (Exception) { /* An unavailable cost observation cannot skip the energy freeze. */ }
+        if (ready) return;
+        var message = "The completed outbound's exact remote idle/return reserve is no longer proved. Its successful flight is retained; the original journey requires intervention."
+            + FreezeNativeLocalFailureEnergy(VoyagerRemoteIdleBindingMatches());
+        _sessions.QuarantineWritesOnMainThread(owner.ActionId, message);
+    }
 
     private static bool IsVoyagerLocalOrder(ActionRecord a) => a.Plan.VoyagerLocalDeadlineGameTick.HasValue
         && (a.ActionKind == NormalActionKinds.Move || a.ActionKind == NormalActionKinds.Harvest);
@@ -25,15 +102,24 @@ internal sealed partial class NormalGameActionCoordinator
         // the movement enum: navigation's DetermineLowVelocity can set Fly,
         // UpdateJump can schedule jump energy or set Fly, and a queued order
         // can start again after Abort. Raw input is checked before GetInput.
-        var subset = exactOrder && NativeWalkModeIsBounded(player, stationary: false, scene)
+        var subset = exactOrder && NativeWalkModeIsBounded(player, stationary: false, scene,
+                finiteWaterCostWithNativePause: true, allowDrift: true)
             && player.orders.orderCount == 0 && BuildUiIsIdle(player) && VoyagerMechaWorkIdle(player)
             && TryObserveOwnedConstructionDrones(player.factory, m.constructionModule, out var dronesIdle, out _) && dronesIdle;
+        return EvaluateNativeLocalMovementCost(player, subset);
+    }
+
+    private static VoyagerLocalWalkReserve EvaluateNativeLocalMovementCost(Player player, bool modeTransitionsExcluded)
+    {
+        var c = player.controller; var w = c.actionWalk; var m = player.mecha;
         return VoyagerLocalWalkReservePolicy.Evaluate(new VoyagerLocalWalkFacts
         {
-            ModeTransitionsExcluded = subset, WalkSpeed = m.walkSpeed, WalkPowerWatts = m.walkPower,
+            ModeTransitionsExcluded = modeTransitionsExcluded, WalkSpeed = m.walkSpeed, WalkPowerWatts = m.walkPower,
             MiningPowerWatts = m.miningPower, OtherWorkPowerWatts = m.replicatePower + m.researchPower,
             ReactorConsumptionRatio = m.reactorPowerConsRatio, RtsSpeed = w.rtsVelocity.magnitude,
             ManualSpeed = w.moveVelocity.magnitude, SoftLandingRecover = c.softLandingRecover,
+            IncludePotentialWaterDrift = true, NativeThrustPowerPerAcceleration = m.thrustPowerPerAcc,
+            NativeGravityUpperBound = NativeLocalGravityUpperBound(player),
             IndependentMechaCosts = CaptureNativeMechaBackgroundCosts(player),
         });
     }
@@ -54,27 +140,34 @@ internal sealed partial class NormalGameActionCoordinator
         };
     }
 
-    private static bool NativeWalkModeIsBounded(Player player, bool stationary, NativeLocalWalkSceneBinding? scene = null)
+    private static bool NativeWalkModeIsBounded(Player player, bool stationary, NativeLocalWalkSceneBinding? scene = null,
+        bool finiteWaterCostWithNativePause = false, bool allowDrift = false)
     {
         var c = player.controller; var w = c.actionWalk;
         var vertical = c.vertSpeed;
         return player.isAlive && !GameMain.isPaused && !GameMain.data.disableController && !GameMain.data.guideRunning
-            && player.movementState == EMovementState.Walk && c.movementStateInFrame == EMovementState.Walk
+            && (player.movementState == EMovementState.Walk || allowDrift && player.movementState == EMovementState.Drift)
+            && (c.movementStateInFrame == EMovementState.Walk || allowDrift && c.movementStateInFrame == EMovementState.Drift)
             && !player.warpCommand && player.warpState == 0f && !player.navigation.navigating && !player.navigation.hasTask
-            && !c.actionSail.fastTravelling && NativeLocalWalkSceneProved(player, scene)
+            && !c.actionSail.fastTravelling && NativeLocalWalkSceneProved(player, scene, finiteWaterCostWithNativePause)
             && NativeMechaBackgroundCostPolicy.IndependentCombatCoreDebitsExcluded(CaptureNativeMechaBackgroundCosts(player))
             && LocalRawMovementInputIdle()
             && c.input0.sqrMagnitude == 0f && c.input1.sqrMagnitude == 0f
             && w.jumpDelayTick <= 0 && w.flyUpChance == 0f && w.moveVelocity.sqrMagnitude == 0f
+            && (!finiteWaterCostWithNativePause || c.actionDrift.moveVelocity.sqrMagnitude == 0f
+                && !float.IsNaN(c.actionDrift.rtsVelocity.magnitude) && !float.IsInfinity(c.actionDrift.rtsVelocity.magnitude)
+                && c.actionDrift.rtsVelocity.magnitude <= player.mecha.walkSpeed + .01f)
             && (!stationary || w.rtsVelocity.sqrMagnitude == 0f)
-            && !float.IsNaN(vertical) && !float.IsInfinity(vertical) && Math.Abs(vertical) <= .01f
+            && !float.IsNaN(vertical) && !float.IsInfinity(vertical) && (allowDrift || Math.Abs(vertical) <= .01f)
             && c.overridePlayerSpeed >= 0f && c.overridePlayerSpeed <= .01f
             && c.softLandingRecover >= 0f && c.softLandingRecover <= 1f
-            && Physics.CheckSphere(player.position + player.position.normalized * .15f, .35f, 15873);
+            && (allowDrift && player.movementState == EMovementState.Drift
+                || Physics.CheckSphere(player.position + player.position.normalized * .15f, .35f, 15873));
     }
 
     public void UpdateVoyagerLocalPrePlayerTickOnMainThread()
     {
+        GuardVoyagerRemoteIdleOnMainThread();
         foreach (var action in _actions.ActiveValues.Where(a => !a.Terminal && IsVoyagerLocalOrder(a)).ToArray())
         {
             try
@@ -99,11 +192,14 @@ internal sealed partial class NormalGameActionCoordinator
                     || !VoyagerLocalWalkReservePolicy.CanFund(player.mecha.coreEnergy,
                     CalculateAvailableFlightEnergy(player.mecha), journey.ReturnEnergyFloorJoules,
                     reserve.PerNativeTickEnergyJoules, VoyagerLocalWalkReservePolicy.StopGameTicks))
-                    FinishVoyagerLocalOrderUnknown(action, "The next Native movement/mining tick and finite owned-order stop tail are unproved; no Fly/jump/manual-input certificate exists.");
+                    FinishVoyagerLocalOrderUnknown(action, "The next complete Native Walk/Drift tick and finite owned-order stop allowance are unproved; Fly/jump/manual input remain excluded.");
             }
             catch (Exception)
             { FinishVoyagerLocalOrderUnknown(action, "The original pre-player local-action observation failed; preserve its original action and evidence."); }
         }
+        // A just-completed order no longer owns the upcoming Player tick.
+        // Revalidate the idle handoff now, before601 can enter paid Drift.
+        GuardVoyagerRemoteIdleOnMainThread();
     }
 
     private void RequestVoyagerLocalOrderStop(ActionRecord action, bool succeeded, string message)
@@ -121,12 +217,11 @@ internal sealed partial class NormalGameActionCoordinator
         { FinishVoyagerLocalOrderUnknown(action, "The original order stopped without a proved remaining Native Walk tail. " + message); return; }
         AbortPlayerOrderIfOwned(action, forLocalNativeStop: true); // Empty queue proved; Native velocity is never written.
         action.VoyagerLocalStopDeadlineTick = GameMain.gameTick + VoyagerLocalWalkReservePolicy.StopGameTicks;
-        action.VoyagerLocalStopDeadlineUtc = DateTimeOffset.UtcNow.AddTicks((long)Math.Ceiling(
-            VoyagerLocalWalkReservePolicy.StopGameTicks * (double)TimeSpan.TicksPerSecond / 60d));
+        action.VoyagerLocalStopDeadlineUtc = DateTimeOffset.UtcNow.AddSeconds(VoyagerLocalStopWallSeconds);
         action.VoyagerLocalStopSucceeded = succeeded;
         action.VoyagerLocalStopMessage = message;
         action.State = NormalActionStates.WaitingForGame;
-        action.Message = "The exact owned order stopped; its original13-tick/UTC Native RTS tail still needs real zero-velocity readback.";
+        action.Message = "The exact owned order stopped; its original13-tick/UTC allowance still needs real grounded Walk and zero-velocity readback. Unproved completion freezes Native energy.";
     }
 
     private void ObserveVoyagerLocalOrderDrain(ActionRecord action)
@@ -143,7 +238,8 @@ internal sealed partial class NormalGameActionCoordinator
             || CalculateAvailableFlightEnergy(player.mecha) < journey.ReturnEnergyFloorJoules
             || CountVoyagerWarpers(player.mecha.warpStorage) < 1 + journey.ExtraWarperReserve)
         { FinishVoyagerLocalOrderUnknown(action, "The original Native tail left its exact ordinary Walk/owned-world envelope."); return; }
-        if (player.controller.actionWalk.rtsVelocity.sqrMagnitude == 0f && player.controller.actionWalk.moveVelocity.sqrMagnitude == 0f
+        if (player.movementState == EMovementState.Walk && player.controller.movementStateInFrame == EMovementState.Walk
+            && player.controller.actionWalk.rtsVelocity.sqrMagnitude == 0f && player.controller.actionWalk.moveVelocity.sqrMagnitude == 0f
             && player.speed <= .1f)
         {
             action.VoyagerLocalCompleting = true;
@@ -163,6 +259,7 @@ internal sealed partial class NormalGameActionCoordinator
     {
         if (action.Terminal) return;
         var exact = VoyagerLocalReferencesMatch(action);
+        message += FreezeNativeLocalFailureEnergy(exact);
         if (exact)
         {
             // Do not pop a user's queued order or replace an external order.
@@ -194,6 +291,7 @@ internal sealed partial class NormalGameActionCoordinator
     public void StopVoyagerLocalForHostShutdownOnMainThread()
     {
         VoyagerLocalPrePlayerTickAvailable = false;
+        GuardVoyagerRemoteIdleOnMainThread(stoppingHost: true);
         foreach (var action in _actions.ActiveValues.Where(a => !a.Terminal && IsVoyagerLocalOrder(a)).ToArray())
             FinishVoyagerLocalOrderUnknown(action, "The original local action lost its host/pre-player hook. Preserve its exact action; physical Native tail is unproved.");
     }

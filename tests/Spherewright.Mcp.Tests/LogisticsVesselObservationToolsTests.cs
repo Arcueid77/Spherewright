@@ -105,11 +105,13 @@ public sealed class LogisticsVesselObservationToolsTests
         var guide = AgentPlaybookResources.GetOpeningMovementPlaybook().Text;
         foreach (var rule in new[]
         {
-            "ownedRemoteLogisticsStation=true", "1+extraWarperReserve", "whole-ball layer4-water absence",
-            "zero configured fleet slots", "Empty default ammo slot1", "3600 ticks/60seconds",
-            "fresh resume never grants another minute", "real subsequent Native construction pass",
+            "ownedRemoteLogisticsStation=true", "1+extraWarperReserve", "finite-cost branch",
+            "one whole player-and-drone tick", "GameMain.Pause", "Never pause a replacement world",
+            "actual dry Walk", "do not auto-resume, load or replay",
+            "zero configured fleet slots", "Empty default ammo slot1", "3600 ticks/60 seconds",
+            "fresh resume grants no new minute", "real subsequent Native construction pass",
             "clear original prelaunch cache", "physicalIdleVerified", "one measured whole-batch debit",
-            "Unknown outcomes retain the original action/build",
+            "Preserve unknown original action/build/checkpoint",
         }) Assert.Contains(rule, guide, StringComparison.Ordinal);
     }
 

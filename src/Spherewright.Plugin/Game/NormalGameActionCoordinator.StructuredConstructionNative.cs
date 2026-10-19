@@ -8,7 +8,8 @@ namespace Spherewright.Plugin.Game;
 
 internal sealed partial class NormalGameActionCoordinator
 {
-    private static bool ConstructionPlayerIdle(Player player) => NativeWalkModeIsBounded(player, stationary: true)
+    private static bool ConstructionPlayerIdle(Player player) => NativeWalkModeIsBounded(player, stationary: true,
+            finiteWaterCostWithNativePause: true)
         && player.movementState == EMovementState.Walk && player.speed <= .1f
         && player.currentOrder is null && player.orders?.orderCount == 0
         && !player.warpCommand && player.warpState == 0f && !player.navigation.navigating
@@ -32,7 +33,8 @@ internal sealed partial class NormalGameActionCoordinator
         if (!ConstructionReferencesMatch(action)) return false;
         var player = action.ConstructionBinding!.Player;
         var order = player.currentOrder;
-        return NativeWalkModeIsBounded(player, stationary: true, action.Plan.VoyagerLocalWalkScene) && player.speed <= .1f
+        return NativeWalkModeIsBounded(player, stationary: true, action.Plan.VoyagerLocalWalkScene,
+                finiteWaterCostWithNativePause: true) && player.speed <= .1f
             && Vector3.Distance(player.position, ToVector(action.BlueprintBuild!.ConstructionControl!.Anchor))
                 <= NativeConstructionDroneReservePolicy.MaximumAnchorDisplacementMeters
             && player.orders.orderCount == 0 && (ReferenceEquals(order, action.PlayerOrder)
@@ -49,9 +51,13 @@ internal sealed partial class NormalGameActionCoordinator
         var rate = Configs.freeMode.droneEnergyPerMeter;
         var eject = Configs.freeMode.droneEjectEnergy;
         var repair = Configs.freeMode.droneRepairHpPerTick * Configs.freeMode.droneRepairEnergyCostPerHP;
-        var background = (Math.Max(0d, player.mecha.walkPower) * Math.Max(2d, player.mecha.walkSpeed)
-            + Math.Max(0d, player.mecha.miningPower) + Math.Max(0d, player.mecha.replicatePower)
-            + Math.Max(0d, player.mecha.researchPower)) * Math.Max(1d, player.mecha.reactorPowerConsRatio);
+        // Even a stationary Walk can enter Drift in this Player tick, before
+        // our next observer. Pay its thrust as well as all current drone work;
+        // a lost anchor/Walk condition freezes Native energy, not a fake drain.
+        // Admission/pre-player independently establish the stationary subset;
+        // the shared cost policy validates all numeric and combat premises.
+        var movement = EvaluateNativeLocalMovementCost(player, modeTransitionsExcluded: true);
+        var background = movement.Proved ? movement.WorkPowerUpperWatts!.Value : double.NaN;
         var independent = CaptureNativeMechaBackgroundCosts(player);
         var anchor = build.ConstructionControl is not null ? ToVector(build.ConstructionControl.Anchor) : player.position;
         var ejectAnchor = anchor.normalized * (anchor.magnitude + 2.8f);

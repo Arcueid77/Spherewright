@@ -313,13 +313,17 @@ prepare/commit 前要求 fresh 前进的原生 tick，并以短于 30 秒控制�
 
 所有远端动作保留在原 `remote_landed` 航程及精确 owned 存档/Native/world 绑定内；保留原返程 UTC/tick 窗、loaded 返程能量底线与原生 `1+extraWarperReserve`。返程核心充能在起飞前重验，不是每个本地动作都要满核心。原生站点配置/转移仍要求玩家实际本地、精确站点及 fresh 哈希；owned-remote 站点只读观察不授权在母星写远端。
 
-Move/Harvest 要求窄普通 RTS Walk/Mine 证书及 fresh Native pre-player 钩子；不覆盖排队订单、输入/惯性、待跳跃、导航、快速旅行、曲速、Fly 或 Drift。每 tick 要求精确已加载场景引用及 fresh 整球 layer4 水碰撞不存在查询；Ice 名称或 `!inWater` 均不足。保留13个付费停止 tick，覆盖 RTS 减速和可能同时采矿；abort 不证明原生速度已零。30秒内查询原 action，原本地期限不得侵入返程储备；物理/模式证据缺失仍保持未知。
+Move/Harvest 复用既有普通 RTS 动作并保留无水快路。有限能耗分支允许运行中有界 Walk/Drift，要求 fresh Native pre-player 钩子及精确 owned world/player/controller/mecha/本地工厂绑定；排队订单、手动输入/惯性、待跳跃、导航、快速旅行、曲速和 Fly 仍不支持。原生水平、推力及后台成本须覆盖有限工作窗与13个付费 Native 游戏停止 tick，含采矿与 RTS 减速同 tick 发生，且不侵入原核心/loaded 返程底线、原生翘曲器或返程时间。Move/Harvest 的停止上限为这13个付费游戏 tick 或独立1秒墙钟，先到为止；UTC 准入另留至少1秒清理余量。墙钟上限只是等待期限，不是物理停稳定理，也不能折成60个付费 tick；任一上限均不重开原 action 或 journey 期限。本地 UTC/tick 期限及30秒原 action 租约的范围保持不变。此分支仅在有限能耗资格通过时替代原整球海洋排除门，不授予路线净空或连续干地区域证书。正常成功仍须实际干地 Walk 与真实 Native 零速度读回；RTS 归零、abort 订单或游戏暂停均不足。
+
+成功远端落地后，同一原 journey 继续守护闲置能耗与原返程时钟，直至已预算的本地动作、受控施工或真实返航接管。失去闲置 Walk、成本或原返程时钟证据时，走精确 owned 绑定的 Pause/quarantine 分支；已成功的飞行或 Move 仍保留成功，后续闲置保护不改写其原结果。 Host 卸载或默认 Save 重载若丢失内存中的 landed-controller 绑定，不得静默重建资格；只对同一 owned 世界 Pause/quarantine，并拒绝本地/结构化施工，保留 checkpoint 与确认门。本子集支持同一 Host 内出航、本地作业和正常返航；物流保存恢复续运安排在回母星且 journey 闭合后，远端在途冷恢复尚未验证。
+
+守卫失败、停止/尾返上限到期或调用者/Host 观察丢失时，有限能耗的失败保护仅在原 owned 绑定仍精确匹配时调用正常 GameMain.Pause。当前 LogicFrame 仍可能跑完 player 与无人机的一整个 tick，因此必须支付并保留该整 tick 的储备；只有后续 Native 游戏能耗/派发 tick 冻结。Pause 不证明物理空闲或尾返成功。保留未核销的 outcome_unknown、quarantine 及精确原 action/build/checkpoint，不自动恢复、Load 或重放；绝不暂停替换后的另一世界。Host 真正卸载时先暂停精确 owned 的受保护世界，再拆除钩子；普通 MCP 断线不卸载 DSP 内常驻 Plugin，租约检查继续。暂停不续原墙钟期限。新源码仍须完整 Plugin/回归、准确 SHA CI、Lab 锁/采用、冷部署及实机检查后才计运行信用；不新增公开工具或协议版本。
 
 首版本地控制子集还要求独立原生战斗扣费为零：护盾容量0或补能原已关闭、激光未启用、旧弹仓0、有效空弹药选择且整仓 item/count/inc/filter0及真实 ROF/费用0，地面/太空模块均为**零配置机队槽位**。这不是活动船只数；默认空弹药槽1可以通过。不能为强行通过修改玩家设置，应报告具体不支持条件。复制器/科研队列须空闲，剩余科研物品 buffer 可以保留。
 
 需要矿机、站点、电力杆、地面带或分拣器时，只用既有原生 `prepare_build`/`commit_build`，每批为2301/2104/2201/2203/2205/2001/2011之一的1..8个同物品对象。保留精确原生节点/姿态/连接校验，以及固定 hold anchor 周围16m目标/弹射包络；高架路径及带覆盖复用不支持。通用蓝图文本不增加矿机布局能力。保留原 `actionId`、`buildId` 和 `constructionControl`；逐对象回执共享一次全批材料实测扣除，不能将每行当成独立扣除。完成前须核精确预建造/实体/组件及双向连接。
 
-工作自原开始最多3600 tick/60秒，fresh resume 不获得另一分钟；working 原 action 查询仅续30秒观察租约。取消、租约到期、用户暂停/接管停止新派发，冻结第一次有限尾部时钟。`dispatchDisabled` 本身不证明安全空闲：须等精确工厂真实后续 Native 施工轮次、原预发缓存清空及全部 owned 无人机实际空闲读回；安全暂停须有 `physicalIdleVerified`、绑定/anchor 和储备证据。未知保留原 action/build，不启用无人机、不重放创建；已证 pending 对象只能通过 fresh `prepare_blueprint_build` 以精确 `resumeBuildId` 及进度/玩家哈希续接。过期工作仍过期；不覆盖用户暂停/输入，也不从 Host 退出推断无人机已返。
+正常施工保持固定 hold anchor 处的 Walk；Drift 或锚损失立即停止新派发并走精确绑定的 Pause/unknown 失败保护，不能声称无人机已尾返。工作仍自原开始最多3600 tick/60秒，fresh resume 不增加一分钟，working 原 action 查询只续30秒观察租约。已知的有限取消保留第一次尾部时钟。dispatchDisabled 不等于安全空闲：须关闭后跨过精确工厂真实 Native 施工轮次、原预发缓存清空、全部 owned 无人机实际空闲及 physicalIdleVerified，并保留原绑定/anchor/储备证据。守卫、租约或尾期失败走失败保护，不能写成空闲成功。保留未知的原 action/build/checkpoint，不启用无人机、不重放创建；已证 pending 对象仅通过 fresh prepare_blueprint_build，以精确 resumeBuildId 及进度/玩家哈希续接。过期工作仍过期，不覆盖用户暂停/输入、不自动恢复，也不从 Host 退出推断无人机已返。
 
 <a id="restart-and-interplanetary-flight"></a>
 ## 重启与行星间飞行
