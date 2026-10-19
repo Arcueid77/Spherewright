@@ -119,6 +119,7 @@ internal sealed partial class GameStateReader
             InventorySlotCount = player.package.size,
             AutoManageResearchItems = GameMain.history?.autoManageLabItems ?? false,
             MechaResearchPower = player.mecha.researchPower,
+            NativePhysics = CaptureNativePlayerPhysicsOnMainThread(player),
         };
 
         var inventory = new Dictionary<int, PlayerInventoryItem>();

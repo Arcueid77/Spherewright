@@ -272,6 +272,10 @@ DSP **经度网格间距随纬度变化**。固定赤道行列公式不是权威
 
 本地调用器断言不是原生拒绝。再 prepare 前独立核对原精确字段；成功不允许执行未批准整链。合法坡道不证明两个分拣器。仅轮询原操作至终态，保留成功坡道，只为独立授权后续新 prepare。
 
+## 原生玩家物理读回
+
+研究移动边界前，可用 `spherewright_get_player_state` 中可选的 `nativePhysics` 检查实际引擎及物理设置。保留采集 tick，缺失值保持未知；即使所有设置均已观察，`safetyCertified=false` 也不变。步长、脱离穿透设置或采样干地点都不能证明完整停止区域。此只读快照不授予执行权限：继续保留已安装移动守卫、原航程储备、检查点及 fresh prepare/commit 门。
+
 <a id="voyager-visibility-and-route-previews"></a>
 ## Voyager 可见信息与航线预览
 

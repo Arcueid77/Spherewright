@@ -254,6 +254,10 @@ The sole elevated bound source is an exact empty independent raised2001 tail wit
 
 A local caller assertion is not a native rejection. Inspect the exact original fields before deciding on another prepare; success is not permission to execute an unapproved whole-chain plan. A legal ramp does not prove its two sorter attachments. Poll once through terminal; preserve successful ramps and re-prepare only separately authorized future work.
 
+## Native player physics readback
+
+Use the optional `nativePhysics` in `spherewright_get_player_state` to inspect actual engine/physics settings before researching a movement bound. Keep unavailable values unknown and retain the capture tick; `safetyCertified=false` remains false even when every setting is observed. A timestep, depenetration setting or sampled dry point does not prove the complete stopping region. This read-only snapshot adds no execution permission: keep the installed movement, original-journey reserve, checkpoint and fresh prepare/commit gates.
+
 ## Voyager visibility and route previews
 
 When the installed 0.5 cohort advertises `spherewright_get_voyager_star_catalog` and `spherewright_preview_voyager_route`, use fresh owned-session/origin observations and native-visible targets. These are read-only, tokenless observations with `executable=false`: no launch, warp, material use, save, checkpoint creation or gameplay action. For permitted views only, the catalog may request normal native star-map scanning and populate legitimate visible scan caches; pending scans stay unknown. It never invokes arbitrary generators or creates remote factories. A route preview does not enable a cross-star commit or establish safe landing or native acceptance. Historical 0.4 same-system phase scope does not prohibit Voyager development; every native execution and confirmation gate remains.

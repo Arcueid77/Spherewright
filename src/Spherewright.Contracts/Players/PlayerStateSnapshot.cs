@@ -67,6 +67,8 @@ public sealed class PlayerStateSnapshot
     public List<HandcraftTaskSnapshot> HandcraftQueue { get; set; } = new List<HandcraftTaskSnapshot>();
 
     public ConstructionDroneSnapshot ConstructionDrones { get; set; } = new ConstructionDroneSnapshot();
+
+    public NativePlayerPhysicsSnapshot? NativePhysics { get; set; }
 }
 
 public sealed class MechaResearchItemSnapshot

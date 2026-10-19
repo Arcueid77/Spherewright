@@ -121,6 +121,10 @@ spherewright_commit_reload_flight_checkpoint
 
 列表使用有界不可变分页及不透明、绑定会话、星球、过滤器、分页大小的 cursor。保留采集 tick，读完一个快照；独立调用不是事务。禁止发布能力字段、原始请求、描述文件或私有路径。
 
+## 原生玩家物理只读观察
+
+0.5 开发版的 `spherewright_get_player_state` 新增可空 `nativePhysics`，在游戏主线程复制当前 Unity 版本、物理步长、Rigidbody 设置及有界玩家碰撞体/材质参数。单位为秒、米、米/秒、两个重力向量的米/秒²及千克。`gravity` 是 Unity 重力，`nativeGravity` 另行记录控制器实际的 universal gravity（universal 坐标）；刚体及碰撞体事实使用当前已加载的本地 Unity 场景，比较向量方向前须显式变换坐标。碰撞体尺寸保留局部坐标系，并附复制的世界变换及缩放。结合读回的 `unityVersion` 解释 `simulationMode` 和各速度设置；设置值不证明模拟后的实际速度。`state=unavailable`、缺失字段或缺失材质均表示未知，旧载荷可以不含此快照。`safetyCertified` 始终为 false：观察到设置不等于证明接触后的总速度、连续干地区域或安全停止距离。此观察不推进物理模拟、不改变玩家、不替代 fresh prepare/commit、不进入现有玩家哈希域，也不放宽海洋、飞行或储备守卫。
+
 <a id="voyager-visibility-and-route-previews"></a>
 ## Voyager 可见信息与航线预览
 
