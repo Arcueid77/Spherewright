@@ -20,9 +20,11 @@ public sealed class BlueprintBuildState
     public long Generation { get; set; }
     public FoundryConstructionPlan? FoundryPlan { get; set; }
     public FoundryConstructionIntent? FoundryIntent { get; set; }
+    public StructuredConstructionBinding? StructuredConstruction { get; set; }
+    public StructuredConstructionControlState? ConstructionControl { get; set; }
 
     public static BlueprintBuildState Create(BlueprintSiteSnapshot site, FoundryConstructionPlan? foundryPlan = null,
-        FoundryConstructionIntent? foundryIntent = null)
+        FoundryConstructionIntent? foundryIntent = null, StructuredConstructionBinding? structuredConstruction = null)
     {
         if (!site.NativeCheckPerformed || !site.NativeCheckPassed || !site.InventorySufficient
             || !site.TechnologySatisfied || site.Blockers.Count != 0)
@@ -32,6 +34,7 @@ public sealed class BlueprintBuildState
             BuildId = Guid.NewGuid().ToString("D"), Site = site, LastEvidenceGameTick = site.CapturedAtGameTick,
             Objects = site.Objects.Select(o => new BlueprintObjectProgress { Index = o.Index }).ToList(),
             FoundryPlan = foundryPlan, FoundryIntent = foundryIntent,
+            StructuredConstruction = structuredConstruction,
         };
         FoundryConstructionCompiler.ValidateBinding(foundryPlan, site, foundryIntent);
         state.PlanHash = state.ImmutableHash();
@@ -53,7 +56,8 @@ public sealed class BlueprintBuildState
             || Site.ConstructionItems.Count > Objects.Count || Site.ConstructionItems.Any(i => i is null)
             || MaximumObjectsToSubmit < 0 || MaximumObjectsToSubmit > BlueprintSitePolicy.MaximumPlacementObjects
             || SubmittedThisAction < 0 || SubmittedThisAction > MaximumObjectsToSubmit
-            || Site.Objects.Where((o, i) => o is null || o.Index != i || !BoundedBlueprintReader.SupportsItem(o.ItemId)
+            || Site.Objects.Where((o, i) => o is null || o.Index != i
+                || !(StructuredConstruction is null ? BoundedBlueprintReader.SupportsItem(o.ItemId) : StructuredConstructionBinding.SupportsItem(o.ItemId))
                 || o.Dependencies is null || o.Parameters is null || o.Position is null || o.Position2 is null
                 || o.Dependencies.Count > Objects.Count || o.Parameters.Length > 128
                 || o.Rotation is null || o.Rotation2 is null
@@ -62,6 +66,21 @@ public sealed class BlueprintBuildState
             || PlanHash != ImmutableHash())
             throw new InvalidDataException("Invalid bounded blueprint progress or immutable plan identity.");
         FoundryConstructionCompiler.ValidateBinding(FoundryPlan, Site, FoundryIntent);
+        if (StructuredConstruction is not null)
+        {
+            StructuredConstruction.Validate(Site);
+            if (FoundryPlan is not null || FoundryIntent is not null) throw new InvalidDataException("Structured provenance is not blueprint/Foundry authority.");
+            ConstructionControl?.Validate(Site.CapturedAtGameTick);
+            if (ConstructionControl?.PhysicalIdleVerifiedAtGameTick > LastEvidenceGameTick
+                || ConstructionControl?.DisabledNativeFactoryPassGameTick > LastEvidenceGameTick)
+                throw new InvalidDataException("Physical drone idle must be covered by the durable native evidence watermark.");
+            if (Phase == "running" && ConstructionControl is null)
+                throw new InvalidDataException("Structured execution requires its original finite control lease.");
+            if (Phase == "completed" && (ConstructionControl?.PhysicalIdleVerified != true
+                || ConstructionControl.Phase != "completed_idle"))
+                throw new InvalidDataException("A structured build is not complete before physical drone idle proof.");
+        }
+        else if (ConstructionControl is not null) throw new InvalidDataException("A generic blueprint cannot inherit structured control authority.");
         var visited = new HashSet<int>();
         while (visited.Count < Objects.Count)
         {
@@ -69,7 +88,7 @@ public sealed class BlueprintBuildState
             if (ready.Length == 0) throw new InvalidDataException("Cyclic construction dependencies cannot resume.");
             foreach (var item in ready) visited.Add(item.Index);
         }
-        if (Objects.Count(o => o.State == BlueprintObjectStates.PendingConstruction || o.State == BlueprintObjectStates.Submitting) > 1
+        if ((StructuredConstruction is null && Objects.Count(o => o.State == BlueprintObjectStates.PendingConstruction || o.State == BlueprintObjectStates.Submitting) > 1)
             || Objects.Where(o => o.EntityId.HasValue).Select(o => o.EntityId).Distinct().Count() != Objects.Count(o => o.EntityId.HasValue)
             || (Phase == "completed" && Objects.Any(o => o.State != BlueprintObjectStates.Completed)))
             throw new InvalidDataException("Finite progress contains impossible object identities or phase.");
@@ -91,7 +110,7 @@ public sealed class BlueprintBuildState
             var submitted = step.State == BlueprintObjectStates.PendingConstruction || step.State == BlueprintObjectStates.Completed;
             if (submitted && (step.PrebuildId.GetValueOrDefault() <= 0 || !step.SubmittedAtGameTick.HasValue
                 || !step.InventoryBefore.HasValue || step.InventoryBefore < 1
-                || step.InventoryAfter != step.InventoryBefore - 1
+                || step.InventoryAfter != step.InventoryBefore - (StructuredConstruction is null ? 1 : Objects.Count)
                 || string.IsNullOrWhiteSpace(step.BeforeInventoryHash) || string.IsNullOrWhiteSpace(step.AfterInventoryHash)))
                 throw new InvalidDataException("Submitted object lacks durable exact-cost evidence.");
             if (step.State == BlueprintObjectStates.Completed
@@ -103,6 +122,7 @@ public sealed class BlueprintBuildState
     private string ImmutableHash()
     {
         var native = BlueprintSitePolicy.AssessmentHash(Site, "immutable-approved-site");
+        if (StructuredConstruction is not null) return CanonicalStateHash.Combine("structured-approved-site-v1", native, StructuredConstruction.ImmutableHash());
         return FoundryPlan is null ? native : CanonicalStateHash.Combine("foundry-bound-blueprint-v1", native,
             FoundryPlan.PlanHash, FoundryConstructionCompiler.IntentHash(FoundryIntent!));
     }
@@ -124,7 +144,7 @@ public sealed class BlueprintBuildState
 
     public int? NextReadyIndex()
     {
-        if (Phase != "running" || SubmittedThisAction >= MaximumObjectsToSubmit
+        if (StructuredConstruction is not null || Phase != "running" || SubmittedThisAction >= MaximumObjectsToSubmit
             || Objects.Any(o => o.State == BlueprintObjectStates.PendingConstruction
                 || o.State == BlueprintObjectStates.Submitting || o.State == BlueprintObjectStates.OutcomeUnknown)) return null;
         foreach (var step in Objects)
@@ -140,6 +160,34 @@ public sealed class BlueprintBuildState
         var step = Objects[index]; step.State = BlueprintObjectStates.Submitting;
         step.SubmittedAtGameTick = tick; step.InventoryBefore = inventoryCount; step.BeforeInventoryHash = inventoryHash;
         LastEvidenceGameTick = tick; Generation++;
+    }
+
+    public void BeforeStructuredSubmission(long tick, int inventoryCount, string inventoryHash)
+    {
+        if (StructuredConstruction is null || Phase != "running" || MaximumObjectsToSubmit < Objects.Count
+            || Objects.Any(o => o.State != BlueprintObjectStates.NotSubmitted)
+            || inventoryCount < Objects.Count || tick < LastEvidenceGameTick || string.IsNullOrWhiteSpace(inventoryHash))
+            throw new InvalidOperationException("A native structured batch requires one complete durable write-ahead receipt.");
+        foreach (var step in Objects)
+        {
+            step.State = BlueprintObjectStates.Submitting; step.SubmittedAtGameTick = tick;
+            step.InventoryBefore = inventoryCount; step.BeforeInventoryHash = inventoryHash;
+        }
+        LastEvidenceGameTick = tick; Generation++;
+    }
+
+    public void ConfirmStructuredSubmission(IReadOnlyList<int> prebuildIds, int inventoryAfter, string inventoryHash)
+    {
+        if (StructuredConstruction is null || prebuildIds.Count != Objects.Count || prebuildIds.Any(id => id <= 0)
+            || prebuildIds.Distinct().Count() != Objects.Count || string.IsNullOrWhiteSpace(inventoryHash)
+            || Objects.Any(o => o.State != BlueprintObjectStates.Submitting || inventoryAfter != o.InventoryBefore - Objects.Count))
+            throw new InvalidOperationException("Native structured IDs and one measured whole-batch debit are required.");
+        for (var index = 0; index < Objects.Count; index++)
+        {
+            var step = Objects[index]; step.PrebuildId = prebuildIds[index]; step.InventoryAfter = inventoryAfter;
+            step.AfterInventoryHash = inventoryHash; step.State = BlueprintObjectStates.PendingConstruction;
+        }
+        SubmittedThisAction = Objects.Count; Generation++;
     }
 
     public void ConfirmSubmission(int index, int prebuildId, int inventoryAfter, string inventoryHash)
@@ -177,11 +225,16 @@ public sealed class BlueprintBuildState
         Phase = phase; Generation++;
     }
 
-    public string ProgressHash(string currentSession, long revision) => CanonicalStateHash.Combine(
-        "blueprint-progress-v1", currentSession, revision, BuildId, PlanHash, Generation, Phase,
-        LastEvidenceGameTick, CanonicalStateHash.Combine("objects", Objects.Select(o => (object)CanonicalStateHash.Combine(
-            "object", o.Index, o.State, o.PrebuildId, o.EntityId, o.SubmittedAtGameTick, o.CompletedAtGameTick,
-            o.InventoryBefore, o.InventoryAfter, o.BeforeInventoryHash, o.AfterInventoryHash, o.FailureKind)).ToArray()));
+    public string ProgressHash(string currentSession, long revision)
+    {
+        var original = CanonicalStateHash.Combine(
+            "blueprint-progress-v1", currentSession, revision, BuildId, PlanHash, Generation, Phase,
+            LastEvidenceGameTick, CanonicalStateHash.Combine("objects", Objects.Select(o => (object)CanonicalStateHash.Combine(
+                "object", o.Index, o.State, o.PrebuildId, o.EntityId, o.SubmittedAtGameTick, o.CompletedAtGameTick,
+                o.InventoryBefore, o.InventoryAfter, o.BeforeInventoryHash, o.AfterInventoryHash, o.FailureKind)).ToArray()));
+        return ConstructionControl is null ? original
+            : CanonicalStateHash.Combine("structured-control-progress-v1", original, ConstructionControl.EvidenceHash());
+    }
 
     private static readonly HashSet<string> AllowedStates = new HashSet<string>(StringComparer.Ordinal)
     { BlueprintObjectStates.NotSubmitted, BlueprintObjectStates.Submitting, BlueprintObjectStates.PendingConstruction,

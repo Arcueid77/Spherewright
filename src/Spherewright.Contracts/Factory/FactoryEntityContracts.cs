@@ -42,6 +42,10 @@ public sealed class ListFactoryEntitiesResult
 
 public sealed class InspectFactoryEntityRequest
 {
+    // Direct read-only inspection only: an already-created, identity-verified
+    // owned factory's positive station entity. Never a remote action scope.
+    public bool OwnedRemoteLogisticsStation { get; set; }
+
     public FactoryGeometryReadRequest? Geometry { get; set; }
     public int PlanetId { get; set; }
 

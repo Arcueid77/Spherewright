@@ -627,41 +627,139 @@ internal sealed partial class NormalGameActionCoordinator
 
     private BridgeError? ValidateVoyagerJourneyLocalCommit(NormalActionPlanPayload plan)
     {
+        if (IsStructuredConstruction(plan))
+            return plan.ActionKind == NormalActionKinds.CancelBlueprintBuild
+                ? ValidateStructuredConstructionCancellation(plan) : ValidateStructuredConstructionBudget(plan);
         var journey = _flightCheckpoints.VoyagerJourney;
         if (journey is null || IsVoyagerJourneyClosed(journey)) return null;
+        if (!VoyagerOwnedJourneyMatchesCurrentSession(journey, plan.SessionId))
+            return Stale("The active journey belongs to another exact owned save or Native version; its local-action budget cannot be borrowed.");
         if (plan.VoyagerBudget is not null || plan.ActionKind == NormalActionKinds.CancelVoyagerFlight) return null;
         if (journey.Phase == "home_awaiting_save" && plan.ActionKind == NormalActionKinds.Save) return null;
         if (journey.Phase != "remote_landed" || journey.RemotePlanetId != plan.PlanetId)
             return Stale("The active Voyager action/checkpoint must be reconciled before unrelated writes.");
         if (plan.ActionKind == NormalActionKinds.Refuel || plan.ActionKind == NormalActionKinds.Save) return null;
-        if (plan.ActionKind != NormalActionKinds.Move && plan.ActionKind != NormalActionKinds.Harvest)
-            return Stale("This bounded remote visit reserves its mecha fuel/warpers for return; only finite move/harvest, native refuel and save are admitted.");
+        var immediate = plan.ActionKind == NormalActionKinds.Transfer || plan.ActionKind == NormalActionKinds.LogisticsStationFleetTransfer
+            || plan.ActionKind == NormalActionKinds.ConfigureBuilding
+                && (plan.ConfigureMode == BuildingConfigurationModes.LogisticsStationStorage
+                    || plan.ConfigureMode == BuildingConfigurationModes.LogisticsStationBelt
+                    || plan.ConfigureMode == BuildingConfigurationModes.LogisticsStationCharge);
+        if (!immediate && plan.ActionKind != NormalActionKinds.Move && plan.ActionKind != NormalActionKinds.Harvest)
+            return Stale("The remote reserve admits finite move/harvest, exact station configuration, ordinary package/storage or fleet transfer, native refuel and save only; construction needs its separately proved native drone lease.");
         var player = GameMain.mainPlayer;
         var upperPower = (Math.Max(0d, player.mecha.walkPower) * Math.Max(2d, player.mecha.walkSpeed)
             + Math.Max(0d, player.mecha.miningPower) + Math.Max(0d, player.mecha.replicatePower) + Math.Max(0d, player.mecha.researchPower))
             * Math.Max(1d, player.mecha.reactorPowerConsRatio);
-        var elapsed = Math.Max(0L, GameMain.gameTick - journey.LastLandedGameTick!.Value);
-        if (!VoyagerMechaWorkIdle(player) || DateTimeOffset.UtcNow.AddSeconds(VoyagerLocalActionMaximumTicks / 60d) >= journey.DeadlineUtc
-            || journey.MaximumGameTicks - journey.SpentGameTicks - elapsed - VoyagerLocalActionMaximumTicks < journey.ReturnReserveGameTicks
-            || double.IsNaN(upperPower) || double.IsInfinity(upperPower)
-            || CalculateAvailableFlightEnergy(player.mecha) < journey.ReturnEnergyFloorJoules + upperPower * VoyagerLocalActionMaximumTicks / 60d)
-            return Stale("This local action cannot reserve its finite worst-case native movement/mining energy and time in addition to the locked return floor.");
-        plan.VoyagerLocalDeadlineGameTick = GameMain.gameTick + VoyagerLocalActionMaximumTicks;
+        var workTicks = immediate ? 1 : VoyagerLocalActionMaximumTicks;
+        var tailTicks = immediate ? 0 : VoyagerLocalWalkReservePolicy.StopGameTicks;
+        var tailEnergy = upperPower / 60d;
+        if (!immediate)
+        {
+            plan.VoyagerLocalWalkScene = CaptureNativeLocalWalkScene();
+            var walk = CaptureVoyagerLocalWalkReserve(player, player.currentOrder is null, plan.VoyagerLocalWalkScene);
+            if (!VoyagerLocalPrePlayerTickAvailable
+                || DateTimeOffset.UtcNow - VoyagerLocalPrePlayerObservedAtUtc > TimeSpan.FromSeconds(1)
+                || plan.VoyagerLocalWalkScene is null || !walk.Proved || !VoyagerLocalWalkReservePolicy.CanFund(player.mecha.coreEnergy,
+                    CalculateAvailableFlightEnergy(player.mecha), journey.ReturnEnergyFloorJoules,
+                    walk.PerNativeTickEnergyJoules, VoyagerLocalWalkReservePolicy.StopGameTicks))
+                return Stale("The exact Native pre-player hook and narrow ordinary RTS Walk/Mine stop reserve are required; Fly, Drift, jump and user input are unproved.");
+            upperPower = walk.WorkPowerUpperWatts!.Value;
+            tailEnergy = walk.StopEnergyJoules!.Value;
+        }
+        var nowUtc = DateTimeOffset.UtcNow;
+        var localDeadlineUtc = VoyagerLocalActionBudgetPolicy.WorkDeadlineUtc(nowUtc, journey.DeadlineUtc,
+            workTicks, journey.ReturnReserveGameTicks, tailTicks);
+        if (!localDeadlineUtc.HasValue) return Stale("The original return wall-time reserve leaves no finite local work window.");
+        var budget = VoyagerLocalActionBudgetPolicy.Evaluate(new VoyagerLocalActionBudgetFacts
+        {
+            ExactRemoteBinding = _sessions.IsCurrentSessionOwned && _sessions.SessionId == plan.SessionId
+                && player.planetId == plan.PlanetId && GameMain.localPlanet?.factory is not null,
+            NativePlayerIdle = player.isAlive && player.movementState == EMovementState.Walk && player.speed <= .1f
+                && player.currentOrder is null && !player.warpCommand && player.warpState == 0f && VoyagerMechaWorkIdle(player)
+                && player.mecha.constructionModule.allDronesIdle,
+            CurrentGameTick = GameMain.gameTick, LastLandedGameTick = journey.LastLandedGameTick,
+            SpentGameTicks = journey.SpentGameTicks, MaximumGameTicks = journey.MaximumGameTicks,
+            ReturnReserveGameTicks = journey.ReturnReserveGameTicks, WorkGameTicks = workTicks, TailGameTicks = tailTicks,
+            NowUtc = nowUtc, JourneyDeadlineUtc = journey.DeadlineUtc,
+            AvailableLoadedEnergyJoules = CalculateAvailableFlightEnergy(player.mecha),
+            LockedReturnFloorJoules = journey.ReturnEnergyFloorJoules, WorkPowerUpperWatts = upperPower,
+            TailAndNextTickEnergyJoules = tailEnergy,
+            NativeWarperCount = CountVoyagerWarpers(player.mecha.warpStorage), OriginalExtraWarperReserve = journey.ExtraWarperReserve,
+        });
+        if (!budget.Proved) return Stale("The fresh remote action does not preserve the original loaded return floor, native warpers and finite time (" + budget.BlockerCode + ").");
+        plan.VoyagerLocalDeadlineGameTick = GameMain.gameTick + workTicks;
+        plan.VoyagerLocalStartedGameTick = GameMain.gameTick;
+        plan.VoyagerLocalLastObservedGameTick = GameMain.gameTick;
+        plan.VoyagerLocalStartedAtUtc = nowUtc;
+        plan.VoyagerLocalDeadlineUtc = localDeadlineUtc;
+        plan.VoyagerLocalOwnedSaveName = journey.OwnedSaveName;
+        plan.VoyagerLocalGameVersion = journey.GameVersion;
+        plan.VoyagerLocalJourneyId = journey.JourneyId;
+        plan.VoyagerLocalBinding = new VoyagerNativeBinding(GameMain.data, player);
+        plan.VoyagerLocalFactory = GameMain.localPlanet!.factory;
         return null;
     }
 
     private bool GuardVoyagerLocalAction(ActionRecord action)
     {
         if (!action.Plan.VoyagerLocalDeadlineGameTick.HasValue) return true;
-        var journey = _flightCheckpoints.VoyagerJourney;
-        if (journey is null || journey.Phase != "remote_landed" || GameMain.gameTick >= action.Plan.VoyagerLocalDeadlineGameTick.Value
-            || CalculateAvailableFlightEnergy(GameMain.mainPlayer.mecha) <= journey.ReturnEnergyFloorJoules)
+        if (!VoyagerLocalReferencesMatch(action))
         {
+            // Retain the original observation. Do not abort a different world's
+            // order, capture its inventory, or quarantine its current session.
+            action.State = NormalActionStates.OutcomeUnknown;
+            action.Terminal = true;
+            action.Succeeded = false;
+            action.CompletedAtGameTick = action.Plan.VoyagerLocalLastObservedGameTick;
+            action.FailureKind = "voyager_local_binding_lost";
+            action.Message = "The exact original owned-world/Native/player/controller/mecha/factory binding ended. The original local action is unknown; retain its action and prior evidence without replay.";
+            return false;
+        }
+        action.Plan.VoyagerLocalLastObservedGameTick = GameMain.gameTick;
+        if (IsVoyagerLocalOrder(action) && action.VoyagerLocalStopDeadlineTick.HasValue) return false;
+        var journey = _flightCheckpoints.VoyagerJourney;
+        var localPlayer = action.Plan.VoyagerLocalBinding!.Player;
+        if (journey is null || journey.JourneyId != action.Plan.VoyagerLocalJourneyId || journey.Phase != "remote_landed"
+            || !VoyagerOwnedJourneyMatchesCurrentSession(journey, action.SessionId)
+            || IsVoyagerLocalOrder(action) && DateTimeOffset.UtcNow >= action.VoyagerLocalObservationLeaseExpiresAtUtc
+            || !VoyagerLocalActionBudgetPolicy.LocalWindowStillOpen(action.Plan.VoyagerLocalStartedGameTick,
+                GameMain.gameTick, action.Plan.VoyagerLocalDeadlineGameTick.Value, action.Plan.VoyagerLocalStartedAtUtc,
+                DateTimeOffset.UtcNow, action.Plan.VoyagerLocalDeadlineUtc)
+            || CalculateAvailableFlightEnergy(localPlayer.mecha) <= journey.ReturnEnergyFloorJoules)
+        {
+            if (IsVoyagerLocalOrder(action))
+            {
+                RequestVoyagerLocalOrderStop(action, false, "The original finite remote local-action allowance ended; reassess the unchanged journey before another action.");
+                return false;
+            }
             AbortPlayerOrderIfOwned(action);
-            Fail(action, "The finite remote local-action allowance ended; the original return reserve remains protected.");
+            Fail(action, "The original finite remote local-action allowance ended. Its owned order stopped; reassess the unchanged journey and return reserves before another action.");
             return false;
         }
         return true;
+    }
+
+    private bool VoyagerLocalReferencesMatch(ActionRecord action)
+    {
+        var p = action.Plan;
+        if (p.VoyagerLocalBinding is not { } b || !_sessions.IsCurrentSessionOwned || _sessions.SessionId != action.SessionId
+            || !ReferenceEquals(GameMain.data, b.World) || !ReferenceEquals(GameMain.mainPlayer, b.Player)
+            || !ReferenceEquals(b.Player.controller, b.Controller) || !ReferenceEquals(b.Player.mecha, b.Mecha)
+            || !ReferenceEquals(GameMain.localPlanet?.factory, p.VoyagerLocalFactory)
+            || !ReferenceEquals(GameMain.data.localLoadedPlanetFactory, p.VoyagerLocalFactory)
+            || b.Player.planetId != action.PlanetId || p.VoyagerLocalFactory?.planetId != action.PlanetId) return false;
+        var session = _sessions.CaptureOnMainThread();
+        return session.SessionId == action.SessionId && VoyagerLocalActionBudgetPolicy.MatchesOwnedJourneyIdentity(
+            p.VoyagerLocalOwnedSaveName, p.VoyagerLocalGameVersion, session.OwnedBySpherewright,
+            _sessions.OwnedSaveName, session.SaveName, session.GameVersion);
+    }
+
+    private bool VoyagerOwnedJourneyMatchesCurrentSession(VoyagerJourneyRecord journey, string expectedSessionId)
+    {
+        var session = _sessions.CaptureOnMainThread();
+        return _sessions.IsCurrentSessionOwned && _sessions.SessionId == expectedSessionId && session.SessionId == expectedSessionId
+            && VoyagerLocalActionBudgetPolicy.MatchesOwnedJourneyIdentity(journey.OwnedSaveName, journey.GameVersion,
+                session.OwnedBySpherewright, _sessions.OwnedSaveName, session.SaveName, session.GameVersion);
     }
 
     private bool TryAccountVoyagerLeg(ActionRecord action, string phase, out string rejection)
@@ -877,6 +975,15 @@ internal sealed partial class NormalGameActionCoordinator
         public bool VoyagerReturnLeg { get; private set; }
         public string? CancelVoyagerActionId { get; private set; }
         public long? VoyagerLocalDeadlineGameTick { get; set; }
+        public long VoyagerLocalStartedGameTick { get; set; }
+        public long VoyagerLocalLastObservedGameTick { get; set; }
+        public DateTimeOffset VoyagerLocalStartedAtUtc { get; set; }
+        public DateTimeOffset? VoyagerLocalDeadlineUtc { get; set; }
+        public string? VoyagerLocalOwnedSaveName { get; set; }
+        public string? VoyagerLocalGameVersion { get; set; }
+        public string? VoyagerLocalJourneyId { get; set; }
+        public VoyagerNativeBinding? VoyagerLocalBinding { get; set; }
+        public PlanetFactory? VoyagerLocalFactory { get; set; }
         public static NormalActionPlanPayload VoyagerFlight(string sessionId, int originPlanetId, string journeyId,
             bool returning, VoyagerRouteBudgetSnapshot budget, PreviewVoyagerRouteRequest request, string playerHash,
             string nativeHash, VoyagerNativeBinding binding) => new NormalActionPlanPayload

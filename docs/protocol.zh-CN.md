@@ -155,6 +155,21 @@ prepare/commit 时原生控制钩子必须在过去两秒内观察到 tick。以
 
 `prepare_cancel_voyager_flight` 使用 `PrepareCancelVoyagerFlightRequest`，绑定原飞行出发地 `planetId`、精确 `actionId` 和 `stateHashVersion=1`；`commit_cancel_voyager_flight` 使用同一提交合约。它在原航程锁存 `stopRequested`，不创建第二个移动 writer。查询原飞行，核原生退出曲速、刹停及真实终态；停止回执本身不证明飞行稳定或恢复完成。未知结果保留原 key/action；checkpoint reload 为独立受保护操作，不得回滚较新主档。
 
+<a id="voyager-local-work-and-durable-structured-construction"></a>
+## Voyager 本地作业与持久结构化施工
+
+原航程处于 `remote_landed` 时，本地例外绑定精确 owned 存档、Native 版本、session、world/player/controller/mecha 及实际已加载本地工厂。Fresh 站点配置、包/仓储或机队转移、补燃料及 Save 保留原生范围；Move/Harvest 与独立结构化施工路径还须在原返程窗口之前预留有限工作和停止时间，保留 loaded 返程能量底线及原生 `1+extraWarperReserve`。这些动作不重置航程期限，也不允许在母星写远端。返程核心充能是 fresh 起飞门，不要求每个本地动作始终满核心。
+
+Move/Harvest 只支持已证普通 RTS Walk/Mine 子集：无排队订单、手动惯性/输入、待跳跃、导航、快速旅行、曲速、Fly 或 Drift。原生 pre-player 钩子逐 tick 重验精确已加载行星/default physics 引用及整球 layer4 水碰撞不存在证；Ice 名称、`!inWater` 或单点采样均不足。停止余量覆盖13个付费 tick，含采矿与 RTS 减速同 tick 发生；abort 订单不代表速度归零。核心及 loaded 能量须支付此余量且不侵入返程底线。原本地 UTC/tick 窗与30秒原 action 租约不得续入返程时间；终态须真实 Native RTS/手动速度收敛。场景、模式或尾部证据未知仍保持未知。
+
+首版本地控制子集排除独立原生战斗扣费：护盾容量0或原已关闭补能、激光未启用、旧弹仓为空、有效空选择且整个弹药仓 item/count/inc/filter0、真实 ROF/费用0，以及地面/太空 `fleetCount=0`。它表示**零配置机队槽位**，不是零活动船只。默认空弹药槽1可以通过；不会为符合条件而修改武器、护盾补能或机队设置。复制器/科研队列须空闲，未用完的原生科研物品 buffer 不必清空。
+
+既有 `prepare_build`/`commit_build` 可在原航程内绑定一个原生已验批次，含1..8个同物品对象：2301、2104、2201、2203、2205、2001或2011。保留原生矿机节点、姿态、科技、碰撞和连接校验。首版拒绝高架路径及带覆盖复用，要求有限16m原生目标/弹射包络与固定 anchor；通用蓝图语法不增加矿机布局格式。原 action 只创建一次，持久保留写前记录、精确预建造至实体/组件/拓扑证据及一次全批实测材料扣除。各对象回执共享这次扣除，不能逐对象重复求和。
+
+读取原 action/build 的 `constructionControl`：`executionKind=structured_native`、phase、禁发/物理空闲/绑定/anchor/储备证据、观察租约、有限尾部 tick/能量与停止原因。初始工作最多3600 tick/60秒，fresh resume 保留原绝对窗口；原 action 查询仅在 working 时续30秒观察租约。取消、租约过期、用户接管/暂停或绑定丢失停止新派发，保留第一次清理时钟。关闭原生无人机不等于物理空闲：关闭后须跨过精确工厂的真实原生施工轮次、清空原缓存预发，并由 pool/module 读回证明全部 owned 无人机空闲，方可安全终态。
+
+只有精确 pending 对象可通过既有 `prepare_blueprint_build`，以 `resumeBuildId` 和新进度/玩家哈希续接。不能替换批次或再次原生创建；原工作窗过期不得刷新。未知结果只核原 action/build，不启用无人机、不编造尾返/储备证明。已知完成仅在精确 owned hold 仍存在且用户未暂停/接管时，才能恢复原本启用的无人机设置。Host 退出记录 pending/interrupted，不虚构空闲或重载权限。
+
 <a id="detail-only-belt-cargo-observation-04-development-slice"></a>
 <a id="factory-cargo-material-and-fuel-observations"></a>
 ## 工厂、货物、材料与燃料观察
@@ -194,6 +209,10 @@ prepare/commit 时原生控制钩子必须在过去两秒内观察到 tick。以
 汇总区分发电、容量、需求、外送，并限制电力、物流、研究扫描：512 工厂、4096 电网、65536 发电机引用、4096 站槽、每站 64 存储槽、12000 科技。不创建或加载远端工厂，超限失败，不静默截断。
 
 诊断包在一个主线程任务中采集生产和汇总，仅合并精确工厂、星球、标志、tick；schema `1`、`public_allowlist_v1` 不含凭据、存档身份或路径。专用不可变分页保留 60 秒。
+
+`inspect_factory_entity.ownedRemoteLogisticsStation=true` 只选择一个已知正数物流站实体，要求精确、已存在、归属受管世界且驻留模拟的工厂，可位于另一恒星。读取不创建或加载工厂，不赋予远端写入范围；远端几何/材料选择、负数/预建造 ID 均拒绝。默认 false 保留现有读取范围，prepare/commit 仍要求玩家实际当前本地星球。
+
+仅详情的 `logisticsStation.activeVessels` 最多复制32条原生 `workShipDatas`，带 `coverage=native_active_work_ship_data`、`complete`、`truncated`、可空原生工作船计数及明确的 `observed`/`partial`/`unavailable`/`not_applicable` 状态。缺失/不可用是未知，完整观察到零须单独区分。`shipIndex` 是真实船字段，不是会压缩的活动数组索引；`ownerGId/shipIndex/gene` 仅区分有限窗口的派遣观察，可能复用或回绕，不能作为跨保存的永久航次身份。`direction` 表示离开/返回归属站，不等于供货/取货；`t` 是阶段参数，不是全程进度或 ETA。白名单仅有货物/增产点、阶段/方向/t/速度/曲速/翘曲器标量，无运输船坐标或私有 `StateToken`。船移动、指纹变化、货物归零或一次到达均不证明原生交付、完整周期或持续开采供应；须结合精确端点、双边库存变化、真实采矿及消费，观察多个完整周期。这些观察不进入 action/configuration/fleet 哈希。
 
 <a id="stocked-logistics-causal-boundary-04-development-slice"></a>
 `stocked_logistics_boundary` 表示 `configured_route_supply_total` 范围有库存，不是所示源未预留库存或发货证明。真实物品路径、needs、订单和运载器进度仍必需。疑似物流阻塞要求连续 600 tick 无进展；变化、回滚、拓扑漂移或超过 3600 tick 缺口使基线失效。时间证据持久化成功后才能返回公共诊断。
@@ -302,6 +321,8 @@ Storage-capacity 在未堆叠 `2101` 绑定完整状态，使用 `set-bans`、`l
 Sorter-filter 绑定根配置及手持货物，支持无货 Returning 或普通 `2011/2012` Inserting。只改过滤、标记，已持货仍去相同目的地。已确认 inserter 的 null 读回表示无过滤，请求 `filterItemId=0` 清过滤；这不是清堵。
 
 物流站 storage 只通过 `SetStationStorage` 配置无订单空槽或同物品槽；belt 选择未选的已连空输出；charge 采用精确原生范围、3 MW 步进。机队转移保留全部其他状态。转移移动真实库存，补燃料用 `AutoReplenishFuel` 和数量、增产点守恒，保存用内部主身份、`SaveCurrentGame`。
+
+现有机队转移支持无人机5001、运输船5002和原生站点翘曲器1210，数量1–100。翘曲器要求普通 ILS、原生运输船曲速科技、真实 `warperCount`/`warperCapacity`、存入零增产点物品及精确玩家/机队哈希；采集站、PLS、未知或已满容量均拒绝。同一原 action 证明背包/计数器双边变化及其他机队/存储/能量保留；不扩大远端写范围、不创造翘曲器，未知转移不得换键重放。
 
 拆除限公布的已建采矿机、普通 `2011/2012` 分拣器、孤立空默认 `2101` 或空 `2001` 链头。仓储要求全部 30 格为空、默认、无堆叠、连接、缓存引用及完整有界扫描；带要求 ≤16 带、512 格、空开独立双向路、无外部、预建造、缓存引用，中段、相连尾、有货、高档拒绝。一次 `DoDismantleObject` 后必须证明消失、精确返还与增产点、幸存对象和拓扑保留。不提供任意删除、瞬拆、自动重建或直接修连接。
 

@@ -79,7 +79,11 @@ function Test-Surface([object[]]$Surface, [string]$Text=$playbook) {
 
 $voyagerPlaybook = $playbook + ' spherewright_get_voyager_star_catalog spherewright_preview_voyager_route maximumFlightGameTicks returnReserveGameTicks maximumWarpGameTicksPerLeg maximumArrivalOffsetMeters destinationStarId returnCoreEnergyMinimumJoules journeyId isReturnLeg tokenless executable=false newer primary spherewright_prepare_supply_mecha_warpers spherewright_commit_supply_mecha_warpers mechaWarperSupplyReadback nativeReturnedSuccess readbackComplete spherewright_prepare_voyager_flight spherewright_commit_voyager_flight spherewright_prepare_cancel_voyager_flight spherewright_commit_cancel_voyager_flight nativeExitObserved'
 function New-TestVoyagerSurface {
-    New-TestSurface
+    $base = @(New-TestSurface)
+    $stationRead = @($base | Where-Object name -ceq 'spherewright_inspect_factory_entity')[0]
+    $stationRead.inputSchema | Add-Member -NotePropertyName required -NotePropertyValue @()
+    $stationRead.inputSchema.properties | Add-Member -NotePropertyName ownedRemoteLogisticsStation -NotePropertyValue ([pscustomobject]@{type='boolean';default=$false;description='READ-ONLY bounded owned resident station'})
+    $base
     foreach ($name in @('spherewright_get_voyager_star_catalog','spherewright_preview_voyager_route')) {
         $properties = [ordered]@{sessionId=[pscustomobject]@{type='string'};planetId=[pscustomobject]@{type='integer'};stateHashVersion=[pscustomobject]@{type='integer'}}
         $required = @('sessionId','planetId')
@@ -264,6 +268,15 @@ foreach ($invalidResources in @(
     } 'exactly one Markdown Agent playbook resource'; $cases++
 }
 Test-VoyagerSurface @(New-TestVoyagerSurface); $cases++
+foreach ($fault in @('missing','type','default','required')) {
+    $caseTools = @(New-TestVoyagerSurface)
+    $stationRead = @($caseTools | Where-Object name -ceq 'spherewright_inspect_factory_entity')[0]
+    if ($fault -ceq 'missing') { $stationRead.inputSchema.properties.PSObject.Properties.Remove('ownedRemoteLogisticsStation') }
+    if ($fault -ceq 'type') { $stationRead.inputSchema.properties.ownedRemoteLogisticsStation.type = 'string' }
+    if ($fault -ceq 'default') { $stationRead.inputSchema.properties.ownedRemoteLogisticsStation.default = $true }
+    if ($fault -ceq 'required') { $stationRead.inputSchema.required += 'ownedRemoteLogisticsStation' }
+    Assert-Rejects { Test-VoyagerSurface $caseTools } 'owned resident station'; $cases++
+}
 $caseTools = @(New-TestVoyagerSurface)
 $caseTools += [pscustomobject]@{name='spherewright_future_read_only_tool'}
 Test-VoyagerSurface $caseTools; $cases++ # Future capabilities remain permitted; no tool-count ceiling.

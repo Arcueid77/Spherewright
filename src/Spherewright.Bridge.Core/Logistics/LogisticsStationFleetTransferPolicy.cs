@@ -21,6 +21,18 @@ public static class LogisticsStationFleetTransferPolicy
         int vesselCapacity,
         bool playerCanAcceptWithdrawal,
         out string rejection)
+        => TryValidate(isInterstellar, isCollector, isVeinCollector, direction, itemId, count,
+            playerItemCount, playerItemInc, idleDroneCount, workingDroneCount, droneCapacity,
+            idleVesselCount, workingVesselCount, vesselCapacity, playerCanAcceptWithdrawal,
+            false, 0, 0, out rejection);
+
+    public static bool TryValidate(
+        bool isInterstellar, bool isCollector, bool isVeinCollector,
+        string direction, int itemId, int count, int playerItemCount, int playerItemInc,
+        int idleDroneCount, int workingDroneCount, int droneCapacity,
+        int idleVesselCount, int workingVesselCount, int vesselCapacity,
+        bool playerCanAcceptWithdrawal, bool nativeWarpDriveUnlocked,
+        int warperCount, int warperCapacity, out string rejection)
     {
         rejection = string.Empty;
         if (isCollector || isVeinCollector)
@@ -44,22 +56,29 @@ public static class LogisticsStationFleetTransferPolicy
 
         var isDrone = itemId == LogisticsFleetItemIds.Drone;
         var isVessel = itemId == LogisticsFleetItemIds.Vessel;
-        if (!isDrone && !isVessel)
+        var isWarper = itemId == LogisticsFleetItemIds.Warper;
+        if (!isDrone && !isVessel && !isWarper)
         {
-            rejection = "Only logistics drones (5001) or logistics vessels (5002) belong in station fleet slots.";
+            rejection = "Only logistics drones (5001), vessels (5002), or native station warpers (1210) are supported.";
             return false;
         }
 
-        if (isVessel && !isInterstellar)
+        if ((isVessel || isWarper) && !isInterstellar)
         {
-            rejection = "A planetary logistics station has no logistics-vessel slot.";
+            rejection = "A planetary logistics station has no interstellar vessel/warper slot.";
             return false;
         }
 
-        var idle = isDrone ? idleDroneCount : idleVesselCount;
-        var working = isDrone ? workingDroneCount : workingVesselCount;
-        var capacity = isDrone ? droneCapacity : vesselCapacity;
-        if (idle < 0 || working < 0 || capacity <= 0 || idle + working > capacity)
+        if (isWarper && !nativeWarpDriveUnlocked)
+        {
+            rejection = "Native logistics-vessel warp-drive technology must be unlocked before using the station warper counter.";
+            return false;
+        }
+
+        var idle = isWarper ? warperCount : isDrone ? idleDroneCount : idleVesselCount;
+        var working = isWarper ? 0 : isDrone ? workingDroneCount : workingVesselCount;
+        var capacity = isWarper ? warperCapacity : isDrone ? droneCapacity : vesselCapacity;
+        if (idle < 0 || working < 0 || capacity <= 0 || (long)idle + working > capacity)
         {
             rejection = "The station fleet counters or current-version prefab capacity are inconsistent.";
             return false;
@@ -79,7 +98,7 @@ public static class LogisticsStationFleetTransferPolicy
                 return false;
             }
 
-            if (idle + working + count > capacity)
+            if ((long)idle + working + count > capacity)
             {
                 rejection = "The requested items exceed the station fleet capacity after working craft are included.";
                 return false;

@@ -301,6 +301,7 @@ public static class CanonicalStateHash
             snapshot.IsVeinCollector, snapshot.DroneCapacity, snapshot.VesselCapacity,
             snapshot.IdleDroneCount, snapshot.WorkingDroneCount,
             snapshot.IdleVesselCount, snapshot.WorkingVesselCount,
+            snapshot.WarperCount, snapshot.WarperCapacity,
             snapshot.DroneAutoReplenish, snapshot.VesselAutoReplenish);
         return Hash(value);
     }

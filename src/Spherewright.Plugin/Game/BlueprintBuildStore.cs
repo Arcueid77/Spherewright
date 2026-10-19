@@ -59,6 +59,27 @@ internal sealed class BlueprintBuildStore
                 if (proposed.Builds[index].PlanHash != state.PlanHash
                     || proposed.Builds[index].Generation > state.Generation)
                     throw new InvalidDataException("Finite plan identity or generation regressed.");
+                var previous = proposed.Builds[index];
+                if (previous.StructuredConstruction is not null && previous.ConstructionControl is not null
+                    && (state.ConstructionControl is null
+                        || !state.ConstructionControl.RetainsOriginalWindowAndSubmission(previous.ConstructionControl)
+                        || previous.ActionId == state.ActionId && previous.ConstructionControl.StopReason is not null
+                            && (state.ConstructionControl.StopReason != previous.ConstructionControl.StopReason
+                                || state.ConstructionControl.DrainStartedAtGameTick != previous.ConstructionControl.DrainStartedAtGameTick
+                                || state.ConstructionControl.DrainStartedAtUtc != previous.ConstructionControl.DrainStartedAtUtc
+                                || previous.ConstructionControl.DisabledNativeFactoryPassGameTick.HasValue
+                                    && state.ConstructionControl.DisabledNativeFactoryPassGameTick != previous.ConstructionControl.DisabledNativeFactoryPassGameTick
+                                || previous.ConstructionControl.PhysicalIdleVerified
+                                    && (!state.ConstructionControl.PhysicalIdleVerified
+                                        || state.ConstructionControl.PhysicalIdleVerifiedAtGameTick != previous.ConstructionControl.PhysicalIdleVerifiedAtGameTick))
+                        || previous.Objects.Where(o => o.SubmittedAtGameTick.HasValue).Any(o =>
+                            state.Objects[o.Index].SubmittedAtGameTick != o.SubmittedAtGameTick
+                            || state.Objects[o.Index].InventoryBefore != o.InventoryBefore
+                            || state.Objects[o.Index].BeforeInventoryHash != o.BeforeInventoryHash
+                            || o.PrebuildId.HasValue && (state.Objects[o.Index].PrebuildId != o.PrebuildId
+                                || state.Objects[o.Index].InventoryAfter != o.InventoryAfter
+                                || state.Objects[o.Index].AfterInventoryHash != o.AfterInventoryHash))))
+                    throw new InvalidDataException("Structured resume cannot renew the original work window or replace native submission receipts.");
                 proposed.Builds[index] = state;
             }
             else

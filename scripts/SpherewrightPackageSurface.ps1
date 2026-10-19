@@ -292,6 +292,15 @@ function Assert-SpherewrightPackageSurface {
                 }
             }
         }
+        $stationRead = @($Tools | Where-Object { $_.name -ceq 'spherewright_inspect_factory_entity' })[0]
+        $stationFlag = Get-RequiredPackageSchemaNode $stationRead.inputSchema 'ownedRemoteLogisticsStation' 'boolean' 'owned resident station'
+        $stationRequired = $stationRead.inputSchema.PSObject.Properties['required']
+        if (($stationRequired -and @($stationRequired.Value) -ccontains 'ownedRemoteLogisticsStation') -or
+            -not $stationFlag.PSObject.Properties['default'] -or $stationFlag.default -ne $false -or
+            -not $stationFlag.PSObject.Properties['description'] -or
+            ([string]$stationFlag.description).IndexOf('READ-ONLY',[StringComparison]::Ordinal) -lt 0) {
+            throw 'The package lacks its optional false READ-ONLY owned resident station contract.'
+        }
         $playbookResources = @($Resources | Where-Object { $_ -and $_.PSObject.Properties['uri'] -and $_.uri -ceq 'spherewright://agent/playbooks/opening-movement-v1' })
         if ($playbookResources.Count -ne 1 -or -not $playbookResources[0].PSObject.Properties['mimeType'] -or $playbookResources[0].mimeType -cne 'text/markdown') {
             throw 'The Voyager package requires the stable Markdown Agent playbook resource exactly once.'

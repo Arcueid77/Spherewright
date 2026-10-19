@@ -57,7 +57,6 @@ internal sealed partial class NormalGameActionCoordinator
         if (!player.Success) return GameCallResult<PreparedNormalAction>.Failed(player.Error!);
         if (player.Value!.StateHash != request.ExpectedPlayerStateHash) return StalePlan("Player state changed before blueprint preparation.");
         var playerError = BlueprintPlayerReady(player.Value);
-        if (playerError is not null) return GameCallResult<PreparedNormalAction>.Failed(BlueprintError(playerError));
         BlueprintBuildState build;
         var resume = request.ResumeBuildId is not null;
         if (resume)
@@ -68,6 +67,9 @@ internal sealed partial class NormalGameActionCoordinator
             if (!_blueprints.TryRead(out var builds)) return GameCallResult<PreparedNormalAction>.Failed(BlueprintError("blueprint_progress_store_unavailable"));
             build = builds.SingleOrDefault(b => b.BuildId == request.ResumeBuildId && b.Site.PlanetId == request.PlanetId)!;
             if (build is null) return InvalidPlan("No such finite construction belongs to this owned planet.");
+            if (build.StructuredConstruction is not null)
+                return PrepareStructuredConstructionResume(request, common.Session!, build, player.Value);
+            if (playerError is not null) return GameCallResult<PreparedNormalAction>.Failed(BlueprintError(playerError));
             var generation = build.Generation;
             var blockers = ReconcileBlueprintState(build);
             if (generation != build.Generation)
@@ -86,6 +88,7 @@ internal sealed partial class NormalGameActionCoordinator
         }
         else
         {
+            if (playerError is not null) return GameCallResult<PreparedNormalAction>.Failed(BlueprintError(playerError));
             if (request.BlueprintCode is null || request.Site is null
                 || request.Site.ExpectedPlayerStateHash != request.ExpectedPlayerStateHash)
                 return InvalidPlan("A new module requires explicit code, placement and the same fresh player hash.");
@@ -132,6 +135,7 @@ internal sealed partial class NormalGameActionCoordinator
 
     private BridgeError? RevalidateBlueprintBuildOnMainThread(NormalActionPlanPayload plan)
     {
+        if (IsStructuredConstruction(plan)) return RevalidateStructuredConstructionResume(plan);
         if (_actions.ActiveValues.Any(a => !a.Terminal) || _sessions.CaptureOnMainThread().Revision != plan.BlueprintRevision)
             return Stale("Session revision or active action changed after finite-plan preparation.");
         var player = _reader.GetPlayerStateOnMainThread(plan.SessionId, new LocalPlanetRequest { PlanetId = plan.PlanetId });
@@ -177,6 +181,7 @@ internal sealed partial class NormalGameActionCoordinator
 
     private void StartBlueprintBuildOnMainThread(ActionRecord action)
     {
+        if (IsStructuredConstruction(action.Plan)) { StartStructuredConstructionOnMainThread(action); return; }
         var build = CloneBlueprintState(action.Plan.BlueprintState!);
         action.BlueprintBuild = build;
         build.Begin(action.SessionId, action.ActionId, action.Plan.BlueprintSubmissionLimit, GameMain.gameTick);
@@ -274,6 +279,7 @@ internal sealed partial class NormalGameActionCoordinator
 
     private List<string> ReconcileBlueprintState(BlueprintBuildState build)
     {
+        if (build.StructuredConstruction is not null) return ReconcileStructuredConstructionState(build);
         var blockers = new List<string>();
         if (GameMain.gameTick < build.LastEvidenceGameTick) { blockers.Add("world_precedes_durable_construction_evidence"); return blockers; }
         var factory = GameMain.data.localLoadedPlanetFactory;
@@ -338,6 +344,8 @@ internal sealed partial class NormalGameActionCoordinator
 
     private BlueprintBuildProgress BlueprintSnapshot(BlueprintBuildState build, SessionState session, List<string> blockers) => new BlueprintBuildProgress
     {
+        ConstructionControl = CaptureConstructionControl(build,
+            _actions.ActiveValues.FirstOrDefault(a => a.BlueprintBuild?.BuildId == build.BuildId)),
         BuildId = build.BuildId, BlueprintHash = build.Site.BlueprintHash, PlanHash = build.PlanHash,
         SessionId = session.SessionId!, PlanetId = build.Site.PlanetId, Revision = session.Revision,
         CapturedAtGameTick = GameMain.gameTick, StateHash = build.ProgressHash(session.SessionId!, session.Revision),

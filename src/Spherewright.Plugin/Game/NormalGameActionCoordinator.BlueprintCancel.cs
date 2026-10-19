@@ -40,6 +40,7 @@ internal sealed partial class NormalGameActionCoordinator
 
     private void CancelBlueprintBuildOnMainThread(ActionRecord cancellation)
     {
+        if (IsStructuredConstruction(cancellation.Plan)) { CancelStructuredConstructionOnMainThread(cancellation); return; }
         var build = cancellation.Plan.BlueprintState!;
         var active = _actions.ActiveValues.SingleOrDefault(a => !a.Terminal && a.ActionKind == NormalActionKinds.BlueprintBuild
             && a.BlueprintBuild?.BuildId == build.BuildId && a.ActionId == build.ActionId);

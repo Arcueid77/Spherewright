@@ -64,6 +64,7 @@ public sealed class ActionResultSnapshot
     public string? BlueprintBuildId { get; set; }
     public string? BlueprintBuildPhase { get; set; }
     public List<Spherewright.Contracts.Factory.BlueprintObjectProgress>? BlueprintObjects { get; set; }
+    public Spherewright.Contracts.Factory.ConstructionControlReadback? ConstructionControl { get; set; }
 
     public bool ReconciledFromOutcomeUnknown { get; set; }
 

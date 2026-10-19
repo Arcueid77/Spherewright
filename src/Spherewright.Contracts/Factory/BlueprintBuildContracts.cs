@@ -56,6 +56,9 @@ public sealed class BlueprintObjectProgress
 
 public sealed class BlueprintBuildProgress
 {
+    // Null for the original blueprint executor. A structured receipt does not
+    // make mining parameters part of the generic blueprint input format.
+    public ConstructionControlReadback? ConstructionControl { get; set; }
     public string BuildId { get; set; } = string.Empty;
     public string BlueprintHash { get; set; } = string.Empty;
     public string PlanHash { get; set; } = string.Empty;
@@ -78,6 +81,22 @@ public sealed class BlueprintBuildProgress
     public BlueprintSiteSnapshot? Site { get; set; }
     public string? FoundryPlanHash { get; set; }
     public FoundryConstructionPlan? FoundryPlan { get; set; }
+}
+
+public sealed class ConstructionControlReadback
+{
+    public string ExecutionKind { get; set; } = "structured_native";
+    public string Phase { get; set; } = string.Empty;
+    public bool DispatchDisabled { get; set; }
+    public bool PhysicalIdleVerified { get; set; }
+    public bool ExactBindingVerified { get; set; }
+    public bool AnchorHeld { get; set; }
+    public bool ReserveProofStillValid { get; set; }
+    public DateTimeOffset ObservationLeaseExpiresAtUtc { get; set; }
+    public long TailGameTicks { get; set; }
+    public double TailAndNextTickEnergyJoules { get; set; }
+    public string? StopReason { get; set; }
+    public bool WholeBatchDebitSharedByObjectReceipts { get; set; } = true;
 }
 
 public sealed class BlueprintBuildList

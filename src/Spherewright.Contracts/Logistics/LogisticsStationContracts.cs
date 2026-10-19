@@ -58,6 +58,10 @@ public sealed class LogisticsStationSnapshot
 
     public int WorkingVesselCount { get; set; }
 
+    // Detail-only copied Native transport evidence. Missing/unavailable is
+    // unknown, never zero; excluded from action/configuration/fleet hashes.
+    public LogisticsActiveVesselObservation? ActiveVessels { get; set; }
+
     public double DroneTripRangeRaw { get; set; }
 
     public double VesselTripRangeRaw { get; set; }

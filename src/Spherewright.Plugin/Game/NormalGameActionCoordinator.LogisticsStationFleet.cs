@@ -28,9 +28,10 @@ internal sealed partial class NormalGameActionCoordinator
         }
 
         if (request.ItemId != LogisticsFleetItemIds.Drone
-            && request.ItemId != LogisticsFleetItemIds.Vessel)
+            && request.ItemId != LogisticsFleetItemIds.Vessel
+            && request.ItemId != LogisticsFleetItemIds.Warper)
         {
-            return InvalidPlan("Only logistics drones (5001) and logistics vessels (5002) are valid fleet items.");
+            return InvalidPlan("Only logistics drones (5001), vessels (5002), and station warpers (1210) are supported.");
         }
 
         if (request.Count <= 0 || request.Count > 100)
@@ -114,6 +115,9 @@ internal sealed partial class NormalGameActionCoordinator
                 station.workShipCount,
                 vesselCapacity,
                 canAcceptWithdrawal,
+                GameMain.history.logisticShipWarpDrive,
+                station.warperCount,
+                station.warperMaxCount,
                 out var rejection))
         {
             var insufficient = rejection.IndexOf("fewer", StringComparison.OrdinalIgnoreCase) >= 0;
@@ -153,7 +157,7 @@ internal sealed partial class NormalGameActionCoordinator
             payload,
             common.Session!,
             1,
-            "The player package and matching idle fleet count change by equal-and-opposite amounts; working craft, the other fleet slot, station storage, and station energy remain unchanged.");
+            "The player package and matching idle craft or native warper counter change by equal-and-opposite amounts; all other craft/counters, station storage, and energy remain unchanged. Warpers require native warp-drive technology/capacity and zero proliferator points.");
         if (prepared.Success && prepared.Value is not null)
         {
             prepared.Value.SourceObjectId = request.Direction == LogisticsStationFleetTransferDirections.StationToPlayer
@@ -230,6 +234,9 @@ internal sealed partial class NormalGameActionCoordinator
             station.workShipCount,
             vesselCapacity,
             CanPlayerPackageAcceptExactly(player.package, plan.FleetTransferItemId, plan.Count),
+            GameMain.history.logisticShipWarpDrive,
+            station.warperCount,
+            station.warperMaxCount,
             out _)
             ? null
             : Stale("Fleet source count, destination capacity, idle availability, or current-version station capacity changed.");
@@ -257,18 +264,13 @@ internal sealed partial class NormalGameActionCoordinator
         var stationBefore = stationBeforeResult.Value?.LogisticsStation
             ?? throw new InvalidOperationException("The station fleet could not be captured before transfer.");
         var playerBefore = player.package.GetItemCount(plan.FleetTransferItemId, out var playerIncBefore);
-        var idleBefore = plan.FleetTransferItemId == LogisticsFleetItemIds.Drone
+        var isWarper = plan.FleetTransferItemId == LogisticsFleetItemIds.Warper;
+        var idleBefore = isWarper ? station!.warperCount : plan.FleetTransferItemId == LogisticsFleetItemIds.Drone
             ? station!.idleDroneCount
             : station!.idleShipCount;
-        var workingBefore = plan.FleetTransferItemId == LogisticsFleetItemIds.Drone
+        var workingBefore = isWarper ? 0 : plan.FleetTransferItemId == LogisticsFleetItemIds.Drone
             ? station.workDroneCount
             : station.workShipCount;
-        var otherIdleBefore = plan.FleetTransferItemId == LogisticsFleetItemIds.Drone
-            ? station.idleShipCount
-            : station.idleDroneCount;
-        var otherWorkingBefore = plan.FleetTransferItemId == LogisticsFleetItemIds.Drone
-            ? station.workShipCount
-            : station.workDroneCount;
         var packageOtherStateBefore = CapturePlayerPackageStateExcludingItem(player.package, plan.FleetTransferItemId);
         var stationStorageBefore = CaptureLogisticsStationStorageState(station);
         var energyBefore = station.energy;
@@ -286,6 +288,10 @@ internal sealed partial class NormalGameActionCoordinator
             {
                 station.idleDroneCount += removed;
             }
+            else if (isWarper)
+            {
+                station.warperCount += removed;
+            }
             else
             {
                 station.idleShipCount += removed;
@@ -302,6 +308,10 @@ internal sealed partial class NormalGameActionCoordinator
             if (plan.FleetTransferItemId == LogisticsFleetItemIds.Drone)
             {
                 station.idleDroneCount -= added;
+            }
+            else if (isWarper)
+            {
+                station.warperCount -= added;
             }
             else
             {
@@ -321,10 +331,10 @@ internal sealed partial class NormalGameActionCoordinator
         var stationAfter = stationAfterResult.Value?.LogisticsStation
             ?? throw new InvalidOperationException("The station fleet could not be captured after transfer.");
         var playerAfter = player.package.GetItemCount(plan.FleetTransferItemId, out var playerIncAfter);
-        var idleAfter = plan.FleetTransferItemId == LogisticsFleetItemIds.Drone
+        var idleAfter = isWarper ? station.warperCount : plan.FleetTransferItemId == LogisticsFleetItemIds.Drone
             ? station.idleDroneCount
             : station.idleShipCount;
-        var workingAfter = plan.FleetTransferItemId == LogisticsFleetItemIds.Drone
+        var workingAfter = isWarper ? 0 : plan.FleetTransferItemId == LogisticsFleetItemIds.Drone
             ? station.workDroneCount
             : station.workShipCount;
         var expectedPlayerDelta = plan.FleetTransferDirection == LogisticsStationFleetTransferDirections.PlayerToStation
@@ -335,12 +345,13 @@ internal sealed partial class NormalGameActionCoordinator
             || workingAfter != workingBefore
             || playerBefore + idleBefore + workingBefore != playerAfter + idleAfter + workingAfter
             || playerIncAfter != playerIncBefore
-            || (plan.FleetTransferItemId == LogisticsFleetItemIds.Drone
-                ? station.idleShipCount != otherIdleBefore || station.workShipCount != otherWorkingBefore
-                : station.idleDroneCount != otherIdleBefore || station.workDroneCount != otherWorkingBefore)
+            || (plan.FleetTransferItemId != LogisticsFleetItemIds.Drone
+                && (station.idleDroneCount != stationBefore.IdleDroneCount || station.workDroneCount != stationBefore.WorkingDroneCount))
+            || (plan.FleetTransferItemId != LogisticsFleetItemIds.Vessel
+                && (station.idleShipCount != stationBefore.IdleVesselCount || station.workShipCount != stationBefore.WorkingVesselCount))
             || player.inhandItemId != 0 || player.inhandItemCount != 0 || player.inhandItemInc != 0
             || station.energy != energyBefore
-            || station.warperCount != warpersBefore
+            || (!isWarper && station.warperCount != warpersBefore)
             || !string.Equals(packageOtherStateBefore, CapturePlayerPackageStateExcludingItem(player.package, plan.FleetTransferItemId), StringComparison.Ordinal)
             || !string.Equals(stationStorageBefore, CaptureLogisticsStationStorageState(station), StringComparison.Ordinal)
             || !string.Equals(stationBefore.ConfigurationStateHash, stationAfter.ConfigurationStateHash, StringComparison.Ordinal))

@@ -13,6 +13,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="..\..\src\Spherewright.Plugin\Bootstrap\InstallationStartupGuard.cs" Link="PluginBootstrap\InstallationStartupGuard.cs" />
+    <Compile Include="..\..\src\Spherewright.Plugin\Hosting\NativeTaskObserverOrderGuard.cs" Link="PluginHosting\NativeTaskObserverOrderGuard.cs" />
     <Compile Include="..\..\src\Spherewright.Plugin\Transport\PluginJson.cs" Link="PluginTransport\PluginJson.cs" />
     <Compile Include="..\..\src\Spherewright.Plugin\Game\GameplayJournalIdentity.cs" Link="PluginGame\GameplayJournalIdentity.cs" />
     <Compile Include="..\..\src\Spherewright.Plugin\Game\GameCallResult.cs" Link="PluginGame\GameCallResult.cs" />

@@ -153,6 +153,8 @@ internal sealed partial class NormalGameActionCoordinator
             playerActionHash,
             item.ID,
             preparation);
+        var constructionError = BindRemoteStructuredConstruction(payload, common.Session!);
+        if (constructionError is not null) return GameCallResult<PreparedNormalAction>.Failed(constructionError);
         var prepared = AddPreparedPlan(
             payload,
             common.Session!,
@@ -160,6 +162,11 @@ internal sealed partial class NormalGameActionCoordinator
             $"DSP creates {preparation.Steps.Count} ordinary {preparation.Kind} prebuild(s), consumes exactly that many owned items, and construction drones replace every prebuild with a reread matching entity.");
         if (prepared.Success && prepared.Value is not null)
         {
+            if (IsStructuredConstruction(payload))
+            {
+                prepared.Value.BlueprintBuild = BlueprintSnapshot(payload.BlueprintState!, common.Session!, new List<string>());
+                prepared.Value.CompletionCondition = "One exact native batch, durable material/prebuild/entity/topology receipts and a finite original-journey drone lease. Terminal success requires physical owned-drone idle; pending objects resume only by this buildId, never by a replacement Create.";
+            }
             prepared.Value.BuildKind = preparation.Kind;
             if (preparation.Kind == NormalBuildKinds.Belt)
             {

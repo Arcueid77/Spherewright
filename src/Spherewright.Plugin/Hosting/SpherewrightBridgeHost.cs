@@ -32,6 +32,10 @@ internal sealed class SpherewrightBridgeHost : IDisposable
     private readonly int _unityThreadId = System.Threading.Thread.CurrentThread.ManagedThreadId;
     private bool _voyagerStopping;
     private bool _gameEndHooked;
+    private GameLogic? _localPrePlayerLogic;
+    private GameData? _localPrePlayerWorld;
+    private ThreadManager? _localPrePlayerManager;
+    private ThreadManager.TaskFunc? _localPrePlayerHandler;
 
     private SpherewrightBridgeHost(
         SpherewrightConfiguration configuration,
@@ -222,6 +226,7 @@ internal sealed class SpherewrightBridgeHost : IDisposable
         }
 
         RefreshVoyagerNativeTickBinding();
+        RefreshVoyagerLocalPrePlayerBinding();
         _sessionTracker.UpdateOnMainThread();
         _statusProvider.UpdateGameLoadedOnMainThread(_sessionTracker.GameLoaded);
         _gameplayJournalManager.UpdateOnMainThread();
@@ -248,6 +253,7 @@ internal sealed class SpherewrightBridgeHost : IDisposable
 
     public void Dispose()
     {
+        StopVoyagerLocalPrePlayerControl();
         StopVoyagerNativeControl();
         if (_gameEndHooked)
         {
@@ -292,6 +298,7 @@ internal sealed class SpherewrightBridgeHost : IDisposable
             _normalActionCoordinator.VoyagerNativeTickAvailable = true;
             _normalActionCoordinator.VoyagerLastNativeTickObservedAtUtc = DateTimeOffset.UtcNow;
             _normalActionCoordinator.UpdateVoyagerNativeTickOnMainThread();
+            _normalActionCoordinator.UpdateStructuredConstructionNativeTickOnMainThread();
         }
         catch (Exception exception)
         {
@@ -301,14 +308,101 @@ internal sealed class SpherewrightBridgeHost : IDisposable
         }
     }
 
-    private void OnNativeGameEnded() => StopVoyagerNativeControl();
+    private void OnNativeGameEnded()
+    {
+        StopVoyagerLocalPrePlayerControl();
+        StopVoyagerNativeControl();
+    }
+
+    private void RefreshVoyagerLocalPrePlayerBinding()
+    {
+        var logic = GameMain.isRunning ? GameMain.logic : null;
+        var manager = logic?.threadController?.threadManager;
+        var world = GameMain.data;
+        if (ReferenceEquals(logic, _localPrePlayerLogic) && ReferenceEquals(manager, _localPrePlayerManager)
+            && ReferenceEquals(world, _localPrePlayerWorld) && logic is not null && manager is not null && _localPrePlayerHandler is not null)
+        {
+            if (NativeTaskObserverOrderGuard.HasNativeBeforeObserver(manager.OnTaskLogic, logic, typeof(GameLogic), _localPrePlayerHandler)) return;
+            StopVoyagerLocalPrePlayerControl();
+            return; // Lost/reordered Native authority is an interruption, never a fast-path success.
+        }
+        StopVoyagerLocalPrePlayerControl();
+        // GameLogic.Init publishes its Native delegate first. Append only our
+        // observer; never replace the Native callback or another subscriber.
+        if (logic is null || manager is null || world is null || !ReferenceEquals(logic.data, world)
+            || !NativeTaskObserverOrderGuard.HasUniqueNative(manager.OnTaskLogic, logic, typeof(GameLogic))) return;
+        var source = logic; var sourceManager = manager; var sourceWorld = world;
+        ThreadManager.TaskFunc? sourceObserver = null;
+        sourceObserver = (task, ordinal, count) => OnVoyagerLocalPrePlayerTask(source, sourceManager, sourceWorld, sourceObserver!, task, ordinal);
+        _localPrePlayerHandler = sourceObserver;
+        _localPrePlayerLogic = source; _localPrePlayerManager = sourceManager; _localPrePlayerWorld = sourceWorld;
+        manager.OnTaskLogic += _localPrePlayerHandler;
+        if (!NativeTaskObserverOrderGuard.HasNativeBeforeObserver(manager.OnTaskLogic, source, typeof(GameLogic), _localPrePlayerHandler))
+            StopVoyagerLocalPrePlayerControl();
+    }
+
+    private void OnVoyagerLocalPrePlayerTask(GameLogic logic, ThreadManager manager, GameData world,
+        ThreadManager.TaskFunc sourceObserver, int task, int ordinal)
+    {
+        if ((task != (int)EGameLogicTask.Physics && task != (int)EGameLogicTask.FactoryConstructionSystem) || ordinal != -1) return;
+        if (!ReferenceEquals(sourceObserver, _localPrePlayerHandler)) return; // A retired observer cannot borrow a newer binding's proof.
+        if (System.Threading.Thread.CurrentThread.ManagedThreadId != _unityThreadId)
+        { _normalActionCoordinator.VoyagerLocalPrePlayerTickAvailable = false; return; }
+        // Native task501 Physics has returned. Ascending synchronized tasks put
+        // the next601 Player after this observer, once per actual game tick,
+        // including several logic ticks in a single rendered frame.
+        try
+        {
+            if (!ReferenceEquals(GameMain.logic, logic) || !ReferenceEquals(GameMain.data, world)
+                || !ReferenceEquals(logic.data, world) || !ReferenceEquals(logic.threadController?.threadManager, manager)
+                || !ReferenceEquals(_localPrePlayerManager, manager) || _localPrePlayerHandler is null
+                || !NativeTaskObserverOrderGuard.HasNativeBeforeObserver(manager.OnTaskLogic, logic, typeof(GameLogic), _localPrePlayerHandler))
+            { StopVoyagerLocalPrePlayerControl(); return; }
+            if (task == (int)EGameLogicTask.FactoryConstructionSystem)
+            {
+                _normalActionCoordinator.ObserveStructuredConstructionNativeFactoryPassOnMainThread(world);
+                return;
+            }
+            _normalActionCoordinator.VoyagerLocalPrePlayerTickAvailable = true;
+            _normalActionCoordinator.VoyagerLocalPrePlayerObservedAtUtc = DateTimeOffset.UtcNow;
+            _normalActionCoordinator.UpdateStructuredConstructionPrePlayerTickOnMainThread();
+            _normalActionCoordinator.UpdateVoyagerLocalPrePlayerTickOnMainThread();
+        }
+        catch (Exception exception)
+        {
+            // Our observer must never interrupt Native's remaining tasks.
+            try { StopVoyagerLocalPrePlayerControl(); } catch (Exception) { }
+            LogVoyagerStopFailure(exception);
+        }
+    }
+
+    private void StopVoyagerLocalPrePlayerControl()
+    {
+        _normalActionCoordinator.VoyagerLocalPrePlayerTickAvailable = false;
+        try
+        {
+            _normalActionCoordinator.StopStructuredConstructionForHostShutdownOnMainThread();
+            _normalActionCoordinator.StopVoyagerLocalForHostShutdownOnMainThread();
+        }
+        catch (Exception exception) { LogVoyagerStopFailure(exception); }
+        finally
+        {
+            if (_localPrePlayerManager is not null && _localPrePlayerHandler is not null)
+                _localPrePlayerManager.OnTaskLogic -= _localPrePlayerHandler;
+            _localPrePlayerLogic = null; _localPrePlayerManager = null; _localPrePlayerWorld = null; _localPrePlayerHandler = null;
+        }
+    }
 
     private void StopVoyagerNativeControl()
     {
         _voyagerStopping = true;
         // Original session/player/controller bindings must still exist when owned
         // commands are released. A command release is not proof of native exit.
-        try { _normalActionCoordinator.StopVoyagerForHostShutdownOnMainThread(); }
+        try
+        {
+            _normalActionCoordinator.StopStructuredConstructionForHostShutdownOnMainThread();
+            _normalActionCoordinator.StopVoyagerForHostShutdownOnMainThread();
+        }
         catch (Exception exception) { LogVoyagerStopFailure(exception); }
         finally
         {

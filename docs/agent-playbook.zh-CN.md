@@ -229,6 +229,12 @@ Governor 公布可选 `parallelExpansionBlueprint` 时，提供一个明确蓝�
 
 `stocked_logistics_boundary` 的 `configured_route_supply_total` 不是可用未预留库存，`logistics_dispatch_state=unproven` 不证明派送或原因。改物流、扩矿前检查原生订单、机队、路线进展。
 
+读取另一星系中已知受管物流站时，复用 `spherewright_inspect_factory_entity`，传 `ownedRemoteLogisticsStation=true`、精确正数 `objectId` 及已存在驻留工厂的星球。不自动选择、不加载或创建工厂、不读取远端几何/材料切片，也不因此取得远端写入权。须核匹配的物流站详情回显；缺失或旧 Plugin 覆盖为未知。所有站点 prepare/commit 仍要求玩家实际本地星球及精确距离。
+
+用有界 `logisticsStation.activeVessels`（`coverage=native_active_work_ship_data`，最多32条）保留原有限窗运输观察，区分完整、截断与未知。读取真实 `shipIndex`，不能用会压缩的数组索引冒充。`ownerGId/shipIndex/gene` 可重复，不是跨保存/恢复的永久航次 ID；`direction` 是离开/返回归属站，`t` 是阶段参数，不是 ETA。不公开运输船坐标或私有 `StateToken`。船移动、货物归零、一次到货或配置正确均不能关闭持续路线门。事前声明数量/速率、库存/能量/翘曲器趋势及覆盖多个原生完整运输周期的窗口；证明真实采矿、双边交货、母星实际消费和正常保存恢复后继续运输。运输船货物、订单不能加入物流站库存。
+
+现有物流站机队 prepare/commit 也支持原生翘曲器 `itemId=1210`。须核新鲜的原生运输船曲速科技、真实 `warperCount`/容量、背包零增产点物品、完整玩家/机队哈希、本地距离及双边数量/增产点守恒。这是正常计数器转移，不注入物品，不新增远端写工具；转移结果未知只核原 action/key。
+
 <a id="native-free-ground-belt-route-choice"></a>
 ### 原生自由地面传送带选择
 
@@ -297,6 +303,19 @@ prepare/commit 前要求 fresh 前进的原生 tick，并以短于 30 秒控制�
 查询同一 action 的 `voyagerFlightReadback`，核真实 `phase`、可空恒星/行星身份、能量、舱内/包内翘曲器、`nativeExitObserved`、`flightDeadlineGameTick` 和绝对 `journeyDeadlineUtc`。太空过渡中根 action 的 `planetId` 保留原出发地。跨 action/session 保留返程储备与航程期限；Host 中断不增加时间或库存。到达恒星标记范围不等于稳定落地，单程不等于完整 Voyager 验收。
 
 有限停止使用 `spherewright_prepare_cancel_voyager_flight` 绑定原飞行 `actionId` 与出发地 `planetId`，`spherewright_commit_cancel_voyager_flight` 在同一 writer 锁存 `stopRequested`。持续查询原航程，核原生退出曲速、刹停及真实终态；停止回执不证明恢复完成。未知结果保留原 action/key；checkpoint reload 仍为独立受保护操作，不得回滚较新主档。安全可控的原生失败与精确符合条件的恢复仍是独立实机验收门。
+
+<a id="voyager-local-work-and-structured-construction"></a>
+## Voyager 本地作业与结构化施工
+
+所有远端动作保留在原 `remote_landed` 航程及精确 owned 存档/Native/world 绑定内；保留原返程 UTC/tick 窗、loaded 返程能量底线与原生 `1+extraWarperReserve`。返程核心充能在起飞前重验，不是每个本地动作都要满核心。原生站点配置/转移仍要求玩家实际本地、精确站点及 fresh 哈希；owned-remote 站点只读观察不授权在母星写远端。
+
+Move/Harvest 要求窄普通 RTS Walk/Mine 证书及 fresh Native pre-player 钩子；不覆盖排队订单、输入/惯性、待跳跃、导航、快速旅行、曲速、Fly 或 Drift。每 tick 要求精确已加载场景引用及 fresh 整球 layer4 水碰撞不存在查询；Ice 名称或 `!inWater` 均不足。保留13个付费停止 tick，覆盖 RTS 减速和可能同时采矿；abort 不证明原生速度已零。30秒内查询原 action，原本地期限不得侵入返程储备；物理/模式证据缺失仍保持未知。
+
+首版本地控制子集还要求独立原生战斗扣费为零：护盾容量0或补能原已关闭、激光未启用、旧弹仓0、有效空弹药选择且整仓 item/count/inc/filter0及真实 ROF/费用0，地面/太空模块均为**零配置机队槽位**。这不是活动船只数；默认空弹药槽1可以通过。不能为强行通过修改玩家设置，应报告具体不支持条件。复制器/科研队列须空闲，剩余科研物品 buffer 可以保留。
+
+需要矿机、站点、电力杆、地面带或分拣器时，只用既有原生 `prepare_build`/`commit_build`，每批为2301/2104/2201/2203/2205/2001/2011之一的1..8个同物品对象。保留精确原生节点/姿态/连接校验，以及固定 hold anchor 周围16m目标/弹射包络；高架路径及带覆盖复用不支持。通用蓝图文本不增加矿机布局能力。保留原 `actionId`、`buildId` 和 `constructionControl`；逐对象回执共享一次全批材料实测扣除，不能将每行当成独立扣除。完成前须核精确预建造/实体/组件及双向连接。
+
+工作自原开始最多3600 tick/60秒，fresh resume 不获得另一分钟；working 原 action 查询仅续30秒观察租约。取消、租约到期、用户暂停/接管停止新派发，冻结第一次有限尾部时钟。`dispatchDisabled` 本身不证明安全空闲：须等精确工厂真实后续 Native 施工轮次、原预发缓存清空及全部 owned 无人机实际空闲读回；安全暂停须有 `physicalIdleVerified`、绑定/anchor 和储备证据。未知保留原 action/build，不启用无人机、不重放创建；已证 pending 对象只能通过 fresh `prepare_blueprint_build` 以精确 `resumeBuildId` 及进度/玩家哈希续接。过期工作仍过期；不覆盖用户暂停/输入，也不从 Host 退出推断无人机已返。
 
 <a id="restart-and-interplanetary-flight"></a>
 ## 重启与行星间飞行

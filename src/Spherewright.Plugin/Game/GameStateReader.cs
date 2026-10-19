@@ -646,9 +646,11 @@ internal sealed partial class GameStateReader
         // Action-coordinator calls retain the two-argument, strictly local overload.
         var localPlanetId = GameMain.localPlanet?.id ?? 0;
         PlanetFactory? factory;
-        var accessError = allowCurrentStarRemoteReadOnly && request.PlanetId != localPlanetId
-            ? ValidateOwnedCurrentStarFactoryReadOnMainThread(requestedSessionId, request.PlanetId, out factory)
-            : ValidateOwnedPlanetOnMainThread(requestedSessionId, request.PlanetId, out factory);
+        var accessError = request.OwnedRemoteLogisticsStation
+            ? ValidateOwnedResidentStationReadOnMainThread(requestedSessionId, request, allowCurrentStarRemoteReadOnly, out factory)
+            : allowCurrentStarRemoteReadOnly && request.PlanetId != localPlanetId
+                ? ValidateOwnedCurrentStarFactoryReadOnMainThread(requestedSessionId, request.PlanetId, out factory)
+                : ValidateOwnedPlanetOnMainThread(requestedSessionId, request.PlanetId, out factory);
         if (accessError is not null)
         {
             return GameCallResult<FactoryEntitySnapshot>.Failed(accessError);
@@ -675,6 +677,8 @@ internal sealed partial class GameStateReader
                 snapshot.BeltCargo = CaptureBeltCargo(factory, request.ObjectId);
             if (snapshot?.ComponentKind == "power-generator")
                 snapshot.FuelPowerState = CaptureFuelPowerState(factory, request.ObjectId);
+            if (allowCurrentStarRemoteReadOnly && snapshot?.LogisticsStation is not null)
+                snapshot.LogisticsStation.ActiveVessels = CaptureActiveLogisticsVessels(factory, request.ObjectId);
         }
         else if (request.ObjectId < 0 && -request.ObjectId < factory!.prebuildCursor)
         {

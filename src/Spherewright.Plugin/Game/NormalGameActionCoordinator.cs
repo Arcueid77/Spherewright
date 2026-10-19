@@ -550,7 +550,8 @@ internal sealed partial class NormalGameActionCoordinator
         }
 
         if (plan.ActionKind != NormalActionKinds.CancelBlueprintBuild
-            && _actions.ActiveValues.Any(a => !a.Terminal && a.ActionKind == NormalActionKinds.BlueprintBuild))
+            && _actions.ActiveValues.Any(a => !a.Terminal && (a.ActionKind == NormalActionKinds.BlueprintBuild
+                || IsStructuredConstruction(a.Plan))))
             return GameCallResult<NormalActionCommitResult>.Failed(BridgeError.Create(BridgeErrorCodes.ServerBusy,
                 "A finite blueprint action owns construction; wait or explicitly prepare/commit cancellation first.",
                 false, "Poll the active action and its per-object progress. Do not issue competing actions."));
@@ -661,10 +662,12 @@ internal sealed partial class NormalGameActionCoordinator
     public void UpdateOnMainThread()
     {
         CheckVoyagerControlWatchdogOnMainThread();
+        CheckStructuredConstructionWatchdogOnMainThread();
+        CheckVoyagerLocalWalkWatchdogOnMainThread();
         foreach (var action in _actions.ActiveValues.ToArray())
         {
             // Voyager control runs at the audited native tick hook, never at render cadence.
-            if (action.Plan.VoyagerBudget is not null) continue;
+            if (action.Plan.VoyagerBudget is not null || IsStructuredConstruction(action.Plan)) continue;
             UpdateActionOnMainThread(action);
         }
         _actions.RefreshTerminals();
@@ -680,9 +683,20 @@ internal sealed partial class NormalGameActionCoordinator
 
         if (!action.Terminal && action.Plan.VoyagerBudget is not null && VoyagerBindingMatches(action.Plan))
             action.VoyagerControlLeaseExpiresAtUtc = DateTimeOffset.UtcNow.AddSeconds(VoyagerControlLeaseSeconds);
+        if (!action.Terminal && action.BlueprintBuild?.ConstructionControl is { StopReason: null } construction
+            && ConstructionReferencesMatch(action))
+            construction.RenewObservationLease(DateTimeOffset.UtcNow);
+        if (!action.Terminal && IsVoyagerLocalOrder(action) && !action.VoyagerLocalStopDeadlineTick.HasValue
+            && VoyagerLocalReferencesMatch(action) && DateTimeOffset.UtcNow < action.VoyagerLocalObservationLeaseExpiresAtUtc)
+        {
+            var nextLease = DateTimeOffset.UtcNow.AddSeconds(30);
+            action.VoyagerLocalObservationLeaseExpiresAtUtc = action.Plan.VoyagerLocalDeadlineUtc.HasValue
+                && nextLease > action.Plan.VoyagerLocalDeadlineUtc.Value ? action.Plan.VoyagerLocalDeadlineUtc.Value : nextLease;
+        }
         if (action.VoyagerLandingPendingPersistence) CompleteVoyagerLanding(action, action.VoyagerLandingCompletionMessage!);
         if (action.VoyagerCoverSaveProof is not null && action.State == NormalActionStates.OutcomeUnknown)
             ReconcileVoyagerCoverSave(action);
+        if (IsStructuredConstruction(action.Plan)) ReconcileStructuredConstructionOriginalAction(action);
         result = CreateActionSnapshot(action);
         return true;
     }
@@ -802,6 +816,7 @@ internal sealed partial class NormalGameActionCoordinator
                 Complete(action, "DSP's normal technology queue accepted the requested technology.");
                 break;
             case NormalActionKinds.Build:
+                if (IsStructuredConstruction(plan)) { StartStructuredConstructionOnMainThread(action); break; }
                 CreatePreparedPrebuildsOnMainThread(action);
                 action.TargetObjectId = action.PrebuildIds.Count == 1 ? -action.PrebuildIds[0] : (int?)null;
                 action.TargetObjectIds = action.PrebuildIds.Select(id => -id).ToList();
@@ -902,6 +917,9 @@ internal sealed partial class NormalGameActionCoordinator
 
     private void UpdateActionOnMainThread(ActionRecord action)
     {
+        // Local journey identity loss is unknown under its original evidence;
+        // the generic branch below must not stamp a replacement world's tick.
+        if (action.Plan.VoyagerLocalDeadlineGameTick.HasValue && !GuardVoyagerLocalAction(action)) return;
         var isFlight = action.ActionKind == NormalActionKinds.InterplanetaryFlight;
         if (!_sessions.IsCurrentSessionOwned
             || !string.Equals(_sessions.SessionId, action.SessionId, StringComparison.Ordinal)
@@ -920,7 +938,6 @@ internal sealed partial class NormalGameActionCoordinator
             return;
         }
 
-        if (!GuardVoyagerLocalAction(action)) return;
         switch (action.ActionKind)
         {
             case NormalActionKinds.Move:
@@ -1171,8 +1188,10 @@ internal sealed partial class NormalGameActionCoordinator
         return false;
     }
 
-    private static void AbortPlayerOrderIfOwned(ActionRecord action)
+    private static void AbortPlayerOrderIfOwned(ActionRecord action, bool forLocalNativeStop = false)
     {
+        if (IsVoyagerLocalOrder(action) && !action.VoyagerLocalCompleting && !forLocalNativeStop)
+            return; // The original local stop path first proves its paid Native tail.
         var player = GameMain.mainPlayer;
         if (player is null || action.PlayerOrder is null)
         {
@@ -1485,6 +1504,8 @@ internal sealed partial class NormalGameActionCoordinator
 
     private void Complete(ActionRecord action, string message)
     {
+        if (IsVoyagerLocalOrder(action) && !action.VoyagerLocalCompleting)
+        { RequestVoyagerLocalOrderStop(action, true, message); return; }
         if (action.Plan.VoyagerBudget is not null)
         {
             CompleteVoyagerLanding(action, message);
@@ -1528,6 +1549,8 @@ internal sealed partial class NormalGameActionCoordinator
 
     private void Fail(ActionRecord action, string message)
     {
+        if (IsVoyagerLocalOrder(action) && !action.VoyagerLocalCompleting)
+        { RequestVoyagerLocalOrderStop(action, false, message); return; }
         if (action.Plan.VoyagerBudget is not null && !action.VoyagerNativeLaunchStarted)
         {
             FinishVoyagerBeforeLaunchFailure(action, message);
@@ -1620,6 +1643,7 @@ internal sealed partial class NormalGameActionCoordinator
             BlueprintBuildId = action.BlueprintBuild?.BuildId,
             BlueprintBuildPhase = action.BlueprintBuild?.Phase,
             BlueprintObjects = action.BlueprintBuild is null ? null : CloneBlueprintObjects(action.BlueprintBuild.Objects),
+            ConstructionControl = CaptureConstructionControl(action.BlueprintBuild, action),
             ReconciledFromOutcomeUnknown = action.ReconciledFromOutcomeUnknown,
             ReconciledAtGameTick = action.ReconciledAtGameTick,
             FlightCheckpointId = action.FlightCheckpointId,
@@ -1638,6 +1662,10 @@ internal sealed partial class NormalGameActionCoordinator
         };
         if (action.Plan.VoyagerBudget is not null && !VoyagerBindingMatches(action.Plan) && action.AfterInventory is null)
             return result; // No current-world inventory is evidence for an ended original binding.
+        if (IsStructuredConstruction(action.Plan) && !ConstructionReferencesMatch(action) && action.AfterInventory is null)
+            return result;
+        if (action.Plan.VoyagerLocalDeadlineGameTick.HasValue && !VoyagerLocalReferencesMatch(action) && action.AfterInventory is null)
+            return result;
         var after = action.AfterInventory ?? CaptureInventory(GameMain.mainPlayer);
         foreach (var itemId in action.BeforeInventory.Keys.Concat(after.Keys).Distinct().OrderBy(id => id))
         {
