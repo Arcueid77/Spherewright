@@ -2671,7 +2671,7 @@ public sealed class SpherewrightToolsTests
         using var provider=services.BuildServiceProvider();
         var description=provider.GetServices<McpServerTool>().Single(t=>t.ProtocolTool.Name=="spherewright_prepare_move").ProtocolTool.Description!;
         Assert.Contains("surfacePreview",description);
-        Assert.Contains("at most66",description);
+        Assert.Contains("at most130",description);
         Assert.Contains("not route clearance",description);
         Assert.Contains("does not change existing hash/commit admission",description);
         Assert.Contains("allowPassiveDrift (default false)", description);
