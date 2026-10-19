@@ -278,25 +278,75 @@ internal sealed class OwnedWorldResumeTicketStore
         }
     }
 
-    public void Consume(string resumeToken)
+    public void Consume(string resumeToken) => TryConsume(resumeToken);
+
+    public bool TryConsume(string resumeToken)
     {
         var current = _currentTicket ?? ReadFromDisk();
         if (current is null || !FixedTimeEquals(current.ResumeToken, resumeToken))
         {
-            return;
+            return false;
         }
 
         if (!PersistConsumptionTombstone(resumeToken, current.GameVersion))
         {
             _logger.LogError("Spherewright did not consume the owned-world resume ticket because no durable tombstone could be written");
-            return;
+            return false;
         }
 
         _currentTicket = null;
         _currentTicketPath = null;
         DeleteTicketReplicaIfMatching(_ticketPath, resumeToken);
         DeleteTicketReplicaIfMatching(_handoffTicketPath, resumeToken);
+        return true;
     }
+
+    public FileStream OpenRemoteResumeJournalLease(OwnedWorldResumeTicket ticket, out string fingerprint)
+    {
+        var identity = GameplayJournalIdentity.HashOwnedSaveIdentity(ticket.OwnedSaveName);
+        var stream = new FileStream(Path.Combine(_runtimeDirectory, "journals", $"gameplay-{identity}.json"),
+            FileMode.Open, FileAccess.Read, FileShare.Read);
+        try
+        {
+            if (stream.Length > 16L * 1024 * 1024 || ticket.GameplayJournalCheckpoint is null
+                || !TryValidateGameplayJournalContinuity(ticket, false, out fingerprint, out var rejection))
+                throw new InvalidDataException("remote_resume_journal_evidence_unproved");
+            return stream;
+        }
+        catch { stream.Dispose(); throw; }
+    }
+
+    public bool TryCaptureRemoteCredential(string token, out string fingerprint, out string rejection)
+    {
+        fingerprint = string.Empty; rejection = string.Empty;
+        try
+        {
+            using var runtime = new FileStream(_ticketPath, FileMode.Open, FileAccess.Read, FileShare.Read);
+            using var handoff = new FileStream(_handoffTicketPath, FileMode.Open, FileAccess.Read, FileShare.Read);
+            if (runtime.Length > 65536 || handoff.Length > 65536) throw new InvalidDataException("Credential exceeds its finite bound.");
+            using var runtimeReader = new StreamReader(runtime, Encoding.UTF8, true);
+            using var handoffReader = new StreamReader(handoff, Encoding.UTF8, true);
+            var runtimeJson = runtimeReader.ReadToEnd(); var handoffJson = handoffReader.ReadToEnd();
+            var first = PluginJson.Deserialize<OwnedWorldResumeTicket>(runtimeJson);
+            var second = PluginJson.Deserialize<OwnedWorldResumeTicket>(handoffJson);
+            if (first is null || second is null || first.Version != TicketVersion
+                || first.ExpiresAtUtc <= DateTimeOffset.UtcNow || first.GameVersion != _gameVersion
+                || string.IsNullOrEmpty(first.QuarantineActionId) || first.GameplayJournalCheckpoint is null
+                || !FixedTimeEquals(first.ResumeToken, token) || IsConsumed(token)
+                || PluginJson.Serialize(first) != PluginJson.Serialize(second)
+                || _currentTicket is null || PluginJson.Serialize(first) != PluginJson.Serialize(_currentTicket))
+                throw new InvalidDataException("The active credential replicas changed.");
+            fingerprint = CanonicalStateHash.Combine("remote-active-credential-v1", HashToken(runtimeJson), HashToken(handoffJson));
+            return true;
+        }
+        catch (Exception exception) when (exception is IOException || exception is UnauthorizedAccessException
+            || exception is ArgumentException || exception is Newtonsoft.Json.JsonException)
+        { rejection = "remote_resume_active_credential_changed:" + exception.GetType().Name; return false; }
+    }
+
+    public bool TryConsumeRemoteCredential(string token, string expectedFingerprint) =>
+        TryCaptureRemoteCredential(token, out var actual, out _)
+        && FixedTimeEquals(expectedFingerprint, actual) && TryConsume(token);
 
     // Unlike TryGetActiveTicket this grants no loading capability. It only authenticates
     // provenance for a fresh short-lived plan. Commit still requires its mode-specific

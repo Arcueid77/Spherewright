@@ -841,6 +841,8 @@ internal sealed partial class NormalGameActionCoordinator
             return;
         }
         NativeLocalWalkSceneBinding? landedIdleScene = null;
+        var idleOwner = !action.Plan.VoyagerReturnLeg ? new VoyagerRemoteIdleOwner(action.Plan.VoyagerBinding!,
+            action.SessionId, action.Plan.VoyagerJourneyId!, action.ActionId, action.ActionId) : null;
         if (!action.Plan.VoyagerReturnLeg)
         {
             var journey = action.VoyagerJourney ?? _flightCheckpoints.VoyagerJourney;
@@ -848,7 +850,7 @@ internal sealed partial class NormalGameActionCoordinator
                 journey.SpentGameTicks, action.StartedAtGameTick, GameMain.gameTick, action.VoyagerLegAccounted);
             var admission = journey is null || !spent.HasValue
                 ? VoyagerRemoteIdleAdmissionPolicy.Blocked("remote_idle_landing_accounting_unproved")
-                : CaptureVoyagerRemoteIdleAdmission(action, journey, scene: null, spent.Value,
+                : CaptureVoyagerRemoteIdleAdmission(idleOwner!, journey, scene: null, spent.Value,
                     action.VoyagerLandedAtGameTick ?? GameMain.gameTick, out landedIdleScene,
                     prospectiveRemotePlanetId: action.VoyagerSelectedDestinationPlanetId);
             if (!admission.Proved)
@@ -894,7 +896,7 @@ internal sealed partial class NormalGameActionCoordinator
         }
         if (!action.Plan.VoyagerReturnLeg)
         {
-            _voyagerRemoteIdleOwner = action;
+            _voyagerRemoteIdleOwner = idleOwner;
             _voyagerRemoteIdleScene = landedIdleScene;
         }
         else { _voyagerRemoteIdleOwner = null; _voyagerRemoteIdleScene = null; }

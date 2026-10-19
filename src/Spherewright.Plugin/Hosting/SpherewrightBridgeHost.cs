@@ -65,6 +65,7 @@ internal sealed class SpherewrightBridgeHost : IDisposable
         _descriptorPublisher = descriptorPublisher;
         _pipeServer = pipeServer;
         _descriptor = descriptor;
+        _sessionTracker.SetRemoteResumeLoadCompleteGuard(OnRemoteResumeNativeLoadComplete);
     }
 
     public static SpherewrightBridgeHost Create(
@@ -131,6 +132,8 @@ internal sealed class SpherewrightBridgeHost : IDisposable
         var researchResultAutoAcknowledger = new ResearchResultAutoAcknowledger(
             configuration.AutoAcknowledgeResearchResults,
             logger);
+        sessionTracker.SetRemoteResumeAdmissionGuard(normalActionCoordinator.AdmitVerifiedVoyagerRemoteResumeOnMainThread,
+            normalActionCoordinator.PreflightVerifiedVoyagerRemoteResumeOnMainThread);
         var testWorldCoordinator = new TestWorldCoordinator(
             configuration.AllowWrites,
             configuration.PlanTokenLifetimeSeconds,
@@ -314,6 +317,26 @@ internal sealed class SpherewrightBridgeHost : IDisposable
         StopVoyagerNativeControl();
     }
 
+    private string? OnRemoteResumeNativeLoadComplete()
+    {
+        if (!_started || System.Threading.Thread.CurrentThread.ManagedThreadId != _unityThreadId)
+            return "remote_resume_loader_main_thread_unproved";
+        RefreshVoyagerNativeTickBinding();
+        RefreshVoyagerLocalPrePlayerBinding();
+        var logic = GameMain.logic;
+        var manager = logic?.threadController?.threadManager;
+        if (logic is null || manager is null || _localPrePlayerHandler is null
+            || !ReferenceEquals(logic, _localPrePlayerLogic) || !ReferenceEquals(GameMain.data, _localPrePlayerWorld)
+            || !ReferenceEquals(manager, _localPrePlayerManager)
+            || !NativeTaskObserverOrderGuard.HasNativeBeforeObserver(manager.OnTaskLogic, logic, typeof(GameLogic), _localPrePlayerHandler))
+            return "remote_resume_loader_pre_player_binding_unproved";
+        // Begin/InitLogic completed, but no Native601 has run in this callback.
+        // Do not set Available, publish an idle owner, release leases or resave.
+        _sessionTracker.UpdateOnMainThread();
+        _gameplayJournalManager.UpdateOnMainThread();
+        return _sessionTracker.PreflightRemoteResumeBeforeFirstPlayerOnMainThread();
+    }
+
     private void RefreshVoyagerLocalPrePlayerBinding()
     {
         var logic = GameMain.isRunning ? GameMain.logic : null;
@@ -365,6 +388,14 @@ internal sealed class SpherewrightBridgeHost : IDisposable
             }
             _normalActionCoordinator.VoyagerLocalPrePlayerTickAvailable = true;
             _normalActionCoordinator.VoyagerLocalPrePlayerObservedAtUtc = DateTimeOffset.UtcNow;
+            if (_sessionTracker.HasPendingRemoteResumeAdoption)
+            {
+                // Only this exact Native501 return may acknowledge the new idle
+                // owner. Ordinary Update/poll cannot release its held evidence.
+                _sessionTracker.UpdateOnMainThread();
+                _gameplayJournalManager.UpdateOnMainThread();
+                if (!_sessionTracker.TryAdmitRemoteResumeOnMainThread()) return;
+            }
             _normalActionCoordinator.UpdateStructuredConstructionPrePlayerTickOnMainThread();
             _normalActionCoordinator.UpdateVoyagerLocalPrePlayerTickOnMainThread();
         }

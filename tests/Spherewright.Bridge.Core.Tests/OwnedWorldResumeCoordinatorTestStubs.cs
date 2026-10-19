@@ -56,17 +56,44 @@ internal sealed partial class GameSessionTracker : IDisposable
     internal OwnedSaveRecoveryLease? PrimaryLease { get; private set; }
     internal bool Reauthorizing { get; private set; }
     internal bool FixedAutosave { get; private set; }
+    internal bool RequiresRemoteResumeEvidence { get; set; }
+    internal FlightCheckpointStore? RemoteResumeCheckpoints { get; set; }
+    internal VoyagerRemoteResumeEvidence? RemoteEvidence { get; private set; }
+    internal string? RemoteResumeActionId { get; private set; }
+    internal OwnedWorldResumeSourceKind ResumeSource { get; private set; }
+    internal Action? BeforeRemoteLoaderBind { get; set; }
+    internal bool RemoteLoaderObserverPrepared { get; private set; }
+    internal bool RemoteLoaderObserverBound { get; private set; }
+    internal void PrepareRemoteResumeNativeLoadObserver() => RemoteLoaderObserverPrepared = true;
+    internal void BindRemoteResumeNativeLoaderAfterDispatch()
+    {
+        BeforeRemoteLoaderBind?.Invoke();
+        RemoteLoaderObserverBound = true;
+    }
+    internal void RecordRemoteResumeNativeDispatchObservationFailure(string exceptionType) =>
+        ResumeAdoptionError = "remote_resume_postdispatch_loader_observation_failed:" + exceptionType;
+    internal bool TryOpenRemoteResumeEvidence(OwnedWorldResumeTicket ticket, OwnedSaveRecoveryLease source,
+        OwnedSaveRecoveryLease primary, out VoyagerRemoteResumeEvidence? evidence, out string rejection)
+    {
+        evidence = null; rejection = "test_remote_store_unavailable";
+        return RemoteResumeCheckpoints is not null
+            && RemoteResumeCheckpoints.TryOpenRemoteResumeEvidence(ticket, source, primary, out evidence, out rejection);
+    }
     internal SessionState CaptureOnMainThread() => Snapshot;
     internal void ExpectNextSessionToBeResumed(OwnedWorldResumeTicket ticket,
         OwnedSaveRecoveryLease? sourceLease = null, bool reauthorizingExpiredPrimary = false,
         IDisposable? journalLease = null, bool reauthorizingFixedAutosave0 = false,
-        OwnedSaveRecoveryLease? primaryLease = null)
+        OwnedSaveRecoveryLease? primaryLease = null, VoyagerRemoteResumeEvidence? remoteEvidence = null,
+        string? remoteResumeActionId = null, OwnedWorldResumeSourceKind resumeSource = OwnedWorldResumeSourceKind.None)
     {
         SourceLease = sourceLease;
         JournalLease = journalLease;
         PrimaryLease = primaryLease;
         Reauthorizing = reauthorizingExpiredPrimary;
         FixedAutosave = reauthorizingFixedAutosave0;
+        RemoteEvidence = remoteEvidence;
+        RemoteResumeActionId = remoteResumeActionId;
+        ResumeSource = resumeSource;
     }
     internal void CancelExpectedResumedSession() => Dispose();
     public void Dispose()
@@ -78,5 +105,7 @@ internal sealed partial class GameSessionTracker : IDisposable
         JournalLease = null;
         PrimaryLease?.Dispose();
         PrimaryLease = null;
+        RemoteEvidence?.Dispose();
+        RemoteEvidence = null;
     }
 }

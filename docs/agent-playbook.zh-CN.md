@@ -317,7 +317,7 @@ prepare/commit 前要求 fresh 前进的原生 tick，并以短于 30 秒控制�
 
 Move/Harvest 复用既有普通 RTS 动作并保留无水快路。有限能耗分支允许运行中有界 Walk/Drift，要求 fresh Native pre-player 钩子及精确 owned world/player/controller/mecha/本地工厂绑定；排队订单、手动输入/惯性、待跳跃、导航、快速旅行、曲速和 Fly 仍不支持。原生水平、推力及后台成本须覆盖有限工作窗与13个付费 Native 游戏停止 tick，含采矿与 RTS 减速同 tick 发生，且不侵入原核心/loaded 返程底线、原生翘曲器或返程时间。Move/Harvest 的停止上限为这13个付费游戏 tick 或独立1秒墙钟，先到为止；UTC 准入另留至少1秒清理余量。墙钟上限只是等待期限，不是物理停稳定理，也不能折成60个付费 tick；任一上限均不重开原 action 或 journey 期限。本地 UTC/tick 期限及30秒原 action 租约的范围保持不变。此分支仅在有限能耗资格通过时替代原整球海洋排除门，不授予路线净空或连续干地区域证书。正常成功仍须实际干地 Walk 与真实 Native 零速度读回；RTS 归零、abort 订单或游戏暂停均不足。
 
-成功远端落地后，同一原 journey 继续守护闲置能耗与原返程时钟，直至已预算的本地动作、受控施工或真实返航接管。失去闲置 Walk、成本或原返程时钟证据时，走精确 owned 绑定的 Pause/quarantine 分支；已成功的飞行或 Move 仍保留成功，后续闲置保护不改写其原结果。 Host 卸载或默认 Save 重载若丢失内存中的 landed-controller 绑定，不得静默重建资格；只对同一 owned 世界 Pause/quarantine，并拒绝本地/结构化施工，保留 checkpoint 与确认门。本子集支持同一 Host 内出航、本地作业和正常返航；物流保存恢复续运安排在回母星且 journey 闭合后，远端在途冷恢复尚未验证。
+成功远端落地后，同一原 journey 继续守护闲置能耗与原返程时钟，直至已预算的本地动作、受控施工或真实返航接管。失去闲置 Walk、成本或原返程时钟证据时，走精确 owned 绑定的 Pause/quarantine 分支；已成功的飞行或 Move 仍保留成功，后续闲置保护不改写其原结果。 Host 卸载或默认 Save 重载若丢失内存中的 landed-controller 绑定，不得静默重建资格；除非独立确认的固定 LastExit 续接证明新的独立 idle owner，否则只对同一 owned 世界 Pause/quarantine 并拒绝本地/结构化施工。保留 checkpoint 与确认门；普通路径支持同一 Host 内出航、本地作业和正常返航；物流保存恢复续运安排在回母星且 journey 闭合后，远端在途冷恢复尚未验证。
 
 守卫失败、停止/尾返上限到期或调用者/Host 观察丢失时，有限能耗的失败保护仅在原 owned 绑定仍精确匹配时调用正常 GameMain.Pause。当前 LogicFrame 仍可能跑完 player 与无人机的一整个 tick，因此必须支付并保留该整 tick 的储备；只有后续 Native 游戏能耗/派发 tick 冻结。Pause 不证明物理空闲或尾返成功。保留未核销的 outcome_unknown、quarantine 及精确原 action/build/checkpoint，不自动恢复、Load 或重放；绝不暂停替换后的另一世界。Host 真正卸载时先暂停精确 owned 的受保护世界，再拆除钩子；普通 MCP 断线不卸载 DSP 内常驻 Plugin，租约检查继续。暂停不续原墙钟期限。新源码仍须完整 Plugin/回归、准确 SHA CI、Lab 锁/采用、冷部署及实机检查后才计运行信用；不新增公开工具或协议版本。
 
@@ -336,7 +336,11 @@ Codex、MCP Host 关闭、重启、断连、上下文压缩、回合结束，均
 
 菜单 `gameLoaded=false` 正常，不能等 `gameLoaded=true` 才 prepare。受保护可用不表示原生就绪；prepare 查预加载、菜单、无 loader、精确源和 Journal，不消耗、不加载。只有真实未就绪拒绝才有界等待。接受终态后要求受管、已存、健康 tick 与 Journal。
 
-主存档早于已知接受工作时先停，不加载。只有精确批准 `verified_newer_lastexit` 才可用健康含 Journal 来源、已知下限与批准候选、证据 1、嵌入身份、完整文件与租约。不推断确认、不伪造隔离、不任意选源、不覆盖主文件。对账保存实体、材料、连接，不能重放成功调用器或伪造旧会话审计。
+远端隔离的窄续接仍使用 `recoveryMode=default`，不新增工具或恢复模式，普通 healthy/default 行为不变。Fresh prepare 必须返回 `userConfirmationRequired=true`、固定 LastExit 的真实 `candidateGameTick`、`exactEmbeddedIdentityVerified=true` 及 `confirmationDigest`。所有者须在审阅这次精确披露后明确同意；commit 使用既有 `userConfirmedInConversation` 与匹配 digest，早先授权或不同候选均不能满足本次确认。
+
+原生加载前须成功持久消费受保护凭据，并绑定固定源与当前主档的完整文件证据、精确同版本 owned/和平身份、原 Journal 及已成功 checkpoint/journey 来源。成功 checkpoint 只作证据，绝不是加载源，也不伪造旧 `ActionRecord`。精确新 Native GameLoader 在 frame10 已完成且禁用的 `onLoadComplete` 同步回调，须在 Begin/InitLogic 后、首个 player(601) tick 前绑定新 Native logic，证明 owned 身份、原 Journal 及严格13个付费 tick 的储备预检。该预检不伪称已观察到 Native tick 可用，也不发布 idle owner；证明未决时禁止自动主档重存及本地/结构化写入。只有首个真正 Native pre-player(501) 检查才可准入独立 idle owner 并释放租约，紧邻重存前还须再次满足完整严格闲置谓词。事后 Update、轮询或首个被观察到的501不能补证已错过的首 tick。失败仅暂停精确 owned 世界并隔离；Pause 不证明物理空闲，也不授予自动 Resume、Load 或重放权限。原期限、核心/loaded/翘曲器底线及已花 tick 记账绝不清零；原返程储备不足则拒绝续接，不改有效期。
+
+主存档早于已知接受工作时先停，不加载。独立的 `verified_newer_lastexit` 流程仍要求精确批准、健康且含 Journal 的来源、已知下限与批准候选、证据 1、嵌入身份、完整文件与租约。不推断确认、不伪造隔离、不任意选源、不覆盖主文件。对账保存实体、材料、连接，不能重放成功调用器或伪造旧会话审计。
 
 主恢复、AutoSave0、飞行能力独立，不是选择器，新进度后不复活旧能力。Governor 附着失败保留原声明，不能改归档或替基线。修复后的冷组件可恢复同声明并清观察，不恢复旧信用。
 

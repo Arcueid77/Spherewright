@@ -4,11 +4,13 @@
 
 **活动阶段（2026-10-19）：`0.5.0` Voyager 开发。** 所有者阶段启动指令保留且仅保留三项验收：正常跨恒星安全往返，带回出发星系有合法证据缺失的资源；至少一条持续跨恒星物流路线；一次可恢复飞行失败及其精确 checkpoint 恢复，且不回滚较新 primary 进度。历史实机验收为 **2/3**：往返在源码 `463fc888b1e4cf4a90e08cb1022d2b8896447700` 通过，可控失败/精确恢复及较新主档保护在源码 `216f4075e983d78fa4d4f5d222bdd279813e1d86` 通过。实际安装态独立记录于 Lab 活动快照，上述恢复组件组仅保留原历史证据范围；持续物流与最终同源手动/Thunderstore 双候选仍开放。详见[范围与能力/缺口表](../ROADMAP.zh-CN.md#050--voyager)；此后最新安装及最终资格以 [Lab 活动快照](https://github.com/Arcueid77/Spherewright-Lab/blob/main/scenarios/v0.5-voyager/current-status.md)为准。
 
+本次受保护续接开发截点：远端隔离航程只能在既有 `default` 模式下，以本次明确确认的 fresh 固定 LastExit 候选续接。完整 owned/Journal/checkpoint/journey 文件证据须包含精确新 Native GameLoader frame10 已完成且禁用的 `onLoadComplete` 交接：在 Begin/InitLogic 后、首个 player(601) tick 前同步绑定新 logic，预检 owned 身份、原 Journal 与严格13个付费 tick 储备，不伪称 Native tick 可用或发布 idle owner。证明未决禁止自动重存；只有首个真正 Native pre-player(501) 检查才可准入 idle owner 并释放租约，重存前仍须另核严格准入。事后 Update 或轮询不能补首 tick 证明。不加载成功 checkpoint，不重建旧 action，不续原时间/材料储备，普通 healthy/default 行为不变。本源码仍须完整构建/回归、准确 SHA CI、指南/包、Lab 采用、安装及实机资格；历史2/3验收及72工具/1资源不变，实际安装独立记录于 Lab。
+
 本次落地交接开发截点：去程 `flight_succeeded` 须满足与远端闲置交接共用的完整严格谓词；条件未证保留原失败/unknown 路径及 `voyagerFlightReadback.failureReason` 中的精确 predicate code，不追改已记录的历史成功。Pause 不是物理空闲或恢复授权；受保护 checkpoint 恢复与适用确认门仍独立。新源码完整构建/回归、准确 SHA CI、包/指南、Lab 采用、安装及实机验证仍须完成，历史2/3验收不变。
 
 本次实机资格前文档截点：下一0.5源码适配复用普通 RTS Move/Harvest，以有限原生水平/推力/后台成本覆盖运行中有界 Walk/Drift 的工作与13个付费 Native 游戏停止 tick。停止上限为这13个付费 tick 或独立1秒墙钟，先到为止，UTC 准入另留至少1秒清理余量。墙钟上限只是等待期限，不是物理停稳定理，也不折成60个付费 tick，绝不续原 action/journey 期限。保留无水快路、原核心/返程/翘曲器/时间底线及观察租约。守卫/尾部/观察证明失败时，精确 owned 绑定的 GameMain.Pause 失败保护保留未核销的未知原 action/build/checkpoint 与隔离，并须支付仍可能完成的 player+无人机整 tick。Pause 不证明物理空闲或成功，也不授权自动恢复、Load 或重放。施工仍为固定锚点 Walk，Drift/锚损失即停派发并 Pause/unknown。
 
-成功远端落地后，同一原 journey 继续守护闲置能耗与原返程时钟，直至已预算的本地动作、受控施工或真实返航接管。失去闲置 Walk、成本或原返程时钟证据时，走精确 owned 绑定的 Pause/quarantine 分支；已成功的飞行或 Move 仍保留成功，后续闲置保护不改写其原结果。 Host 卸载或默认 Save 重载若丢失内存中的 landed-controller 绑定，不得静默重建资格；只对同一 owned 世界 Pause/quarantine，并拒绝本地/结构化施工，保留 checkpoint 与确认门。本子集支持同一 Host 内出航、本地作业和正常返航；物流保存恢复续运安排在回母星且 journey 闭合后，远端在途冷恢复尚未验证。 Host 真正卸载时先暂停精确 owned 的受保护世界，再拆除钩子；普通 MCP 断线不卸载 DSP 内常驻 Plugin，租约检查继续。
+成功远端落地后，同一原 journey 继续守护闲置能耗与原返程时钟，直至已预算的本地动作、受控施工或真实返航接管。失去闲置 Walk、成本或原返程时钟证据时，走精确 owned 绑定的 Pause/quarantine 分支；已成功的飞行或 Move 仍保留成功，后续闲置保护不改写其原结果。 Host 卸载或默认 Save 重载若丢失内存中的 landed-controller 绑定，不得静默重建资格；除非独立确认的固定 LastExit 续接证明新的独立 idle owner，否则只对同一 owned 世界 Pause/quarantine 并拒绝本地/结构化施工。保留 checkpoint 与确认门；普通路径支持同一 Host 内出航、本地作业和正常返航；物流保存恢复续运安排在回母星且 journey 闭合后，远端在途冷恢复尚未验证。 Host 真正卸载时先暂停精确 owned 的受保护世界，再拆除钩子；普通 MCP 断线不卸载 DSP 内常驻 Plugin，租约检查继续。
 
 本适配首次完整 Plugin 构建已零警告/错误；首轮4,047项回归暴露1项旧整球规则的指南短语契约失配，措辞已按新语义更新，此截点第二轮完整回归仍待跑。准确 SHA CI、包/指南检查、Lab 锁/采用、必要冷部署及实机检查仍待完成。不新增公开工具或版本系统，72工具/1资源与历史2/3门保持。
 

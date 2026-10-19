@@ -3,10 +3,11 @@ using Spherewright.Bridge.Core.Safety;
 using Spherewright.Contracts.Errors;
 using Spherewright.Contracts.Sessions;
 using Spherewright.Plugin.RuntimeDescriptor;
+using Spherewright.Plugin.Transport;
 
 namespace Spherewright.Plugin.Game;
 
-internal sealed class GameSessionTracker : IDisposable
+internal sealed partial class GameSessionTracker : IDisposable
 {
     private readonly bool _writesConfigured;
     private readonly bool _userSaveImportConfigured;
@@ -186,6 +187,7 @@ internal sealed class GameSessionTracker : IDisposable
         {
             if (GameLoaded || _observedData is not null)
             {
+                CancelRemoteResumeAdmission();
                 if (_expectedResumeTicket is not null || _pendingJournalResumeTicket is not null
                     || (_ownedSaveState == OwnedSaveStates.WaitingToSave && ConfirmedPlannedResumeMinimumGameTick.HasValue))
                 {
@@ -215,6 +217,7 @@ internal sealed class GameSessionTracker : IDisposable
 
         if (!GameLoaded || !ReferenceEquals(_observedData, currentData))
         {
+            if (GameLoaded) CancelRemoteResumeAdmission();
             if (GameLoaded && (_expectedResumeTicket is not null || _pendingJournalResumeTicket is not null
                 || (_ownedSaveState == OwnedSaveStates.WaitingToSave && ConfirmedPlannedResumeMinimumGameTick.HasValue)))
             {
@@ -307,6 +310,8 @@ internal sealed class GameSessionTracker : IDisposable
 
         if (_expectedResumeTicket is not null && !IsCurrentSessionOwned)
         {
+            if (HasPendingRemoteResumeAdoption && !_remoteResumeLoadCompleteObserved)
+                return; // Only the exact Native loader event crosses this boundary.
             if (!TryValidateResumeCandidate(currentData, _expectedResumeTicket,
                     _resumeSourceLease?.Prefix.GameTick, out var pending, out var rejection))
             {
@@ -318,6 +323,7 @@ internal sealed class GameSessionTracker : IDisposable
                 _resumeAdoptionError = rejection;
                 _resumeTickets.Consume(_expectedResumeTicket.ResumeToken);
                 _expectedResumeTicket = null;
+                CancelRemoteResumeAdmission();
                 ReleaseResumeSourceLease();
                 _ownedSaveState = OwnedSaveStates.None;
                 _logger.LogError("Spherewright rejected an owned-world resume candidate because provenance did not match");
@@ -376,6 +382,13 @@ internal sealed class GameSessionTracker : IDisposable
         ConfirmedPlannedResumeMinimumGameTick = string.IsNullOrWhiteSpace(ticket.QuarantineActionId)
             ? _resumeSourceLease?.Prefix.GameTick ?? ticket.MinimumGameTick : (long?)null;
         _pendingJournalResumeTicket = null;
+        if (_pendingRemoteResumeEvidence is not null)
+        {
+            if (_pendingRemoteResumeEvidence.JournalJson != PluginJson.Serialize(checkpoint))
+                throw new InvalidOperationException("remote_resume_original_journal_checkpoint_changed");
+            _remoteResumeJournalConfirmed = true;
+            return; // Retain all leases until the strict pre-player admission.
+        }
         ReleaseResumeSourceLease();
         _logger.LogInfo("Spherewright confirmed gameplay-journal continuity and consumed the one-time resume ticket");
     }
@@ -387,6 +400,8 @@ internal sealed class GameSessionTracker : IDisposable
             return;
         }
 
+        if (_pendingRemoteResumeEvidence is not null) FailRemoteResumeAdmission("remote_resume_original_journal_rejected");
+        CancelRemoteResumeAdmission();
         _pendingJournalResumeTicket = null;
         ReleaseResumeSourceLease();
         _ownedData = null;
@@ -809,6 +824,7 @@ internal sealed class GameSessionTracker : IDisposable
 
     private void TrySaveOwnedWorldOnMainThread(GameData currentData)
     {
+        if (!RemoteResumeAllowsPrimaryResave()) return;
         if (!string.Equals(_ownedSaveState, OwnedSaveStates.WaitingToSave, StringComparison.Ordinal)
             || _pendingJournalResumeTicket is not null
             || !string.Equals(_writeHealth, WriteHealthStates.Healthy, StringComparison.Ordinal)
@@ -825,6 +841,8 @@ internal sealed class GameSessionTracker : IDisposable
     public bool TrySaveOwnedWorldNowOnMainThread(out string? error)
     {
         error = null;
+        if (!RemoteResumeAllowsPrimaryResave())
+        { error = "remote_resume_strict_idle_admission_pending_or_unproved"; return false; }
         if (!IsCurrentSessionOwned
             || _pendingJournalResumeTicket is not null
             || _resumeSourceLease is not null
@@ -938,7 +956,9 @@ internal sealed class GameSessionTracker : IDisposable
 
     public void ExpectNextSessionToBeResumed(OwnedWorldResumeTicket ticket, OwnedSaveRecoveryLease? sourceLease = null,
         bool reauthorizingExpiredPrimary = false, IDisposable? journalLease = null,
-        bool reauthorizingFixedAutosave0 = false, OwnedSaveRecoveryLease? primaryLease = null)
+        bool reauthorizingFixedAutosave0 = false, OwnedSaveRecoveryLease? primaryLease = null,
+        VoyagerRemoteResumeEvidence? remoteEvidence = null, string? remoteResumeActionId = null,
+        OwnedWorldResumeSourceKind resumeSource = OwnedWorldResumeSourceKind.None)
     {
         if (ticket is null)
         {
@@ -957,7 +977,7 @@ internal sealed class GameSessionTracker : IDisposable
 
         if (reauthorizingFixedAutosave0 && (!reauthorizingExpiredPrimary || primaryLease is null))
             throw new InvalidOperationException("Fixed AutoSave0 recovery requires verified protected provenance, explicit authority and the primary lease.");
-        if (!reauthorizingFixedAutosave0 && primaryLease is not null)
+        if (!reauthorizingFixedAutosave0 && primaryLease is not null && remoteEvidence is null)
             throw new InvalidOperationException("A primary overwrite-target lease belongs only to fixed AutoSave0 recovery.");
         if (reauthorizingExpiredPrimary && (sourceLease is null || journalLease is null))
             throw new InvalidOperationException("Protected reauthorization requires verified source and original-Journal leases.");
@@ -970,7 +990,13 @@ internal sealed class GameSessionTracker : IDisposable
             ? !OwnedWorldVersionCompatibilityPolicy.AllowsReauthorization(ticket.GameVersion, _gameVersion)
             : ticket.GameVersion != _gameVersion)
             throw new InvalidOperationException("The source game version is not permitted for this resume mode.");
-        if (sourceLease is not null && (ticket.GameplayJournalCheckpoint is null
+        if (remoteEvidence is not null && (remoteEvidence.IsDisposed || reauthorizingExpiredPrimary || reauthorizingFixedAutosave0
+            || resumeSource != OwnedWorldResumeSourceKind.LastExit || !Guid.TryParse(remoteResumeActionId, out _)
+            || sourceLease is null || primaryLease is null || journalLease is null || ticket.GameplayJournalCheckpoint is null
+            || string.IsNullOrEmpty(ticket.QuarantineActionId) || sourceLease.Fingerprint != remoteEvidence.SourceFingerprint
+            || primaryLease.Fingerprint != remoteEvidence.PrimaryFingerprint))
+            throw new InvalidOperationException("remote_resume_full_lease_handoff_unproved");
+        if (remoteEvidence is null && sourceLease is not null && (ticket.GameplayJournalCheckpoint is null
             || !string.IsNullOrWhiteSpace(ticket.QuarantineActionId)
             || !sourceLease.Prefix.MatchesExpectedIdentity
             || !OwnedWorldReauthorizationPolicy.AllowsLeaseTick(sourceLease.Prefix.GameTick,
@@ -978,6 +1004,11 @@ internal sealed class GameSessionTracker : IDisposable
             throw new InvalidOperationException("Verified recovery requires its mode-specific tick and a healthy Journal-bearing ticket.");
 
         _expectedResumeTicket = ticket;
+        _pendingRemoteResumeEvidence = remoteEvidence;
+        _pendingRemoteResumeActionId = remoteResumeActionId;
+        _remoteResumeJournalConfirmed = false;
+        _remoteResumeAdmitted = false;
+        _remoteResumeAdoption = null;
         _resumeSourceLease = sourceLease;
         _resumePrimaryLease = primaryLease;
         _reauthorizationJournalLease = journalLease;
@@ -989,6 +1020,7 @@ internal sealed class GameSessionTracker : IDisposable
 
     public void CancelExpectedResumedSession()
     {
+        CancelRemoteResumeAdmission();
         _expectedResumeTicket = null;
         ReleaseResumeSourceLease();
         if (!IsCurrentSessionOwned)
@@ -1016,6 +1048,7 @@ internal sealed class GameSessionTracker : IDisposable
 
     public void Dispose()
     {
+        CancelRemoteResumeAdmission();
         ReleaseResumeSourceLease();
         ReleaseFlightCheckpointSourceLease();
     }
@@ -1310,6 +1343,9 @@ internal sealed class GameSessionTracker : IDisposable
                 Message = "Writes are blocked until the protected gameplay journal proves the resume ticket's durable checkpoint.",
             });
         }
+        if (HasPendingRemoteResumeAdoption)
+            blockers.Add(new WriteBlocker { Code = BridgeErrorCodes.BridgeNotReady,
+                Message = "The exact remote LastExit continuation awaits its first verified Native pre-player idle handoff; writes and primary resave remain blocked." });
         if (!_writesConfigured)
         {
             blockers.Add(new WriteBlocker

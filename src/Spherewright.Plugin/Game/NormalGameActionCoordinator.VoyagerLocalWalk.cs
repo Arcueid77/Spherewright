@@ -9,7 +9,7 @@ internal sealed partial class NormalGameActionCoordinator
 {
     public bool VoyagerLocalPrePlayerTickAvailable { get; set; }
     public DateTimeOffset VoyagerLocalPrePlayerObservedAtUtc { get; set; }
-    private ActionRecord? _voyagerRemoteIdleOwner;
+    private VoyagerRemoteIdleOwner? _voyagerRemoteIdleOwner;
     private NativeLocalWalkSceneBinding? _voyagerRemoteIdleScene;
     // A separate patience bound, not a 13/60s prediction of physics motion.
     private const double VoyagerLocalStopWallSeconds = VoyagerRemoteIdleAdmissionPolicy.StopWallSeconds;
@@ -19,21 +19,28 @@ internal sealed partial class NormalGameActionCoordinator
         return VoyagerRemoteIdleBindingMatches(_voyagerRemoteIdleOwner, _flightCheckpoints.VoyagerJourney);
     }
 
-    private bool VoyagerRemoteIdleBindingMatches(ActionRecord? owner, VoyagerJourneyRecord? journey,
+    private bool VoyagerRemoteIdleBindingMatches(VoyagerRemoteIdleOwner? owner, VoyagerJourneyRecord? journey,
         int? prospectiveRemotePlanetId = null)
     {
-        var b = owner?.Plan.VoyagerBinding;
+        var b = owner?.Binding;
         return owner is not null && b is not null && journey is not null
             && (prospectiveRemotePlanetId.HasValue || journey.Phase == "remote_landed")
-            && journey.JourneyId == owner.Plan.VoyagerJourneyId
-            && VoyagerOwnedJourneyMatchesCurrentSession(journey, owner.SessionId)
+            && journey.JourneyId == owner.JourneyId && VoyagerRemoteIdleRuntimeMatches(owner)
+            && VoyagerLocalActionBudgetPolicy.MatchesOwnedJourneyIdentity(journey.OwnedSaveName, journey.GameVersion,
+                _sessions.IsCurrentSessionOwned, _sessions.OwnedSaveName, b.World.gameName, _sessions.CurrentNativeGameVersion)
             && ReferenceEquals(GameMain.data, b.World) && ReferenceEquals(GameMain.mainPlayer, b.Player)
             && ReferenceEquals(b.Player.controller, b.Controller) && ReferenceEquals(b.Player.mecha, b.Mecha)
             && GameMain.localPlanet is { } planet && planet.id == (prospectiveRemotePlanetId ?? journey.RemotePlanetId)
             && ReferenceEquals(b.Player.planetData, planet) && ReferenceEquals(b.Player.factory, planet.factory);
     }
 
-    private VoyagerRemoteIdleAdmissionDecision CaptureVoyagerRemoteIdleAdmission(ActionRecord owner,
+    private bool VoyagerRemoteIdleRuntimeMatches(VoyagerRemoteIdleOwner owner) =>
+        _sessions.IsCurrentSessionOwned && _sessions.SessionId == owner.SessionId
+        && ReferenceEquals(GameMain.data, owner.Binding.World) && ReferenceEquals(GameMain.mainPlayer, owner.Binding.Player)
+        && ReferenceEquals(owner.Binding.Player.controller, owner.Binding.Controller)
+        && ReferenceEquals(owner.Binding.Player.mecha, owner.Binding.Mecha);
+
+    private VoyagerRemoteIdleAdmissionDecision CaptureVoyagerRemoteIdleAdmission(VoyagerRemoteIdleOwner owner,
         VoyagerJourneyRecord journey, NativeLocalWalkSceneBinding? scene, long spentGameTicks,
         long? lastLandedGameTick, out NativeLocalWalkSceneBinding? observedScene, int? prospectiveRemotePlanetId = null)
     {
@@ -43,7 +50,7 @@ internal sealed partial class NormalGameActionCoordinator
         {
             if (!VoyagerRemoteIdleBindingMatches(owner, journey, prospectiveRemotePlanetId))
                 return VoyagerRemoteIdleAdmissionPolicy.Blocked("remote_idle_binding_unproved");
-            var player = owner.Plan.VoyagerBinding!.Player;
+            var player = owner.Binding.Player;
             stage = "current_order";
             if (player.currentOrder is not null) return VoyagerRemoteIdleAdmissionPolicy.Blocked("remote_idle_current_order_active");
             stage = "scene_capture";
@@ -114,7 +121,7 @@ internal sealed partial class NormalGameActionCoordinator
         if (!bindingMatches)
         {
             if (_voyagerRemoteIdleOwner is { } originalOwner && _flightCheckpoints.VoyagerJourney is { Phase: "remote_landed" } retainedOwner
-                && retainedOwner.JourneyId == originalOwner.Plan.VoyagerJourneyId && VoyagerBindingMatches(originalOwner.Plan))
+                && retainedOwner.JourneyId == originalOwner.JourneyId && VoyagerRemoteIdleRuntimeMatches(originalOwner))
             {
                 var reason = "The completed outbound's remote idle binding is no longer proved. Its successful flight is retained."
                     + VoyagerRemoteIdleFailureDetail(bindingFailure) + FreezeNativeLocalFailureEnergy(true);
@@ -151,6 +158,60 @@ internal sealed partial class NormalGameActionCoordinator
             + VoyagerRemoteIdleFailureDetail(admission)
             + FreezeNativeLocalFailureEnergy(bindingMatches);
         _sessions.QuarantineWritesOnMainThread(owner.ActionId, message);
+    }
+
+    internal string? AdmitVerifiedVoyagerRemoteResumeOnMainThread(VoyagerRemoteResumeAdoption adoption)
+        => CheckVerifiedVoyagerRemoteResumeOnMainThread(adoption, admit: true);
+
+    // Called only by the exact completed-loader callback after Host proves its
+    // Native delegate binding. It never fabricates a501 observation or owner.
+    internal string? PreflightVerifiedVoyagerRemoteResumeOnMainThread(VoyagerRemoteResumeAdoption adoption)
+        => CheckVerifiedVoyagerRemoteResumeOnMainThread(adoption, admit: false);
+
+    private string? CheckVerifiedVoyagerRemoteResumeOnMainThread(VoyagerRemoteResumeAdoption adoption, bool admit)
+    {
+        if (admit && (!VoyagerLocalPrePlayerTickAvailable || DateTimeOffset.UtcNow < VoyagerLocalPrePlayerObservedAtUtc
+            || DateTimeOffset.UtcNow - VoyagerLocalPrePlayerObservedAtUtc > TimeSpan.FromSeconds(2)))
+            return "remote_resume_native_pre_player_guard_unproved";
+        if (adoption.SourceKind != OwnedWorldResumeSourceKind.LastExit || !Guid.TryParse(adoption.ResumeActionId, out _)
+            || !_sessions.IsCurrentSessionOwned || _sessions.SessionId != adoption.SessionId
+            || !ReferenceEquals(GameMain.data, adoption.World) || !ReferenceEquals(GameMain.mainPlayer, adoption.Player))
+            return "remote_resume_adopted_runtime_binding_unproved";
+        var journey = _flightCheckpoints.VoyagerJourney;
+        if (journey is null || journey.Phase != "remote_landed") return "remote_resume_original_remote_journey_unproved";
+        var existing = _voyagerRemoteIdleOwner;
+        var sameOwner = existing is not null && ReferenceEquals(existing.ResumeAdoption, adoption);
+        if (!sameOwner && !_flightCheckpoints.RemoteResumeEvidenceStillMatches(adoption.Evidence))
+            return "remote_resume_original_durable_proof_changed";
+        var owner = sameOwner ? existing! : new VoyagerRemoteIdleOwner(new VoyagerNativeBinding(adoption.World, adoption.Player),
+            adoption.SessionId, journey.JourneyId, adoption.ResumeActionId, journey.ActiveActionId, adoption);
+        var decision = CaptureVoyagerRemoteIdleAdmission(owner, journey, sameOwner ? _voyagerRemoteIdleScene : null,
+            journey.SpentGameTicks, journey.LastLandedGameTick, out var scene);
+        if (!decision.Proved) return decision.BlockerCode
+            + (decision.CaptureStage is null ? string.Empty : ":" + decision.CaptureStage)
+            + (decision.CaptureExceptionType is null ? string.Empty : ":" + decision.CaptureExceptionType);
+        if (admit)
+        {
+            _voyagerRemoteIdleOwner = owner;
+            _voyagerRemoteIdleScene = scene;
+        }
+        return null;
+    }
+
+    private sealed class VoyagerRemoteIdleOwner
+    {
+        public VoyagerRemoteIdleOwner(VoyagerNativeBinding binding, string sessionId, string journeyId,
+            string actionId, string sourceFlightActionId, VoyagerRemoteResumeAdoption? resumeAdoption = null)
+        {
+            Binding = binding; SessionId = sessionId; JourneyId = journeyId; ActionId = actionId;
+            SourceFlightActionId = sourceFlightActionId; ResumeAdoption = resumeAdoption;
+        }
+        public VoyagerNativeBinding Binding { get; }
+        public string SessionId { get; }
+        public string JourneyId { get; }
+        public string ActionId { get; }
+        public string SourceFlightActionId { get; }
+        public VoyagerRemoteResumeAdoption? ResumeAdoption { get; }
     }
 
     private static bool IsVoyagerLocalOrder(ActionRecord a) => a.Plan.VoyagerLocalDeadlineGameTick.HasValue
