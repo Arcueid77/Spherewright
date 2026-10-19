@@ -958,7 +958,8 @@ internal sealed partial class GameSessionTracker : IDisposable
         bool reauthorizingExpiredPrimary = false, IDisposable? journalLease = null,
         bool reauthorizingFixedAutosave0 = false, OwnedSaveRecoveryLease? primaryLease = null,
         VoyagerRemoteResumeEvidence? remoteEvidence = null, string? remoteResumeActionId = null,
-        OwnedWorldResumeSourceKind resumeSource = OwnedWorldResumeSourceKind.None)
+        OwnedWorldResumeSourceKind resumeSource = OwnedWorldResumeSourceKind.None,
+        VoyagerRecoveryAuthorization? recoveryAuthorization = null)
     {
         if (ticket is null)
         {
@@ -996,6 +997,17 @@ internal sealed partial class GameSessionTracker : IDisposable
             || string.IsNullOrEmpty(ticket.QuarantineActionId) || sourceLease.Fingerprint != remoteEvidence.SourceFingerprint
             || primaryLease.Fingerprint != remoteEvidence.PrimaryFingerprint))
             throw new InvalidOperationException("remote_resume_full_lease_handoff_unproved");
+        if (recoveryAuthorization is not null && (remoteEvidence?.RecoveryProposal is not { } proposal
+            || recoveryAuthorization.ResumeActionId != remoteResumeActionId
+            || recoveryAuthorization.EvidenceFingerprint != remoteEvidence.Fingerprint
+            || string.IsNullOrEmpty(recoveryAuthorization.ConfirmationDigest)
+            || recoveryAuthorization.ConfirmedAtUtc == default || recoveryAuthorization.ConfirmedAtUtc > DateTimeOffset.UtcNow
+            || recoveryAuthorization.Proposal.DeadlineUtc != proposal.DeadlineUtc
+            || recoveryAuthorization.Proposal.Scope != proposal.Scope
+            || recoveryAuthorization.Proposal.MaximumChargeGameTicks != proposal.MaximumChargeGameTicks
+            || recoveryAuthorization.Proposal.MaximumChargeWallSeconds != proposal.MaximumChargeWallSeconds)
+            || remoteEvidence?.RecoveryProposal is not null && recoveryAuthorization is null)
+            throw new InvalidOperationException("remote_resume_recovery_authorization_handoff_unproved");
         if (remoteEvidence is null && sourceLease is not null && (ticket.GameplayJournalCheckpoint is null
             || !string.IsNullOrWhiteSpace(ticket.QuarantineActionId)
             || !sourceLease.Prefix.MatchesExpectedIdentity
@@ -1006,6 +1018,7 @@ internal sealed partial class GameSessionTracker : IDisposable
         _expectedResumeTicket = ticket;
         _pendingRemoteResumeEvidence = remoteEvidence;
         _pendingRemoteResumeActionId = remoteResumeActionId;
+        _pendingRecoveryAuthorization = recoveryAuthorization;
         _remoteResumeJournalConfirmed = false;
         _remoteResumeAdmitted = false;
         _remoteResumeAdoption = null;

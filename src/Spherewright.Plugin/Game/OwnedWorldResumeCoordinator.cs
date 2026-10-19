@@ -120,11 +120,19 @@ internal sealed class OwnedWorldResumeCoordinator
                 : payload.Reauthorizing ? OwnedWorldReauthorizationPolicy.EvidenceVersion
                 : payload.VerifiedRecovery ? OwnedWorldRecoveryPolicy.EvidenceVersion : 0,
             CandidateGameTick = payload.VerifiedRecovery || payload.RequiresConfirmation ? payload.MinimumGameTick : (long?)null,
+            OriginalJourneyDeadlineUtc = payload.RemoteEvidence?.Journey.DeadlineUtc,
+            EffectiveRecoveryDeadlineUtc = payload.RemoteEvidence?.RecoveryProposal?.DeadlineUtc,
+            RecoveryScope = payload.Request.RecoveryScope,
+            MaximumChargeGameTicks = payload.Request.MaximumChargeGameTicks,
+            MaximumChargeWallSeconds = payload.Request.MaximumChargeWallSeconds,
+            NativeChargeFeasibilityRequiresFreshCapture = payload.RemoteEvidence?.RecoveryProposal is not null,
             ExactEmbeddedIdentityVerified = payload.VerifiedRecovery || payload.RequiresConfirmation,
             UserConfirmationRequired = payload.RequiresConfirmation,
             SourceGameVersion = ticket.GameVersion,
             TargetGameVersion = _tickets.CurrentGameVersion,
-            ConfirmationPrompt = payload.RemoteContinuation
+            ConfirmationPrompt = payload.RemoteEvidence?.RecoveryProposal is { } recoveryWindow
+                ? $"Confirm one finite attempt to continue the original bounded task until {recoveryWindow.DeadlineUtc:O}. The original deadline {payload.RemoteEvidence.Journey.DeadlineUtc:O} and all tick/energy/warper limits remain unchanged. Natural charging is capped at {recoveryWindow.MaximumChargeGameTicks} game ticks / {recoveryWindow.MaximumChargeWallSeconds} wall seconds within the five-minute adoption lease; Native P/g and feasibility remain unknown until fresh capture. No promised admission or flight, automatic renewal, checkpoint load or Resume of isolated RAM."
+                : payload.RemoteContinuation
                 ? "Confirm this exact fixed LastExit candidate after reviewing its disclosed tick and full-file proof. It retains the original successful flight, Journal and unchanged journey deadline/reserves; it does not load the successful pre-flight checkpoint."
                 : payload.VersionChangedPrimary ? OwnedWorldPrimaryMigrationPolicy.ConfirmationPromptFor(ticket.GameVersion, _tickets.CurrentGameVersion)
                 : payload.FixedAutosaveRecovery ? OwnedWorldAutosaveRecoveryPolicy.ConfirmationPromptFor(payload.Request.RecoveryMode)
@@ -132,7 +140,9 @@ internal sealed class OwnedWorldResumeCoordinator
             ConfirmationDigest = payload.RequiresConfirmation ? payload.Fingerprint : string.Empty,
             CommitAllowedNow = blockers.Count == 0,
             CommitBlockers = blockers,
-            CompletionCondition = payload.RemoteContinuation
+            CompletionCondition = payload.RemoteEvidence?.RecoveryProposal is not null
+                ? "Only this fixed LastExit, exact immutable one-shot UTC authorization and original task limits may continue after subsequent explicit confirmation. Native guarded charging remains pending; the full strict13 and original return core minimum precede idle admission/primary resave. Fresh positive route proof precedes flight. A failed attempt pauses and cannot rekey or renew."
+                : payload.RemoteContinuation
                 ? $"Only the fixed LastExit at tick {payload.MinimumGameTick} may continue this exact quarantined remote journey after subsequent explicit confirmation of this disclosure. Source, current primary, original successful checkpoint and Journal are held and rechecked. The old credential is durably consumed before normal loading; ownership and Journal confirmation precede a new strict idle owner and any normal primary resave. No automatic Resume, checkpoint rollback, renewed budget or deadline."
                 : payload.VersionChangedPrimary
                 ? $"Only the exact active-credential owned primary at the recorded tick may migrate from {ticket.GameVersion} to {_tickets.CurrentGameVersion} after subsequent explicit confirmation of this disclosure. Unchanged ticket replicas, full primary evidence and original durable Journal are rechecked and held read-only. Provenance is durably consumed before loading; the exact transition preserves Journal origin/history before normal primary resave and a target-version credential. No expiry edits, alternate source, fallback or replay."
@@ -250,13 +260,17 @@ internal sealed class OwnedWorldResumeCoordinator
         };
         FileStream? journalLease = null;
         var nativeLoadAttempted = false;
+        VoyagerRecoveryAuthorization? recoveryAuthorization = null;
         try
         {
             if (payload.RemoteContinuation)
             {
                 journalLease = currentPayload!.RemoteJournalLease;
+                if (currentPayload.RemoteEvidence?.RecoveryProposal is { } proposal)
+                    recoveryAuthorization = new VoyagerRecoveryAuthorization(action.ActionId, currentPayload.RemoteEvidence.Fingerprint,
+                        payload.Fingerprint, DateTimeOffset.UtcNow, proposal);
                 if (currentPayload.RemoteEvidence is null
-                    || !_tickets.TryConsumeRemoteCredential(currentTicket.ResumeToken, currentPayload.RemoteCredentialFingerprint))
+                    || !_tickets.TryConsumeRemoteCredential(currentTicket.ResumeToken, currentPayload.RemoteCredentialFingerprint, recoveryAuthorization))
                 {
                     currentPayload.RemoteEvidence?.Dispose();
                     journalLease?.Dispose(); sourceLease?.Dispose(); primaryLease?.Dispose();
@@ -277,7 +291,7 @@ internal sealed class OwnedWorldResumeCoordinator
                     false, "Keep the current main menu and investigate; do not replay with another save."));
             _sessions.ExpectNextSessionToBeResumed(currentTicket, sourceLease, payload.Reauthorizing, journalLease,
                 payload.FixedAutosaveRecovery, primaryLease, currentPayload!.RemoteEvidence,
-                payload.RemoteContinuation ? action.ActionId : null, payload.ResumeSource);
+                payload.RemoteContinuation ? action.ActionId : null, payload.ResumeSource, recoveryAuthorization);
             sourceLease = null; // Tracker owns the lease through adoption/Journal confirmation.
             journalLease = null;
             primaryLease = null;
@@ -448,6 +462,10 @@ internal sealed class OwnedWorldResumeCoordinator
         lease = null;
         primaryLease = null;
         rejection = string.Empty;
+        var hasRecoveryWindow = request.RecoveryDeadlineUtc.HasValue || !string.IsNullOrEmpty(request.RecoveryScope)
+            || request.MaximumChargeGameTicks != 0 || request.MaximumChargeWallSeconds != 0d;
+        if (hasRecoveryWindow && (!request.RecoveryDeadlineUtc.HasValue || request.RecoveryMode != OwnedWorldResumeModes.Default))
+        { rejection = "remote_resume_recovery_window_default_only"; return false; }
         if (request.RecoveryMode == OwnedWorldResumeModes.Default)
         {
             if (!TryResolveResumeSource(ticket, out var source, out rejection)) return false;
@@ -462,7 +480,10 @@ internal sealed class OwnedWorldResumeCoordinator
                     primaryLease = OwnedSaveRecoveryLease.Open(GameSave.SavePath(ticket.OwnedSaveName), ticket.OwnedSaveName);
                     remoteJournal = _tickets.OpenRemoteResumeJournalLease(ticket, out var journalFingerprint);
                     if (!_tickets.TryCaptureRemoteCredential(ticket.ResumeToken, out var credentialFingerprint, out rejection)) return false;
-                    if (!_sessions.TryOpenRemoteResumeEvidence(ticket, lease, primaryLease, out remoteEvidence, out rejection))
+                    var proposal = request.RecoveryDeadlineUtc is { } proposedDeadline
+                        ? new VoyagerRecoveryWindowProposal(proposedDeadline, request.RecoveryScope,
+                            request.MaximumChargeGameTicks, request.MaximumChargeWallSeconds) : null;
+                    if (!_sessions.TryOpenRemoteResumeEvidence(ticket, lease, primaryLease, out remoteEvidence, out rejection, proposal))
                         return false;
                     payload = new OwnedWorldResumePlanPayload(ticket, source, request, lease, provenance, _sessions.Revision,
                         primaryLease.Fingerprint, remoteEvidence, remoteJournal, journalFingerprint, credentialFingerprint);
@@ -477,6 +498,7 @@ internal sealed class OwnedWorldResumeCoordinator
                     if (payload is null) { lease?.Dispose(); lease = null; primaryLease?.Dispose(); primaryLease = null; }
                 }
             }
+            if (hasRecoveryWindow) { rejection = "remote_resume_recovery_window_quarantined_remote_only"; return false; }
             payload = new OwnedWorldResumePlanPayload(ticket, source, request, null, provenance, _sessions.Revision);
             return true;
         }
@@ -700,6 +722,8 @@ internal sealed class OwnedWorldResumeCoordinator
                 UserConfirmedInConversation = request.UserConfirmedInConversation,
                 MinimumRecoveryGameTick = request.MinimumRecoveryGameTick,
                 ExpectedRecoveryGameTick = request.ExpectedRecoveryGameTick,
+                RecoveryDeadlineUtc = request.RecoveryDeadlineUtc, RecoveryScope = request.RecoveryScope,
+                MaximumChargeGameTicks = request.MaximumChargeGameTicks, MaximumChargeWallSeconds = request.MaximumChargeWallSeconds,
             };
             MinimumGameTick = lease?.Prefix.GameTick ?? ticket.MinimumGameTick;
             Fingerprint = CanonicalStateHash.Combine(
@@ -729,7 +753,8 @@ internal sealed class OwnedWorldResumeCoordinator
                 Request.MinimumRecoveryGameTick,
                 Request.ExpectedRecoveryGameTick,
                 lease?.Fingerprint ?? string.Empty,
-                primaryFingerprint, remoteEvidence?.Fingerprint ?? string.Empty, remoteJournalFingerprint, remoteCredentialFingerprint);
+                primaryFingerprint, remoteEvidence?.Fingerprint ?? string.Empty, remoteJournalFingerprint, remoteCredentialFingerprint,
+                Request.RecoveryDeadlineUtc, Request.RecoveryScope, Request.MaximumChargeGameTicks, Request.MaximumChargeWallSeconds);
         }
 
         public OwnedWorldResumeTicket Ticket { get; }

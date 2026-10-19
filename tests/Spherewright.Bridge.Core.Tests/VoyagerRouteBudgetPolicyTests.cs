@@ -8,6 +8,37 @@ namespace Spherewright.Bridge.Core.Tests;
 public sealed class VoyagerRouteBudgetPolicyTests
 {
     [Fact]
+    public void StrictIdleCanAdmitBelowTheIndependentFreshReturnCoreMinimum()
+    {
+        const double core = 33_000_000, returnCore = 1_280_000_000;
+        var cost = VoyagerLocalWalkReservePolicy.Evaluate(new VoyagerLocalWalkFacts
+        {
+            ModeTransitionsExcluded = true, IndependentMechaCosts = NativeMechaBackgroundCostPolicyTests.Idle(),
+            WalkSpeed = 12, WalkPowerWatts = 1000, MiningPowerWatts = 200, OtherWorkPowerWatts = 100,
+            ReactorConsumptionRatio = 2, RtsSpeed = 0, ManualSpeed = 0, SoftLandingRecover = 1,
+            IncludePotentialWaterDrift = true, NativeThrustPowerPerAcceleration = 300, NativeGravityUpperBound = 50,
+        });
+        Assert.True(cost.Proved); Assert.True(13 * cost.PerNativeTickEnergyJoules < core); Assert.True(core < returnCore);
+        var now = DateTimeOffset.UtcNow;
+        var facts = new VoyagerRemoteIdleAdmissionFacts { CoreEnergyJoules = core, MovementReserve = cost,
+            JourneyBudget = new() { ExactRemoteBinding = true, NativePlayerIdle = true, CurrentGameTick = 100,
+                LastLandedGameTick = 100, SpentGameTicks = 10, MaximumGameTicks = 108000, ReturnReserveGameTicks = 54000,
+                WorkGameTicks = 1, TailGameTicks = 13, NowUtc = now, JourneyDeadlineUtc = now.AddHours(1),
+                AvailableLoadedEnergyJoules = 10_000_000_000, LockedReturnFloorJoules = 5_000_000_000,
+                WorkPowerUpperWatts = cost.WorkPowerUpperWatts, TailAndNextTickEnergyJoules = cost.StopEnergyJoules!.Value,
+                NativeWarperCount = 3, OriginalExtraWarperReserve = 1 } };
+        Assert.True(VoyagerRemoteIdleAdmissionPolicy.Evaluate(facts).Proved);
+        facts.CoreEnergyJoules = 2 * cost.PerNativeTickEnergyJoules;
+        Assert.False(VoyagerRemoteIdleAdmissionPolicy.Evaluate(facts).Proved);
+        var returning = ReturnFacts(); returning.CoreCapacityJoules = 1_600_000_000;
+        returning.CoreEnergyJoules = core; returning.LockedReturnCoreMinimumJoules = returnCore;
+        var freshReturn = VoyagerRouteBudgetPolicy.Evaluate(returning, ReturnRequest());
+        Assert.False(freshReturn.BudgetSufficient); Assert.False(freshReturn.CoreBufferSufficient);
+        Assert.Equal(returnCore, freshReturn.ReturnCoreEnergyMinimumJoules);
+        Assert.Contains(freshReturn.Blockers, b => b.Code == "core_buffer_or_generation_insufficient");
+    }
+
+    [Fact]
     public void SufficientFiniteReserveRemainsReadOnlyAndPreservesRealItemCounts()
     {
         var input = Facts();

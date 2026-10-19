@@ -32,6 +32,7 @@ public sealed class VoyagerFlightReadback
     public long CapturedAtGameTick { get; set; }
     public long FlightDeadlineGameTick { get; set; }
     public System.DateTimeOffset JourneyDeadlineUtc { get; set; }
+    public System.DateTimeOffset? EffectiveJourneyDeadlineUtc { get; set; }
     public long WarpGameTicks { get; set; }
     public long MaximumWarpGameTicks { get; set; }
     public double? CoreEnergyJoules { get; set; }

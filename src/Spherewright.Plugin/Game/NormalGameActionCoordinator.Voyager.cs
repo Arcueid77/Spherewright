@@ -143,7 +143,7 @@ internal sealed partial class NormalGameActionCoordinator
             RequestVoyagerStop(action, "Unexpected native mecha work or another player order appeared during the reserved flight.");
         if (!HasVoyagerNextControlReserve(action, player))
             RequestVoyagerStop(action, "The next native control and finite exit/braking allowance would reach the protected return floor.");
-        if (tick >= action.VoyagerDeadlineGameTick || DateTimeOffset.UtcNow >= action.VoyagerJourney!.DeadlineUtc
+        if (tick >= action.VoyagerDeadlineGameTick || DateTimeOffset.UtcNow >= _sessions.EffectiveVoyagerDeadline(action.VoyagerJourney!)
             || DateTimeOffset.UtcNow >= action.VoyagerControlLeaseExpiresAtUtc)
             RequestVoyagerStop(action, "The finite flight deadline or original caller's 30-second observation lease expired.");
         if (action.VoyagerStopReason is not null)
@@ -438,12 +438,12 @@ internal sealed partial class NormalGameActionCoordinator
         }
     }
 
-    private static VoyagerControlDeadlineDecision EvaluateVoyagerClock(ActionRecord action) =>
+    private VoyagerControlDeadlineDecision EvaluateVoyagerClock(ActionRecord action) =>
         VoyagerControlDeadlinePolicy.Evaluate(new VoyagerControlDeadlineFacts
         {
             CurrentGameTick = GameMain.gameTick, LastControlledTick = action.VoyagerLastNativeTick,
             FlightDeadlineTick = action.VoyagerDeadlineGameTick,
-            JourneyDeadlineUtc = action.VoyagerJourney?.DeadlineUtc,
+            JourneyDeadlineUtc = action.VoyagerJourney is { } stopJourney ? _sessions.EffectiveVoyagerDeadline(stopJourney) : null,
             ControlLeaseExpiresAtUtc = action.VoyagerControlLeaseExpiresAtUtc,
             StopRequested = action.VoyagerStopReason is not null, StopDeadlineGameTick = action.VoyagerStopDeadlineGameTick,
             StopDeadlineUtc = action.VoyagerStopDeadlineUtc, NativeStopSettled = action.VoyagerStopSettled,
@@ -621,7 +621,7 @@ internal sealed partial class NormalGameActionCoordinator
     private BridgeError? ValidateVoyagerReturnReserve(VoyagerJourneyRecord journey, Player player)
     {
         var elapsedRemote = journey.LastLandedGameTick.HasValue ? Math.Max(0L, GameMain.gameTick - journey.LastLandedGameTick.Value) : 0L;
-        if (DateTimeOffset.UtcNow >= journey.DeadlineUtc
+        if (DateTimeOffset.UtcNow >= _sessions.EffectiveVoyagerDeadline(journey)
             || journey.MaximumGameTicks - journey.SpentGameTicks - elapsedRemote < journey.ReturnReserveGameTicks
             || CalculateAvailableFlightEnergy(player.mecha) < journey.ReturnEnergyFloorJoules
             || player.mecha.coreEnergy < journey.ReturnCoreEnergyMinimumJoules
@@ -678,7 +678,7 @@ internal sealed partial class NormalGameActionCoordinator
         // cleanup wall allowance must be reserved independently, not as13/60s.
         var cleanupWallSlack = Math.Max(0d, VoyagerLocalStopWallSeconds - tailTicks / 60d);
         var localDeadlineUtc = VoyagerLocalActionBudgetPolicy.WorkDeadlineUtc(nowUtc,
-            journey.DeadlineUtc.AddSeconds(-cleanupWallSlack),
+            _sessions.EffectiveVoyagerDeadline(journey).AddSeconds(-cleanupWallSlack),
             workTicks, journey.ReturnReserveGameTicks, tailTicks);
         if (!localDeadlineUtc.HasValue) return Stale("The original return wall-time reserve leaves no finite local work window.");
         var budget = VoyagerLocalActionBudgetPolicy.Evaluate(new VoyagerLocalActionBudgetFacts
@@ -691,7 +691,7 @@ internal sealed partial class NormalGameActionCoordinator
             CurrentGameTick = GameMain.gameTick, LastLandedGameTick = journey.LastLandedGameTick,
             SpentGameTicks = journey.SpentGameTicks, MaximumGameTicks = journey.MaximumGameTicks,
             ReturnReserveGameTicks = journey.ReturnReserveGameTicks, WorkGameTicks = workTicks, TailGameTicks = tailTicks,
-            NowUtc = nowUtc, JourneyDeadlineUtc = journey.DeadlineUtc,
+            NowUtc = nowUtc, JourneyDeadlineUtc = _sessions.EffectiveVoyagerDeadline(journey),
             AvailableLoadedEnergyJoules = CalculateAvailableFlightEnergy(player.mecha),
             LockedReturnFloorJoules = journey.ReturnEnergyFloorJoules, WorkPowerUpperWatts = upperPower,
             TailAndNextTickEnergyJoules = tailEnergy,
@@ -975,6 +975,7 @@ internal sealed partial class NormalGameActionCoordinator
             ActualStarId = GameMain.localStar?.id, ActualPlanetId = GameMain.localPlanet?.id,
             CapturedAtGameTick = GameMain.gameTick, FlightDeadlineGameTick = action.VoyagerDeadlineGameTick,
             JourneyDeadlineUtc = action.VoyagerJourney?.DeadlineUtc ?? default,
+            EffectiveJourneyDeadlineUtc = action.VoyagerJourney is { } originalJourney ? _sessions.EffectiveVoyagerDeadline(originalJourney) : (DateTimeOffset?)null,
             WarpGameTicks = action.VoyagerWarpTicks, MaximumWarpGameTicks = budget.MaximumWarpGameTicksPerLeg,
             CoreEnergyJoules = VoyagerFiniteObservation(player.mecha.coreEnergy),
             LoadedEnergyJoules = VoyagerFiniteObservation(CalculateAvailableFlightEnergy(player.mecha)),

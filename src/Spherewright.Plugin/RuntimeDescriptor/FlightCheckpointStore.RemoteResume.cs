@@ -8,7 +8,8 @@ namespace Spherewright.Plugin.RuntimeDescriptor;
 internal sealed partial class FlightCheckpointStore
 {
     public bool TryOpenRemoteResumeEvidence(OwnedWorldResumeTicket ticket, OwnedSaveRecoveryLease source,
-        OwnedSaveRecoveryLease primary, out VoyagerRemoteResumeEvidence? evidence, out string rejection)
+        OwnedSaveRecoveryLease primary, out VoyagerRemoteResumeEvidence? evidence, out string rejection,
+        VoyagerRecoveryWindowProposal? recoveryProposal = null)
     {
         evidence = null;
         rejection = string.Empty;
@@ -54,12 +55,13 @@ internal sealed partial class FlightCheckpointStore
                 LastLandedGameTick = journey.LastLandedGameTick, SpentGameTicks = journey.SpentGameTicks,
                 MaximumGameTicks = journey.MaximumGameTicks, ReturnReserveGameTicks = journey.ReturnReserveGameTicks,
                 NowUtc = DateTimeOffset.UtcNow, OriginalDeadlineUtc = journey.DeadlineUtc,
+                OriginalIssuedAtUtc = journey.IssuedAtUtc, RecoveryProposal = recoveryProposal,
             };
             rejection = VoyagerRemoteResumePolicy.Blocker(facts) ?? string.Empty;
             if (rejection.Length != 0) return false;
             evidence = new VoyagerRemoteResumeEvidence(PluginJson.Serialize(journey), PluginJson.Serialize(checkpoint),
                 source.Fingerprint, primary.Fingerprint, source.Prefix.GameTick, primary.Prefix.GameTick,
-                ticket.GameplayJournalCheckpoint!, ticketLease, journeyLease, checkpointLease);
+                ticket.GameplayJournalCheckpoint!, recoveryProposal, ticketLease, journeyLease, checkpointLease);
             ticketLease = null; journeyLease = null; checkpointLease = null;
             return true;
         }
@@ -87,13 +89,13 @@ internal sealed class VoyagerRemoteResumeEvidence : IDisposable
     public bool IsDisposed { get; private set; }
     public VoyagerRemoteResumeEvidence(string journeyJson, string checkpointJson, string sourceFingerprint,
         string primaryFingerprint, long sourceGameTick, long primaryGameTick, OwnedWorldGameplayJournalCheckpoint journal,
-        params IDisposable[] leases)
+        VoyagerRecoveryWindowProposal? recoveryProposal, params IDisposable[] leases)
     {
         JourneyJson = journeyJson; CheckpointJson = checkpointJson; SourceFingerprint = sourceFingerprint;
         PrimaryFingerprint = primaryFingerprint; SourceGameTick = sourceGameTick; PrimaryGameTick = primaryGameTick;
-        JournalJson = PluginJson.Serialize(journal); _leases = leases;
+        JournalJson = PluginJson.Serialize(journal); _leases = leases; RecoveryProposal = recoveryProposal;
         Fingerprint = CanonicalStateHash.Combine("voyager-remote-last-exit-v1", journeyJson, checkpointJson,
-            sourceFingerprint, primaryFingerprint, sourceGameTick, primaryGameTick, JournalJson);
+            sourceFingerprint, primaryFingerprint, sourceGameTick, primaryGameTick, JournalJson, PluginJson.Serialize(recoveryProposal));
     }
     public string JourneyJson { get; }
     public string CheckpointJson { get; }
@@ -103,6 +105,7 @@ internal sealed class VoyagerRemoteResumeEvidence : IDisposable
     public long PrimaryGameTick { get; }
     public string JournalJson { get; }
     public string Fingerprint { get; }
+    public VoyagerRecoveryWindowProposal? RecoveryProposal { get; }
     public VoyagerJourneyRecord Journey => PluginJson.Deserialize<VoyagerJourneyRecord>(JourneyJson)!;
     public void Dispose()
     {

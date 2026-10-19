@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Microsoft.Extensions.DependencyInjection;
 using ModelContextProtocol.Server;
+using ModelContextProtocol.Protocol;
 using Spherewright.Bridge.Core.Safety;
 using Spherewright.Contracts.Actions;
 using Spherewright.Contracts.Celestial;
@@ -24,6 +25,94 @@ namespace Spherewright.Mcp.Tests;
 
 public sealed class SpherewrightToolsTests
 {
+    [Fact]
+    public async Task ConditionalRecoveryWindowHasOptionalSchemaAndForwardsRealJsonToolArgumentsAndEcho()
+    {
+        var deadline = DateTimeOffset.UtcNow.AddMinutes(30);
+        var bridge = new FakeBridgeClient(SuccessResult()) { ResumePlan = WindowPlan(deadline) };
+        var services = new ServiceCollection(); services.AddSingleton<IBridgeClient>(bridge);
+        services.AddMcpServer().WithToolsFromAssembly(typeof(SpherewrightTools).Assembly);
+        using var provider = services.BuildServiceProvider();
+        var tools = provider.GetServices<McpServerTool>().ToArray();
+        var tool = Assert.Single(tools, t => t.ProtocolTool.Name == "spherewright_prepare_resume_owned_game");
+        Assert.Equal(72, tools.Length);
+        var schema = tool.ProtocolTool.InputSchema;
+        var names = new[] { "recoveryDeadlineUtc", "recoveryScope", "maximumChargeGameTicks", "maximumChargeWallSeconds" };
+        foreach (var name in names)
+        {
+            Assert.True(schema.GetProperty("properties").TryGetProperty(name, out _));
+            if (schema.TryGetProperty("required", out var required)) Assert.DoesNotContain(required.EnumerateArray(), p => p.GetString() == name);
+        }
+        await using var server = McpServer.Create(new StreamServerTransport(Stream.Null, Stream.Null), new McpServerOptions(), null, provider);
+        var parameters = new CallToolRequestParams { Name = tool.ProtocolTool.Name, Arguments = new Dictionary<string, JsonElement>
+        {
+            ["resumeToken"] = JsonSerializer.SerializeToElement("synthetic-ticket"),
+            ["recoveryDeadlineUtc"] = JsonSerializer.SerializeToElement(deadline),
+            ["recoveryScope"] = JsonSerializer.SerializeToElement(VoyagerRecoveryWindowProposal.TaskScope),
+            ["maximumChargeGameTicks"] = JsonSerializer.SerializeToElement(9000),
+            ["maximumChargeWallSeconds"] = JsonSerializer.SerializeToElement(240),
+        } };
+        var context = new RequestContext<CallToolRequestParams>(server, new JsonRpcRequest { Id = new RequestId(1), Method = "tools/call" }, parameters)
+        { Services = provider };
+        var result = await tool.InvokeAsync(context);
+        Assert.False(result.IsError);
+        var forwarded = bridge.LastResumePrepareRequest!;
+        Assert.Equal(deadline, forwarded.RecoveryDeadlineUtc); Assert.Equal(VoyagerRecoveryWindowProposal.TaskScope, forwarded.RecoveryScope);
+        Assert.Equal(9000, forwarded.MaximumChargeGameTicks); Assert.Equal(240, forwarded.MaximumChargeWallSeconds);
+        var echo = result.StructuredContent!.Value.GetProperty("result");
+        Assert.Equal(deadline, echo.GetProperty("effectiveRecoveryDeadlineUtc").GetDateTimeOffset());
+        Assert.Equal(bridge.ResumePlan.OriginalJourneyDeadlineUtc, echo.GetProperty("originalJourneyDeadlineUtc").GetDateTimeOffset());
+        Assert.True(echo.GetProperty("nativeChargeFeasibilityRequiresFreshCapture").GetBoolean());
+    }
+
+    [Theory]
+    [InlineData("deadline")] [InlineData("scope")] [InlineData("ticks")] [InlineData("wall")]
+    [InlineData("tickcap")] [InlineData("wallcap")] [InlineData("mode")]
+    public async Task PartialOrOtherModeWindowNeverReachesBridge(string fault)
+    {
+        var bridge = new FakeBridgeClient(SuccessResult());
+        var result = await SpherewrightTools.PrepareOwnedWorldResumeAsync(bridge, "synthetic-ticket",
+            recoveryMode: fault == "mode" ? OwnedWorldResumeModes.VerifiedNewerLastExit : OwnedWorldResumeModes.Default,
+            recoveryDeadlineUtc: fault == "deadline" ? null : DateTimeOffset.UtcNow.AddMinutes(30),
+            recoveryScope: fault == "scope" ? "" : VoyagerRecoveryWindowProposal.TaskScope,
+            maximumChargeGameTicks: fault == "ticks" ? 0 : fault == "tickcap" ? 18001 : 9000,
+            maximumChargeWallSeconds: fault == "wall" ? 0 : fault == "wallcap" ? 301 : 240);
+        Assert.True(result.IsError); Assert.Null(bridge.LastResumePrepareRequest);
+        Assert.DoesNotContain("planToken", result.StructuredContent!.Value.GetRawText());
+    }
+
+    [Theory]
+    [InlineData("old_plugin")] [InlineData("deadline")] [InlineData("original")]
+    [InlineData("scope")] [InlineData("ticks")] [InlineData("wall")] [InlineData("confirmation")]
+    public async Task RecoveryWindowCannotExposeAPlanThatDidNotEchoItsExactConditionalDisclosure(string fault)
+    {
+        var deadline = DateTimeOffset.UtcNow.AddMinutes(30); var plan = WindowPlan(deadline);
+        switch (fault)
+        {
+            case "old_plugin": plan = new() { Prepared = true, PlanToken = "old-plan" }; break;
+            case "deadline": plan.EffectiveRecoveryDeadlineUtc = deadline.AddSeconds(1); break;
+            case "original": plan.OriginalJourneyDeadlineUtc = null; break;
+            case "scope": plan.RecoveryScope = "other"; break;
+            case "ticks": plan.MaximumChargeGameTicks++; break;
+            case "wall": plan.MaximumChargeWallSeconds++; break;
+            case "confirmation": plan.ConfirmationDigest = ""; break;
+        }
+        var bridge = new FakeBridgeClient(SuccessResult()) { ResumePlan = plan };
+        var result = await SpherewrightTools.PrepareOwnedWorldResumeAsync(bridge, "synthetic-ticket", recoveryDeadlineUtc: deadline,
+            recoveryScope: VoyagerRecoveryWindowProposal.TaskScope, maximumChargeGameTicks: 9000, maximumChargeWallSeconds: 240);
+        Assert.True(result.IsError); Assert.DoesNotContain("planToken", result.StructuredContent!.Value.GetRawText());
+    }
+
+    private static PreparedOwnedWorldResumePlan WindowPlan(DateTimeOffset deadline) => new()
+    {
+        Prepared = true, PlanToken = "synthetic-window-plan", RecoveryMode = OwnedWorldResumeModes.Default,
+        RecoveryEvidenceVersion = VoyagerRemoteResumePolicy.EvidenceVersion, OriginalJourneyDeadlineUtc = deadline.AddHours(-2),
+        EffectiveRecoveryDeadlineUtc = deadline, RecoveryScope = VoyagerRecoveryWindowProposal.TaskScope,
+        MaximumChargeGameTicks = 9000, MaximumChargeWallSeconds = 240, NativeChargeFeasibilityRequiresFreshCapture = true,
+        ExactEmbeddedIdentityVerified = true, UserConfirmationRequired = true, CommitAllowedNow = false,
+        ConfirmationDigest = "synthetic-exact-fingerprint",
+    };
+
     [Fact]
     public void BlueprintTropicSnappingGuidanceRequiresReturnedPosesAndFreshApproval()
     {

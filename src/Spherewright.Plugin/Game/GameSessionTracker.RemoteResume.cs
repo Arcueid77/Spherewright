@@ -12,6 +12,7 @@ internal sealed partial class GameSessionTracker
     private bool _remoteResumeJournalConfirmed;
     private bool _remoteResumeAdmitted;
     private VoyagerRemoteResumeAdoption? _remoteResumeAdoption;
+    private VoyagerRecoveryAuthorization? _pendingRecoveryAuthorization;
     private Func<VoyagerRemoteResumeAdoption, string?>? _remoteResumeAdmissionGuard;
     private Func<VoyagerRemoteResumeAdoption, string?>? _remoteResumePreflightGuard;
     private Func<string?>? _remoteResumeLoadCompleteGuard;
@@ -28,8 +29,33 @@ internal sealed partial class GameSessionTracker
     internal string CurrentNativeGameVersion => _gameVersion;
 
     internal bool TryOpenRemoteResumeEvidence(OwnedWorldResumeTicket ticket, OwnedSaveRecoveryLease source,
-        OwnedSaveRecoveryLease primary, out VoyagerRemoteResumeEvidence? evidence, out string rejection) =>
-        _flightCheckpoints.TryOpenRemoteResumeEvidence(ticket, source, primary, out evidence, out rejection);
+        OwnedSaveRecoveryLease primary, out VoyagerRemoteResumeEvidence? evidence, out string rejection,
+        VoyagerRecoveryWindowProposal? proposal = null) =>
+        _flightCheckpoints.TryOpenRemoteResumeEvidence(ticket, source, primary, out evidence, out rejection, proposal);
+
+    internal DateTimeOffset EffectiveVoyagerDeadline(VoyagerJourneyRecord journey)
+    {
+        var adoption = _remoteResumeAdoption;
+        var authorization = adoption?.Authorization;
+        if (authorization is null || !IsCurrentSessionOwned || !ReferenceEquals(GameMain.data, adoption!.World)
+            || _sessionId != adoption.SessionId || authorization.ResumeActionId != adoption.ResumeActionId
+            || authorization.EvidenceFingerprint != adoption.Evidence.Fingerprint) return journey.DeadlineUtc;
+        var original = adoption.Evidence.Journey;
+        // Phase/action/accounting may advance normally; immutable limits may not.
+        return journey.Version == original.Version && journey.JourneyId == original.JourneyId && journey.OwnedSaveName == original.OwnedSaveName
+            && journey.GameVersion == original.GameVersion && journey.IssuedAtUtc == original.IssuedAtUtc
+            && journey.HomePlanetId == original.HomePlanetId && journey.HomeStarId == original.HomeStarId
+            && journey.DestinationStarId == original.DestinationStarId && journey.RemotePlanetId == original.RemotePlanetId
+            && journey.StartedAtGameTick == original.StartedAtGameTick && journey.SpentGameTicks >= original.SpentGameTicks
+            && journey.LastAccountedGameTick >= original.LastAccountedGameTick
+            && journey.DeadlineUtc == original.DeadlineUtc && journey.MaximumGameTicks == original.MaximumGameTicks
+            && journey.ReturnReserveGameTicks == original.ReturnReserveGameTicks
+            && journey.ReturnEnergyFloorJoules == original.ReturnEnergyFloorJoules
+            && journey.WithdrawalReserveJoules == original.WithdrawalReserveJoules
+            && journey.ReturnCoreEnergyMinimumJoules == original.ReturnCoreEnergyMinimumJoules
+            && journey.ExtraWarperReserve == original.ExtraWarperReserve
+            ? authorization.Proposal.DeadlineUtc : journey.DeadlineUtc;
+    }
 
     internal void SetRemoteResumeAdmissionGuard(Func<VoyagerRemoteResumeAdoption, string?> guard,
         Func<VoyagerRemoteResumeAdoption, string?> preflight)
@@ -125,7 +151,7 @@ internal sealed partial class GameSessionTracker
             || !ReferenceEquals(GameMain.data, _ownedData))
             return "remote_resume_original_runtime_proof_changed";
         _remoteResumeAdoption ??= new VoyagerRemoteResumeAdoption(_pendingRemoteResumeActionId!,
-            _sessionId!, _ownedData!, GameMain.mainPlayer, evidence);
+            _sessionId!, _ownedData!, GameMain.mainPlayer, evidence, _pendingRecoveryAuthorization);
         adoption = _remoteResumeAdoption;
         return null;
     }
@@ -147,6 +173,7 @@ internal sealed partial class GameSessionTracker
         string? blocker;
         try { blocker = _remoteResumeAdmissionGuard is null ? "remote_resume_idle_guard_unavailable" : _remoteResumeAdmissionGuard(adoption!); }
         catch (Exception exception) { blocker = "remote_resume_idle_guard_capture_failed:" + exception.GetType().Name; }
+        if (blocker == VoyagerRecoveryWindowPolicy.ChargingPending) return false;
         if (blocker is not null) return FailRemoteResumeAdmission(blocker);
         _remoteResumeAdmitted = true;
         // The journal has been confirmed and the exact first idle owner now
@@ -209,6 +236,7 @@ internal sealed partial class GameSessionTracker
         _remoteResumeCompletedWorld = null;
         _remoteResumeLoadCompleteObserved = false;
         _remoteResumeLoadPreflightPassed = false;
+        _pendingRecoveryAuthorization = null;
     }
 }
 
@@ -217,9 +245,9 @@ internal sealed partial class GameSessionTracker
 internal sealed class VoyagerRemoteResumeAdoption
 {
     public VoyagerRemoteResumeAdoption(string resumeActionId, string sessionId, GameData world,
-        Player player, VoyagerRemoteResumeEvidence evidence)
+        Player player, VoyagerRemoteResumeEvidence evidence, VoyagerRecoveryAuthorization? authorization)
     {
-        ResumeActionId = resumeActionId; SessionId = sessionId; World = world; Player = player; Evidence = evidence;
+        ResumeActionId = resumeActionId; SessionId = sessionId; World = world; Player = player; Evidence = evidence; Authorization = authorization;
     }
     public string ResumeActionId { get; }
     public OwnedWorldResumeSourceKind SourceKind => OwnedWorldResumeSourceKind.LastExit;
@@ -227,4 +255,10 @@ internal sealed class VoyagerRemoteResumeAdoption
     public GameData World { get; }
     public Player Player { get; }
     public VoyagerRemoteResumeEvidence Evidence { get; }
+    public VoyagerRecoveryAuthorization? Authorization { get; }
+    public long? ChargeStartedGameTick { get; set; }
+    public DateTimeOffset? ChargeStartedUtc { get; set; }
+    public string? ChargeCostEnvelope { get; set; }
+    public double? ChargePerTickUpper { get; set; }
+    public double? ChargeGenerationLowerBoundWatts { get; set; }
 }

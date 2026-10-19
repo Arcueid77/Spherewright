@@ -106,6 +106,8 @@ public sealed class PreviewVoyagerRouteRequest
 
 public sealed class VoyagerRouteBudgetSnapshot
 {
+    public DateTimeOffset? OriginalJourneyDeadlineUtc { get; set; }
+    public DateTimeOffset? EffectiveJourneyDeadlineUtc { get; set; }
     public string Phase { get; set; } = "voyager_route_budget_preview_v1";
     public string SessionId { get; set; } = string.Empty;
     public int OriginPlanetId { get; set; }

@@ -276,8 +276,7 @@ internal sealed partial class GameStateReader
             ThrusterLevel = mecha.thrusterLevel, MaxSailSpeed = mecha.maxSailSpeed, MaxWarpSpeed = mecha.maxWarpSpeed,
             CoreEnergyJoules = mecha.coreEnergy, CoreCapacityJoules = mecha.coreEnergyCap,
             ReactorEnergyJoules = mecha.reactorEnergy, FuelStorageEnergyJoules = fuelEnergy,
-            CoreGenerationLowerBoundWatts = Math.Max(0d, mecha.corePowerGen)
-                + (fuelAvailable ? Math.Max(0d, mecha.reactorPowerGen * minimumFuelRatio) : 0d),
+            CoreGenerationLowerBoundWatts = CaptureNativeCoreGenerationLowerBoundWatts(mecha),
             WarpKeepingPowerPerSpeed = mecha.warpKeepingPowerPerSpeed,
             WarpStartPowerPerSpeed = mecha.warpStartPowerPerSpeed,
             EnergyConsumptionCoefficient = mecha.reactorPowerConsRatio,
@@ -292,7 +291,7 @@ internal sealed partial class GameStateReader
             var session = _sessions.CaptureOnMainThread();
             input.ReturnJourneyVerified = journey is not null && journey.JourneyId == request.JourneyId
                 && journey.Phase == "remote_landed" && journey.OwnedSaveName == session.SaveName
-                && journey.GameVersion == session.GameVersion && DateTimeOffset.UtcNow < journey.DeadlineUtc
+                && journey.GameVersion == session.GameVersion && DateTimeOffset.UtcNow < _sessions.EffectiveVoyagerDeadline(journey)
                 && journey.RemotePlanetId == request.PlanetId && journey.HomePlanetId == request.DestinationPlanetId
                 && journey.HomeStarId == input.DestinationStarId && journey.DestinationStarId == input.OriginStarId
                 && journey.LastLandedGameTick.HasValue && GameMain.gameTick >= journey.LastLandedGameTick.Value;
@@ -309,10 +308,36 @@ internal sealed partial class GameStateReader
             }
         }
         var evaluated = VoyagerRouteBudgetPolicy.Evaluate(input, request);
+        if (!string.IsNullOrWhiteSpace(request.JourneyId) && VoyagerCheckpoints?.VoyagerJourney is { } originalJourney)
+        {
+            evaluated.OriginalJourneyDeadlineUtc = originalJourney.DeadlineUtc;
+            evaluated.EffectiveJourneyDeadlineUtc = _sessions.EffectiveVoyagerDeadline(originalJourney);
+        }
         _lastVoyagerRouteRequest = CopyVoyagerRequest(request);
         _lastVoyagerRouteBudget = evaluated;
         _lastVoyagerRouteAtUtc = DateTimeOffset.UtcNow;
         return GameCallResult<VoyagerRouteBudgetSnapshot>.Succeeded(evaluated);
+    }
+
+    internal static double CaptureNativeCoreGenerationLowerBoundWatts(Mecha mecha)
+    {
+        var available = mecha.reactorEnergy > 0d;
+        var ratio = 1d;
+        if (available)
+        {
+            var burning = LDB.items.Select(mecha.reactorItemId);
+            ratio = IsOrdinaryVoyagerFuel(burning) ? Math.Min(1d, 1d + burning!.ReactorInc) : 0d;
+        }
+        var storage = mecha.reactorStorage;
+        var grids = storage?.grids ?? Array.Empty<StorageComponent.GRID>();
+        for (var i = 0; i < Math.Min(storage?.size ?? 0, grids.Length); i++)
+        {
+            var g = grids[i]; var item = g.itemId > 0 && g.count > 0 ? LDB.items.Select(g.itemId) : null;
+            if (!IsOrdinaryVoyagerFuel(item)) { if (g.count > 0) ratio = 0d; continue; }
+            ratio = Math.Min(ratio, 1d + item!.ReactorInc); available = true;
+        }
+        var result = Math.Max(0d, mecha.corePowerGen) + (available ? Math.Max(0d, mecha.reactorPowerGen * ratio) : 0d);
+        return double.IsNaN(result) || double.IsInfinity(result) ? 0d : result;
     }
 
     internal static PreviewVoyagerRouteRequest CopyVoyagerRequest(PreviewVoyagerRouteRequest request) =>

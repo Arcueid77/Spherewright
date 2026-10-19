@@ -23,6 +23,8 @@ public sealed class VoyagerRemoteResumeFacts
     public long ReturnReserveGameTicks { get; set; }
     public DateTimeOffset NowUtc { get; set; }
     public DateTimeOffset OriginalDeadlineUtc { get; set; }
+    public DateTimeOffset OriginalIssuedAtUtc { get; set; }
+    public VoyagerRecoveryWindowProposal? RecoveryProposal { get; set; }
 }
 
 public static class VoyagerRemoteResumePolicy
@@ -43,11 +45,15 @@ public static class VoyagerRemoteResumePolicy
             || f.SourceGameTick < f.PrimaryGameTick || f.SourceGameTick < f.TicketMinimumGameTick
             || f.SourceGameTick < f.LastAccountedGameTick || f.SourceGameTick < f.LastLandedGameTick)
             return "remote_resume_newer_progress_rollback_forbidden";
+        if (f.RecoveryProposal is { } proposal && VoyagerRecoveryWindowPolicy.ProposalBlocker(proposal, f.NowUtc,
+                f.OriginalIssuedAtUtc, f.OriginalDeadlineUtc, f.ReturnReserveGameTicks) is { } proposalBlocker)
+            return proposalBlocker;
+        var effectiveDeadline = f.RecoveryProposal?.DeadlineUtc ?? f.OriginalDeadlineUtc;
         if (f.SpentGameTicks < 0 || f.MaximumGameTicks < 1 || f.ReturnReserveGameTicks < 3600
             || (decimal)f.SpentGameTicks + f.SourceGameTick - f.LastLandedGameTick.Value
                 + f.ReturnReserveGameTicks + 1 + VoyagerLocalWalkReservePolicy.StopGameTicks > f.MaximumGameTicks
             || f.NowUtc == default || f.OriginalDeadlineUtc == default
-            || (f.OriginalDeadlineUtc - f.NowUtc).TotalSeconds <= f.ReturnReserveGameTicks / 60d
+            || (effectiveDeadline - f.NowUtc).TotalSeconds <= f.ReturnReserveGameTicks / 60d
                 + VoyagerRemoteIdleAdmissionPolicy.StopWallSeconds + 1d / 60d)
             return "remote_resume_original_return_time_insufficient";
         return null;

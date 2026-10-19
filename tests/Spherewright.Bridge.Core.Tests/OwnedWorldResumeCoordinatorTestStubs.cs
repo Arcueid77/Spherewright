@@ -61,6 +61,7 @@ internal sealed partial class GameSessionTracker : IDisposable
     internal VoyagerRemoteResumeEvidence? RemoteEvidence { get; private set; }
     internal string? RemoteResumeActionId { get; private set; }
     internal OwnedWorldResumeSourceKind ResumeSource { get; private set; }
+    internal VoyagerRecoveryAuthorization? RecoveryAuthorization { get; private set; }
     internal Action? BeforeRemoteLoaderBind { get; set; }
     internal bool RemoteLoaderObserverPrepared { get; private set; }
     internal bool RemoteLoaderObserverBound { get; private set; }
@@ -73,18 +74,20 @@ internal sealed partial class GameSessionTracker : IDisposable
     internal void RecordRemoteResumeNativeDispatchObservationFailure(string exceptionType) =>
         ResumeAdoptionError = "remote_resume_postdispatch_loader_observation_failed:" + exceptionType;
     internal bool TryOpenRemoteResumeEvidence(OwnedWorldResumeTicket ticket, OwnedSaveRecoveryLease source,
-        OwnedSaveRecoveryLease primary, out VoyagerRemoteResumeEvidence? evidence, out string rejection)
+        OwnedSaveRecoveryLease primary, out VoyagerRemoteResumeEvidence? evidence, out string rejection,
+        VoyagerRecoveryWindowProposal? proposal = null)
     {
         evidence = null; rejection = "test_remote_store_unavailable";
         return RemoteResumeCheckpoints is not null
-            && RemoteResumeCheckpoints.TryOpenRemoteResumeEvidence(ticket, source, primary, out evidence, out rejection);
+            && RemoteResumeCheckpoints.TryOpenRemoteResumeEvidence(ticket, source, primary, out evidence, out rejection, proposal);
     }
     internal SessionState CaptureOnMainThread() => Snapshot;
     internal void ExpectNextSessionToBeResumed(OwnedWorldResumeTicket ticket,
         OwnedSaveRecoveryLease? sourceLease = null, bool reauthorizingExpiredPrimary = false,
         IDisposable? journalLease = null, bool reauthorizingFixedAutosave0 = false,
         OwnedSaveRecoveryLease? primaryLease = null, VoyagerRemoteResumeEvidence? remoteEvidence = null,
-        string? remoteResumeActionId = null, OwnedWorldResumeSourceKind resumeSource = OwnedWorldResumeSourceKind.None)
+        string? remoteResumeActionId = null, OwnedWorldResumeSourceKind resumeSource = OwnedWorldResumeSourceKind.None,
+        VoyagerRecoveryAuthorization? recoveryAuthorization = null)
     {
         SourceLease = sourceLease;
         JournalLease = journalLease;
@@ -94,6 +97,7 @@ internal sealed partial class GameSessionTracker : IDisposable
         RemoteEvidence = remoteEvidence;
         RemoteResumeActionId = remoteResumeActionId;
         ResumeSource = resumeSource;
+        RecoveryAuthorization = recoveryAuthorization;
     }
     internal void CancelExpectedResumedSession() => Dispose();
     public void Dispose()

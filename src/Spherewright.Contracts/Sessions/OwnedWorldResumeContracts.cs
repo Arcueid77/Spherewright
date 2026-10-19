@@ -21,6 +21,10 @@ public sealed class PrepareOwnedWorldResumeRequest
     public long? MinimumRecoveryGameTick { get; set; }
 
     public long? ExpectedRecoveryGameTick { get; set; }
+    public DateTimeOffset? RecoveryDeadlineUtc { get; set; }
+    public string RecoveryScope { get; set; } = string.Empty;
+    public long MaximumChargeGameTicks { get; set; }
+    public double MaximumChargeWallSeconds { get; set; }
 }
 
 public sealed class CommitOwnedWorldResumeRequest
@@ -49,6 +53,12 @@ public sealed class PreparedOwnedWorldResumePlan
     public string RecoveryMode { get; set; } = OwnedWorldResumeModes.Default;
 
     public int RecoveryEvidenceVersion { get; set; }
+    public DateTimeOffset? OriginalJourneyDeadlineUtc { get; set; }
+    public DateTimeOffset? EffectiveRecoveryDeadlineUtc { get; set; }
+    public string RecoveryScope { get; set; } = string.Empty;
+    public long MaximumChargeGameTicks { get; set; }
+    public double MaximumChargeWallSeconds { get; set; }
+    public bool NativeChargeFeasibilityRequiresFreshCapture { get; set; }
 
     public long? CandidateGameTick { get; set; }
 

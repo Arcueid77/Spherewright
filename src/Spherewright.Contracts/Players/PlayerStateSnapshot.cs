@@ -69,6 +69,7 @@ public sealed class PlayerStateSnapshot
     public ConstructionDroneSnapshot ConstructionDrones { get; set; } = new ConstructionDroneSnapshot();
 
     public NativePlayerPhysicsSnapshot? NativePhysics { get; set; }
+    public NativeLocalControlEnergyObservation? NativeLocalControlEnergy { get; set; }
 }
 
 public sealed class MechaResearchItemSnapshot

@@ -126,7 +126,7 @@ internal sealed partial class NormalGameActionCoordinator
             SpentGameTicks = journey.SpentGameTicks, MaximumGameTicks = journey.MaximumGameTicks,
             ReturnReserveGameTicks = journey.ReturnReserveGameTicks,
             WorkGameTicks = workTicks, TailGameTicks = reserve.TailGameTicks,
-            NowUtc = DateTimeOffset.UtcNow, JourneyDeadlineUtc = journey.DeadlineUtc,
+            NowUtc = DateTimeOffset.UtcNow, JourneyDeadlineUtc = _sessions.EffectiveVoyagerDeadline(journey),
             AvailableLoadedEnergyJoules = CalculateAvailableFlightEnergy(player.mecha),
             LockedReturnFloorJoules = journey.ReturnEnergyFloorJoules,
             WorkPowerUpperWatts = reserve.PowerUpperWatts,
@@ -388,7 +388,7 @@ internal sealed partial class NormalGameActionCoordinator
         var journey = _flightCheckpoints.VoyagerJourney;
         if (journey is null || journey.JourneyId != build.StructuredConstruction!.JourneyId || journey.Phase != "remote_landed"
             || !VoyagerOwnedJourneyMatchesCurrentSession(journey, action.SessionId)
-            || journey.RemotePlanetId != action.PlanetId || DateTimeOffset.UtcNow >= journey.DeadlineUtc
+            || journey.RemotePlanetId != action.PlanetId || DateTimeOffset.UtcNow >= _sessions.EffectiveVoyagerDeadline(journey)
             || GameMain.gameTick >= control.WorkDeadlineGameTick || DateTimeOffset.UtcNow >= control.WorkDeadlineUtc
             || DateTimeOffset.UtcNow >= control.ObservationLeaseExpiresAtUtc)
             return "construction_original_time_or_poll_lease_ended";
@@ -403,7 +403,7 @@ internal sealed partial class NormalGameActionCoordinator
             LastLandedGameTick = journey.LastLandedGameTick, SpentGameTicks = journey.SpentGameTicks,
             MaximumGameTicks = journey.MaximumGameTicks, ReturnReserveGameTicks = journey.ReturnReserveGameTicks,
             WorkGameTicks = 1, TailGameTicks = reserve.TailGameTicks,
-            NowUtc = DateTimeOffset.UtcNow, JourneyDeadlineUtc = journey.DeadlineUtc,
+            NowUtc = DateTimeOffset.UtcNow, JourneyDeadlineUtc = _sessions.EffectiveVoyagerDeadline(journey),
             AvailableLoadedEnergyJoules = CalculateAvailableFlightEnergy(player.mecha), LockedReturnFloorJoules = journey.ReturnEnergyFloorJoules,
             WorkPowerUpperWatts = reserve.PowerUpperWatts, TailAndNextTickEnergyJoules = reserve.TailAndNextTickEnergyJoules,
             NativeWarperCount = CountVoyagerWarpers(player.mecha.warpStorage), OriginalExtraWarperReserve = journey.ExtraWarperReserve,
@@ -590,7 +590,7 @@ internal sealed partial class NormalGameActionCoordinator
             && reserve.Proved && hash == control.NativeCostHash && ConstructionDronesStayInEnvelope(action)
             && journey is not null && journey.JourneyId == action.BlueprintBuild.StructuredConstruction!.JourneyId
             && VoyagerOwnedJourneyMatchesCurrentSession(journey, action.SessionId)
-            && journey.Phase == "remote_landed" && DateTimeOffset.UtcNow < journey.DeadlineUtc
+            && journey.Phase == "remote_landed" && DateTimeOffset.UtcNow < _sessions.EffectiveVoyagerDeadline(journey)
             && NativeConstructionDroneReservePolicy.CanFundNativeTail(player.mecha.coreEnergy,
                 CalculateAvailableFlightEnergy(player.mecha), journey.ReturnEnergyFloorJoules, remainingEnergy)
             && CountVoyagerWarpers(player.mecha.warpStorage) >= 1 + journey.ExtraWarperReserve;

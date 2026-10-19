@@ -18,6 +18,84 @@ namespace Spherewright.Bridge.Core.Tests;
 public sealed class VoyagerRemoteResumeCoordinatorIntegrationTests
 {
     [Fact]
+    public void ExpiredOriginalUtcNeedsANewExactDisclosureAndOneDurableNonRenewableAuthorization()
+    {
+        using var s = new Scenario(expiredJourney: true);
+        var original = File.ReadAllBytes(Path.Combine(s.Handoff, "voyager-journey.json"));
+        Assert.False(s.PrepareResult(new()).Success);
+        var request = WindowRequest(); var p = s.Prepare(request);
+        Assert.Equal(s.OriginalDeadline, p.OriginalJourneyDeadlineUtc);
+        Assert.Equal(request.RecoveryDeadlineUtc, p.EffectiveRecoveryDeadlineUtc);
+        Assert.Equal(request.RecoveryScope, p.RecoveryScope);
+        Assert.Equal(request.MaximumChargeGameTicks, p.MaximumChargeGameTicks);
+        Assert.Equal(request.MaximumChargeWallSeconds, p.MaximumChargeWallSeconds);
+        Assert.True(p.NativeChargeFeasibilityRequiresFreshCapture);
+        Assert.True(p.UserConfirmationRequired); Assert.False(p.CommitAllowedNow);
+        Assert.False(s.Commit(p, confirmed: false).Success); Assert.Equal(0, DSPGame.LoadCalls);
+        // A rejected commit consumes its preview token, never the credential.
+        // A fresh disclosure of the same absolute proposal is still required.
+        p = s.Prepare(request);
+        var commit = new CommitOwnedWorldResumeRequest { PlanToken = p.PlanToken, IdempotencyKey = Guid.NewGuid().ToString(),
+            UserConfirmedInConversation = true, ConfirmationDigest = p.ConfirmationDigest };
+        var accepted = s.Commit(commit);
+        Assert.True(accepted.Success, accepted.Error?.Message);
+        var auth = s.Sessions.RecoveryAuthorization!;
+        Assert.Equal(accepted.Value!.ActionId, auth.ResumeActionId);
+        Assert.Equal(p.ConfirmationDigest, auth.ConfirmationDigest);
+        Assert.Equal(s.Sessions.RemoteEvidence!.Fingerprint, auth.EvidenceFingerprint);
+        Assert.Equal(request.RecoveryDeadlineUtc, auth.Proposal.DeadlineUtc);
+        var tombstonePath = Assert.Single(Directory.GetFiles(s.Runtime, "owned-world-resume-consumed-*.json"));
+        var tombstone = PluginJson.Deserialize<OwnedWorldResumeConsumptionTombstone>(File.ReadAllText(tombstonePath))!;
+        Assert.Equal(auth.ResumeActionId, tombstone.RecoveryAuthorization!.ResumeActionId);
+        Assert.Equal(auth.Proposal.DeadlineUtc, tombstone.RecoveryAuthorization.Proposal.DeadlineUtc);
+        Assert.Equal(original, File.ReadAllBytes(Path.Combine(s.Handoff, "voyager-journey.json")));
+        var replay = s.Commit(commit);
+        Assert.True(replay.Success); Assert.True(replay.Value!.IdempotentReplay);
+        Assert.Equal(accepted.Value.ActionId, replay.Value.ActionId); Assert.Equal(1, DSPGame.LoadCalls);
+        Assert.False(s.Commit(p).Success); // A new key cannot revive the consumed proposal.
+        Assert.False(s.PrepareResult(WindowRequest()).Success);
+        var coldStore = new OwnedWorldResumeTicketStore(s.Runtime, s.Handoff, "test-bridge", "0.10.34.28529", new ManualLogSource());
+        Assert.False(coldStore.TryGetActiveTicket(s.Token, out _, out _));
+        Assert.Equal(1, DSPGame.LoadCalls);
+    }
+
+    [Theory]
+    [InlineData("deadline")] [InlineData("scope")] [InlineData("ticks")] [InlineData("wall")] [InlineData("mode")]
+    public void APartialOrDifferentModeRecoveryWindowNeverDispatches(string fault)
+    {
+        using var s = new Scenario(expiredJourney: true); var request = WindowRequest();
+        switch (fault)
+        {
+            case "deadline": request.RecoveryDeadlineUtc = null; break;
+            case "scope": request.RecoveryScope = ""; break;
+            case "ticks": request.MaximumChargeGameTicks = 0; break;
+            case "wall": request.MaximumChargeWallSeconds = 0; break;
+            case "mode": request.RecoveryMode = OwnedWorldResumeModes.VerifiedNewerLastExit; break;
+        }
+        Assert.False(s.PrepareResult(request).Success); Assert.Equal(0, DSPGame.LoadCalls);
+    }
+
+    [Fact]
+    public void ChangedAbsoluteProposalCannotBorrowAnotherPreparedConfirmation()
+    {
+        using var s = new Scenario(expiredJourney: true);
+        var first = s.Prepare(WindowRequest());
+        var secondRequest = WindowRequest(); secondRequest.RecoveryDeadlineUtc = secondRequest.RecoveryDeadlineUtc!.Value.AddMinutes(-1);
+        var second = s.Prepare(secondRequest);
+        Assert.NotEqual(first.ConfirmationDigest, second.ConfirmationDigest);
+        var result = s.Commit(new CommitOwnedWorldResumeRequest { PlanToken = second.PlanToken, IdempotencyKey = Guid.NewGuid().ToString(),
+            UserConfirmedInConversation = true, ConfirmationDigest = first.ConfirmationDigest });
+        Assert.False(result.Success); Assert.Equal(0, DSPGame.LoadCalls);
+        Assert.True(s.Tickets.TryGetActiveTicket(s.Token, out _, out _));
+    }
+
+    private static PrepareOwnedWorldResumeRequest WindowRequest() => new()
+    {
+        RecoveryDeadlineUtc = DateTimeOffset.UtcNow.AddMinutes(30), RecoveryScope = VoyagerRecoveryWindowProposal.TaskScope,
+        MaximumChargeGameTicks = 9000, MaximumChargeWallSeconds = 240,
+    };
+
+    [Fact]
     public void FreshDisclosureRequiresNewExactConfirmationAndPrepareHoldsNoFileLocks()
     {
         using var s = new Scenario();
@@ -166,11 +244,12 @@ public sealed class VoyagerRemoteResumeCoordinatorIntegrationTests
         internal GameSessionTracker Sessions { get; }
         private OwnedWorldResumeCoordinator Coordinator { get; }
         internal string Token { get; }
+        internal DateTimeOffset OriginalDeadline { get; private set; }
         private string CheckpointSaveName { get; }
         internal IEnumerable<string> ProtectedEvidencePaths => new[] { GameSave.SavePath(GameSave.LastExit), GameSave.SavePath(Identity),
             GameSave.SavePath(CheckpointSaveName), JournalPath, Path.Combine(Handoff, "flight-checkpoint.json"), Path.Combine(Handoff, "voyager-journey.json") };
 
-        internal Scenario()
+        internal Scenario(bool expiredJourney = false)
         {
             Directory.CreateDirectory(_root); Directory.CreateDirectory(Runtime); Directory.CreateDirectory(Handoff);
             GameSave.Root = _root; DSPGame.BeforeLoad = null; DSPGame.LoadCalls = 0; DSPGame.LoadedName = null;
@@ -188,9 +267,11 @@ public sealed class VoyagerRemoteResumeCoordinatorIntegrationTests
                 DestinationStarId = 2, ActiveActionId = actionId, ActiveCheckpointId = cp.CheckpointId,
                 StartedAtGameTick = 12345, MaximumGameTicks = 108000, ReturnReserveGameTicks = 54000,
                 ReturnEnergyFloorJoules = 5_000_000_000, WithdrawalReserveJoules = 1_600_000_000,
-                ReturnCoreEnergyMinimumJoules = 1_280_000_000, IssuedAtUtc = DateTimeOffset.UtcNow,
-                DeadlineUtc = DateTimeOffset.UtcNow.AddHours(1), ExtraWarperReserve = 1,
+                ReturnCoreEnergyMinimumJoules = 1_280_000_000,
+                IssuedAtUtc = DateTimeOffset.UtcNow.AddHours(expiredJourney ? -2 : 0),
+                DeadlineUtc = DateTimeOffset.UtcNow.AddHours(expiredJourney ? -1 : 1), ExtraWarperReserve = 1,
             };
+            OriginalDeadline = journey.DeadlineUtc;
             Assert.True(Checkpoints.TryPersistVoyagerJourney(journey, out _));
             Assert.True(Checkpoints.TryMarkFlightSucceeded(cp.CheckpointId, actionId, 12500, out _));
             journey.Phase = "remote_landed"; journey.RemotePlanetId = 201; journey.SpentGameTicks = 155;
@@ -211,9 +292,13 @@ public sealed class VoyagerRemoteResumeCoordinatorIntegrationTests
             Sessions = new GameSessionTracker { RequiresRemoteResumeEvidence = true, RemoteResumeCheckpoints = Checkpoints };
             Coordinator = new OwnedWorldResumeCoordinator(true, 30, 30, 16, Sessions, Tickets);
         }
-        internal PreparedOwnedWorldResumePlan Prepare()
+        internal GameCallResult<PreparedOwnedWorldResumePlan> PrepareResult(PrepareOwnedWorldResumeRequest request)
         {
-            var result = Coordinator.PrepareOnMainThread(new PrepareOwnedWorldResumeRequest { ResumeToken = Token });
+            request.ResumeToken = Token; return Coordinator.PrepareOnMainThread(request);
+        }
+        internal PreparedOwnedWorldResumePlan Prepare(PrepareOwnedWorldResumeRequest? request = null)
+        {
+            var result = PrepareResult(request ?? new());
             Assert.True(result.Success, result.Error?.Message); return result.Value!;
         }
         internal GameCallResult<OwnedWorldResumeResult> Commit(PreparedOwnedWorldResumePlan p, bool confirmed = true) =>

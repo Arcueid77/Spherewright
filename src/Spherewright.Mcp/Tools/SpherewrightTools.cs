@@ -1456,13 +1456,19 @@ public static partial class SpherewrightTools
 [Description("default, verified_newer_lastexit, reauthorize_expired_primary, reauthorize_expired_autosave0, reauthorize_fixed_autosave0, or reauthorize_version_changed_primary. The expired-primary mode previews the exact expired primary and original Journal, discloses sourceGameVersion/targetGameVersion and requires subsequent conversation confirmation. Fixed AutoSave0 modes require a known floor and exact authorized candidate tick; prepare never accepts confirmation. Expired AutoSave0 uses expired healthy provenance and evidence version3; fixed AutoSave0 uses an active healthy credential and evidence version4. Both require the same supported source/runtime/candidate version, exact identity and original durable Journal; no migration or fallback. For active fixed AutoSave0 an existing explicit conversation grant matching the disclosed candidate suffices at commit without asking again; generic continue is not authority for another candidate. Expired-primary supports only exact researched directional pairs: 0.10.34.28529 to 0.10.35.29057 or 0.10.35.29088, 0.10.35.29088 to 0.10.35.29104, 0.10.35.29104 to 0.10.35.29131, 0.10.35.29131 to 0.10.35.29145, and 0.10.35.29145 to 0.10.35.29151. The last pair is expired-primary only and requires a fifth continuous durable Journal transition; active-primary evidence5/6 stays unchanged. Version-changed-primary uses unchanged active healthy provenance only for 29104 to29131 with evidence5 or 29131 to29145 with evidence6, the exact recorded primary tick and original Journal; subsequent explicit confirmation of its pair-specific prepared disclosure is required. Default resume still requires equal versions. Unknown pairs and downgrades reject. Never renew/edit ticket expiry.")] string recoveryMode = OwnedWorldResumeModes.Default,
         [Description("Caller attests to actual explicit user confirmation in the conversation; never infer it.")] bool userConfirmedInConversation = false,
         [Description("Known latest progress that must not be rolled back; required only for verified recovery.")] long? minimumRecoveryGameTick = null,
-        [Description("Exact explicitly authorized newer candidate tick; required for verified_newer_lastexit and both fixed AutoSave0 modes. No slot selection.")] long? expectedRecoveryGameTick = null)
+        [Description("Exact explicitly authorized newer candidate tick; required for verified_newer_lastexit and both fixed AutoSave0 modes. No slot selection.")] long? expectedRecoveryGameTick = null,
+        [Description("Optional one-shot absolute UTC cap for a quarantined remote default continuation. Requires a new prepared disclosure and subsequent explicit confirmation; never renews the original journey budget.")] DateTimeOffset? recoveryDeadlineUtc = null,
+        [Description("Only continue_original_finite_task is supported with recoveryDeadlineUtc; otherwise empty.")] string recoveryScope = "",
+        [Description("Optional natural-charge tick cap, 1..18000, inside the original remaining game ticks and five-minute adoption limit.")] long maximumChargeGameTicks = 0,
+        [Description("Optional natural-charge wall cap, greater than0 and at most300 seconds; never extends the original five-minute adoption lease.")] double maximumChargeWallSeconds = 0d)
     {
         var request = new PrepareOwnedWorldResumeRequest
         {
             ResumeToken = resumeToken, RecoveryMode = recoveryMode,
             UserConfirmedInConversation = userConfirmedInConversation,
             MinimumRecoveryGameTick = minimumRecoveryGameTick, ExpectedRecoveryGameTick = expectedRecoveryGameTick,
+            RecoveryDeadlineUtc = recoveryDeadlineUtc, RecoveryScope = recoveryScope,
+            MaximumChargeGameTicks = maximumChargeGameTicks, MaximumChargeWallSeconds = maximumChargeWallSeconds,
         };
         var invalid = OwnedWorldRecoveryPolicy.ValidateRequest(request);
         if (invalid is not null)
@@ -1471,6 +1477,16 @@ public static partial class SpherewrightTools
         var result = await bridgeClient.PrepareOwnedWorldResumeAsync(
             request,
             cancellationToken).ConfigureAwait(false);
+        if (recoveryDeadlineUtc.HasValue && result.Success && (result.Value is not { } window
+            || window.EffectiveRecoveryDeadlineUtc != recoveryDeadlineUtc || !window.OriginalJourneyDeadlineUtc.HasValue
+            || window.RecoveryScope != recoveryScope || window.MaximumChargeGameTicks != maximumChargeGameTicks
+            || window.MaximumChargeWallSeconds != maximumChargeWallSeconds || !window.NativeChargeFeasibilityRequiresFreshCapture
+            || !window.Prepared || window.RecoveryMode != OwnedWorldResumeModes.Default || window.CommitAllowedNow
+            || string.IsNullOrEmpty(window.ConfirmationDigest) || !window.UserConfirmationRequired
+            || !window.ExactEmbeddedIdentityVerified || window.RecoveryEvidenceVersion < 1))
+            result = BridgeCallResult<PreparedOwnedWorldResumePlan>.Failed(BridgeError.Create(BridgeErrorCodes.BridgeNotReady,
+                "The Plugin did not echo the exact one-shot remote recovery window; no plan token is exposed.", false,
+                "Install matching Plugin/MCP bytes and prepare again. Do not commit a default plan that ignored these fields."));
         if (recoveryMode == OwnedWorldResumeModes.VerifiedNewerLastExit && result.Success
             && (result.Value is null || !OwnedWorldRecoveryPolicy.HasMatchingEcho(request, result.Value)))
             result = BridgeCallResult<PreparedOwnedWorldResumePlan>.Failed(BridgeError.Create(

@@ -5,6 +5,22 @@ namespace Spherewright.Bridge.Core.Tests;
 
 public sealed class VoyagerRemoteResumePolicyTests
 {
+    [Fact]
+    public void ANewAbsoluteUtcWindowDoesNotRestoreSpentTicksOrPermitOlderPrimaryOrCheckpointLoad()
+    {
+        var f = Good(); f.OriginalIssuedAtUtc = Now.AddHours(-2); f.OriginalDeadlineUtc = Now.AddHours(-1);
+        f.RecoveryProposal = new(Now.AddMinutes(30), VoyagerRecoveryWindowProposal.TaskScope, 18000, 300);
+        var originalDeadline = f.OriginalDeadlineUtc; var spent = f.SpentGameTicks;
+        Assert.Null(VoyagerRemoteResumePolicy.Blocker(f));
+        Assert.Equal(originalDeadline, f.OriginalDeadlineUtc); Assert.Equal(spent, f.SpentGameTicks);
+        f.SpentGameTicks = f.MaximumGameTicks;
+        Assert.Equal("remote_resume_original_return_time_insufficient", VoyagerRemoteResumePolicy.Blocker(f));
+        f.SpentGameTicks = spent; f.PrimaryGameTick = f.SourceGameTick + 1;
+        Assert.Equal("remote_resume_newer_progress_rollback_forbidden", VoyagerRemoteResumePolicy.Blocker(f));
+        f.PrimaryGameTick = 900; f.CheckpointFlightSucceededWithoutReload = false;
+        Assert.Equal("remote_resume_successful_outbound_required", VoyagerRemoteResumePolicy.Blocker(f));
+    }
+
     private static readonly DateTimeOffset Now = new(2025, 1, 1, 0, 0, 0, TimeSpan.Zero);
 
     [Fact]

@@ -10,6 +10,14 @@ public static class OwnedWorldRecoveryPolicy
 
     public static string? ValidateRequest(PrepareOwnedWorldResumeRequest request)
     {
+        var window = request.RecoveryDeadlineUtc.HasValue || !string.IsNullOrEmpty(request.RecoveryScope)
+            || request.MaximumChargeGameTicks != 0 || request.MaximumChargeWallSeconds != 0d;
+        if (window && (request.RecoveryMode != OwnedWorldResumeModes.Default || !request.RecoveryDeadlineUtc.HasValue
+            || request.RecoveryScope != VoyagerRecoveryWindowProposal.TaskScope || request.MaximumChargeGameTicks < 1
+            || request.MaximumChargeGameTicks > 18000 || double.IsNaN(request.MaximumChargeWallSeconds)
+            || double.IsInfinity(request.MaximumChargeWallSeconds) || request.MaximumChargeWallSeconds <= 0d
+            || request.MaximumChargeWallSeconds > 300d))
+            return "A remote default recovery window requires its absolute UTC cap, exact task scope and finite charge caps together.";
         if (request.RecoveryMode == OwnedWorldResumeModes.ReauthorizeVersionChangedPrimary)
             return OwnedWorldPrimaryMigrationPolicy.ValidateRequest(request);
         if (OwnedWorldAutosaveRecoveryPolicy.IsFixedAutosaveMode(request.RecoveryMode))

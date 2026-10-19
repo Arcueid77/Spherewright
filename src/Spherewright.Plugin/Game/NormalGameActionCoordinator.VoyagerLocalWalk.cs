@@ -1,5 +1,6 @@
 using Spherewright.Bridge.Core.Safety;
 using Spherewright.Contracts.Actions;
+using Spherewright.Contracts.Players;
 using Spherewright.Plugin.RuntimeDescriptor;
 using UnityEngine;
 
@@ -42,7 +43,8 @@ internal sealed partial class NormalGameActionCoordinator
 
     private VoyagerRemoteIdleAdmissionDecision CaptureVoyagerRemoteIdleAdmission(VoyagerRemoteIdleOwner owner,
         VoyagerJourneyRecord journey, NativeLocalWalkSceneBinding? scene, long spentGameTicks,
-        long? lastLandedGameTick, out NativeLocalWalkSceneBinding? observedScene, int? prospectiveRemotePlanetId = null)
+        long? lastLandedGameTick, out NativeLocalWalkSceneBinding? observedScene, int? prospectiveRemotePlanetId = null,
+        Action<VoyagerRemoteIdleAdmissionFacts>? captureFacts = null)
     {
         observedScene = scene;
         var stage = "binding";
@@ -78,7 +80,7 @@ internal sealed partial class NormalGameActionCoordinator
             if (!(player.speed <= .1f)) return VoyagerRemoteIdleAdmissionPolicy.Blocked("remote_idle_actual_speed_not_at_rest");
             stage = "energy_and_journey";
             var now = DateTimeOffset.UtcNow;
-            return VoyagerRemoteIdleAdmissionPolicy.Evaluate(new VoyagerRemoteIdleAdmissionFacts
+            var facts = new VoyagerRemoteIdleAdmissionFacts
             {
                 MovementReserve = reserve, CoreEnergyJoules = player.mecha.coreEnergy,
                 JourneyBudget = new VoyagerLocalActionBudgetFacts
@@ -87,12 +89,14 @@ internal sealed partial class NormalGameActionCoordinator
                     LastLandedGameTick = lastLandedGameTick, SpentGameTicks = spentGameTicks,
                     MaximumGameTicks = journey.MaximumGameTicks, ReturnReserveGameTicks = journey.ReturnReserveGameTicks,
                     WorkGameTicks = 1, TailGameTicks = VoyagerLocalWalkReservePolicy.StopGameTicks,
-                    NowUtc = now, JourneyDeadlineUtc = journey.DeadlineUtc,
+                    NowUtc = now, JourneyDeadlineUtc = _sessions.EffectiveVoyagerDeadline(journey),
                     AvailableLoadedEnergyJoules = CalculateAvailableFlightEnergy(player.mecha), LockedReturnFloorJoules = journey.ReturnEnergyFloorJoules,
                     WorkPowerUpperWatts = reserve.WorkPowerUpperWatts, TailAndNextTickEnergyJoules = reserve.StopEnergyJoules ?? double.NaN,
                     NativeWarperCount = CountVoyagerWarpers(player.mecha.warpStorage), OriginalExtraWarperReserve = journey.ExtraWarperReserve,
                 },
-            });
+            };
+            captureFacts?.Invoke(facts);
+            return VoyagerRemoteIdleAdmissionPolicy.Evaluate(facts);
         }
         catch (Exception exception)
         {
@@ -181,12 +185,22 @@ internal sealed partial class NormalGameActionCoordinator
         if (journey is null || journey.Phase != "remote_landed") return "remote_resume_original_remote_journey_unproved";
         var existing = _voyagerRemoteIdleOwner;
         var sameOwner = existing is not null && ReferenceEquals(existing.ResumeAdoption, adoption);
+        if (!sameOwner && adoption.Authorization is { } chargeAuthorization && adoption.ChargeStartedUtc is { } chargeStarted
+            && ((DateTimeOffset.UtcNow - chargeStarted).TotalSeconds > chargeAuthorization.Proposal.MaximumChargeWallSeconds
+                || GameMain.gameTick - adoption.ChargeStartedGameTick!.Value > chargeAuthorization.Proposal.MaximumChargeGameTicks))
+            return "remote_resume_charge_finite_budget_exhausted";
         if (!sameOwner && !_flightCheckpoints.RemoteResumeEvidenceStillMatches(adoption.Evidence))
             return "remote_resume_original_durable_proof_changed";
         var owner = sameOwner ? existing! : new VoyagerRemoteIdleOwner(new VoyagerNativeBinding(adoption.World, adoption.Player),
             adoption.SessionId, journey.JourneyId, adoption.ResumeActionId, journey.ActiveActionId, adoption);
+        VoyagerRemoteIdleAdmissionFacts? captured = null;
         var decision = CaptureVoyagerRemoteIdleAdmission(owner, journey, sameOwner ? _voyagerRemoteIdleScene : null,
-            journey.SpentGameTicks, journey.LastLandedGameTick, out var scene);
+            journey.SpentGameTicks, journey.LastLandedGameTick, out var scene, captureFacts: f => captured = f);
+        if (!sameOwner && adoption.Authorization is { } authorization && captured is not null && !decision.Proved)
+        {
+            var bootstrapBlocker = ValidateRemoteResumeCharge(adoption, journey, captured, authorization);
+            return bootstrapBlocker ?? (admit ? VoyagerRecoveryWindowPolicy.ChargingPending : null);
+        }
         if (!decision.Proved) return decision.BlockerCode
             + (decision.CaptureStage is null ? string.Empty : ":" + decision.CaptureStage)
             + (decision.CaptureExceptionType is null ? string.Empty : ":" + decision.CaptureExceptionType);
@@ -195,6 +209,53 @@ internal sealed partial class NormalGameActionCoordinator
             _voyagerRemoteIdleOwner = owner;
             _voyagerRemoteIdleScene = scene;
         }
+        return null;
+    }
+
+    private string? ValidateRemoteResumeCharge(VoyagerRemoteResumeAdoption adoption, VoyagerJourneyRecord journey,
+        VoyagerRemoteIdleAdmissionFacts facts, VoyagerRecoveryAuthorization authorization)
+    {
+        var p = adoption.Player; var m = p.mecha; var h = GameMain.history; var factory = p.factory;
+        var module = m.constructionModule;
+        var now = DateTimeOffset.UtcNow;
+        var effectiveDeadline = _sessions.EffectiveVoyagerDeadline(journey);
+        var originalBudgetBlocker = VoyagerRecoveryWindowPolicy.ChargeBudgetBlocker(facts.JourneyBudget, now, effectiveDeadline);
+        if (originalBudgetBlocker is not null) return originalBudgetBlocker;
+        if (p.controller.actionWalk.rtsVelocity.sqrMagnitude != 0f || p.controller.actionWalk.moveVelocity.sqrMagnitude != 0f
+            || p.controller.actionDrift.rtsVelocity.sqrMagnitude != 0f || p.controller.actionDrift.moveVelocity.sqrMagnitude != 0f)
+            return "remote_resume_charge_rts_or_manual_velocity_nonzero";
+        // Tech completion can change this envelope; empty local mecha research
+        // alone is insufficient. Native queue is a fixed array of zero entries.
+        if (h is null || h.currentTech != 0 || h.techQueue is null || h.techQueue.Length != 32
+            || h.techQueue.Any(id => id != 0)) return "remote_resume_charge_global_research_active";
+        // This bootstrap is for an unbuilt remote site. No cached/current or
+        // destroyed prebuild may launch a drone during the paid Player frame.
+        if (factory is null || factory.entityCount != 0 || factory.entityCursor > 1
+            || factory.prebuildCount != 0 || factory.prebuildCursor > 1
+            || module.buildTargetTotalCount != 0 || module.repairTargetTotalCount != 0 || module.autoReconstructTargetTotalCount != 0
+            || module.buildTargets is { } bt && (bt.Length > 256 || bt.Any(t => t.objectId != 0))
+            || module.repairTargets is { } rt && (rt.Length > 256 || rt.Any(t => t.objectId != 0))
+            || module.autoReconstructTargets is { } at && (at.Length > 256 || at.Any(t => t.objectId != 0)))
+            return "remote_resume_charge_native_construction_not_empty";
+        var reserve = facts.MovementReserve!;
+        var perTick = reserve.PerNativeTickEnergyJoules ?? double.NaN;
+        var envelope = CanonicalStateHash.Combine("remote-charge-fixed-cost-envelope-v1", m.walkSpeed, m.walkPower,
+            m.miningPower, m.replicatePower, m.researchPower, m.reactorPowerConsRatio, m.thrustPowerPerAcc, NativeLocalGravityUpperBound(p));
+        if (adoption.ChargeCostEnvelope is not null && (adoption.ChargeCostEnvelope != envelope || adoption.ChargePerTickUpper != perTick))
+            return "remote_resume_charge_cost_envelope_changed";
+        var startTick = adoption.ChargeStartedGameTick ?? GameMain.gameTick;
+        var startUtc = adoption.ChargeStartedUtc ?? now;
+        var blocker = VoyagerRecoveryWindowPolicy.ChargeBlocker(m.coreEnergy, m.coreEnergyCap, CalculateAvailableFlightEnergy(m),
+            journey.ReturnEnergyFloorJoules, perTick, journey.ReturnCoreEnergyMinimumJoules, journey.SpentGameTicks,
+            GameMain.gameTick - journey.LastLandedGameTick!.Value, journey.MaximumGameTicks, journey.ReturnReserveGameTicks,
+            GameMain.gameTick - startTick, authorization.Proposal.MaximumChargeGameTicks, (now - startUtc).TotalSeconds,
+            authorization.Proposal.MaximumChargeWallSeconds, now, effectiveDeadline);
+        if (blocker is not null) return blocker;
+        adoption.ChargeStartedGameTick ??= startTick; adoption.ChargeStartedUtc ??= startUtc;
+        adoption.ChargeCostEnvelope ??= envelope; adoption.ChargePerTickUpper ??= perTick;
+        // g is a gross lower bound, not a promise of positive net progress. The
+        // two-tick funding above never spends future unproved generation.
+        adoption.ChargeGenerationLowerBoundWatts = GameStateReader.CaptureNativeCoreGenerationLowerBoundWatts(m);
         return null;
     }
 
@@ -250,6 +311,25 @@ internal sealed partial class NormalGameActionCoordinator
             NativeGravityUpperBound = NativeLocalGravityUpperBound(player),
             IndependentMechaCosts = CaptureNativeMechaBackgroundCosts(player),
         });
+    }
+
+    internal static NativeLocalControlEnergyObservation CaptureConditionalNativeLocalControlEnergy(Player player)
+    {
+        var observation = new NativeLocalControlEnergyObservation();
+        try
+        {
+            observation.IndependentDebitsExcluded = NativeMechaBackgroundCostPolicy.IndependentCombatCoreDebitsExcluded(
+                CaptureNativeMechaBackgroundCosts(player));
+            // Only a conditional numeric envelope. The caller never receives an
+            // execution certificate by supplying a paused snapshot.
+            var reserve = EvaluateNativeLocalMovementCost(player, modeTransitionsExcluded: true);
+            observation.CostInputsProved = reserve.Proved;
+            observation.PerNativeTickEnergyUpperJoules = reserve.Proved ? reserve.PerNativeTickEnergyJoules : null;
+            if (!reserve.Proved) observation.Blockers.Add(reserve.BlockerCode ?? "native_cost_unknown");
+            observation.Blockers.Add(GameMain.isPaused ? "native_paused_not_execution_ready" : "conditional_cost_not_execution_authority");
+        }
+        catch (Exception exception) { observation.Blockers.Add("native_cost_capture_failed:" + exception.GetType().Name); }
+        return observation;
     }
 
     private static NativeMechaBackgroundCostFacts CaptureNativeMechaBackgroundCosts(Player player)

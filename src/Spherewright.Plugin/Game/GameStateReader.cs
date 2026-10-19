@@ -120,6 +120,7 @@ internal sealed partial class GameStateReader
             AutoManageResearchItems = GameMain.history?.autoManageLabItems ?? false,
             MechaResearchPower = player.mecha.researchPower,
             NativePhysics = CaptureNativePlayerPhysicsOnMainThread(player),
+            NativeLocalControlEnergy = NormalGameActionCoordinator.CaptureConditionalNativeLocalControlEnergy(player),
         };
 
         var inventory = new Dictionary<int, PlayerInventoryItem>();

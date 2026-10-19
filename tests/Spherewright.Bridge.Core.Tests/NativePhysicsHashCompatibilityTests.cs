@@ -28,6 +28,14 @@ public sealed class NativePhysicsHashCompatibilityTests
         };
         Assert.Equal(complete, CanonicalStateHash.Player(player));
         Assert.Equal(action, CanonicalStateHash.PlayerAction(player));
+        player.NativeLocalControlEnergy = new NativeLocalControlEnergyObservation
+        {
+            PerNativeTickEnergyUpperJoules = 12345, CostInputsProved = true, IndependentDebitsExcluded = true,
+            Blockers = new() { "native_paused_not_execution_ready" },
+        };
+        Assert.False(player.NativeLocalControlEnergy.ExecutionPremisesProved);
+        Assert.Equal(complete, CanonicalStateHash.Player(player));
+        Assert.Equal(action, CanonicalStateHash.PlayerAction(player));
         player.NativePhysics.State = "unavailable";
         player.NativePhysics.FixedDeltaTimeSeconds = null;
         Assert.Equal(complete, CanonicalStateHash.Player(player));

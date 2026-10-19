@@ -276,6 +276,8 @@ DSP **经度网格间距随纬度变化**。固定赤道行列公式不是权威
 
 研究移动边界前，可用 `spherewright_get_player_state` 中可选的 `nativePhysics` 检查实际引擎及物理设置。保留采集 tick，缺失值保持未知；即使所有设置均已观察，`safetyCertified=false` 也不变。步长、脱离穿透设置或采样干地点都不能证明完整停止区域。此只读快照不授予执行权限：继续保留已安装移动守卫、原航程储备、检查点及 fresh prepare/commit 门。
 
+同一 `spherewright_get_player_state` 可返回可空 `nativeLocalControlEnergy`，无新 opt-in。`perNativeTickEnergyUpperJoules` 是每 Native tick 的条件能量上界 P（焦耳），须保留 `basis`、`costInputsProved`、`independentDebitsExcluded` 及 `blockers`。`executionPremisesProved` 始终 false：此读取不证明执行权限，暂停世界仍明确带 blocker。缺失/未证保持未知，不能当零；该脱离原生引用的观察不进入既有 v1 哈希。生成下界 g 仍来自航线预览 `coreGenerationLowerBoundWatts`（瓦），比较净值前须显式统一单位。P/g 未知或净值非正均不保证进度；即使估算为正，也仅可披露 fresh 守卫下的有限尝试，不保证充能或飞行完成。
+
 <a id="voyager-visibility-and-route-previews"></a>
 ## Voyager 可见信息与航线预览
 
@@ -338,7 +340,9 @@ Codex、MCP Host 关闭、重启、断连、上下文压缩、回合结束，均
 
 远端隔离的窄续接仍使用 `recoveryMode=default`，不新增工具或恢复模式，普通 healthy/default 行为不变。Fresh prepare 必须返回 `userConfirmationRequired=true`、固定 LastExit 的真实 `candidateGameTick`、`exactEmbeddedIdentityVerified=true` 及 `confirmationDigest`。所有者须在审阅这次精确披露后明确同意；commit 使用既有 `userConfirmedInConversation` 与匹配 digest，早先授权或不同候选均不能满足本次确认。
 
-原生加载前须成功持久消费受保护凭据，并绑定固定源与当前主档的完整文件证据、精确同版本 owned/和平身份、原 Journal 及已成功 checkpoint/journey 来源。成功 checkpoint 只作证据，绝不是加载源，也不伪造旧 `ActionRecord`。精确新 Native GameLoader 在 frame10 已完成且禁用的 `onLoadComplete` 同步回调，须在 Begin/InitLogic 后、首个 player(601) tick 前绑定新 Native logic，证明 owned 身份、原 Journal 及严格13个付费 tick 的储备预检。该预检不伪称已观察到 Native tick 可用，也不发布 idle owner；证明未决时禁止自动主档重存及本地/结构化写入。只有首个真正 Native pre-player(501) 检查才可准入独立 idle owner 并释放租约，紧邻重存前还须再次满足完整严格闲置谓词。事后 Update、轮询或首个被观察到的501不能补证已错过的首 tick。失败仅暂停精确 owned 世界并隔离；Pause 不证明物理空闲，也不授予自动 Resume、Load 或重放权限。原期限、核心/loaded/翘曲器底线及已花 tick 记账绝不清零；原返程储备不足则拒绝续接，不改有效期。
+仅此 `default` 窄提案可追加四个可选扁平参数：`recoveryDeadlineUtc`、固定 `recoveryScope=continue_original_finite_task`、`maximumChargeGameTicks`、`maximumChargeWallSeconds`。充能上限须为正且有界，最多18000 tick/300墙钟秒。Prepared 单列 `originalJourneyDeadlineUtc` 与 `effectiveRecoveryDeadlineUtc`，回显 scope/上限，并声明 `nativeChargeFeasibilityRequiresFreshCapture`，不承诺充能进度。所提有效 UTC 窗口不得超过原声明 UTC 跨度；凭据消费前绑定单一不可变提案、证据及本次新预览后的明确确认，旧同意不涵盖该期限或充能尝试。不得靠重键、更换 Host 或重建续期；原有效期、tick 最大值/已花值、返程预留及能量/翘曲器底线不变，普通 healthy/default 行为不变。
+
+原生加载前绑定固定源与当前主档的完整文件证据、精确同版本 owned/和平身份、原 Journal 及已成功 checkpoint/journey 来源；任何不可变恢复窗口授权须先持久化，再持久消费受保护凭据。成功 checkpoint 只作证据，绝不是加载源，也不伪造旧 `ActionRecord`。精确新 Native GameLoader 在 frame10 已完成且禁用的 `onLoadComplete` 同步回调，须在 Begin/InitLogic 后、首个 player(601) tick 前绑定新 Native logic，证明 owned 身份、原 Journal 与闭合 bootstrap 包络。在实时证明的运行前提下，bootstrap 要求核心至少2P、loaded 能量至少为受保护返程底线加2P；队列、独立扣费及可能无人机派发均须闭合。充能只使用新加载世界中自然运行的 Native GenerateEnergy，绝不 Resume 原隔离世界。该预检不伪称 Native tick 可用，也不发布 idle owner；证明未决禁止自动主档重存及本地/结构化写入。真实 Native pre-player(501) 须逐 tick 守护 bootstrap，只有某次证明原完整 strict13（核心至少13P、loaded 至少为原受保护返程底线加13P，以及原 tick/墙钟/翘曲器门）后，才可准入 idle owner、释放租约并允许重存，紧邻重存前仍须再核严格条件。原返航核心最低值仍是独立 fresh 返航起飞门，不追加为恢复接管条件。可行性须依 P/g 及 fresh 预算判定，不保证自然充能、后续 Move、任务或返程完成，也不降门或续预算。事后 Update 或轮询不能补首 tick 证明。充能在声明的 tick/墙钟任一上限先到时停止，且仍受原五分钟总接管上限约束；进入充能或更换 Host 均不重开。失败只暂停精确 owned 世界并隔离，不证明物理空闲，也不授予自动 Resume、Load 或重放。保留原 UTC 原件、最大/已花/返程预留 tick 及核心/loaded/翘曲器底线；原剩余储备不足则拒绝。
 
 主存档早于已知接受工作时先停，不加载。独立的 `verified_newer_lastexit` 流程仍要求精确批准、健康且含 Journal 的来源、已知下限与批准候选、证据 1、嵌入身份、完整文件与租约。不推断确认、不伪造隔离、不任意选源、不覆盖主文件。对账保存实体、材料、连接，不能重放成功调用器或伪造旧会话审计。
 

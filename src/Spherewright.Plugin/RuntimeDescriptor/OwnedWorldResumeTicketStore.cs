@@ -280,7 +280,9 @@ internal sealed class OwnedWorldResumeTicketStore
 
     public void Consume(string resumeToken) => TryConsume(resumeToken);
 
-    public bool TryConsume(string resumeToken)
+    public bool TryConsume(string resumeToken) => TryConsume(resumeToken, null);
+
+    private bool TryConsume(string resumeToken, VoyagerRecoveryAuthorization? authorization)
     {
         var current = _currentTicket ?? ReadFromDisk();
         if (current is null || !FixedTimeEquals(current.ResumeToken, resumeToken))
@@ -288,7 +290,7 @@ internal sealed class OwnedWorldResumeTicketStore
             return false;
         }
 
-        if (!PersistConsumptionTombstone(resumeToken, current.GameVersion))
+        if (!PersistConsumptionTombstone(resumeToken, current.GameVersion, authorization))
         {
             _logger.LogError("Spherewright did not consume the owned-world resume ticket because no durable tombstone could be written");
             return false;
@@ -344,9 +346,9 @@ internal sealed class OwnedWorldResumeTicketStore
         { rejection = "remote_resume_active_credential_changed:" + exception.GetType().Name; return false; }
     }
 
-    public bool TryConsumeRemoteCredential(string token, string expectedFingerprint) =>
+    public bool TryConsumeRemoteCredential(string token, string expectedFingerprint, VoyagerRecoveryAuthorization? authorization = null) =>
         TryCaptureRemoteCredential(token, out var actual, out _)
-        && FixedTimeEquals(expectedFingerprint, actual) && TryConsume(token);
+        && FixedTimeEquals(expectedFingerprint, actual) && TryConsume(token, authorization);
 
     // Unlike TryGetActiveTicket this grants no loading capability. It only authenticates
     // provenance for a fresh short-lived plan. Commit still requires its mode-specific
@@ -508,7 +510,8 @@ internal sealed class OwnedWorldResumeTicketStore
         }
     }
 
-    private bool PersistConsumptionTombstone(string resumeToken, string? sourceGameVersion = null)
+    private bool PersistConsumptionTombstone(string resumeToken, string? sourceGameVersion = null,
+        VoyagerRecoveryAuthorization? authorization = null)
     {
         if (string.IsNullOrWhiteSpace(resumeToken))
         {
@@ -524,6 +527,7 @@ internal sealed class OwnedWorldResumeTicketStore
             // New readers treat consumption as irreversible across all runtime versions.
             GameVersion = sourceGameVersion ?? _gameVersion,
             ConsumedAtUtc = DateTimeOffset.UtcNow,
+            RecoveryAuthorization = authorization,
         };
         var handoffDirectory = Path.GetDirectoryName(_handoffTicketPath)
             ?? throw new InvalidOperationException("The owned-world handoff directory is unavailable.");
@@ -871,6 +875,7 @@ internal sealed class OwnedWorldGameplayJournalCheckpoint
 
 internal sealed class OwnedWorldResumeConsumptionTombstone
 {
+    public VoyagerRecoveryAuthorization? RecoveryAuthorization { get; set; }
     public int Version { get; set; }
 
     public string ResumeTokenHash { get; set; } = string.Empty;
