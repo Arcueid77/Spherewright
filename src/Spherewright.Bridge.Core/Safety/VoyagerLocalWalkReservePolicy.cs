@@ -19,6 +19,7 @@ public sealed class VoyagerLocalWalkFacts
     // of current gravity. The Native consumer must prove the complete inputs.
     public double? NativeGravityUpperBound { get; set; }
     public NativeMechaBackgroundCostFacts? IndependentMechaCosts { get; set; }
+    public NativeMechaRechargeFacts? BoundedRechargeCosts { get; set; }
 }
 
 public sealed class VoyagerLocalWalkReserve
@@ -27,6 +28,7 @@ public sealed class VoyagerLocalWalkReserve
     public string? BlockerCode { get; internal set; }
     public double? PerNativeTickEnergyJoules { get; internal set; }
     public double? WorkPowerUpperWatts { get; internal set; }
+    public NativeMechaRechargeCost? BudgetedRecharge { get; internal set; }
     // Thirteen charged ticks cover RTS decay only. Potential Drift thrust can
     // continue afterward; its consumer must separately observe dry Walk/idle
     // or use the authorized Native pause path on failure, never assume stop.
@@ -51,13 +53,22 @@ public static class VoyagerLocalWalkReservePolicy
     public static VoyagerLocalWalkReserve Evaluate(VoyagerLocalWalkFacts f)
     {
         if (f is null) throw new ArgumentNullException(nameof(f));
-        if (!f.ModeTransitionsExcluded || !NativeMechaBackgroundCostPolicy.IndependentCombatCoreDebitsExcluded(f.IndependentMechaCosts)
-            || !Known(f.WalkSpeed) || !Known(f.WalkPowerWatts)
+        if (!f.ModeTransitionsExcluded || !Known(f.WalkSpeed) || !Known(f.WalkPowerWatts)
             || !Known(f.MiningPowerWatts) || !Known(f.OtherWorkPowerWatts) || !Known(f.ReactorConsumptionRatio)
             || !Known(f.RtsSpeed) || !Known(f.ManualSpeed) || !Known(f.SoftLandingRecover)
             || f.WalkSpeed < 1d || f.WalkSpeed > 60d || f.ReactorConsumptionRatio <= 0d
             || f.SoftLandingRecover > 1d || f.ManualSpeed != 0d || f.RtsSpeed > f.WalkSpeed + .01d)
             return new VoyagerLocalWalkReserve { BlockerCode = "native_rts_walk_mode_or_tail_unproved" };
+        NativeMechaRechargeCost? recharge = null;
+        if (!NativeMechaBackgroundCostPolicy.IndependentCombatCoreDebitsExcluded(f.IndependentMechaCosts))
+        {
+            var unsupported = NativeMechaRechargeCostPolicy.BackgroundBlocker(f.IndependentMechaCosts);
+            if (unsupported is not null) return new VoyagerLocalWalkReserve { BlockerCode = unsupported };
+            if (!ReferenceEquals(f.IndependentMechaCosts, f.BoundedRechargeCosts?.Background))
+                return new VoyagerLocalWalkReserve { BlockerCode = "native_independent_cost_facts_mismatch" };
+            recharge = NativeMechaRechargeCostPolicy.Evaluate(f.BoundedRechargeCosts);
+            if (!recharge.Proved) return new VoyagerLocalWalkReserve { BlockerCode = recharge.BlockerCode };
+        }
         var velocityUpper = (f.WalkSpeed!.Value + .01d) * (f.IncludePotentialWaterDrift ? 2d : 1d);
         // Slerp of an RTS velocity bounded by walkSpeed and a tangent target
         // of walkSpeed cannot grow beyond that bound (plus arithmetic slack).
@@ -80,13 +91,14 @@ public static class VoyagerLocalWalkReservePolicy
                 return new VoyagerLocalWalkReserve { BlockerCode = "native_potential_drift_cost_unproved" };
             totalPower += driftPower.Value;
         }
-        var perTick = totalPower * NativeTickSeconds;
+        // Native shield/laser refill is independent of energyConsumptionCoef.
+        var perTick = totalPower * NativeTickSeconds + (recharge?.PerNativeTickEnergyUpperJoules ?? 0d);
         var stop = perTick * StopGameTicks;
         var workPower = perTick * 60d;
         if (!Finite(totalPower) || !Finite(perTick) || !Finite(stop) || !Finite(workPower))
             return new VoyagerLocalWalkReserve { BlockerCode = "native_rts_walk_energy_overflow" };
         return new VoyagerLocalWalkReserve { Proved = true, PerNativeTickEnergyJoules = perTick,
-            WorkPowerUpperWatts = workPower, StopEnergyJoules = stop };
+            WorkPowerUpperWatts = workPower, StopEnergyJoules = stop, BudgetedRecharge = recharge };
     }
 
     public static double? CalculateNativeGravityUpperBound(IReadOnlyList<double>? planetRadii,

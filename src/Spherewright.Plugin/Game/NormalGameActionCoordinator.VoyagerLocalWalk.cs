@@ -60,7 +60,7 @@ internal sealed partial class NormalGameActionCoordinator
             if (observedScene is null) return VoyagerRemoteIdleAdmissionPolicy.Blocked("remote_idle_scene_unproved");
             stage = "native_mode";
             var nativeBlocker = NativeWalkModeBlocker(player, stationary: false, observedScene,
-                finiteWaterCostWithNativePause: true, allowDrift: true);
+                finiteWaterCostWithNativePause: true, allowDrift: true, allowBudgetedRecharge: true);
             if (nativeBlocker is not null) return VoyagerRemoteIdleAdmissionPolicy.Blocked(nativeBlocker);
             stage = "order_queue";
             if (player.orders.orderCount != 0) return VoyagerRemoteIdleAdmissionPolicy.Blocked("remote_idle_order_queue_active");
@@ -292,15 +292,19 @@ internal sealed partial class NormalGameActionCoordinator
         // UpdateJump can schedule jump energy or set Fly, and a queued order
         // can start again after Abort. Raw input is checked before GetInput.
         var subset = exactOrder && NativeWalkModeIsBounded(player, stationary: false, scene,
-                finiteWaterCostWithNativePause: true, allowDrift: true)
+                finiteWaterCostWithNativePause: true, allowDrift: true, allowBudgetedRecharge: true)
             && player.orders.orderCount == 0 && BuildUiIsIdle(player) && VoyagerMechaWorkIdle(player)
             && TryObserveOwnedConstructionDrones(player.factory, m.constructionModule, out var dronesIdle, out _) && dronesIdle;
         return EvaluateNativeLocalMovementCost(player, subset);
     }
 
-    private static VoyagerLocalWalkReserve EvaluateNativeLocalMovementCost(Player player, bool modeTransitionsExcluded)
+    private static VoyagerLocalWalkReserve EvaluateNativeLocalMovementCost(Player player, bool modeTransitionsExcluded,
+        NativeMechaBackgroundCostFacts? background = null, NativeMechaRechargeFacts? recharge = null)
     {
         var c = player.controller; var w = c.actionWalk; var m = player.mecha;
+        background ??= CaptureNativeMechaBackgroundCosts(player);
+        if (!NativeMechaBackgroundCostPolicy.IndependentCombatCoreDebitsExcluded(background))
+            recharge ??= CaptureNativeMechaRechargeFacts(player, background);
         return VoyagerLocalWalkReservePolicy.Evaluate(new VoyagerLocalWalkFacts
         {
             ModeTransitionsExcluded = modeTransitionsExcluded, WalkSpeed = m.walkSpeed, WalkPowerWatts = m.walkPower,
@@ -309,7 +313,7 @@ internal sealed partial class NormalGameActionCoordinator
             ManualSpeed = w.moveVelocity.magnitude, SoftLandingRecover = c.softLandingRecover,
             IncludePotentialWaterDrift = true, NativeThrustPowerPerAcceleration = m.thrustPowerPerAcc,
             NativeGravityUpperBound = NativeLocalGravityUpperBound(player),
-            IndependentMechaCosts = CaptureNativeMechaBackgroundCosts(player),
+            IndependentMechaCosts = background, BoundedRechargeCosts = recharge,
         });
     }
 
@@ -325,6 +329,14 @@ internal sealed partial class NormalGameActionCoordinator
             var reserve = EvaluateNativeLocalMovementCost(player, modeTransitionsExcluded: true);
             observation.CostInputsProved = reserve.Proved;
             observation.PerNativeTickEnergyUpperJoules = reserve.Proved ? reserve.PerNativeTickEnergyJoules : null;
+            if (reserve.Proved && reserve.BudgetedRecharge is { Proved: true } budgeted)
+            {
+                observation.Basis = "conditional_native_walk_drift_tick_upper_v2";
+                observation.IndependentDebitsBudgeted = true;
+                observation.IndependentEnergyPerNativeTickUpperJoules = budgeted.PerNativeTickEnergyUpperJoules;
+                observation.ShieldRechargeEnergyPerNativeTickUpperJoules = budgeted.ShieldRechargeEnergyPerNativeTickUpperJoules;
+                observation.LaserRechargeEnergyPerNativeTickUpperJoules = budgeted.LaserRechargeEnergyPerNativeTickUpperJoules;
+            }
             if (!reserve.Proved) observation.Blockers.Add(reserve.BlockerCode ?? "native_cost_unknown");
             observation.Blockers.Add(GameMain.isPaused ? "native_paused_not_execution_ready" : "conditional_cost_not_execution_authority");
         }
@@ -348,12 +360,47 @@ internal sealed partial class NormalGameActionCoordinator
         };
     }
 
+    private static NativeMechaRechargeFacts CaptureNativeMechaRechargeFacts(Player player, NativeMechaBackgroundCostFacts background)
+    {
+        var result = new NativeMechaRechargeFacts { Background = background };
+        try
+        {
+            var m = player.mecha; var c = player.controller; var history = GameMain.history;
+            result.StableCostInputs = history is not null && history.currentTech == 0
+                && history.techQueue is { Length: 32 } && history.techQueue.All(id => id == 0)
+                && LocalRawMovementInputIdle()
+                && c.input0.sqrMagnitude == 0f && c.input1.sqrMagnitude == 0f;
+            result.CoreEnergyJoules = m.coreEnergy; result.CoreCapacityJoules = m.coreEnergyCap;
+            result.ReactorPowerGenerationWatts = m.reactorPowerGen; result.ShieldRechargeSpeed = m.energyShieldRechargeSpeed;
+            result.CurrentReactorItemId = m.reactorItemId; result.CurrentReactorItemInc = m.reactorItemInc;
+            var itemSet = LDB.items;
+            var catalog = itemSet?.dataArray;
+            if (itemSet is null || catalog is null || catalog.Length < 1 || catalog.Length > NativeMechaRechargeCostPolicy.MaximumItemCount)
+            { result.CaptureBlockerCode = "native_independent_item_catalog_unproved"; return result; }
+            var inc = Cargo.incTableMilli; var acc = Cargo.accTableMilli;
+            if (inc is null || acc is null || inc.Length < 11 || acc.Length < 11
+                || inc.Length > NativeMechaRechargeCostPolicy.MaximumTableLength || acc.Length > NativeMechaRechargeCostPolicy.MaximumTableLength)
+            { result.CaptureBlockerCode = "native_independent_fuel_tables_unproved"; return result; }
+            // Copies only global item metadata, never factory/resource data.
+            result.ItemCatalog = catalog.Select(item => item is null ? null : new NativeRechargeItemFacts
+                { ItemId = item.ID, ReactorInc = item.ReactorInc, Productive = item.Productive }).ToArray();
+            var selected = m.reactorItemId > 0 ? itemSet.Select(m.reactorItemId) : null;
+            result.CurrentSelection = selected is null ? null : new NativeRechargeItemFacts
+                { ItemId = selected.ID, ReactorInc = selected.ReactorInc, Productive = selected.Productive };
+            result.CurrentSelectionObserved = true;
+            result.IncTableMilli = inc.Take(11).Select(value => (double)value).ToArray();
+            result.AccTableMilli = acc.Take(11).Select(value => (double)value).ToArray();
+        }
+        catch (Exception exception) { result.CaptureBlockerCode = "native_independent_cost_capture_failed:" + exception.GetType().Name; }
+        return result;
+    }
+
     private static bool NativeWalkModeIsBounded(Player player, bool stationary, NativeLocalWalkSceneBinding? scene = null,
-        bool finiteWaterCostWithNativePause = false, bool allowDrift = false) =>
-        NativeWalkModeBlocker(player, stationary, scene, finiteWaterCostWithNativePause, allowDrift) is null;
+        bool finiteWaterCostWithNativePause = false, bool allowDrift = false, bool allowBudgetedRecharge = false) =>
+        NativeWalkModeBlocker(player, stationary, scene, finiteWaterCostWithNativePause, allowDrift, allowBudgetedRecharge) is null;
 
     private static string? NativeWalkModeBlocker(Player player, bool stationary, NativeLocalWalkSceneBinding? scene,
-        bool finiteWaterCostWithNativePause, bool allowDrift)
+        bool finiteWaterCostWithNativePause, bool allowDrift, bool allowBudgetedRecharge = false)
     {
         var c = player.controller; var w = c.actionWalk;
         var vertical = c.vertSpeed;
@@ -367,7 +414,13 @@ internal sealed partial class NormalGameActionCoordinator
         if (player.navigation.navigating || player.navigation.hasTask) return "remote_idle_navigation_active";
         if (c.actionSail.fastTravelling) return "remote_idle_fast_travel_active";
         if (!NativeLocalWalkSceneProved(player, scene, finiteWaterCostWithNativePause)) return "remote_idle_scene_unproved";
-        if (!NativeMechaBackgroundCostPolicy.IndependentCombatCoreDebitsExcluded(CaptureNativeMechaBackgroundCosts(player))) return "remote_idle_independent_mecha_cost_unproved";
+        var independent = CaptureNativeMechaBackgroundCosts(player);
+        if (!NativeMechaBackgroundCostPolicy.IndependentCombatCoreDebitsExcluded(independent))
+        {
+            if (!allowBudgetedRecharge) return "remote_idle_independent_mecha_cost_unproved";
+            var bounded = NativeMechaRechargeCostPolicy.Evaluate(CaptureNativeMechaRechargeFacts(player, independent));
+            if (!bounded.Proved) return bounded.BlockerCode;
+        }
         if (!LocalRawMovementInputIdle()) return "remote_idle_raw_input_active";
         if (c.input0.sqrMagnitude != 0f || c.input1.sqrMagnitude != 0f) return "remote_idle_controller_input_active";
         if (w.jumpDelayTick > 0 || w.flyUpChance != 0f) return "remote_idle_jump_or_fly_pending";

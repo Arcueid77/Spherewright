@@ -15,6 +15,8 @@ public sealed class NativeConstructionDroneFacts
     public double? MaximumTargetDistanceMeters { get; set; }
     public int? NativePendingJumpTicks { get; set; }
     public NativeMechaBackgroundCostFacts? IndependentMechaCosts { get; set; }
+    public bool AllowBudgetedIndependentRecharge { get; set; }
+    public NativeMechaRechargeFacts? BoundedRechargeCosts { get; set; }
 }
 
 public sealed class NativeConstructionDroneReserve
@@ -64,7 +66,21 @@ public static class NativeConstructionDroneReservePolicy
         if (f.NativePendingJumpTicks > 0)
             return Blocked("native_pending_jump_not_in_construction_tail");
         if (!NativeMechaBackgroundCostPolicy.IndependentCombatCoreDebitsExcluded(f.IndependentMechaCosts))
-            return Blocked("native_independent_mecha_costs_not_excluded");
+        {
+            if (!f.AllowBudgetedIndependentRecharge) return Blocked("native_independent_mecha_costs_not_excluded");
+            var unsupported = NativeMechaRechargeCostPolicy.BackgroundBlocker(f.IndependentMechaCosts);
+            if (unsupported is not null) return Blocked(unsupported);
+            if (!ReferenceEquals(f.IndependentMechaCosts, f.BoundedRechargeCosts?.Background))
+                return Blocked("native_independent_cost_facts_mismatch");
+            var bounded = NativeMechaRechargeCostPolicy.Evaluate(f.BoundedRechargeCosts);
+            if (!bounded.Proved) return Blocked(bounded.BlockerCode!);
+            var alreadyIncludedPower = bounded.PerNativeTickEnergyUpperJoules!.Value * 60d;
+            if (!Finite(alreadyIncludedPower) || !Finite(f.OtherMechaPowerUpperWatts.Value)
+                || f.OtherMechaPowerUpperWatts < alreadyIncludedPower)
+                return Blocked("native_independent_recharge_not_in_background_budget");
+            // The supplied background is movement.P*60 from these same facts.
+            // It already pays B, including every tail+2 tick: do not add it again.
+        }
         var n = f.MaximumMechaDrones.Value;
         var speed = f.NativeSpeedMetersPerSecond.Value;
         var rate = f.NativeEnergyPerMeter.Value;

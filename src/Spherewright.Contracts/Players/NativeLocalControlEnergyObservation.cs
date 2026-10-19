@@ -7,6 +7,10 @@ public sealed class NativeLocalControlEnergyObservation
     public double? PerNativeTickEnergyUpperJoules { get; set; }
     public bool CostInputsProved { get; set; }
     public bool IndependentDebitsExcluded { get; set; }
+    public bool IndependentDebitsBudgeted { get; set; }
+    public double? IndependentEnergyPerNativeTickUpperJoules { get; set; }
+    public double? ShieldRechargeEnergyPerNativeTickUpperJoules { get; set; }
+    public double? LaserRechargeEnergyPerNativeTickUpperJoules { get; set; }
     public bool ExecutionPremisesProved => false;
     public List<string> Blockers { get; set; } = new();
 }

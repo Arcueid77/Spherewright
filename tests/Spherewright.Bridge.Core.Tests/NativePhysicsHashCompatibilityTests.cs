@@ -30,7 +30,9 @@ public sealed class NativePhysicsHashCompatibilityTests
         Assert.Equal(action, CanonicalStateHash.PlayerAction(player));
         player.NativeLocalControlEnergy = new NativeLocalControlEnergyObservation
         {
-            PerNativeTickEnergyUpperJoules = 12345, CostInputsProved = true, IndependentDebitsExcluded = true,
+            PerNativeTickEnergyUpperJoules = 12345, CostInputsProved = true, IndependentDebitsExcluded = false,
+            IndependentDebitsBudgeted = true, IndependentEnergyPerNativeTickUpperJoules = 500,
+            ShieldRechargeEnergyPerNativeTickUpperJoules = 300, LaserRechargeEnergyPerNativeTickUpperJoules = 200,
             Blockers = new() { "native_paused_not_execution_ready" },
         };
         Assert.False(player.NativeLocalControlEnergy.ExecutionPremisesProved);

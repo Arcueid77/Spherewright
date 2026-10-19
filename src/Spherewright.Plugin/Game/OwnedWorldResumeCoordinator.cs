@@ -141,7 +141,7 @@ internal sealed class OwnedWorldResumeCoordinator
             CommitAllowedNow = blockers.Count == 0,
             CommitBlockers = blockers,
             CompletionCondition = payload.RemoteEvidence?.RecoveryProposal is not null
-                ? "Only this fixed LastExit, exact immutable one-shot UTC authorization and original task limits may continue after subsequent explicit confirmation. Native guarded charging remains pending; the full strict13 and original return core minimum precede idle admission/primary resave. Fresh positive route proof precedes flight. A failed attempt pauses and cannot rekey or renew."
+                ? "Only this fixed LastExit, exact immutable one-shot UTC authorization and original task limits may continue after subsequent explicit confirmation. Native guarded charging remains pending until full original strict13 idle admission; the original return core minimum remains an independent fresh return-flight gate. Fresh positive route proof precedes flight. A failed attempt pauses and cannot rekey or renew."
                 : payload.RemoteContinuation
                 ? $"Only the fixed LastExit at tick {payload.MinimumGameTick} may continue this exact quarantined remote journey after subsequent explicit confirmation of this disclosure. Source, current primary, original successful checkpoint and Journal are held and rechecked. The old credential is durably consumed before normal loading; ownership and Journal confirmation precede a new strict idle owner and any normal primary resave. No automatic Resume, checkpoint rollback, renewed budget or deadline."
                 : payload.VersionChangedPrimary

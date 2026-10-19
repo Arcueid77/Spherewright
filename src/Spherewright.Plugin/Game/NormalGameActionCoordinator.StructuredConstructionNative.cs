@@ -9,7 +9,7 @@ namespace Spherewright.Plugin.Game;
 internal sealed partial class NormalGameActionCoordinator
 {
     private static bool ConstructionPlayerIdle(Player player) => NativeWalkModeIsBounded(player, stationary: true,
-            finiteWaterCostWithNativePause: true)
+            finiteWaterCostWithNativePause: true, allowBudgetedRecharge: true)
         && player.movementState == EMovementState.Walk && player.speed <= .1f
         && player.currentOrder is null && player.orders?.orderCount == 0
         && !player.warpCommand && player.warpState == 0f && !player.navigation.navigating
@@ -34,7 +34,7 @@ internal sealed partial class NormalGameActionCoordinator
         var player = action.ConstructionBinding!.Player;
         var order = player.currentOrder;
         return NativeWalkModeIsBounded(player, stationary: true, action.Plan.VoyagerLocalWalkScene,
-                finiteWaterCostWithNativePause: true) && player.speed <= .1f
+                finiteWaterCostWithNativePause: true, allowBudgetedRecharge: true) && player.speed <= .1f
             && Vector3.Distance(player.position, ToVector(action.BlueprintBuild!.ConstructionControl!.Anchor))
                 <= NativeConstructionDroneReservePolicy.MaximumAnchorDisplacementMeters
             && player.orders.orderCount == 0 && (ReferenceEquals(order, action.PlayerOrder)
@@ -56,9 +56,11 @@ internal sealed partial class NormalGameActionCoordinator
         // a lost anchor/Walk condition freezes Native energy, not a fake drain.
         // Admission/pre-player independently establish the stationary subset;
         // the shared cost policy validates all numeric and combat premises.
-        var movement = EvaluateNativeLocalMovementCost(player, modeTransitionsExcluded: true);
-        var background = movement.Proved ? movement.WorkPowerUpperWatts!.Value : double.NaN;
         var independent = CaptureNativeMechaBackgroundCosts(player);
+        var rechargeFacts = NativeMechaBackgroundCostPolicy.IndependentCombatCoreDebitsExcluded(independent)
+            ? null : CaptureNativeMechaRechargeFacts(player, independent);
+        var movement = EvaluateNativeLocalMovementCost(player, modeTransitionsExcluded: true, independent, rechargeFacts);
+        var background = movement.Proved ? movement.WorkPowerUpperWatts!.Value : double.NaN;
         var anchor = build.ConstructionControl is not null ? ToVector(build.ConstructionControl.Anchor) : player.position;
         var ejectAnchor = anchor.normalized * (anchor.magnitude + 2.8f);
         var reach = 0d;
@@ -78,6 +80,10 @@ internal sealed partial class NormalGameActionCoordinator
             independent.AmmoItemId, independent.AmmoSelectSlot, independent.AmmoRateOfFire, independent.AmmoEnergyCost,
             independent.AmmoStorageEmptyAndUnfiltered,
             independent.GroundFleetCount, independent.SpaceFleetCount);
+        if (movement.BudgetedRecharge is { Proved: true } budgeted)
+            costHash = CanonicalStateHash.Combine("native-structured-drone-cost-bounded-independent-v2", costHash,
+                budgeted.WeaponPowerUpperWatts, budgeted.ShieldRechargeEnergyPerNativeTickUpperJoules,
+                budgeted.LaserRechargeEnergyPerNativeTickUpperJoules, budgeted.PerNativeTickEnergyUpperJoules);
         return NativeConstructionDroneReservePolicy.Evaluate(new NativeConstructionDroneFacts
         {
             MaximumMechaDrones = module.droneCount, NativeSpeedMetersPerSecond = speed,
@@ -86,6 +92,8 @@ internal sealed partial class NormalGameActionCoordinator
             MaximumTargetDistanceMeters = reach,
             NativePendingJumpTicks = player.controller.actionWalk.jumpDelayTick,
             IndependentMechaCosts = independent,
+            AllowBudgetedIndependentRecharge = movement.BudgetedRecharge?.Proved == true,
+            BoundedRechargeCosts = rechargeFacts,
         });
     }
 

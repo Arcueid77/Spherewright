@@ -62,11 +62,15 @@ Move 校验有限地表目标，不证明路径无碰撞。有电移动在 180 �
 
 Voyager 本地 Move/Harvest 复用普通 RTS 并保留无水快路；有限能耗分支允许运行中有界 Walk/Drift，仍拒绝手动输入/惯性、排队订单、待跳跃、导航、快速旅行、曲速及 Fly。精确 owned 绑定与 Native pre-player 钩子继续必需。水平、推力及后台能量覆盖有限工作与13个付费 Native 游戏停止 tick，保留原核心、loaded 返程、原生翘曲器、UTC/tick 和观察租约储备。Move/Harvest 停止上限为13个付费游戏 tick 或独立1秒墙钟，先到为止；UTC 准入留至少1秒清理余量。墙钟上限只是等待期限，不是物理停稳定理，也不折算成60个付费 tick；原 action/journey 期限绝不重开。正常成功要求实际干地 Walk 和真实 Native 零速度，RTS 归零或 Pause 不足。这是在该分支内以有限能耗替代海洋排除门，不是采样或全域干地几何证书；`nativePhysics` 仍为 safetyCertified=false 的只读观察，不选择或授权该分支。
 
+条件 P 可保留旧零独立扣费证明，或仅为已证明有限的护盾/激光补能上界编列预算。`independentDebitsExcluded` 保持旧含义；`independentDebitsBudgeted` 标识已含的条件上界，不代表实际已支付或执行许可。有界 v2 P 在移动消耗系数结算后只加一次 B，B 不乘 `energyConsumptionCoef`；可空贡献在未证前仍为未知。上界通过已加载物品原型超集、两张 inc 表0..10及回退值覆盖当前和可能的 Native 换燃料，并核有限值/转换/溢出及已预算包络内的生成/补能速度稳定性。空弹药与地面/太空零配置机队槽位仍为必要条件；默认值、满缓冲或和平模式不免除费用，不改玩家设置。`executionPremisesProved` 仍为 false，P 不进入既有 v1 哈希。
+
 成功远端落地后，同一原 journey 继续守护闲置能耗与原返程时钟，直至已预算的本地动作、受控施工或真实返航接管。失去闲置 Walk、成本或原返程时钟证据时，走精确 owned 绑定的 Pause/quarantine 分支；已成功的飞行或 Move 仍保留成功，后续闲置保护不改写其原结果。 Host 卸载或默认 Save 重载若丢失内存中的 landed-controller 绑定，不得静默重建资格；除非独立确认的固定 LastExit 续接证明新的独立 idle owner，否则只对同一 owned 世界 Pause/quarantine 并拒绝本地/结构化施工。保留 checkpoint 与确认门；普通路径支持同一 Host 内出航、本地作业和正常返航；物流保存恢复续运安排在回母星且 journey 闭合后，远端在途冷恢复尚未验证。
 
 守卫失败、停止/尾返上限到期或调用者/Host 观察丢失时，有限能耗的失败保护仅在原 owned 绑定仍精确匹配时调用正常 GameMain.Pause。当前 LogicFrame 仍可能跑完 player 与无人机的一整个 tick，因此必须支付并保留该整 tick 的储备；只有后续 Native 游戏能耗/派发 tick 冻结。Pause 不证明物理空闲或尾返成功。保留未核销的 outcome_unknown、quarantine 及精确原 action/build/checkpoint，不自动恢复、Load 或重放；绝不暂停替换后的另一世界。Host 真正卸载时先暂停精确 owned 的受保护世界，再拆除钩子；普通 MCP 断线不卸载 DSP 内常驻 Plugin，租约检查继续。暂停不续原墙钟期限。新源码仍须完整 Plugin/回归、准确 SHA CI、Lab 锁/采用、冷部署及实机检查后才计运行信用；不新增公开工具或协议版本。
 
 受控施工仍在固定锚点保持 Walk，并保留独立原生无人机尾部预算；Drift/锚损失停派发并走 Pause/unknown，不声称尾返成功。已知的正常尾返仍须精确工厂后续 Native 轮次、原预发缓存为空及全部 owned 无人机空闲证据。本维护源码适配仍待完整 Plugin/回归、准确 SHA CI、Lab 采用、冷安装与实机资格，历史2/3验收及72工具/1资源接口不变。
+
+既有有限原生施工适配器仅在后台预算已包含同一组捕获事实下的 B 时，才可显式采用相同有界补能证明；它核验预算覆盖关系，不重复计入 B。旧排除门仍为默认。生成/补能速度稳定性须覆盖完整已预算工作与无人机尾部加2tick；固定 Walk/锚点、16m目标/28m无人机、原几何、核心/loaded/返程底线及未知/尾返门均不变，不新增施工范围或布局能力。
 
 <a id="ownership-creation-import-and-journal"></a>
 ## 所有权、创建、导入与 Journal
@@ -103,7 +107,7 @@ Journal 起始版本和历史保持不变，最多允许五次已研究的持久
 
 仅此 `default` 窄提案可追加四个可选扁平参数：`recoveryDeadlineUtc`、固定 `recoveryScope=continue_original_finite_task`、`maximumChargeGameTicks`、`maximumChargeWallSeconds`。充能上限须为正且有界，最多18000 tick/300墙钟秒。Prepared 单列 `originalJourneyDeadlineUtc` 与 `effectiveRecoveryDeadlineUtc`，回显 scope/上限，并声明 `nativeChargeFeasibilityRequiresFreshCapture`，不承诺充能进度。所提有效 UTC 窗口不得超过原声明 UTC 跨度；凭据消费前绑定单一不可变提案、证据及本次新预览后的明确确认，旧同意不涵盖该期限或充能尝试。不得靠重键、更换 Host 或重建续期；原有效期、tick 最大值/已花值、返程预留及能量/翘曲器底线不变，普通 healthy/default 行为不变。
 
-原生加载前绑定固定源与当前主档的完整文件证据、精确同版本 owned/和平身份、原 Journal 及已成功 checkpoint/journey 来源；任何不可变恢复窗口授权须先持久化，再持久消费受保护凭据。成功 checkpoint 只作证据，绝不是加载源，也不伪造旧 `ActionRecord`。精确新 Native GameLoader 在 frame10 已完成且禁用的 `onLoadComplete` 同步回调，须在 Begin/InitLogic 后、首个 player(601) tick 前绑定新 Native logic，证明 owned 身份、原 Journal 与闭合 bootstrap 包络。在实时证明的运行前提下，bootstrap 要求核心至少2P、loaded 能量至少为受保护返程底线加2P；队列、独立扣费及可能无人机派发均须闭合。充能只使用新加载世界中自然运行的 Native GenerateEnergy，绝不 Resume 原隔离世界。该预检不伪称 Native tick 可用，也不发布 idle owner；证明未决禁止自动主档重存及本地/结构化写入。真实 Native pre-player(501) 须逐 tick 守护 bootstrap，只有某次证明原完整 strict13（核心至少13P、loaded 至少为原受保护返程底线加13P，以及原 tick/墙钟/翘曲器门）后，才可准入 idle owner、释放租约并允许重存，紧邻重存前仍须再核严格条件。原返航核心最低值仍是独立 fresh 返航起飞门，不追加为恢复接管条件。可行性须依 P/g 及 fresh 预算判定，不保证自然充能、后续 Move、任务或返程完成，也不降门或续预算。事后 Update 或轮询不能补首 tick 证明。充能在声明的 tick/墙钟任一上限先到时停止，且仍受原五分钟总接管上限约束；进入充能或更换 Host 均不重开。失败只暂停精确 owned 世界并隔离，不证明物理空闲，也不授予自动 Resume、Load 或重放。保留原 UTC 原件、最大/已花/返程预留 tick 及核心/loaded/翘曲器底线；原剩余储备不足则拒绝。
+原生加载前绑定固定源与当前主档的完整文件证据、精确同版本 owned/和平身份、原 Journal 及已成功 checkpoint/journey 来源；任何不可变恢复窗口授权须先持久化，再持久消费受保护凭据。成功 checkpoint 只作证据，绝不是加载源，也不伪造旧 `ActionRecord`。精确新 Native GameLoader 在 frame10 已完成且禁用的 `onLoadComplete` 同步回调，须在 Begin/InitLogic 后、首个 player(601) tick 前绑定新 Native logic，证明 owned 身份、原 Journal 与闭合 bootstrap 包络。在实时证明的运行前提下，bootstrap 要求核心至少2P、loaded 能量至少为受保护返程底线加2P；队列及可能无人机派发须闭合，独立护盾/激光扣费须被排除或由同一已证明的 P 覆盖。充能只使用新加载世界中自然运行的 Native GenerateEnergy，绝不 Resume 原隔离世界。该预检不伪称 Native tick 可用，也不发布 idle owner；证明未决禁止自动主档重存及本地/结构化写入。真实 Native pre-player(501) 须逐 tick 守护 bootstrap，只有某次证明原完整 strict13（核心至少13P、loaded 至少为原受保护返程底线加13P，以及原 tick/墙钟/翘曲器门）后，才可准入 idle owner、释放租约并允许重存，紧邻重存前仍须再核严格条件。原返航核心最低值仍是独立 fresh 返航起飞门，不追加为恢复接管条件。可行性须依 P/g 及 fresh 预算判定，不保证自然充能、后续 Move、任务或返程完成，也不降门或续预算。事后 Update 或轮询不能补首 tick 证明。充能在声明的 tick/墙钟任一上限先到时停止，且仍受原五分钟总接管上限约束；进入充能或更换 Host 均不重开。失败只暂停精确 owned 世界并隔离，不证明物理空闲，也不授予自动 Resume、Load 或重放。保留原 UTC 原件、最大/已花/返程预留 tick 及核心/loaded/翘曲器底线；原剩余储备不足则拒绝。
 
 默认恢复绑定受保护 ticket 与菜单 revision。来源选择检查合格内部主存档或固定 LastExit 的头部 tick 和文件修改时间新鲜度，commit 重查 ticket 与来源选择。存在受保护 Journal 检查点时，加载前和接管后都必须验证；既有旧 ticket 兼容性仍限规定路径。接管仍须证明嵌入受管身份、预期星球、和平模式和最低 tick。除上述远端隔离窄续接外，普通默认恢复不计算完整源文件指纹，也不在接管期间持有源文件只读租约。
 

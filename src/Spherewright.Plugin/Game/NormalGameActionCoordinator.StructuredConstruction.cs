@@ -283,7 +283,7 @@ internal sealed partial class NormalGameActionCoordinator
                      && a.Plan.ActionKind != NormalActionKinds.CancelBlueprintBuild).ToArray())
         {
             if (ConstructionReferencesMatch(action) && NativeWalkModeIsBounded(action.ConstructionBinding!.Player, stationary: true, action.Plan.VoyagerLocalWalkScene,
-                    finiteWaterCostWithNativePause: true)
+                    finiteWaterCostWithNativePause: true, allowBudgetedRecharge: true)
                 && ConstructionHoldOwned(action)) continue;
             // Catch an already scheduled jump before Player.GameTick can debit
             // it. Never clear user input/Native jump or claim that an external
