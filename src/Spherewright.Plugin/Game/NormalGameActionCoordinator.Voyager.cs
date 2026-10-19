@@ -780,7 +780,10 @@ internal sealed partial class NormalGameActionCoordinator
         if (!action.VoyagerLegAccounted)
         {
             var observedTick = VoyagerBindingMatches(action.Plan) ? GameMain.gameTick : action.VoyagerLastNativeTick;
-            journey.SpentGameTicks += Math.Max(0L, observedTick - action.StartedAtGameTick);
+            var spent = VoyagerRemoteIdleAdmissionPolicy.ProjectSpentGameTicks(journey.SpentGameTicks,
+                action.StartedAtGameTick, observedTick, legAlreadyAccounted: false);
+            if (!spent.HasValue) { rejection = "The original Voyager leg accounting is outside its finite range."; return false; }
+            journey.SpentGameTicks = spent.Value;
             journey.LastAccountedGameTick = observedTick;
             journey.LastAccountedFlightActionId = action.ActionId;
             action.VoyagerLegAccounted = true;
@@ -808,6 +811,7 @@ internal sealed partial class NormalGameActionCoordinator
 
     private void CompleteVoyagerLanding(ActionRecord action, string message)
     {
+        if (action.Terminal && action.Succeeded) return; // Never rewrite a completed original flight.
         if (!VoyagerBindingMatches(action.Plan))
         {
             MarkVoyagerOutcomeUnknown(action, "The exact original landing binding ended before its metadata could be reconciled.");
@@ -817,6 +821,16 @@ internal sealed partial class NormalGameActionCoordinator
         if (!player.isAlive || player.movementState != EMovementState.Walk || player.speed > 0.1f
             || player.planetId != action.VoyagerSelectedDestinationPlanetId || player.warpCommand || player.warpState != 0f)
         {
+            if (action.VoyagerLandingPendingPersistence)
+            {
+                var pause = FreezeNativeLocalFailureEnergy(VoyagerBindingMatches(action.Plan));
+                var reason = "The original landing metadata remains unresolved; current Native state no longer proves the same stable landing."
+                    + " [remote_idle_landing_stability_unproved]";
+                action.VoyagerStopReason ??= reason;
+                MarkVoyagerOutcomeUnknown(action, reason + pause);
+                CaptureVoyagerReadback(action);
+                return;
+            }
             if (action.Terminal)
             {
                 action.State = NormalActionStates.OutcomeUnknown;
@@ -825,6 +839,37 @@ internal sealed partial class NormalGameActionCoordinator
             }
             RequestVoyagerStop(action, "Native warp exit and a stable living target landing are required before success can be sealed.");
             return;
+        }
+        NativeLocalWalkSceneBinding? landedIdleScene = null;
+        if (!action.Plan.VoyagerReturnLeg)
+        {
+            var journey = action.VoyagerJourney ?? _flightCheckpoints.VoyagerJourney;
+            var spent = journey is null ? null : VoyagerRemoteIdleAdmissionPolicy.ProjectSpentGameTicks(
+                journey.SpentGameTicks, action.StartedAtGameTick, GameMain.gameTick, action.VoyagerLegAccounted);
+            var admission = journey is null || !spent.HasValue
+                ? VoyagerRemoteIdleAdmissionPolicy.Blocked("remote_idle_landing_accounting_unproved")
+                : CaptureVoyagerRemoteIdleAdmission(action, journey, scene: null, spent.Value,
+                    action.VoyagerLandedAtGameTick ?? GameMain.gameTick, out landedIdleScene,
+                    prospectiveRemotePlanetId: action.VoyagerSelectedDestinationPlanetId);
+            if (!admission.Proved)
+            {
+                // Do not mark the checkpoint successful and then discover that
+                // no idle controller can accept it. The original flight keeps
+                // its finite stop/recovery path and the exact failed predicate.
+                var reason = "The outbound landing cannot hand control to its strict remote idle guard."
+                    + VoyagerRemoteIdleFailureDetail(admission);
+                if (action.VoyagerLandingPendingPersistence)
+                {
+                    // A previous attempt may already have marked the checkpoint
+                    // flight_succeeded. Never convert that retry into a stop or
+                    // a recoverable failed flight; preserve its original poll.
+                    action.VoyagerStopReason ??= reason;
+                    MarkVoyagerOutcomeUnknown(action, reason + FreezeNativeLocalFailureEnergy(VoyagerBindingMatches(action.Plan)));
+                    CaptureVoyagerReadback(action);
+                }
+                else RequestVoyagerStop(action, reason);
+                return;
+            }
         }
         action.VoyagerLandingPendingPersistence = true;
         action.VoyagerLandingCompletionMessage ??= message;
@@ -850,7 +895,7 @@ internal sealed partial class NormalGameActionCoordinator
         if (!action.Plan.VoyagerReturnLeg)
         {
             _voyagerRemoteIdleOwner = action;
-            _voyagerRemoteIdleScene = CaptureNativeLocalWalkScene();
+            _voyagerRemoteIdleScene = landedIdleScene;
         }
         else { _voyagerRemoteIdleOwner = null; _voyagerRemoteIdleScene = null; }
         action.VoyagerLandingPendingPersistence = false;

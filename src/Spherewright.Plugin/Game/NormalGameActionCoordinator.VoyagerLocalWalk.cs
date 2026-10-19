@@ -1,5 +1,6 @@
 using Spherewright.Bridge.Core.Safety;
 using Spherewright.Contracts.Actions;
+using Spherewright.Plugin.RuntimeDescriptor;
 using UnityEngine;
 
 namespace Spherewright.Plugin.Game;
@@ -11,21 +12,93 @@ internal sealed partial class NormalGameActionCoordinator
     private ActionRecord? _voyagerRemoteIdleOwner;
     private NativeLocalWalkSceneBinding? _voyagerRemoteIdleScene;
     // A separate patience bound, not a 13/60s prediction of physics motion.
-    private const double VoyagerLocalStopWallSeconds = 1d;
+    private const double VoyagerLocalStopWallSeconds = VoyagerRemoteIdleAdmissionPolicy.StopWallSeconds;
 
     private bool VoyagerRemoteIdleBindingMatches()
     {
-        var owner = _voyagerRemoteIdleOwner;
-        var journey = _flightCheckpoints.VoyagerJourney;
+        return VoyagerRemoteIdleBindingMatches(_voyagerRemoteIdleOwner, _flightCheckpoints.VoyagerJourney);
+    }
+
+    private bool VoyagerRemoteIdleBindingMatches(ActionRecord? owner, VoyagerJourneyRecord? journey,
+        int? prospectiveRemotePlanetId = null)
+    {
         var b = owner?.Plan.VoyagerBinding;
-        return owner is not null && b is not null && journey?.Phase == "remote_landed"
+        return owner is not null && b is not null && journey is not null
+            && (prospectiveRemotePlanetId.HasValue || journey.Phase == "remote_landed")
             && journey.JourneyId == owner.Plan.VoyagerJourneyId
             && VoyagerOwnedJourneyMatchesCurrentSession(journey, owner.SessionId)
             && ReferenceEquals(GameMain.data, b.World) && ReferenceEquals(GameMain.mainPlayer, b.Player)
             && ReferenceEquals(b.Player.controller, b.Controller) && ReferenceEquals(b.Player.mecha, b.Mecha)
-            && GameMain.localPlanet is { } planet && planet.id == journey.RemotePlanetId
+            && GameMain.localPlanet is { } planet && planet.id == (prospectiveRemotePlanetId ?? journey.RemotePlanetId)
             && ReferenceEquals(b.Player.planetData, planet) && ReferenceEquals(b.Player.factory, planet.factory);
     }
+
+    private VoyagerRemoteIdleAdmissionDecision CaptureVoyagerRemoteIdleAdmission(ActionRecord owner,
+        VoyagerJourneyRecord journey, NativeLocalWalkSceneBinding? scene, long spentGameTicks,
+        long? lastLandedGameTick, out NativeLocalWalkSceneBinding? observedScene, int? prospectiveRemotePlanetId = null)
+    {
+        observedScene = scene;
+        var stage = "binding";
+        try
+        {
+            if (!VoyagerRemoteIdleBindingMatches(owner, journey, prospectiveRemotePlanetId))
+                return VoyagerRemoteIdleAdmissionPolicy.Blocked("remote_idle_binding_unproved");
+            var player = owner.Plan.VoyagerBinding!.Player;
+            stage = "current_order";
+            if (player.currentOrder is not null) return VoyagerRemoteIdleAdmissionPolicy.Blocked("remote_idle_current_order_active");
+            stage = "scene_capture";
+            observedScene ??= CaptureNativeLocalWalkScene();
+            if (observedScene is null) return VoyagerRemoteIdleAdmissionPolicy.Blocked("remote_idle_scene_unproved");
+            stage = "native_mode";
+            var nativeBlocker = NativeWalkModeBlocker(player, stationary: false, observedScene,
+                finiteWaterCostWithNativePause: true, allowDrift: true);
+            if (nativeBlocker is not null) return VoyagerRemoteIdleAdmissionPolicy.Blocked(nativeBlocker);
+            stage = "order_queue";
+            if (player.orders.orderCount != 0) return VoyagerRemoteIdleAdmissionPolicy.Blocked("remote_idle_order_queue_active");
+            stage = "build_ui";
+            if (!BuildUiIsIdle(player)) return VoyagerRemoteIdleAdmissionPolicy.Blocked("remote_idle_build_ui_active");
+            stage = "mecha_work";
+            if (!VoyagerMechaWorkIdle(player)) return VoyagerRemoteIdleAdmissionPolicy.Blocked("remote_idle_mecha_work_active");
+            stage = "construction_drones";
+            if (!TryObserveOwnedConstructionDrones(player.factory, player.mecha.constructionModule, out var dronesIdle, out _))
+                return VoyagerRemoteIdleAdmissionPolicy.Blocked("remote_idle_construction_drones_unobserved");
+            if (!dronesIdle) return VoyagerRemoteIdleAdmissionPolicy.Blocked("remote_idle_construction_drones_active");
+            stage = "movement_cost";
+            var reserve = EvaluateNativeLocalMovementCost(player, modeTransitionsExcluded: true);
+            if (!reserve.Proved) return VoyagerRemoteIdleAdmissionPolicy.Blocked(reserve.BlockerCode ?? "remote_idle_movement_cost_unproved");
+            stage = "walk_at_rest";
+            if (player.movementState != EMovementState.Walk) return VoyagerRemoteIdleAdmissionPolicy.Blocked("remote_idle_actual_walk_required");
+            if (!(player.speed <= .1f)) return VoyagerRemoteIdleAdmissionPolicy.Blocked("remote_idle_actual_speed_not_at_rest");
+            stage = "energy_and_journey";
+            var now = DateTimeOffset.UtcNow;
+            return VoyagerRemoteIdleAdmissionPolicy.Evaluate(new VoyagerRemoteIdleAdmissionFacts
+            {
+                MovementReserve = reserve, CoreEnergyJoules = player.mecha.coreEnergy,
+                JourneyBudget = new VoyagerLocalActionBudgetFacts
+                {
+                    ExactRemoteBinding = true, NativePlayerIdle = true, CurrentGameTick = GameMain.gameTick,
+                    LastLandedGameTick = lastLandedGameTick, SpentGameTicks = spentGameTicks,
+                    MaximumGameTicks = journey.MaximumGameTicks, ReturnReserveGameTicks = journey.ReturnReserveGameTicks,
+                    WorkGameTicks = 1, TailGameTicks = VoyagerLocalWalkReservePolicy.StopGameTicks,
+                    NowUtc = now, JourneyDeadlineUtc = journey.DeadlineUtc,
+                    AvailableLoadedEnergyJoules = CalculateAvailableFlightEnergy(player.mecha), LockedReturnFloorJoules = journey.ReturnEnergyFloorJoules,
+                    WorkPowerUpperWatts = reserve.WorkPowerUpperWatts, TailAndNextTickEnergyJoules = reserve.StopEnergyJoules ?? double.NaN,
+                    NativeWarperCount = CountVoyagerWarpers(player.mecha.warpStorage), OriginalExtraWarperReserve = journey.ExtraWarperReserve,
+                },
+            });
+        }
+        catch (Exception exception)
+        {
+            // Only stable stage/type metadata is exposed; exception messages may
+            // contain private paths. Keep the actual capture cause, not false.
+            return VoyagerRemoteIdleAdmissionPolicy.Blocked("remote_idle_capture_failed", stage, exception.GetType().Name);
+        }
+    }
+
+    private static string VoyagerRemoteIdleFailureDetail(VoyagerRemoteIdleAdmissionDecision decision) =>
+        " [" + decision.BlockerCode
+        + (decision.CaptureStage is null ? string.Empty : "; capture=" + decision.CaptureStage)
+        + (decision.CaptureExceptionType is null ? string.Empty : "; exception=" + decision.CaptureExceptionType) + "]";
 
     private void GuardVoyagerRemoteIdleOnMainThread(bool stoppingHost = false)
     {
@@ -33,8 +106,21 @@ internal sealed partial class NormalGameActionCoordinator
         // continues owning idle energy until a budgeted controller takes over.
         // A terminal local order alone cannot guarantee the next tick stays dry.
         if (GameMain.isPaused) return;
-        if (!VoyagerRemoteIdleBindingMatches())
+        var bindingMatches = false;
+        var bindingFailure = VoyagerRemoteIdleAdmissionPolicy.Blocked("remote_idle_binding_unproved");
+        try { bindingMatches = VoyagerRemoteIdleBindingMatches(); }
+        catch (Exception exception)
+        { bindingFailure = VoyagerRemoteIdleAdmissionPolicy.Blocked("remote_idle_capture_failed", "binding", exception.GetType().Name); }
+        if (!bindingMatches)
         {
+            if (_voyagerRemoteIdleOwner is { } originalOwner && _flightCheckpoints.VoyagerJourney is { Phase: "remote_landed" } retainedOwner
+                && retainedOwner.JourneyId == originalOwner.Plan.VoyagerJourneyId && VoyagerBindingMatches(originalOwner.Plan))
+            {
+                var reason = "The completed outbound's remote idle binding is no longer proved. Its successful flight is retained."
+                    + VoyagerRemoteIdleFailureDetail(bindingFailure) + FreezeNativeLocalFailureEnergy(true);
+                _sessions.QuarantineWritesOnMainThread(originalOwner.ActionId, reason);
+                return;
+            }
             // A remote primary/Host reload has no in-memory landed-controller
             // handoff. Do not silently recertify it or borrow an old action.
             var retained = _flightCheckpoints.VoyagerJourney;
@@ -44,6 +130,7 @@ internal sealed partial class NormalGameActionCoordinator
                 && !string.IsNullOrEmpty(retained.ActiveActionId))
             {
                 var reason = "The original remote journey has no current landed-controller idle binding; remote local work is not recertified after reload."
+                    + VoyagerRemoteIdleFailureDetail(bindingFailure)
                     + FreezeNativeLocalFailureEnergy(true);
                 _sessions.QuarantineWritesOnMainThread(retained.ActiveActionId, reason);
             }
@@ -55,34 +142,14 @@ internal sealed partial class NormalGameActionCoordinator
             && (IsVoyagerLocalOrder(a) && a.Plan.VoyagerLocalJourneyId == journey.JourneyId
                 || IsStructuredConstruction(a.Plan) && a.Plan.BlueprintState?.StructuredConstruction?.JourneyId == journey.JourneyId)))
             return; // Only controllers with the full current-tick reserve.
-        var ready = false;
         // Host teardown must attempt Pause before any cost capture can throw.
-        if (!stoppingHost) try
-        {
-        var player = owner.Plan.VoyagerBinding!.Player;
-        var reserve = CaptureVoyagerLocalWalkReserve(player, player.currentOrder is null, _voyagerRemoteIdleScene);
-        ready = reserve.Proved && player.currentOrder is null
-            && player.movementState == EMovementState.Walk && player.speed <= .1f
-            && (journey.DeadlineUtc - DateTimeOffset.UtcNow).TotalSeconds
-                > journey.ReturnReserveGameTicks / 60d + VoyagerLocalStopWallSeconds + 1d / 60d
-            && VoyagerLocalWalkReservePolicy.CanFund(player.mecha.coreEnergy, CalculateAvailableFlightEnergy(player.mecha),
-                journey.ReturnEnergyFloorJoules, reserve.PerNativeTickEnergyJoules, VoyagerLocalWalkReservePolicy.StopGameTicks)
-            && VoyagerLocalActionBudgetPolicy.Evaluate(new VoyagerLocalActionBudgetFacts
-            {
-                ExactRemoteBinding = true, NativePlayerIdle = true, CurrentGameTick = GameMain.gameTick,
-                LastLandedGameTick = journey.LastLandedGameTick, SpentGameTicks = journey.SpentGameTicks,
-                MaximumGameTicks = journey.MaximumGameTicks, ReturnReserveGameTicks = journey.ReturnReserveGameTicks,
-                WorkGameTicks = 1, TailGameTicks = VoyagerLocalWalkReservePolicy.StopGameTicks,
-                NowUtc = DateTimeOffset.UtcNow, JourneyDeadlineUtc = journey.DeadlineUtc,
-                AvailableLoadedEnergyJoules = CalculateAvailableFlightEnergy(player.mecha), LockedReturnFloorJoules = journey.ReturnEnergyFloorJoules,
-                WorkPowerUpperWatts = reserve.WorkPowerUpperWatts, TailAndNextTickEnergyJoules = reserve.StopEnergyJoules ?? double.NaN,
-                NativeWarperCount = CountVoyagerWarpers(player.mecha.warpStorage), OriginalExtraWarperReserve = journey.ExtraWarperReserve,
-            }).Proved;
-        }
-        catch (Exception) { /* An unavailable cost observation cannot skip the energy freeze. */ }
-        if (ready) return;
+        var admission = stoppingHost ? VoyagerRemoteIdleAdmissionPolicy.Blocked("remote_idle_host_stopping")
+            : CaptureVoyagerRemoteIdleAdmission(owner, journey, _voyagerRemoteIdleScene,
+                journey.SpentGameTicks, journey.LastLandedGameTick, out _);
+        if (admission.Proved) return;
         var message = "The completed outbound's exact remote idle/return reserve is no longer proved. Its successful flight is retained; the original journey requires intervention."
-            + FreezeNativeLocalFailureEnergy(VoyagerRemoteIdleBindingMatches());
+            + VoyagerRemoteIdleFailureDetail(admission)
+            + FreezeNativeLocalFailureEnergy(bindingMatches);
         _sessions.QuarantineWritesOnMainThread(owner.ActionId, message);
     }
 
@@ -141,28 +208,39 @@ internal sealed partial class NormalGameActionCoordinator
     }
 
     private static bool NativeWalkModeIsBounded(Player player, bool stationary, NativeLocalWalkSceneBinding? scene = null,
-        bool finiteWaterCostWithNativePause = false, bool allowDrift = false)
+        bool finiteWaterCostWithNativePause = false, bool allowDrift = false) =>
+        NativeWalkModeBlocker(player, stationary, scene, finiteWaterCostWithNativePause, allowDrift) is null;
+
+    private static string? NativeWalkModeBlocker(Player player, bool stationary, NativeLocalWalkSceneBinding? scene,
+        bool finiteWaterCostWithNativePause, bool allowDrift)
     {
         var c = player.controller; var w = c.actionWalk;
         var vertical = c.vertSpeed;
-        return player.isAlive && !GameMain.isPaused && !GameMain.data.disableController && !GameMain.data.guideRunning
-            && (player.movementState == EMovementState.Walk || allowDrift && player.movementState == EMovementState.Drift)
-            && (c.movementStateInFrame == EMovementState.Walk || allowDrift && c.movementStateInFrame == EMovementState.Drift)
-            && !player.warpCommand && player.warpState == 0f && !player.navigation.navigating && !player.navigation.hasTask
-            && !c.actionSail.fastTravelling && NativeLocalWalkSceneProved(player, scene, finiteWaterCostWithNativePause)
-            && NativeMechaBackgroundCostPolicy.IndependentCombatCoreDebitsExcluded(CaptureNativeMechaBackgroundCosts(player))
-            && LocalRawMovementInputIdle()
-            && c.input0.sqrMagnitude == 0f && c.input1.sqrMagnitude == 0f
-            && w.jumpDelayTick <= 0 && w.flyUpChance == 0f && w.moveVelocity.sqrMagnitude == 0f
-            && (!finiteWaterCostWithNativePause || c.actionDrift.moveVelocity.sqrMagnitude == 0f
-                && !float.IsNaN(c.actionDrift.rtsVelocity.magnitude) && !float.IsInfinity(c.actionDrift.rtsVelocity.magnitude)
-                && c.actionDrift.rtsVelocity.magnitude <= player.mecha.walkSpeed + .01f)
-            && (!stationary || w.rtsVelocity.sqrMagnitude == 0f)
-            && !float.IsNaN(vertical) && !float.IsInfinity(vertical) && (allowDrift || Math.Abs(vertical) <= .01f)
-            && c.overridePlayerSpeed >= 0f && c.overridePlayerSpeed <= .01f
-            && c.softLandingRecover >= 0f && c.softLandingRecover <= 1f
-            && (allowDrift && player.movementState == EMovementState.Drift
-                || Physics.CheckSphere(player.position + player.position.normalized * .15f, .35f, 15873));
+        if (!player.isAlive) return "remote_idle_player_not_alive";
+        if (GameMain.isPaused) return "remote_idle_game_paused";
+        if (GameMain.data.disableController) return "remote_idle_controller_disabled";
+        if (GameMain.data.guideRunning) return "remote_idle_guide_running";
+        if (!(player.movementState == EMovementState.Walk || allowDrift && player.movementState == EMovementState.Drift)) return "remote_idle_movement_mode_unproved";
+        if (!(c.movementStateInFrame == EMovementState.Walk || allowDrift && c.movementStateInFrame == EMovementState.Drift)) return "remote_idle_frame_movement_mode_unproved";
+        if (player.warpCommand || player.warpState != 0f) return "remote_idle_warp_exit_unproved";
+        if (player.navigation.navigating || player.navigation.hasTask) return "remote_idle_navigation_active";
+        if (c.actionSail.fastTravelling) return "remote_idle_fast_travel_active";
+        if (!NativeLocalWalkSceneProved(player, scene, finiteWaterCostWithNativePause)) return "remote_idle_scene_unproved";
+        if (!NativeMechaBackgroundCostPolicy.IndependentCombatCoreDebitsExcluded(CaptureNativeMechaBackgroundCosts(player))) return "remote_idle_independent_mecha_cost_unproved";
+        if (!LocalRawMovementInputIdle()) return "remote_idle_raw_input_active";
+        if (c.input0.sqrMagnitude != 0f || c.input1.sqrMagnitude != 0f) return "remote_idle_controller_input_active";
+        if (w.jumpDelayTick > 0 || w.flyUpChance != 0f) return "remote_idle_jump_or_fly_pending";
+        if (w.moveVelocity.sqrMagnitude != 0f) return "remote_idle_walk_manual_velocity_nonzero";
+        if (finiteWaterCostWithNativePause && (c.actionDrift.moveVelocity.sqrMagnitude != 0f
+            || float.IsNaN(c.actionDrift.rtsVelocity.magnitude) || float.IsInfinity(c.actionDrift.rtsVelocity.magnitude)
+            || !(c.actionDrift.rtsVelocity.magnitude <= player.mecha.walkSpeed + .01f))) return "remote_idle_drift_velocity_unproved";
+        if (stationary && w.rtsVelocity.sqrMagnitude != 0f) return "remote_idle_walk_rts_velocity_nonzero";
+        if (float.IsNaN(vertical) || float.IsInfinity(vertical) || !allowDrift && !(Math.Abs(vertical) <= .01f)) return "remote_idle_vertical_velocity_unproved";
+        if (!(c.overridePlayerSpeed >= 0f && c.overridePlayerSpeed <= .01f)) return "remote_idle_override_speed_unproved";
+        if (!(c.softLandingRecover >= 0f && c.softLandingRecover <= 1f)) return "remote_idle_soft_landing_unproved";
+        if (!(allowDrift && player.movementState == EMovementState.Drift)
+            && !Physics.CheckSphere(player.position + player.position.normalized * .15f, .35f, 15873)) return "remote_idle_ground_contact_unproved";
+        return null;
     }
 
     public void UpdateVoyagerLocalPrePlayerTickOnMainThread()

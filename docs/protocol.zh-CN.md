@@ -164,6 +164,8 @@ prepare/commit 时原生控制钩子必须在过去两秒内观察到 tick。以
 `prepare_cancel_voyager_flight` 使用 `PrepareCancelVoyagerFlightRequest`，绑定原飞行出发地 `planetId`、精确 `actionId` 和 `stateHashVersion=1`；`commit_cancel_voyager_flight` 使用同一提交合约。它在原航程锁存 `stopRequested`，不创建第二个移动 writer。查询原飞行，核原生退出曲速、刹停及真实终态；停止回执本身不证明飞行稳定或恢复完成。未知结果保留原 key/action；checkpoint reload 为独立受保护操作，不得回滚较新主档。
 
 <a id="voyager-local-work-and-durable-structured-construction"></a>
+去程报告 `flight_succeeded` 前，须通过与 `remote_landed` 闲置交接共用的完整严格谓词，仅有落地计数不足。任一条件未证时保留原 action 的失败/unknown 路径，并在 `voyagerFlightReadback.failureReason` 保留精确 predicate code，不以笼统到达结果覆盖细因。该要求约束新结果，不追改已记录的历史成功。`GameMain.Pause` 既不证明物理空闲或恢复完成，也不授予重载权限；checkpoint 恢复仍须独立受保护的 prepare/commit 及其适用确认门。
+
 ## Voyager 本地作业与持久结构化施工
 
 原航程处于 `remote_landed` 时，本地例外绑定精确 owned 存档、Native 版本、session、world/player/controller/mecha 及实际已加载本地工厂。Fresh 站点配置、包/仓储或机队转移、补燃料及 Save 保留原生范围；Move/Harvest 与独立结构化施工路径还须在原返程窗口之前预留有限工作和停止时间，保留 loaded 返程能量底线及原生 `1+extraWarperReserve`。这些动作不重置航程期限，也不允许在母星写远端。返程核心充能是 fresh 起飞门，不要求每个本地动作始终满核心。
