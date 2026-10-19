@@ -17,7 +17,7 @@ internal sealed partial class NormalGameActionCoordinator
         if (plan is null) { unavailable.ReasonCode = "surface_span_outside_bounded_preview"; return unavailable; }
         var rays = new List<MovementSurfaceRayEvidence>();
         // Exact current-DLL DetermineDrift downward masks; no live player/controller fields are changed.
-        // 33 points maximum, two queries per point. Geometry/summary is pure Core over copied values.
+        // 65 points maximum, two queries per point (130 total). Geometry/summary is pure Core over copied values.
         foreach (var point in plan.Points)
         {
             var normal = ToVector(point).normalized;

@@ -11,7 +11,7 @@ public sealed class MovementSurfacePreview
     public long CapturedAtGameTick { get; set; }
     public double? ArcLengthMetres { get; set; }
     public double MaximumSampleSpacingMetres { get; set; } = 1;
-    public double MaximumArcMetres { get; set; } = 32;
+    public double MaximumArcMetres { get; set; } = 64;
     public int? WaterItemId { get; set; }
     public int RaycastCount { get; set; }
     public int UnknownSampleCount { get; set; }

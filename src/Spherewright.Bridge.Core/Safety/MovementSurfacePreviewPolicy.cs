@@ -6,8 +6,8 @@ namespace Spherewright.Bridge.Core.Safety;
 /// <summary>Finite geometry and interpretation of copied downward-ray evidence, not a pathfinder.</summary>
 public static class MovementSurfacePreviewPolicy
 {
-    public const double MaximumArcMetres = 32;
-    public const int MaximumSamples = 33;
+    public const double MaximumArcMetres = 64;
+    public const int MaximumSamples = 65;
     public const float RayLength = 30;
     public const float RayOriginAltitude = 10;
 

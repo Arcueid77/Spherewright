@@ -1,4 +1,7 @@
+using System.ComponentModel;
+using System.Reflection;
 using Spherewright.Mcp.Resources;
+using Spherewright.Mcp.Tools;
 using Xunit;
 
 namespace Spherewright.Mcp.Tests;
@@ -38,7 +41,7 @@ public sealed class AgentShoreCrossingGuideTests
         Assert.Contains("water in transit", guide, StringComparison.Ordinal);
         Assert.Contains("`state=observed`", guide, StringComparison.Ordinal);
         Assert.Contains("`unknownSampleCount=0`", guide, StringComparison.Ordinal);
-        Assert.Contains("`arcLengthMetres<=32`", guide, StringComparison.Ordinal);
+        Assert.Contains("`arcLengthMetres<=64`", guide, StringComparison.Ordinal);
         Assert.Contains("arcLengthMetres/(samples.Count-1)<=1", guide, StringComparison.Ordinal);
         Assert.Contains("at least4m", guide, StringComparison.Ordinal);
         Assert.Contains("`groundHit=true`, `waterHit=true`", guide, StringComparison.Ordinal);
@@ -72,5 +75,21 @@ public sealed class AgentShoreCrossingGuideTests
         Assert.Contains("native whole-footprint ground, collision, technology and material checks remain mandatory", guide, StringComparison.Ordinal);
         Assert.Contains("`NeedGround` rejection must not be overridden using path samples", guide, StringComparison.Ordinal);
         Assert.Contains("power coverage at the actual `plannedPosition`", guide, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void ExtendedPreviewBudgetIsDiscoverableWithoutChangingCommitOrStableLandingAuthority()
+    {
+        var description = typeof(SpherewrightTools).GetMethod(nameof(SpherewrightTools.PrepareMoveAsync))!
+            .GetCustomAttribute<DescriptionAttribute>()!.Description;
+        Assert.Contains("at most64m", description, StringComparison.Ordinal);
+        Assert.Contains("at most65 samples", description, StringComparison.Ordinal);
+        Assert.Contains("at most130 native downward rays", description, StringComparison.Ordinal);
+        Assert.Contains("does not change existing hash/commit admission", description, StringComparison.Ordinal);
+        Assert.Contains("not route clearance or guaranteed Walk", description, StringComparison.Ordinal);
+        var guide = AgentPlaybookResources.GetOpeningMovementPlaybook().Text;
+        Assert.Contains("≤64 m/65 samples/130 rays", guide, StringComparison.Ordinal);
+        Assert.Contains("600 consecutive grounded low-speed ticks", guide, StringComparison.Ordinal);
+        Assert.Contains("never widen a failed action's tolerance and replay it", guide, StringComparison.Ordinal);
     }
 }

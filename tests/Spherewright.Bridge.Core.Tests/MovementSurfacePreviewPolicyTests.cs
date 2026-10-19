@@ -18,11 +18,15 @@ public sealed class MovementSurfacePreviewPolicyTests
     [InlineData(12.5)]
     [InlineData(28)]
     [InlineData(32)]
+    [InlineData(32.1)]
+    [InlineData(44)]
+    [InlineData(63.5)]
+    [InlineData(64)]
     public void SamplesCompleteShortArcWithinFixedQueryBudget(double arc)
     {
         var plan = Plan(arc);
         Assert.NotNull(plan);
-        Assert.InRange(plan.Points.Count, 2, 33);
+        Assert.InRange(plan.Points.Count, 2, 65);
         Assert.InRange(plan.ArcLengthMetres, Math.Max(0, arc - .0001), arc + .0001);
         Assert.InRange(plan.ArcLengthMetres / (plan.Points.Count - 1), 0, 1.000001);
         Assert.InRange(Math.Abs(plan.Points[^1].Z - Point(arc).Z), 0, .0001);
@@ -34,7 +38,8 @@ public sealed class MovementSurfacePreviewPolicyTests
     }
 
     [Theory]
-    [InlineData(32.1)]
+    [InlineData(64.01)]
+    [InlineData(65)]
     [InlineData(200)]
     [InlineData(628)]
     public void LongSpanIsNotTruncatedOrGivenFalseClearEvidence(double arc) => Assert.Null(MovementSurfacePreviewPolicy.CreatePlan(Point(0), Point(arc), 200));
@@ -127,5 +132,59 @@ public sealed class MovementSurfacePreviewPolicyTests
         var preview = MovementSurfacePreviewPolicy.Summarize(plan, rays, 1000, 1);
         preview.Samples[0].Position.X = 0;
         Assert.Equal(200, plan.Points[0].X);
+    }
+
+    [Fact]
+    public void FullSixtyFourMetreArcUsesAtMostOneMetreSpacingAndExactlyOneHundredThirtyCopiedQueries()
+    {
+        var plan = Plan(64);
+        Assert.Equal(65, plan.Points.Count);
+        Assert.InRange(plan.ArcLengthMetres / (plan.Points.Count - 1), .999999, 1.000001);
+        for (var i = 1; i < plan.Points.Count; i++)
+        {
+            var a = plan.Points[i - 1]; var b = plan.Points[i];
+            var chord = Math.Sqrt(Math.Pow(a.X - b.X, 2) + Math.Pow(a.Y - b.Y, 2) + Math.Pow(a.Z - b.Z, 2));
+            Assert.InRange(chord, .9998, 1.0001); // Copied float coordinates, not a new sample-spacing allowance.
+        }
+        var preview = MovementSurfacePreviewPolicy.Summarize(plan, plan.Points.Select(_ => Ground()).ToArray(), 1000, 1);
+        Assert.Equal(130, preview.RaycastCount);
+        Assert.Equal(64, preview.MaximumArcMetres);
+        Assert.Equal(1, preview.MaximumSampleSpacingMetres);
+        Assert.Equal("observed", preview.State);
+        Assert.Equal(0, preview.UnknownSampleCount);
+        Assert.Equal("downward_samples_not_route_clearance", preview.EvidenceScope);
+    }
+
+    [Theory]
+    [InlineData("interior_water_miss")] [InlineData("terminal_ground_miss")]
+    [InlineData("terminal_water_miss")] [InlineData("invalid_terminal_distance")]
+    public void MissingInteriorOrTerminalEvidenceAtTheExtendedBoundNeverBecomesCompleteDryGround(string fault)
+    {
+        var plan = Plan(64); var rays = plan.Points.Select(_ => Ground()).ToArray();
+        switch (fault)
+        {
+            case "interior_water_miss": rays[32].WaterHit = false; break;
+            case "terminal_ground_miss": rays[^1].GroundHit = false; break;
+            case "terminal_water_miss": rays[^1].WaterHit = false; break;
+            case "invalid_terminal_distance": rays[^1].GroundDistance = 31; break;
+        }
+        var preview = MovementSurfacePreviewPolicy.Summarize(plan, rays, 1000, 1);
+        Assert.Equal("partial", preview.State); Assert.Equal("unknown", preview.ShoreRisk);
+        Assert.Equal(1, preview.UnknownSampleCount); Assert.Equal(130, preview.RaycastCount);
+        Assert.Contains(preview.Samples, sample => sample.GroundBelowWaterMetres is null);
+        Assert.Throws<ArgumentException>(() => MovementSurfacePreviewPolicy.Summarize(plan, rays.Take(64).ToArray(), 1000, 1));
+    }
+
+    [Fact]
+    public void FullyCopiedDryEndsDoNotHideWaterInTransitOrGrantRouteClearance()
+    {
+        var plan = Plan(64);
+        var rays = plan.Points.Select((_, i) => Ground(i == 0 || i >= plan.Points.Count - 6 ? .2 : -1)).ToArray();
+        var preview = MovementSurfacePreviewPolicy.Summarize(plan, rays, 1000, 1);
+        Assert.Equal("observed", preview.State); Assert.Equal(0, preview.UnknownSampleCount);
+        Assert.Equal("detected", preview.ShoreRisk); Assert.True(preview.ShoreRiskSampleCount > 0);
+        Assert.All(preview.Samples.TakeLast(6), sample => Assert.True(sample.GroundBelowWaterMetres <= -.1));
+        Assert.True(5 * plan.ArcLengthMetres / (plan.Points.Count - 1) >= 4); // Dry suffix still has a real margin.
+        Assert.Equal("downward_samples_not_route_clearance", preview.EvidenceScope);
     }
 }

@@ -103,6 +103,10 @@ spherewright_commit_reload_flight_checkpoint
 
 修改 prepare 绑定当前会话、revision、`GameData`、操作、身份、参数、预算和要求的哈希域。Commit 使用短期 `planToken`、UUID `idempotencyKey` 及规定的会话、星球绑定。菜单创建与恢复有独立 schema。
 
+`prepare_move.surfacePreview` 是请求最短表面弧最多64m的附加建议证据：最多65样本、最大1m间距及总计130次原生向下查询，沿用8704地面/16水面掩码。它不创建订单，不改玩家/能量字段或commit准入；超过64m为unavailable，partial、缺失或unavailable保持未知。即使采样完整，也不等于原生寻路、路线净空或Walk证明。
+
+完整观察的岸线过水仍须无未知样本、精确已审目标，以及至少4m且至少`2*arrivalTolerance+1`米的末尾干地后缀；后缀每点要求有效地面/水面命中及有限 `groundBelowWaterMetres<=-0.1`。保持 `arrivalTolerance=1.5`、原有限预算及原action/key，不扩大失败目标容差重放。要求真实终态/Walk/低速/能量读回，并保留飞行岸线落地原有的连续600 tick地面低速门。水中间点、浅水终点或失败操作不是落地证明；失败停止该候选族，不另开路线或本地飞行。
+
 | 证据 | 范围 |
 | --- | --- |
 | 玩家操作 `stateHash` | 新的正常操作玩家证据；可选 Move 漂移有独立限制 |

@@ -103,11 +103,11 @@ Prepare 不接受确认。展示具体披露并获得之后明确回复，再 co
 
 采集接近在原生到达或产出、节点减少前使用相同 **180/600 游戏 tick** 进度窗。原地正常采矿不是停滞；缺电时暂停，恢复后重置。真实终态停滞保留原 action，不能重放、传送或内置寻路。
 
-`prepare_move.surfacePreview` 是最短弧建议证据（最多 32 m、33 样本、66 射线），不是原生寻路或路线净空。Partial、unavailable、缺失是未知，不是干地。通过也不预测控制器或样本间净空。终态后要求实际稳定 Walk、低速和足够能量。
+`prepare_move.surfacePreview` 是最短弧建议证据（最多 64 m、65 样本、130 射线），不是原生寻路或路线净空。Partial、unavailable、缺失是未知，不是干地。通过也不预测控制器或样本间净空。终态后要求实际稳定 Walk、低速和足够能量。
 
 较长或不完整观察的过水，只能由外部选择一次连续原生 Move，目标必须是在当前受管世界重新观察、此前验证的 Walk 落点，带障碍证据、有限过水和恢复储备。建筑存在本身不是 Walk 落点。禁止建立中间水上目标；这不会把 unavailable 变干地证据，也不是未知岸线的通用例外。轮询同 action 至终态并要求 `movementState=Walk`；失败或非 Walk 到达立即停，不重复同目标。
 
-完整观察的短过水可在途中有水。要求 `state=observed`、`unknownSampleCount=0`、`arcLengthMetres<=32`、完整间距 `arcLengthMetres/(samples.Count-1)<=1`，末尾干地后缀至少 4 m。后缀每点需 `groundHit=true`、`waterHit=true`、有限非 null `groundBelowWaterMetres<=-0.1`，且无岸线风险。采用 `arrivalTolerance=1.5`，不要强制 0.5 m；半径归一、三维距离会占用容差。容差要高于径向差并留停止余量，干地后缀还须 ≥`2*arrivalTolerance+1` 米。不能扩大失败操作容差重放。这仍不证明 Walk 或净空。浅水终点、缺样、partial、unavailable 均不合格。对精确审阅目标重 prepare、重核证据、commit 一次、轮询终态。失败或未就绪落点即停，保留 action；不能扩成候选扫描或自动寻路。
+完整观察的短过水可在途中有水。要求 `state=observed`、`unknownSampleCount=0`、`arcLengthMetres<=64`、完整间距 `arcLengthMetres/(samples.Count-1)<=1`，末尾干地后缀至少 4 m。后缀每点需 `groundHit=true`、`waterHit=true`、有限非 null `groundBelowWaterMetres<=-0.1`，且无岸线风险。采用 `arrivalTolerance=1.5`，不要强制 0.5 m；半径归一、三维距离会占用容差。容差要高于径向差并留停止余量，干地后缀还须 ≥`2*arrivalTolerance+1` 米。不能扩大失败操作容差重放。这仍不证明 Walk 或净空。浅水终点、缺样、partial、unavailable 均不合格。对精确审阅目标重 prepare、重核证据、commit 一次、轮询终态。失败或未就绪落点即停，保留 action；不能扩成候选扫描或自动寻路。
 
 这是 Move 接近规则，不是建筑放置门槛。移动预览通过不批准建筑占地。已在当前原生建造范围内就不要额外 Move。全占地原生地面、碰撞、科技、材料仍必查，不能用路径样本覆盖 `NeedGround` 拒绝。检查真实 `plannedPosition` 的电力覆盖。
 

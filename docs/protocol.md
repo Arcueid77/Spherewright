@@ -99,6 +99,10 @@ Inspection uses `objectId`, positive for a built entity and negative for a prebu
 
 Mutable prepare binds current session/revision/`GameData`, action, identity, parameters, budget and required hash domain. Commit uses a short-lived `planToken`, UUID `idempotencyKey` and documented session/planet binding. Menu creation/resume have separate schemas.
 
+`prepare_move.surfacePreview` is additive advisory evidence for at most64m of the requested shortest surface arc: at most65 samples with maximum1m spacing and130 total Native downward queries, using the existing8704 ground /16 water masks. It creates no order and changes no player/energy fields or commit admission. Spans beyond64m are unavailable; partial, missing or unavailable evidence stays unknown. Even complete sampling is not Native pathfinding, route clearance or proof of Walk.
+
+A fully observed coastal crossing still requires no unknown samples, the exact reviewed target and an above-water terminal suffix at least4m and at least`2*arrivalTolerance+1` metres. Each suffix sample needs valid ground/water hits and finite `groundBelowWaterMetres<=-0.1`. Keep `arrivalTolerance=1.5`, the original finite budget and original action/key; never widen/replay a failed target. Require actual terminal/Walk/low-speed/energy readback, and retain the existing600 consecutive grounded low-speed ticks for flight shore landing. Water midpoints, a shallow endpoint or a failed action are not landing proof; failure stops that candidate family, without another route or local flight.
+
 | Evidence | Scope |
 | --- | --- |
 | Player action `stateHash` | Fresh normal-action player evidence; optional Move drift has separate bounds |
