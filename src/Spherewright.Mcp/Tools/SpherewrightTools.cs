@@ -1453,11 +1453,11 @@ public static partial class SpherewrightTools
         IBridgeClient bridgeClient,
         string resumeToken,
         CancellationToken cancellationToken = default,
-[Description("default, verified_newer_lastexit, reauthorize_expired_primary, reauthorize_expired_autosave0, reauthorize_fixed_autosave0, or reauthorize_version_changed_primary. The expired-primary mode previews the exact expired primary and original Journal, discloses sourceGameVersion/targetGameVersion and requires subsequent conversation confirmation. Fixed AutoSave0 modes require a known floor and exact authorized candidate tick; prepare never accepts confirmation. Expired AutoSave0 uses expired healthy provenance and evidence version3; fixed AutoSave0 uses an active healthy credential and evidence version4. Both require the same supported source/runtime/candidate version, exact identity and original durable Journal; no migration or fallback. For active fixed AutoSave0 an existing explicit conversation grant matching the disclosed candidate suffices at commit without asking again; generic continue is not authority for another candidate. Expired-primary supports only exact researched directional pairs: 0.10.34.28529 to 0.10.35.29057 or 0.10.35.29088, 0.10.35.29088 to 0.10.35.29104, 0.10.35.29104 to 0.10.35.29131, 0.10.35.29131 to 0.10.35.29145, and 0.10.35.29145 to 0.10.35.29151. The last pair is expired-primary only and requires a fifth continuous durable Journal transition; active-primary evidence5/6 stays unchanged. Version-changed-primary uses unchanged active healthy provenance only for 29104 to29131 with evidence5 or 29131 to29145 with evidence6, the exact recorded primary tick and original Journal; subsequent explicit confirmation of its pair-specific prepared disclosure is required. Default resume still requires equal versions. Unknown pairs and downgrades reject. Never renew/edit ticket expiry.")] string recoveryMode = OwnedWorldResumeModes.Default,
+[Description("default, verified_newer_lastexit, reauthorize_expired_primary, reauthorize_expired_autosave0, reauthorize_fixed_autosave0, reauthorize_version_changed_primary, or reauthorize_failed_remote_last_exit. The failed-remote mode requires the independently captured current context, active quarantine credential, immediate known-terminal-failed attestation and finite proposal; it is never a default fallback or an old commitment opening. The expired-primary mode previews the exact expired primary and original Journal, discloses sourceGameVersion/targetGameVersion and requires subsequent conversation confirmation. Fixed AutoSave0 modes require a known floor and exact authorized candidate tick; prepare never accepts confirmation. Expired AutoSave0 uses expired healthy provenance and evidence version3; fixed AutoSave0 uses an active healthy credential and evidence version4. Both require the same supported source/runtime/candidate version, exact identity and original durable Journal; no migration or fallback. For active fixed AutoSave0 an existing explicit conversation grant matching the disclosed candidate suffices at commit without asking again; generic continue is not authority for another candidate. Expired-primary supports only exact researched directional pairs: 0.10.34.28529 to 0.10.35.29057 or 0.10.35.29088, 0.10.35.29088 to 0.10.35.29104, 0.10.35.29104 to 0.10.35.29131, 0.10.35.29131 to 0.10.35.29145, and 0.10.35.29145 to 0.10.35.29151. The last pair is expired-primary only and requires a fifth continuous durable Journal transition; active-primary evidence5/6 stays unchanged. Version-changed-primary uses unchanged active healthy provenance only for 29104 to29131 with evidence5 or 29131 to29145 with evidence6, the exact recorded primary tick and original Journal; subsequent explicit confirmation of its pair-specific prepared disclosure is required. Default resume still requires equal versions. Unknown pairs and downgrades reject. Never renew/edit ticket expiry.")] string recoveryMode = OwnedWorldResumeModes.Default,
         [Description("Caller attests to actual explicit user confirmation in the conversation; never infer it.")] bool userConfirmedInConversation = false,
         [Description("Known latest progress that must not be rolled back; required only for verified recovery.")] long? minimumRecoveryGameTick = null,
         [Description("Exact explicitly authorized newer candidate tick; required for verified_newer_lastexit and both fixed AutoSave0 modes. No slot selection.")] long? expectedRecoveryGameTick = null,
-        [Description("Optional one-shot absolute UTC cap for a quarantined remote default continuation. Requires a fresh disclosed proposal, applicable explicit conversation authority and its exact confirmationDigest; matching existing authority does not require asking again. Never renews the original journey budget.")] DateTimeOffset? recoveryDeadlineUtc = null,
+        [Description("Optional one-shot absolute UTC cap for a quarantined remote default continuation, or required for reauthorize_failed_remote_last_exit. Requires a fresh disclosed proposal, applicable explicit conversation authority and its exact confirmationDigest; matching existing authority does not require asking again. Never changes the original journey deadline or tick budget.")] DateTimeOffset? recoveryDeadlineUtc = null,
         [Description("Only continue_original_finite_task is supported with recoveryDeadlineUtc; otherwise empty.")] string recoveryScope = "",
         [Description("Optional natural-charge tick cap, 1..18000, inside the original remaining game ticks and five-minute adoption limit.")] long maximumChargeGameTicks = 0,
         [Description("Optional natural-charge wall cap, greater than0 and at most300 seconds; never extends the original five-minute adoption lease.")] double maximumChargeWallSeconds = 0d,
@@ -1465,7 +1465,8 @@ public static partial class SpherewrightTools
         [Description("Exact sha256 source-fingerprint witness for the prior consumed authorization. The Plugin opens its original commitment against current route, checkpoint, Journal and primary; no path or JSON input.")] string priorSourceFingerprint = "",
         [Description("Explicit caller attestation, supported by the original action receipt, that the exact prior resume terminally failed with no unknown outcome. Consumption is not a Native durable terminal certificate. Unknown or unobserved outcomes must not be asserted as failed.")] bool? priorActionKnownTerminalFailed = null,
         [Description("Optional additional exact legacy source fingerprint for one explicitly formatted V2 predecessor. Requires all three prior-failure fields; binds exactly four fixed consumed-record replicas and two commitment openings. No arbitrary ancestry, path or JSON input.")] string priorLegacySourceFingerprint = "",
-        [Description("Optional exact middle source fingerprint for one fixed V3 predecessor. Requires the newest priorSourceFingerprint, oldest priorLegacySourceFingerprint, consumed token and explicit known-terminal-failure attestation. Exactly six fixed replicas and three openings; no fourth generation or arbitrary ancestry.")] string priorIntermediateSourceFingerprint = "")
+        [Description("Optional exact middle source fingerprint for one fixed V3 predecessor. Requires the newest priorSourceFingerprint, oldest priorLegacySourceFingerprint, consumed token and explicit known-terminal-failure attestation. Exactly six fixed replicas and three openings; no fourth generation or arbitrary ancestry.")] string priorIntermediateSourceFingerprint = "",
+        [Description("Required only for recoveryMode=reauthorize_failed_remote_last_exit: independently captured exact current remote-context sha256 fingerprint, not a path or JSON. Requires the immediate consumed token and known-terminal-failed caller attestation, with no legacy source witnesses. Active quarantined fixed LastExit only, exact zero-progress landed+1 edge, complete Journal/current primary/original checkpoint binding and charge caps no greater than prior authorization. Fresh disclosure and applicable explicit authority are required; this is new current-context authorization, never an opened old commitment or durable Native terminal certificate.")] string expectedRemoteRecoveryContextFingerprint = "")
     {
         var request = new PrepareOwnedWorldResumeRequest
         {
@@ -1478,6 +1479,7 @@ public static partial class SpherewrightTools
             PriorActionKnownTerminalFailed = priorActionKnownTerminalFailed,
             PriorLegacySourceFingerprint = priorLegacySourceFingerprint,
             PriorIntermediateSourceFingerprint = priorIntermediateSourceFingerprint,
+            ExpectedRemoteRecoveryContextFingerprint = expectedRemoteRecoveryContextFingerprint,
         };
         var invalid = OwnedWorldRecoveryPolicy.ValidateRequest(request);
         if (invalid is not null)
@@ -1486,7 +1488,13 @@ public static partial class SpherewrightTools
         var result = await bridgeClient.PrepareOwnedWorldResumeAsync(
             request,
             cancellationToken).ConfigureAwait(false);
-        if (OwnedWorldRecoveryPolicy.HasPriorFailedResumeWitness(request) && result.Success
+        if (recoveryMode == OwnedWorldResumeModes.ReauthorizeFailedRemoteLastExit && result.Success
+            && (result.Value is null || !VoyagerFailedRemoteReauthorizationPolicy.HasMatchingEcho(request, result.Value)))
+            result = BridgeCallResult<PreparedOwnedWorldResumePlan>.Failed(BridgeError.Create(BridgeErrorCodes.BridgeNotReady,
+                "The Plugin did not echo the exact fresh failed-remote-LastExit mode and owner context; no plan token is exposed.", false,
+                "Use matching Plugin/MCP bytes. Prior consumption is not a Native terminal certificate or an opened legacy commitment."));
+        if (recoveryMode != OwnedWorldResumeModes.ReauthorizeFailedRemoteLastExit
+            && OwnedWorldRecoveryPolicy.HasPriorFailedResumeWitness(request) && result.Success
             && (result.Value is not { } prior || !prior.Prepared || prior.RecoveryMode != OwnedWorldResumeModes.Default
                 || !prior.PriorFailedResumeProvenanceUsed || !prior.PriorActionTerminalFailureAttested
                 || prior.CommitAllowedNow || !prior.UserConfirmationRequired || !prior.ExactEmbeddedIdentityVerified
@@ -1508,7 +1516,9 @@ public static partial class SpherewrightTools
             || window.EffectiveRecoveryDeadlineUtc != recoveryDeadlineUtc || !window.OriginalJourneyDeadlineUtc.HasValue
             || window.RecoveryScope != recoveryScope || window.MaximumChargeGameTicks != maximumChargeGameTicks
             || window.MaximumChargeWallSeconds != maximumChargeWallSeconds || !window.NativeChargeFeasibilityRequiresFreshCapture
-            || !window.Prepared || window.RecoveryMode != OwnedWorldResumeModes.Default || window.CommitAllowedNow
+            || !window.Prepared || window.RecoveryMode != recoveryMode
+            || (recoveryMode != OwnedWorldResumeModes.Default && recoveryMode != OwnedWorldResumeModes.ReauthorizeFailedRemoteLastExit)
+            || window.CommitAllowedNow
             || string.IsNullOrEmpty(window.ConfirmationDigest) || !window.UserConfirmationRequired
             || !window.ExactEmbeddedIdentityVerified || window.RecoveryEvidenceVersion < 1))
             result = BridgeCallResult<PreparedOwnedWorldResumePlan>.Failed(BridgeError.Create(BridgeErrorCodes.BridgeNotReady,

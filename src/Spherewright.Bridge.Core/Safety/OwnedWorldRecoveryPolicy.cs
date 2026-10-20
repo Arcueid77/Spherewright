@@ -10,6 +10,10 @@ public static class OwnedWorldRecoveryPolicy
 
     public static string? ValidateRequest(PrepareOwnedWorldResumeRequest request)
     {
+        if (request.RecoveryMode == OwnedWorldResumeModes.ReauthorizeFailedRemoteLastExit)
+            return VoyagerFailedRemoteReauthorizationPolicy.ValidateRequest(request);
+        if (!string.IsNullOrEmpty(request.ExpectedRemoteRecoveryContextFingerprint))
+            return "An expected remote context requires the explicit failed-remote-LastExit reauthorization mode; no default fallback is permitted.";
         if (HasPriorFailedResumeWitness(request) && (request.RecoveryMode != OwnedWorldResumeModes.Default
             || string.IsNullOrWhiteSpace(request.PriorConsumedResumeToken) || request.PriorConsumedResumeToken.Length > 256
             || !IsCanonicalFingerprint(request.PriorSourceFingerprint) || request.PriorActionKnownTerminalFailed != true))

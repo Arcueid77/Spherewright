@@ -11,13 +11,17 @@ internal sealed partial class FlightCheckpointStore
         OwnedSaveRecoveryLease primary, out VoyagerRemoteResumeEvidence? evidence, out string rejection,
         VoyagerRecoveryWindowProposal? recoveryProposal = null, PriorFailedResumeProof? priorFailedProof = null,
         string priorSourceFingerprint = "", bool priorActionKnownTerminalFailed = false, string priorLegacySourceFingerprint = "",
-        string priorIntermediateSourceFingerprint = "")
+        string priorIntermediateSourceFingerprint = "", bool failedRemoteReauthorization = false,
+        string expectedRemoteContext = "", string validatedJournalHash = "")
     {
         evidence = null;
         rejection = string.Empty;
         FileStream? ticketLease = null; FileStream? journeyLease = null; OwnedSaveRecoveryLease? checkpointLease = null;
         try
         {
+            if (failedRemoteReauthorization && ((File.GetAttributes(_ticketPath) & FileAttributes.ReparsePoint) != 0
+                || (File.GetAttributes(VoyagerJourneyPath) & FileAttributes.ReparsePoint) != 0))
+                throw new InvalidDataException("The current original context must use regular protected records.");
             ticketLease = new FileStream(_ticketPath, FileMode.Open, FileAccess.Read, FileShare.Read);
             journeyLease = new FileStream(VoyagerJourneyPath, FileMode.Open, FileAccess.Read, FileShare.Read);
             var checkpoint = ReadBoundedResumeRecord<FlightCheckpointTicket>(ticketLease);
@@ -32,7 +36,7 @@ internal sealed partial class FlightCheckpointStore
             var journalJson = PluginJson.Serialize(ticket.GameplayJournalCheckpoint);
             var originalActionMatches = !string.IsNullOrEmpty(ticket.QuarantineActionId)
                 && ticket.QuarantineActionId == journey.ActiveActionId;
-            if (priorFailedProof is not null)
+            if (priorFailedProof is not null && !failedRemoteReauthorization)
             {
                 if (!priorActionKnownTerminalFailed || originalActionMatches
                     || source.Prefix.GameTick != ticket.MinimumGameTick
@@ -131,16 +135,33 @@ internal sealed partial class FlightCheckpointStore
                 NowUtc = DateTimeOffset.UtcNow, OriginalDeadlineUtc = journey.DeadlineUtc,
                 OriginalIssuedAtUtc = journey.IssuedAtUtc, RecoveryProposal = recoveryProposal,
             };
-            rejection = VoyagerRemoteResumePolicy.Blocker(facts) ?? string.Empty;
+            var currentContext = failedRemoteReauthorization
+                ? VoyagerFailedRemoteReauthorizationPolicy.ContextFingerprint(journeyJson, checkpointJson,
+                    checkpointLease.Fingerprint, primary.Fingerprint, source.Prefix.GameTick, primary.Prefix.GameTick,
+                    journalJson, validatedJournalHash) : string.Empty;
+            rejection = failedRemoteReauthorization
+                ? VoyagerFailedRemoteReauthorizationPolicy.Blocker(facts, expectedRemoteContext, currentContext,
+                    priorFailedProof is not null && priorFailedProof.LegacyAncestor is null
+                        && priorFailedProof.Authorization.ResumeActionId == ticket.QuarantineActionId
+                        && priorFailedProof.ConsumedAtUtc <= ticket.IssuedAtUtc
+                        && OwnedWorldRecoveryPolicy.IsCanonicalFingerprint("sha256:" + validatedJournalHash),
+                    priorActionKnownTerminalFailed, checkpoint.SuccessfulFlightAtGameTick,
+                    priorFailedProof?.Authorization.Proposal) ?? string.Empty
+                : VoyagerRemoteResumePolicy.Blocker(facts) ?? string.Empty;
             if (rejection.Length != 0) return false;
-            evidence = new VoyagerRemoteResumeEvidence(journeyJson, checkpointJson,
+            evidence = failedRemoteReauthorization
+                ? VoyagerRemoteResumeEvidence.CreateFailedRemoteReauthorization(journeyJson, checkpointJson,
+                    source.Fingerprint, primary.Fingerprint, source.Prefix.GameTick, primary.Prefix.GameTick,
+                    ticket.GameplayJournalCheckpoint!, recoveryProposal!, priorFailedProof!, currentContext,
+                    ticket.QuarantineActionId, ticketLease, journeyLease, checkpointLease)
+                : new VoyagerRemoteResumeEvidence(journeyJson, checkpointJson,
                 source.Fingerprint, primary.Fingerprint, source.Prefix.GameTick, primary.Prefix.GameTick,
                 ticket.GameplayJournalCheckpoint!, recoveryProposal, priorFailedProof, priorSourceFingerprint,
                 ticket.QuarantineActionId, priorLegacySourceFingerprint, priorIntermediateSourceFingerprint, ticketLease, journeyLease, checkpointLease);
             ticketLease = null; journeyLease = null; checkpointLease = null;
             return true;
         }
-        catch (Exception exception) when (exception is IOException || exception is UnauthorizedAccessException
+        catch (Exception exception) when (exception is IOException || exception is InvalidDataException || exception is UnauthorizedAccessException
             || exception is Newtonsoft.Json.JsonException || exception is ArgumentException)
         { rejection = "remote_resume_original_evidence_unavailable:" + exception.GetType().Name; return false; }
         finally { ticketLease?.Dispose(); journeyLease?.Dispose(); checkpointLease?.Dispose(); }
@@ -218,7 +239,22 @@ internal sealed class VoyagerRemoteResumeEvidence : IDisposable
     public long SourceGameTick { get; }
     public long PrimaryGameTick { get; }
     public string JournalJson { get; }
-    public string Fingerprint { get; }
+    public string Fingerprint { get; private set; }
+    public bool FailedRemoteLastExitReauthorization { get; private set; }
+    public string RemoteRecoveryContextFingerprint { get; private set; } = string.Empty;
+    internal static VoyagerRemoteResumeEvidence CreateFailedRemoteReauthorization(string journeyJson,
+        string checkpointJson, string sourceFingerprint, string primaryFingerprint, long sourceTick, long primaryTick,
+        OwnedWorldGameplayJournalCheckpoint journal, VoyagerRecoveryWindowProposal proposal,
+        PriorFailedResumeProof immediate, string contextFingerprint, string quarantineActionId, params IDisposable[] leases)
+    {
+        var result = new VoyagerRemoteResumeEvidence(journeyJson, checkpointJson, sourceFingerprint, primaryFingerprint,
+            sourceTick, primaryTick, journal, proposal, leases.Concat(new IDisposable[] { immediate }).ToArray());
+        result.FailedRemoteLastExitReauthorization = true;
+        result.RemoteRecoveryContextFingerprint = contextFingerprint;
+        result.Fingerprint = CanonicalStateHash.Combine("voyager-failed-remote-last-exit-reauthorization-v1",
+            result.Fingerprint, contextFingerprint, immediate.Fingerprint, quarantineActionId, true);
+        return result;
+    }
     public VoyagerRecoveryWindowProposal? RecoveryProposal { get; }
     public VoyagerJourneyRecord Journey => PluginJson.Deserialize<VoyagerJourneyRecord>(JourneyJson)!;
     public void Dispose()

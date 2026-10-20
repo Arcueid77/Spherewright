@@ -84,6 +84,8 @@ Voyager 本地 Move/Harvest 复用普通 RTS 并保留无水快路；有限能�
 当前用户保护的 Gameplay Journal 使用由存档身份推导的内部 key，并记录声明的跟踪边界、连续序列、持久检查点及显式 pending/error 状态。`attached_existing_save` 保留 `historicalCoverageComplete=false`；缺失早期事件不证明事件从未发生。保留原条目前缀，不能补造时间戳或强制每个操作新增事件。恢复必须在加载前及接管后证明同一原 Journal 与最低持久序号。旧凭据仅沿支持的兼容路径使用，并在之后健康保存时获得更强检查点。
 
 <a id="protected-recovery-and-version-changes"></a>
+可选的地形逐足部命中诊断只保留原同次有界查询结果及当前 simulator 的精确引用匹配。缺失、外部、重复或不完整事实不能认证归属；列表完整或已知 ocean/sphere 命中也不能替代原 owned surface 聚合与首帧守卫。观察仍为深拷贝且 `safetyCertified=false`，不进入既有 v1 哈希。
+
 ## 受保护恢复与版本变化
 
 受保护能力不是存档选择器。禁止修改 ticket、有效期、身份、Journal 或源文件使其合格。过旧主存档不能静默丢弃已知更新的接受工作。只使用明确授权的流程和精确当前候选：
@@ -91,6 +93,7 @@ Voyager 本地 Move/Harvest 复用普通 RTS 并保留无水快路；有限能�
 | 模式 | 必要边界 |
 | --- | --- |
 | `default` | 有效受保护凭据；精确版本、身份与 Journal，由内部选择符合条件的主存档或隔离源；不得任意选源或由调用方覆盖 tick |
+| `reauthorize_failed_remote_last_exit` | 精确远端失败 LastExit 的 fresh 明确所有者上下文及匹配指纹/回显；仅有界当前证据，不追祖先或续旧 grant |
 | `verified_newer_lastexit` | 明确授权的精确更新候选及已知进度下限；健康且含 Journal 的来源；证据 1 与精确身份、tick 回显 |
 | `reauthorize_expired_primary` | 过期、未消耗、健康来源；精确记录的主存档 tick、原 Journal、证据 2，以及 prepare 披露与 digest 后的明确回复 |
 | `reauthorize_expired_autosave0` | 过期健康来源；仅固定原生 AutoSave0、已批准下限与精确 tick，源、运行时、候选为同一支持版本；证据 3 与之后确认 |
@@ -103,9 +106,11 @@ AutoSave0 模式要求候选严格新于凭据与任何已观察主存档，不�
 
 Journal 起始版本和历史保持不变，最多允许五次已研究的持久转换。每次必须承接有效源版本，接管 tick 与持久序号单调。完整已研究补丁链的各中间环节必须存在。Ticket、主存档与 Journal 有效版本必须与允许的源和运行时版本对一致。
 
-远端隔离的窄续接仍使用 `recoveryMode=default`，不新增工具或恢复模式，普通 healthy/default 行为不变。Fresh prepare 必须返回 `userConfirmationRequired=true`、精确票据绑定的 LastExit 的真实 `candidateGameTick`、`exactEmbeddedIdentityVerified=true` 及 `confirmationDigest`。执行方须有适用的明确所有者授权，并在 commit 前核本次 fresh 披露；commit 仍使用 `userConfirmedInConversation` 与匹配 digest。同类恢复的既有明确授权可以适用，无需重复相同询问；不能由此推导迁移、另一世界、原主档回滚或扩大范围的许可。
+既有远端隔离续接及其有界 V1–V3 来源开口仍使用 `recoveryMode=default`，普通 healthy/default 行为不变。下述独立命名的远端失败 LastExit 再授权不扩展这些来源代际。Fresh prepare 必须返回 `userConfirmationRequired=true`、精确票据绑定的 LastExit 的真实 `candidateGameTick`、`exactEmbeddedIdentityVerified=true` 及 `confirmationDigest`。执行方须有适用的明确所有者授权，并在 commit 前核本次 fresh 披露；commit 仍使用 `userConfirmedInConversation` 与匹配 digest。同类恢复的既有明确授权可以适用，无需重复相同询问；不能由此推导迁移、另一世界、原主档回滚或扩大范围的许可。
 
-仅此 `default` 窄提案可追加四个可选扁平参数：`recoveryDeadlineUtc`、固定 `recoveryScope=continue_original_finite_task`、`maximumChargeGameTicks`、`maximumChargeWallSeconds`。充能上限须为正且有界，最多18000 tick/300墙钟秒。Prepared 单列 `originalJourneyDeadlineUtc` 与 `effectiveRecoveryDeadlineUtc`，回显 scope/上限，并声明 `nativeChargeFeasibilityRequiresFreshCapture`，不承诺充能进度。所提有效 UTC 窗口不得超过原声明 UTC 跨度；凭据消费前绑定单一不可变提案、证据及适用明确授权下对本次新预览的确认；该授权须涵盖披露的期限与充能尝试。不得靠重键、更换 Host 或重建续期；原有效期、tick 最大值/已花值、返程预留及能量/翘曲器底线不变，普通 healthy/default 行为不变。
+既有 `default` 窄提案可追加四个可选扁平参数：`recoveryDeadlineUtc`、固定 `recoveryScope=continue_original_finite_task`、`maximumChargeGameTicks`、`maximumChargeWallSeconds`。充能上限须为正且有界，最多18000 tick/300墙钟秒。Prepared 单列 `originalJourneyDeadlineUtc` 与 `effectiveRecoveryDeadlineUtc`，回显 scope/上限，并声明 `nativeChargeFeasibilityRequiresFreshCapture`，不承诺充能进度。所提有效 UTC 窗口不得超过原声明 UTC 跨度；凭据消费前绑定单一不可变提案、证据及适用明确授权下对本次新预览的确认；该授权须涵盖披露的期限与充能尝试。不得靠重键、更换 Host 或重建续期；原有效期、tick 最大值/已花值、返程预留及能量/翘曲器底线不变，普通 healthy/default 行为不变。
+
+独立 `reauthorize_failed_remote_last_exit` 模式以 `expectedRemoteRecoveryContextFingerprint` 绑定 fresh 明确所有者上下文，必须核 Prepared `failedRemoteLastExitReauthorizationUsed=true` 及精确匹配的 `remoteRecoveryContextFingerprint`。它不是 V4、旧 grant 续期或历史 Native 失败证书；原 action 已知终态失败仍是控制方事实断言，未知不得准入。只接受 active 未消耗双凭据、直接两份固定记录、精确票据绑定 LastExit 及完整 checkpoint/primary/Journal 租约；不追祖先、不加载成功 checkpoint。LastExit 为最近落地 tick 加1，已核销/checkpoint tick 仍在落地时刻。相同四个扁平窗口参数保持固定 scope、前次提案上限及18000 tick/300秒上限；原 UTC 跨度上限、旅程 deadline、最大/已耗/返程 tick 与能量/翘曲器底线不变。适用明确授权、当前披露/digest 及全部原 bootstrap/足部/首帧/strict13/返航核心门仍为必需；Pause 和诊断完整均不证明物理空闲或恢复。
 
 单次旧来源兼容开口可同时提供 `priorConsumedResumeToken`、`priorSourceFingerprint` 及可空 `priorActionKnownTerminalFailed`，或三者全不提供；仅适用于此 `default` 窄分支与当前隔离。`true` 表示控制方已核精确原公开恢复 action 为终态失败且非未知；消费记录不是 Native 持久动作终态，未知绝不能作此断言。两份固定消费/授权副本须在只读租约下相符、每份不超过64KiB，具完整原版本授权、匹配的 journey/checkpoint/Journal/当前主档来源与同一 source tick，并保留全部禁止较新主档回滚检查。旧不可变提案与 prior 指纹只用于打开旧 v1 证据指纹，不执行旧提案/action，也不复用其预算。Fresh Prepared 须回显 `priorFailedResumeProvenanceUsed=true` 和 `priorActionTerminalFailureAttested=true`，原确认/digest 门保持；回显缺失或被忽略则阻止兼容。新提案须有当前适用授权；新授权记录标记本次 hop；原三参数路径仍拒绝已标记前驱。原最大/已花/返程 tick 与能量/翘曲器储备不重置，直接路径及普通 v1 路径不变。token/指纹实际值与记录 JSON 留在保护区。
 

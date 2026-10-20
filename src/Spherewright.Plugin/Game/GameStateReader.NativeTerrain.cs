@@ -60,6 +60,7 @@ internal sealed partial class GameStateReader
     internal static string? CaptureOwnedTerrainFootOverlap(Player player, NativePlanetTerrainPhysicsSnapshot terrain,
         Collider[] ownedSurface)
     {
+        terrain.FootHits = null; terrain.FootHitDetailsComplete = null;
         var blocker = NativeTerrainObservationPolicy.Blocker(terrain, 31);
         if (blocker is not null) return blocker;
         try
@@ -71,6 +72,7 @@ internal sealed partial class GameStateReader
                 results, 15873 | (1 << 31), QueryTriggerInteraction.Collide);
             terrain.FootOverlapCount = count;
             terrain.FootOverlapComplete = count >= 0 && count < results.Length;
+            CaptureTerrainFootHitDetails(player, terrain, results, count);
             terrain.FootOverlapsOwnedSurfaceOnly = count > 0 && count < results.Length
                 && results.Take(count).All(c => c != null && c is MeshCollider mesh && mesh.sharedMesh != null
                     && c.enabled && c.gameObject.activeInHierarchy && !c.isTrigger && c.gameObject.layer == 31
@@ -79,7 +81,71 @@ internal sealed partial class GameStateReader
                     && c.gameObject.scene.GetPhysicsScene().Equals(Physics.defaultPhysicsScene));
             return NativeTerrainObservationPolicy.FootBlocker(terrain);
         }
-        catch (Exception exception) { return "remote_resume_first_frame_foot_query_failed:" + exception.GetType().Name; }
+        catch (Exception exception)
+        { terrain.FootHitDetailsComplete = false; return "remote_resume_first_frame_foot_query_failed:" + exception.GetType().Name; }
+    }
+
+    // This consumes the original query array before its original aggregate guard returns.
+    // It never discovers ownership outside these three exact current simulator collections.
+    private static void CaptureTerrainFootHitDetails(Player player, NativePlanetTerrainPhysicsSnapshot terrain,
+        Collider[] results, int count)
+    {
+        Collider[]? surface = null; Collider? ocean = null; Collider? sphere = null;
+        string? contextFailure = null;
+        try
+        {
+            var planet = GameMain.localPlanet;
+            var sim = planet?.gameObject?.GetComponent<PlanetSimulator>();
+            if (planet is null || sim == null || !ReferenceEquals(player.planetData, planet)
+                || !ReferenceEquals(player.factory, planet.factory) || !ReferenceEquals(sim.planetData, planet)
+                || sim.surfaceCollider is not { Length: > 0 and <= NativeTerrainObservationPolicy.MaximumSurfaceColliders })
+                contextFailure = "current_simulator_unavailable";
+            else { surface = sim.surfaceCollider; ocean = sim.oceanCollider; sphere = sim.sphereCollider; }
+        }
+        catch (Exception exception) { contextFailure = exception.GetType().Name; }
+        var size = Math.Min(Math.Max(count, 0), results.Length);
+        var details = new List<NativeTerrainFootHitPhysicsSnapshot>(size);
+        var complete = count >= 0 && count < results.Length && contextFailure is null;
+        for (var i = 0; i < size; i++)
+        {
+            var row = new NativeTerrainFootHitPhysicsSnapshot();
+            try
+            {
+                var c = results[i];
+                if (c == null) row.ReasonType = "null_hit";
+                else
+                {
+                    row.Type = c is MeshCollider ? "mesh" : c is SphereCollider ? "sphere"
+                        : c is CapsuleCollider ? "capsule" : c is BoxCollider ? "box" : "other";
+                    row.Enabled = c.enabled; row.ActiveInHierarchy = c.gameObject.activeInHierarchy;
+                    row.Layer = c.gameObject.layer; row.IsTrigger = c.isTrigger;
+                    row.SharedMeshPresent = c is MeshCollider mesh ? mesh.sharedMesh != null : (bool?)null;
+                    row.SameDefaultPhysicsScene = c.gameObject.scene.IsValid() && c.gameObject.scene.isLoaded
+                        && c.gameObject.scene.GetPhysicsScene().Equals(Physics.defaultPhysicsScene);
+                    row.WorldPosition = TerrainVector(c.transform.position);
+                    row.WorldRotation = NativePhysicsRotation(c.transform.rotation);
+                    row.WorldLossyScale = TerrainVector(c.transform.lossyScale);
+                    if (surface is null) row.ReasonType = contextFailure ?? "current_simulator_unavailable";
+                    else
+                    {
+                        var matches = 0; var slot = -1;
+                        for (var j = 0; j < surface.Length; j++)
+                            if (ReferenceEquals(c, surface[j])) { matches++; slot = j; }
+                        row.IsCurrentSurface = matches > 0;
+                        row.UniqueSurfaceIndex = matches == 1 ? slot : (int?)null;
+                        row.SameCurrentOcean = ReferenceEquals(c, ocean); row.SameCurrentSphere = ReferenceEquals(c, sphere);
+                        row.UnknownOwner = matches == 0 && row.SameCurrentOcean != true && row.SameCurrentSphere != true;
+                        if (matches > 1) row.ReasonType = "non_unique_current_surface";
+                        else if (row.UnknownOwner == true) row.ReasonType = "owner_outside_current_simulator";
+                        else row.State = "observed";
+                    }
+                }
+            }
+            catch (Exception exception) { row.ReasonType = exception.GetType().Name; }
+            if (row.State != "observed") complete = false;
+            details.Add(row);
+        }
+        terrain.FootHits = details; terrain.FootHitDetailsComplete = complete;
     }
 
     private static Vector3Snapshot TerrainVector(Vector3 v)

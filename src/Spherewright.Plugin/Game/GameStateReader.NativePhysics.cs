@@ -24,6 +24,16 @@ internal sealed partial class GameStateReader
             result.AutoSyncTransforms = Physics.autoSyncTransforms;
             result.GroundContact = CaptureNativeGroundContact(player, "current_player_read");
             result.Terrain = CaptureNativeTerrain(player, "current_player_read");
+            // Detail-only: the layer9 ordinary state does not add this overlap query.
+            if (NativeTerrainObservationPolicy.Blocker(result.Terrain, 31) is null)
+            {
+                var sim = GameMain.localPlanet?.gameObject?.GetComponent<PlanetSimulator>();
+                if (sim?.surfaceCollider is { } surface)
+                {
+                    result.Terrain.NativeGroundSphereHit = result.GroundContact?.CheckSphereHit;
+                    _ = CaptureOwnedTerrainFootOverlap(player, result.Terrain, surface);
+                }
+            }
             _sessions.CopyRemoteResumeGroundDiagnostics(player, result);
             result.Gravity = NativePhysicsVector(Physics.gravity);
             var controller = player.controller;

@@ -28,6 +28,9 @@ public sealed class NativePlanetTerrainPhysicsSnapshot
     public int? FootOverlapCount { get; set; }
     public bool? FootOverlapComplete { get; set; }
     public bool? FootOverlapsOwnedSurfaceOnly { get; set; }
+    public bool? FootHitDetailsComplete { get; set; }
+    // At most the 257 results from the same bounded query; diagnostics never replace aggregate admission evidence.
+    public List<NativeTerrainFootHitPhysicsSnapshot>? FootHits { get; set; }
     public bool? NativeGroundSphereHit { get; set; }
     public List<NativeTerrainColliderPhysicsSnapshot>? SurfaceColliders { get; set; }
 
@@ -40,6 +43,16 @@ public sealed class NativePlanetTerrainPhysicsSnapshot
         SphereColliderEnabled = SphereColliderEnabled, SphereColliderLayer = SphereColliderLayer,
         OceanColliderEnabled = OceanColliderEnabled, OceanColliderLayer = OceanColliderLayer,
         FootOverlapCount = FootOverlapCount, FootOverlapComplete = FootOverlapComplete, FootOverlapsOwnedSurfaceOnly = FootOverlapsOwnedSurfaceOnly,
+        FootHitDetailsComplete = FootHitDetailsComplete,
+        FootHits = FootHits?.Select(c => new NativeTerrainFootHitPhysicsSnapshot
+        {
+            State = c.State, ReasonType = c.ReasonType, Type = c.Type, UniqueSurfaceIndex = c.UniqueSurfaceIndex,
+            IsCurrentSurface = c.IsCurrentSurface, SameCurrentOcean = c.SameCurrentOcean,
+            SameCurrentSphere = c.SameCurrentSphere, UnknownOwner = c.UnknownOwner,
+            Enabled = c.Enabled, ActiveInHierarchy = c.ActiveInHierarchy, Layer = c.Layer, IsTrigger = c.IsTrigger,
+            SharedMeshPresent = c.SharedMeshPresent, SameDefaultPhysicsScene = c.SameDefaultPhysicsScene,
+            WorldPosition = Vector(c.WorldPosition), WorldRotation = Rotation(c.WorldRotation), WorldLossyScale = Vector(c.WorldLossyScale),
+        }).ToList(),
         NativeGroundSphereHit = NativeGroundSphereHit,
         SurfaceColliders = SurfaceColliders?.Select(c => new NativeTerrainColliderPhysicsSnapshot
         {
@@ -55,6 +68,29 @@ public sealed class NativePlanetTerrainPhysicsSnapshot
 public sealed class NativeTerrainColliderPhysicsSnapshot
 {
     public string? Type { get; set; }
+    public bool? Enabled { get; set; }
+    public bool? ActiveInHierarchy { get; set; }
+    public int? Layer { get; set; }
+    public bool? IsTrigger { get; set; }
+    public bool? SharedMeshPresent { get; set; }
+    public bool? SameDefaultPhysicsScene { get; set; }
+    public Vector3Snapshot? WorldPosition { get; set; }
+    public QuaternionSnapshot? WorldRotation { get; set; }
+    public Vector3Snapshot? WorldLossyScale { get; set; }
+}
+
+/// <summary>Copied hit scalars. Ownership is only exact current-simulator reference membership.</summary>
+public sealed class NativeTerrainFootHitPhysicsSnapshot
+{
+    public string State { get; set; } = "unavailable";
+    public string? ReasonType { get; set; }
+    public string? Type { get; set; }
+    // Zero-based only when exactly one current surface slot matches; otherwise unknown.
+    public int? UniqueSurfaceIndex { get; set; }
+    public bool? IsCurrentSurface { get; set; }
+    public bool? SameCurrentOcean { get; set; }
+    public bool? SameCurrentSphere { get; set; }
+    public bool? UnknownOwner { get; set; }
     public bool? Enabled { get; set; }
     public bool? ActiveInHierarchy { get; set; }
     public int? Layer { get; set; }

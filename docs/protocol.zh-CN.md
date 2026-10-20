@@ -129,6 +129,8 @@ spherewright_commit_reload_flight_checkpoint
 
 详细本地地形生命周期观察可另返回 `nativePhysics.terrain`、`resumeTerrainPreFirstFrame`、`resumeTerrainPostUniverse` 及 `resumeGroundContactPostUniverse`。须保留真实阶段/session/接管归属和 unavailable；计划阶段不是已采集 Native 轮次。这些字段与保留的旧同步诊断不运行首帧、不授权重试、不改变 v1 哈希，也不确定此前地面检查失败的原因。新首帧路径不调用 SyncTransforms；现有 query/缓存值及安全证书的区分不变。
 
+地形快照可另保留同一次有界 overlap 查询的 `footHits`（至多257条）及可空 `footHitDetailsComplete`，在原聚合足部拒绝之前采集。每条仅含深拷贝的形状/状态/原因、有限世界姿态及可空事实；归属只以精确引用匹配当前 simulator 的 surface、ocean 或 sphere。仅唯一精确 surface 匹配时提供从0开始的 `uniqueSurfaceIndex`；重复匹配、外部归属、缺值、异常或截断仍为未知或不完整。诊断列表完整不等于 owned surface 准入证明；观察到 ocean/sphere 命中不满足 terrain 足部门。原 overlap 聚合、层/mask/查询参数、首帧守卫、安全标记及 v1 哈希不变；普通 layer9 观察不新增 overlap 查询。
+
 同一 `spherewright_get_player_state` 可返回可空 `nativeLocalControlEnergy`，无新 opt-in。`perNativeTickEnergyUpperJoules` 是每 Native tick 的条件能量上界 P（焦耳），须保留 `basis`、`costInputsProved`、`independentDebitsExcluded`、`independentDebitsBudgeted` 及 `blockers`。旧 `independentDebitsExcluded` 保持原零独立扣费排除含义及 v1 basis；有界 v2 basis `conditional_native_walk_drift_tick_upper_v2` 可改为报告 `independentDebitsBudgeted=true`：P 已包含 `independentEnergyPerNativeTickUpperJoules`，并分别披露 `shieldRechargeEnergyPerNativeTickUpperJoules` 与 `laserRechargeEnergyPerNativeTickUpperJoules` 贡献。不得再把这些含项加到 P；它们是条件数学上界，不是实际已支付量。`executionPremisesProved` 始终 false：此读取不证明执行权限，暂停世界仍明确带 blocker。缺失/未证保持未知，不能当零；该脱离原生引用的观察不进入既有 v1 哈希。生成下界 g 仍来自航线预览 `coreGenerationLowerBoundWatts`（瓦），比较净值前须显式统一单位。P/g 未知或净值非正均不保证进度；即使估算为正，也仅可披露 fresh 守卫下的有限尝试，不保证充能或飞行完成。
 
 <a id="voyager-visibility-and-route-previews"></a>
@@ -357,9 +359,24 @@ Sorter-filter 绑定根配置及手持货物，支持无货 Returning 或普通 
 
 恢复使用当前受保护 token。菜单 `gameLoaded=false` 正常，新 prepare 检查原生预加载、菜单、无 loader、精确源及 Journal，不加载。可用性本身不证明有效期或最终就绪。
 
-远端隔离的窄续接仍使用 `recoveryMode=default`，不新增工具或恢复模式，普通 healthy/default 行为不变。Fresh prepare 必须返回 `userConfirmationRequired=true`、精确票据绑定的 LastExit 的真实 `candidateGameTick`、`exactEmbeddedIdentityVerified=true` 及 `confirmationDigest`。执行方须有适用的明确所有者授权，并在 commit 前核本次 fresh 披露；commit 仍使用 `userConfirmedInConversation` 与匹配 digest。同类恢复的既有明确授权可以适用，无需重复相同询问；不能由此推导迁移、另一世界、原主档回滚或扩大范围的许可。
+既有远端隔离续接及其有界 V1–V3 来源开口仍使用 `recoveryMode=default`，普通 healthy/default 行为不变。下述独立命名的远端失败 LastExit 再授权不扩展这些来源代际。Fresh prepare 必须返回 `userConfirmationRequired=true`、精确票据绑定的 LastExit 的真实 `candidateGameTick`、`exactEmbeddedIdentityVerified=true` 及 `confirmationDigest`。执行方须有适用的明确所有者授权，并在 commit 前核本次 fresh 披露；commit 仍使用 `userConfirmedInConversation` 与匹配 digest。同类恢复的既有明确授权可以适用，无需重复相同询问；不能由此推导迁移、另一世界、原主档回滚或扩大范围的许可。
 
-仅此 `default` 窄提案可追加四个可选扁平参数：`recoveryDeadlineUtc`、固定 `recoveryScope=continue_original_finite_task`、`maximumChargeGameTicks`、`maximumChargeWallSeconds`。充能上限须为正且有界，最多18000 tick/300墙钟秒。Prepared 单列 `originalJourneyDeadlineUtc` 与 `effectiveRecoveryDeadlineUtc`，回显 scope/上限，并声明 `nativeChargeFeasibilityRequiresFreshCapture`，不承诺充能进度。所提有效 UTC 窗口不得超过原声明 UTC 跨度；凭据消费前绑定单一不可变提案、证据及适用明确授权下对本次新预览的确认；该授权须涵盖披露的期限与充能尝试。不得靠重键、更换 Host 或重建续期；原有效期、tick 最大值/已花值、返程预留及能量/翘曲器底线不变，普通 healthy/default 行为不变。
+既有 `default` 窄提案可追加四个可选扁平参数：`recoveryDeadlineUtc`、固定 `recoveryScope=continue_original_finite_task`、`maximumChargeGameTicks`、`maximumChargeWallSeconds`。充能上限须为正且有界，最多18000 tick/300墙钟秒。Prepared 单列 `originalJourneyDeadlineUtc` 与 `effectiveRecoveryDeadlineUtc`，回显 scope/上限，并声明 `nativeChargeFeasibilityRequiresFreshCapture`，不承诺充能进度。所提有效 UTC 窗口不得超过原声明 UTC 跨度；凭据消费前绑定单一不可变提案、证据及适用明确授权下对本次新预览的确认；该授权须涵盖披露的期限与充能尝试。不得靠重键、更换 Host 或重建续期；原有效期、tick 最大值/已花值、返程预留及能量/翘曲器底线不变，普通 healthy/default 行为不变。
+
+独立的 `recoveryMode=reauthorize_failed_remote_last_exit` 要求对本次披露的当前远端上下文有 fresh 明确所有者授权。`expectedRemoteRecoveryContextFingerprint` 须匹配下述八个独立提供值重新计算的期望承诺；Prepared 必须回显 `failedRemoteLastExitReauthorizationUsed=true` 及匹配的 `remoteRecoveryContextFingerprint`，否则 MCP 不发令牌。这不是 V4 来源开口或旧 grant 续期，也不声称 V1–V3 来源成功回显。原 action 已知终态失败仍是控制方核实后的事实断言，不是消费记录提供的 Native 持久结果。只接受 active 且未消耗的双凭据及直接两份固定记录，不追溯祖先。精确票据绑定 LastExit 的源 tick 须等于票据下界及最近落地 tick 加1，已核销 tick 与成功 checkpoint tick 均等于该落地 tick。完整 checkpoint/primary/Journal 证据持只读租约，禁止较新主档回滚检查保持；成功 checkpoint 仅作证据，不作加载源。该模式复用相同四个扁平窗口参数及固定 scope；两项充能上限仍不超过18000 tick/300秒且不得超过直接前次提案。既有 UTC 跨度上限保持，披露的有效恢复 UTC 不修改原旅程 deadline，也不重置最大/已耗/返程 tick 或能量/翘曲器底线。适用明确授权及本次 fresh 披露/digest 仍必需。不新增工具，原 bootstrap、足部、自然首帧、strict13 及独立 fresh 返航核心门全部保持；仅源码实现不代表地面修复或重试许可。
+
+可在离线调用公开 `VoyagerFailedRemoteReauthorizationPolicy.ContextFingerprint` 计算所有者独立提供的期望承诺，domain 为 `voyager-zero-progress-remote-context-v1`。八个参数顺序固定如下：
+
+1. `journeyJson`：精确 Native journey 记录 JSON。
+2. `checkpointJson`：精确 Native checkpoint 记录 JSON。
+3. `checkpointNativeFingerprint`：完整 checkpoint Native 存档指纹。
+4. `primaryFingerprint`：完整受保护 primary 指纹。
+5. `sourceTick`：经验证的源 Native 存档 tick。
+6. `primaryTick`：经验证的受保护 primary Native 存档 tick。
+7. `journalCheckpointJson`：票据 Journal checkpoint 的精确 Native JSON。
+8. `validatedJournalHash`：完整连续性验证 Journal 文本的 `HashToken`，即其 UTF-8 文本的 SHA-256，表示为64个小写十六进制字符，不带 `sha256:` 前缀。
+
+这些值须来自所有者在预览前独立保护的基线。记录 JSON 字符串须保留已安装 Native `PluginJson.Serialize` 的原输出及数值词元；不得在桌面解析/重渲染、归一化浮点数，或以只有 header/metadata 的证据替代任一完整文件指纹。Journal 须保留 Native 识别 BOM 后读取的全部已验证文本及空白/行尾，不得解析后重新序列化再哈希。公开 Core 函数返回带 `sha256:` 前缀的承诺，不依赖 Lab helper；它只计算确定性数据绑定，不验证或签发所有者身份、授权或 Native 失败证书。租约、身份/版本及实机门仍由 coordinator 独立验证。本次预览的 Plugin 计算回显本身不能充当所有者独立 expected 基线；独立证据缺失仍为未知并阻止该模式。
 
 单次旧来源兼容开口可同时提供 `priorConsumedResumeToken`、`priorSourceFingerprint` 及可空 `priorActionKnownTerminalFailed`，或三者全不提供；仅适用于此 `default` 窄分支与当前隔离。`true` 表示控制方已核精确原公开恢复 action 为终态失败且非未知；消费记录不是 Native 持久动作终态，未知绝不能作此断言。两份固定消费/授权副本须在只读租约下相符、每份不超过64KiB，具完整原版本授权、匹配的 journey/checkpoint/Journal/当前主档来源与同一 source tick，并保留全部禁止较新主档回滚检查。旧不可变提案与 prior 指纹只用于打开旧 v1 证据指纹，不执行旧提案/action，也不复用其预算。Fresh Prepared 须回显 `priorFailedResumeProvenanceUsed=true` 和 `priorActionTerminalFailureAttested=true`，原确认/digest 门保持；回显缺失或被忽略则阻止兼容。新提案须有当前适用授权；新授权记录标记本次 hop；原三参数路径仍拒绝已标记前驱。原最大/已花/返程 tick 与能量/翘曲器储备不重置，直接路径及普通 v1 路径不变。token/指纹实际值与记录 JSON 留在保护区。
 

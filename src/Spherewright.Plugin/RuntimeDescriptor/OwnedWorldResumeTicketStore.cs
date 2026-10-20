@@ -303,15 +303,18 @@ internal sealed class OwnedWorldResumeTicketStore
         return true;
     }
 
-    public FileStream OpenRemoteResumeJournalLease(OwnedWorldResumeTicket ticket, out string fingerprint)
+    public FileStream OpenRemoteResumeJournalLease(OwnedWorldResumeTicket ticket, out string fingerprint,
+        bool requireExactCheckpoint = false)
     {
         var identity = GameplayJournalIdentity.HashOwnedSaveIdentity(ticket.OwnedSaveName);
-        var stream = new FileStream(Path.Combine(_runtimeDirectory, "journals", $"gameplay-{identity}.json"),
-            FileMode.Open, FileAccess.Read, FileShare.Read);
+        var path = Path.Combine(_runtimeDirectory, "journals", $"gameplay-{identity}.json");
+        if (requireExactCheckpoint && (File.GetAttributes(path) & FileAttributes.ReparsePoint) != 0)
+            throw new InvalidDataException("The exact Journal must be a regular protected file.");
+        var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);
         try
         {
             if (stream.Length > 16L * 1024 * 1024 || ticket.GameplayJournalCheckpoint is null
-                || !TryValidateGameplayJournalContinuity(ticket, false, out fingerprint, out var rejection))
+                || !TryValidateGameplayJournalContinuity(ticket, requireExactCheckpoint, out fingerprint, out var rejection))
                 throw new InvalidDataException("remote_resume_journal_evidence_unproved");
             return stream;
         }
@@ -346,9 +349,72 @@ internal sealed class OwnedWorldResumeTicketStore
         { rejection = "remote_resume_active_credential_changed:" + exception.GetType().Name; return false; }
     }
 
-    public bool TryConsumeRemoteCredential(string token, string expectedFingerprint, VoyagerRecoveryAuthorization? authorization = null) =>
-        TryCaptureRemoteCredential(token, out var actual, out _)
-        && FixedTimeEquals(expectedFingerprint, actual) && TryConsume(token, authorization);
+    public bool TryOpenRemoteCredential(string token, out RemoteResumeCredentialLease? proof, out string rejection)
+    {
+        proof = null; rejection = string.Empty;
+        FileStream? runtime = null; FileStream? handoff = null;
+        try
+        {
+            if ((File.GetAttributes(_ticketPath) & FileAttributes.ReparsePoint) != 0
+                || (File.GetAttributes(_handoffTicketPath) & FileAttributes.ReparsePoint) != 0)
+                throw new InvalidDataException("Active credentials must be regular protected files.");
+            runtime = new FileStream(_ticketPath, FileMode.Open, FileAccess.Read, FileShare.Read);
+            handoff = new FileStream(_handoffTicketPath, FileMode.Open, FileAccess.Read, FileShare.Read);
+            if (runtime.Length < 1 || runtime.Length > 65536 || handoff.Length < 1 || handoff.Length > 65536)
+                throw new InvalidDataException("Active credentials exceed their finite bound.");
+            var firstBytes = ReadConsumptionBytes(runtime); var secondBytes = ReadConsumptionBytes(handoff);
+            if (!firstBytes.SequenceEqual(secondBytes))
+                throw new InvalidDataException("Active credential replicas must have identical bounded bytes.");
+            _ = new UTF8Encoding(false, true).GetString(firstBytes);
+            if (!TryCaptureRemoteCredential(token, out var fingerprint, out rejection)) return false;
+            proof = new RemoteResumeCredentialLease(fingerprint,
+                CanonicalStateHash.Combine("remote-active-credential-raw-v1", HashBytes(firstBytes), HashBytes(secondBytes)), runtime, handoff);
+            runtime = null; handoff = null;
+            return true;
+        }
+        catch (Exception exception) when (exception is IOException || exception is InvalidDataException
+            || exception is UnauthorizedAccessException || exception is ArgumentException || exception is Newtonsoft.Json.JsonException)
+        { rejection = "remote_resume_active_credential_changed:" + exception.GetType().Name; return false; }
+        finally { runtime?.Dispose(); handoff?.Dispose(); }
+    }
+
+    public bool TryConsumeRemoteCredential(string token, string expectedFingerprint,
+        VoyagerRecoveryAuthorization? authorization = null, RemoteResumeCredentialLease? protectedCredential = null)
+    {
+        // This is the single normal durable-consumption boundary. Until here the
+        // fresh-mode active pair is held read-only; release permits deletion only
+        // after all other proofs are complete. Recapture before the tombstones.
+        if (protectedCredential is not null)
+        {
+            var matches = !protectedCredential.IsDisposed && FixedTimeEquals(expectedFingerprint, protectedCredential.Fingerprint);
+            var expectedRaw = protectedCredential.RawFingerprint;
+            protectedCredential.Dispose();
+            if (!matches) return false;
+            if (!TryOpenRemoteCredential(token, out var fresh, out _)) return false;
+            using (fresh)
+                if (!FixedTimeEquals(expectedRaw, fresh!.RawFingerprint)) return false;
+        }
+        return TryCaptureRemoteCredential(token, out var actual, out _)
+            && FixedTimeEquals(expectedFingerprint, actual) && TryConsume(token, authorization);
+    }
+
+    public bool TryOpenImmediateFailedRemoteProof(string priorToken, OwnedWorldResumeTicket currentTicket,
+        out PriorFailedResumeProof? proof, out string rejection)
+    {
+        proof = null; rejection = string.Empty;
+        if (string.IsNullOrWhiteSpace(priorToken) || priorToken.Length > 256
+            || FixedTimeEquals(priorToken, currentTicket.ResumeToken) || string.IsNullOrEmpty(currentTicket.QuarantineActionId))
+        { rejection = "remote_reauthorization_immediate_credential_invalid"; return false; }
+        if (!TryOpenFixedConsumptionProof(HashToken(priorToken), currentTicket.QuarantineActionId, null,
+                out var immediate, out rejection) || immediate is null) return false;
+        if (currentTicket.IssuedAtUtc == default || currentTicket.IssuedAtUtc > DateTimeOffset.UtcNow
+            || currentTicket.ExpiresAtUtc <= DateTimeOffset.UtcNow || currentTicket.ExpiresAtUtc <= currentTicket.IssuedAtUtc
+            || immediate.ConsumedAtUtc > currentTicket.IssuedAtUtc)
+        { immediate.Dispose(); rejection = "remote_reauthorization_consumption_order_unproved"; return false; }
+        // No ancestor is opened and no historical opaque commitment is claimed.
+        proof = immediate;
+        return true;
+    }
 
     public bool TryOpenPriorFailedResumeProof(string priorToken, string quarantineActionId,
         out PriorFailedResumeProof? proof, out string rejection, bool requireV2Predecessor = false,
@@ -397,7 +463,7 @@ internal sealed class OwnedWorldResumeTicketStore
         finally { oldest?.Dispose(); ancestor?.Dispose(); immediate?.Dispose(); }
     }
 
-    private bool TryOpenFixedConsumptionProof(string tokenHash, string? quarantineActionId, bool requireLegacy,
+    private bool TryOpenFixedConsumptionProof(string tokenHash, string? quarantineActionId, bool? requireLegacy,
         out PriorFailedResumeProof? proof, out string rejection)
     {
         proof = null; rejection = string.Empty;
@@ -426,8 +492,8 @@ internal sealed class OwnedWorldResumeTicketStore
                 || !FixedTimeEquals(first.ResumeTokenHash, tokenHash) || !FixedTimeEquals(second.ResumeTokenHash, tokenHash)
                 || first.GameVersion != _gameVersion || second.GameVersion != _gameVersion
                 || first.ConsumedAtUtc == default || authorization is null
-                || (requireLegacy ? authorization.PriorConsumedResumeTokenHash is not null
-                    : authorization.PriorConsumedResumeTokenHash is null)
+                || (requireLegacy.HasValue && (requireLegacy.Value ? authorization.PriorConsumedResumeTokenHash is not null
+                    : authorization.PriorConsumedResumeTokenHash is null))
                 || !Guid.TryParse(authorization.ResumeActionId, out _)
                 || (quarantineActionId is not null && !string.Equals(authorization.ResumeActionId, quarantineActionId, StringComparison.Ordinal))
                 || !OwnedWorldRecoveryPolicy.IsCanonicalFingerprint(authorization.EvidenceFingerprint)
@@ -892,10 +958,13 @@ internal sealed class OwnedWorldResumeTicketStore
         Path.Combine(directory, $"owned-world-reauthorization-attempt-{tokenHash}.json");
 
     private static string HashToken(string token)
+        => HashBytes(Encoding.UTF8.GetBytes(token ?? string.Empty));
+
+    private static string HashBytes(byte[] value)
     {
         using (var sha256 = SHA256.Create())
         {
-            var bytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(token ?? string.Empty));
+            var bytes = sha256.ComputeHash(value);
             return BitConverter.ToString(bytes).Replace("-", string.Empty).ToLowerInvariant();
         }
     }
@@ -998,6 +1067,22 @@ internal sealed class OwnedWorldResumeConsumptionTombstone
     public string GameVersion { get; set; } = string.Empty;
 
     public DateTimeOffset ConsumedAtUtc { get; set; }
+}
+
+internal sealed class RemoteResumeCredentialLease : IDisposable
+{
+    private readonly IDisposable[] _leases;
+    public RemoteResumeCredentialLease(string fingerprint, string rawFingerprint, params IDisposable[] leases)
+    { Fingerprint = fingerprint; RawFingerprint = rawFingerprint; _leases = leases; }
+    public string Fingerprint { get; }
+    public string RawFingerprint { get; }
+    public bool IsDisposed { get; private set; }
+    public void Dispose()
+    {
+        if (IsDisposed) return;
+        IsDisposed = true;
+        foreach (var lease in _leases) lease.Dispose();
+    }
 }
 
 internal sealed class PriorFailedResumeProof : IDisposable

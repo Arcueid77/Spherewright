@@ -26,6 +26,86 @@ namespace Spherewright.Mcp.Tests;
 public sealed class SpherewrightToolsTests
 {
     [Theory]
+    [InlineData("supported")] [InlineData("missing_echo")] [InlineData("wrong_context")]
+    [InlineData("old_mode")] [InlineData("legacy_claim")] [InlineData("unattested")] [InlineData("evidence_zero")]
+    public async Task FailedRemoteReauthorizationUsesRealOptionalSchemaAndRequiresItsIndependentEcho(string fault)
+    {
+        var deadline = DateTimeOffset.UtcNow.AddMinutes(30);
+        var contextFingerprint = CanonicalStateHash.Combine("synthetic-independent-owner-context");
+        var p = WindowPlan(deadline); p.RecoveryMode = OwnedWorldResumeModes.ReauthorizeFailedRemoteLastExit;
+        p.FailedRemoteLastExitReauthorizationUsed = true; p.RemoteRecoveryContextFingerprint = contextFingerprint;
+        p.PriorActionTerminalFailureAttested = true; p.CandidateGameTick = 101; p.MinimumGameTick = 101;
+        p.ConfirmationDigest = CanonicalStateHash.Combine("synthetic-fresh-plan");
+        switch (fault)
+        {
+            case "missing_echo": p.FailedRemoteLastExitReauthorizationUsed = false; break;
+            case "wrong_context": p.RemoteRecoveryContextFingerprint = CanonicalStateHash.Combine("wrong-context"); break;
+            case "old_mode": p.RecoveryMode = OwnedWorldResumeModes.Default; break;
+            case "legacy_claim": p.PriorFailedResumeProvenanceUsed = true; break;
+            case "unattested": p.PriorActionTerminalFailureAttested = false; break;
+            case "evidence_zero": p.RecoveryEvidenceVersion = 0; break;
+        }
+        var bridge = new FakeBridgeClient(SuccessResult()) { ResumePlan = p };
+        var services = new ServiceCollection(); services.AddSingleton<IBridgeClient>(bridge);
+        services.AddMcpServer().WithToolsFromAssembly(typeof(SpherewrightTools).Assembly);
+        using var provider = services.BuildServiceProvider();
+        var tool = Assert.Single(provider.GetServices<McpServerTool>(), t => t.ProtocolTool.Name == "spherewright_prepare_resume_owned_game");
+        var schema = tool.ProtocolTool.InputSchema;
+        Assert.True(schema.GetProperty("properties").TryGetProperty("expectedRemoteRecoveryContextFingerprint", out _));
+        if (schema.TryGetProperty("required", out var required))
+            Assert.DoesNotContain(required.EnumerateArray(), p => p.GetString() == "expectedRemoteRecoveryContextFingerprint");
+        await using var server = McpServer.Create(new StreamServerTransport(Stream.Null, Stream.Null), new McpServerOptions(), null, provider);
+        var args = new CallToolRequestParams { Name = tool.ProtocolTool.Name, Arguments = new Dictionary<string, JsonElement>
+        {
+            ["resumeToken"] = JsonSerializer.SerializeToElement("synthetic-current"),
+            ["recoveryMode"] = JsonSerializer.SerializeToElement(OwnedWorldResumeModes.ReauthorizeFailedRemoteLastExit),
+            ["expectedRemoteRecoveryContextFingerprint"] = JsonSerializer.SerializeToElement(contextFingerprint),
+            ["priorConsumedResumeToken"] = JsonSerializer.SerializeToElement("synthetic-immediate-consumed"),
+            ["priorActionKnownTerminalFailed"] = JsonSerializer.SerializeToElement(true),
+            ["recoveryDeadlineUtc"] = JsonSerializer.SerializeToElement(deadline),
+            ["recoveryScope"] = JsonSerializer.SerializeToElement(VoyagerRecoveryWindowProposal.TaskScope),
+            ["maximumChargeGameTicks"] = JsonSerializer.SerializeToElement(9000L),
+            ["maximumChargeWallSeconds"] = JsonSerializer.SerializeToElement(240d),
+        } };
+        var call = new RequestContext<CallToolRequestParams>(server,
+            new JsonRpcRequest { Id = new RequestId(1), Method = "tools/call" }, args) { Services = provider };
+        var result = await tool.InvokeAsync(call);
+        var forwarded = bridge.LastResumePrepareRequest!;
+        Assert.Equal(OwnedWorldResumeModes.ReauthorizeFailedRemoteLastExit, forwarded.RecoveryMode);
+        Assert.Equal(contextFingerprint, forwarded.ExpectedRemoteRecoveryContextFingerprint);
+        Assert.Equal("synthetic-immediate-consumed", forwarded.PriorConsumedResumeToken);
+        Assert.True(forwarded.PriorActionKnownTerminalFailed); Assert.Empty(forwarded.PriorSourceFingerprint);
+        Assert.Equal(deadline, forwarded.RecoveryDeadlineUtc); Assert.Equal(9000, forwarded.MaximumChargeGameTicks);
+        Assert.Equal(240d, forwarded.MaximumChargeWallSeconds);
+        Assert.Equal(fault != "supported", result.IsError);
+        if (fault == "supported")
+        {
+            var echoed = result.StructuredContent!.Value.GetProperty("result");
+            Assert.True(echoed.GetProperty("failedRemoteLastExitReauthorizationUsed").GetBoolean());
+            Assert.Equal(contextFingerprint, echoed.GetProperty("remoteRecoveryContextFingerprint").GetString());
+            Assert.False(echoed.GetProperty("priorFailedResumeProvenanceUsed").GetBoolean());
+        }
+        else Assert.DoesNotContain("planToken", result.StructuredContent!.Value.GetRawText());
+    }
+
+    [Theory]
+    [InlineData("context")] [InlineData("token")] [InlineData("ack")] [InlineData("old_witness")]
+    [InlineData("deadline")] [InlineData("default")]
+    public async Task FailedRemotePartialOrWrongModeInputNeverReachesBridge(string fault)
+    {
+        var bridge = new FakeBridgeClient(SuccessResult());
+        var result = await SpherewrightTools.PrepareOwnedWorldResumeAsync(bridge, "synthetic-current",
+            recoveryMode: fault == "default" ? OwnedWorldResumeModes.Default : OwnedWorldResumeModes.ReauthorizeFailedRemoteLastExit,
+            recoveryDeadlineUtc: fault == "deadline" ? null : DateTimeOffset.UtcNow.AddMinutes(30),
+            recoveryScope: VoyagerRecoveryWindowProposal.TaskScope, maximumChargeGameTicks: 9000, maximumChargeWallSeconds: 240,
+            priorConsumedResumeToken: fault == "token" ? "" : "synthetic-prior",
+            priorSourceFingerprint: fault == "old_witness" ? CanonicalStateHash.Combine("legacy") : "",
+            priorActionKnownTerminalFailed: fault == "ack" ? null : true,
+            expectedRemoteRecoveryContextFingerprint: fault == "context" ? "" : CanonicalStateHash.Combine("owner-context"));
+        Assert.True(result.IsError); Assert.Null(bridge.LastResumePrepareRequest);
+    }
+
+    [Theory]
     [InlineData(true)] [InlineData(false)]
     public async Task FixedV3RealSchemaForwardsTheIntermediateWitnessAndWithholdsIgnoredProof(bool supported)
     {

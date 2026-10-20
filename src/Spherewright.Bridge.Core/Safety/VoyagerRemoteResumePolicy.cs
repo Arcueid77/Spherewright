@@ -38,6 +38,13 @@ public static class VoyagerRemoteResumePolicy
         if (!f.FullSourceAndPrimaryEvidence) return "remote_resume_full_file_evidence_unproved";
         if (!f.ExactDurableJourneyAndCheckpoint || !f.QuarantineMatchesOriginalAction
             || !f.OriginalJournalCheckpointPresent) return "remote_resume_original_provenance_unproved";
+        return RemainingJourneyBlocker(f);
+    }
+
+    // Both entry points establish their own provenance before sharing these
+    // unchanged phase, rollback and original finite-budget checks.
+    internal static string? RemainingJourneyBlocker(VoyagerRemoteResumeFacts f)
+    {
         if (!f.RemoteLandedOutbound || !f.CheckpointFlightSucceededWithoutReload)
             return "remote_resume_successful_outbound_required";
         if (f.PrimaryGameTick < 0 || f.TicketMinimumGameTick < 0 || f.LastAccountedGameTick < 0

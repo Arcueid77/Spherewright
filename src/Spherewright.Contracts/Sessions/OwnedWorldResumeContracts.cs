@@ -8,6 +8,7 @@ public static class OwnedWorldResumeModes
     public const string ReauthorizeExpiredAutosave0 = "reauthorize_expired_autosave0";
     public const string ReauthorizeFixedAutosave0 = "reauthorize_fixed_autosave0";
     public const string ReauthorizeVersionChangedPrimary = "reauthorize_version_changed_primary";
+    public const string ReauthorizeFailedRemoteLastExit = "reauthorize_failed_remote_last_exit";
 }
 
 public sealed class PrepareOwnedWorldResumeRequest
@@ -30,6 +31,7 @@ public sealed class PrepareOwnedWorldResumeRequest
     public string PriorLegacySourceFingerprint { get; set; } = string.Empty;
     public string PriorIntermediateSourceFingerprint { get; set; } = string.Empty;
     public bool? PriorActionKnownTerminalFailed { get; set; }
+    public string ExpectedRemoteRecoveryContextFingerprint { get; set; } = string.Empty;
 }
 
 public sealed class CommitOwnedWorldResumeRequest
@@ -68,6 +70,8 @@ public sealed class PreparedOwnedWorldResumePlan
     public bool PriorFailedResumeV2ProvenanceUsed { get; set; }
     public bool PriorFailedResumeV3ProvenanceUsed { get; set; }
     public bool PriorActionTerminalFailureAttested { get; set; }
+    public bool FailedRemoteLastExitReauthorizationUsed { get; set; }
+    public string RemoteRecoveryContextFingerprint { get; set; } = string.Empty;
 
     public long? CandidateGameTick { get; set; }
 

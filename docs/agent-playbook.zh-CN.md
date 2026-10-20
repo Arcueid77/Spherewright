@@ -280,6 +280,8 @@ DSP **经度网格间距随纬度变化**。固定赤道行列公式不是权威
 
 详细本地地形生命周期观察可另返回 `nativePhysics.terrain`、`resumeTerrainPreFirstFrame`、`resumeTerrainPostUniverse` 及 `resumeGroundContactPostUniverse`。须保留真实阶段/session/接管归属和 unavailable；计划阶段不是已采集 Native 轮次。这些字段与保留的旧同步诊断不运行首帧、不授权重试、不改变 v1 哈希，也不确定此前地面检查失败的原因。新首帧路径不调用 SyncTransforms；现有 query/缓存值及安全证书的区分不变。
 
+返回时应把地形 `footHits`（至多257条）及 `footHitDetailsComplete` 与原聚合拒绝一起保留。逐条归属只匹配当前 simulator 的精确 surface/ocean/sphere 引用；仅唯一 surface 匹配有从0开始的索引。未知、外部、重复或不完整结果绝不成为归属证明，已知 ocean/sphere 归属也不通过 terrain 足部门。深拷贝明细复用原同次有界查询，不改执行守卫或 v1 哈希，普通 layer9 不新增 overlap 查询；它们不证明失败原因、修复、物理空闲或重试许可。
+
 同一 `spherewright_get_player_state` 可返回可空 `nativeLocalControlEnergy`，无新 opt-in。`perNativeTickEnergyUpperJoules` 是每 Native tick 的条件能量上界 P（焦耳），须保留 `basis`、`costInputsProved`、`independentDebitsExcluded`、`independentDebitsBudgeted` 及 `blockers`。旧 `independentDebitsExcluded` 保持原零独立扣费排除含义及 v1 basis；有界 v2 basis `conditional_native_walk_drift_tick_upper_v2` 可改为报告 `independentDebitsBudgeted=true`：P 已包含 `independentEnergyPerNativeTickUpperJoules`，并分别披露 `shieldRechargeEnergyPerNativeTickUpperJoules` 与 `laserRechargeEnergyPerNativeTickUpperJoules` 贡献。不得再把这些含项加到 P；它们是条件数学上界，不是实际已支付量。`executionPremisesProved` 始终 false：此读取不证明执行权限，暂停世界仍明确带 blocker。缺失/未证保持未知，不能当零；该脱离原生引用的观察不进入既有 v1 哈希。生成下界 g 仍来自航线预览 `coreGenerationLowerBoundWatts`（瓦），比较净值前须显式统一单位。P/g 未知或净值非正均不保证进度；即使估算为正，也仅可披露 fresh 守卫下的有限尝试，不保证充能或飞行完成。
 
 <a id="voyager-visibility-and-route-previews"></a>
@@ -346,9 +348,13 @@ Codex、MCP Host 关闭、重启、断连、上下文压缩、回合结束，均
 
 菜单 `gameLoaded=false` 正常，不能等 `gameLoaded=true` 才 prepare。受保护可用不表示原生就绪；prepare 查预加载、菜单、无 loader、精确源和 Journal，不消耗、不加载。只有真实未就绪拒绝才有界等待。接受终态后要求受管、已存、健康 tick 与 Journal。
 
-远端隔离的窄续接仍使用 `recoveryMode=default`，不新增工具或恢复模式，普通 healthy/default 行为不变。Fresh prepare 必须返回 `userConfirmationRequired=true`、精确票据绑定的 LastExit 的真实 `candidateGameTick`、`exactEmbeddedIdentityVerified=true` 及 `confirmationDigest`。执行方须有适用的明确所有者授权，并在 commit 前核本次 fresh 披露；commit 仍使用 `userConfirmedInConversation` 与匹配 digest。同类恢复的既有明确授权可以适用，无需重复相同询问；不能由此推导迁移、另一世界、原主档回滚或扩大范围的许可。
+既有远端隔离续接及其有界 V1–V3 来源开口仍使用 `recoveryMode=default`，普通 healthy/default 行为不变。下述独立命名的远端失败 LastExit 再授权不扩展这些来源代际。Fresh prepare 必须返回 `userConfirmationRequired=true`、精确票据绑定的 LastExit 的真实 `candidateGameTick`、`exactEmbeddedIdentityVerified=true` 及 `confirmationDigest`。执行方须有适用的明确所有者授权，并在 commit 前核本次 fresh 披露；commit 仍使用 `userConfirmedInConversation` 与匹配 digest。同类恢复的既有明确授权可以适用，无需重复相同询问；不能由此推导迁移、另一世界、原主档回滚或扩大范围的许可。
 
-仅此 `default` 窄提案可追加四个可选扁平参数：`recoveryDeadlineUtc`、固定 `recoveryScope=continue_original_finite_task`、`maximumChargeGameTicks`、`maximumChargeWallSeconds`。充能上限须为正且有界，最多18000 tick/300墙钟秒。Prepared 单列 `originalJourneyDeadlineUtc` 与 `effectiveRecoveryDeadlineUtc`，回显 scope/上限，并声明 `nativeChargeFeasibilityRequiresFreshCapture`，不承诺充能进度。所提有效 UTC 窗口不得超过原声明 UTC 跨度；凭据消费前绑定单一不可变提案、证据及适用明确授权下对本次新预览的确认；该授权须涵盖披露的期限与充能尝试。不得靠重键、更换 Host 或重建续期；原有效期、tick 最大值/已花值、返程预留及能量/翘曲器底线不变，普通 healthy/default 行为不变。
+既有 `default` 窄提案可追加四个可选扁平参数：`recoveryDeadlineUtc`、固定 `recoveryScope=continue_original_finite_task`、`maximumChargeGameTicks`、`maximumChargeWallSeconds`。充能上限须为正且有界，最多18000 tick/300墙钟秒。Prepared 单列 `originalJourneyDeadlineUtc` 与 `effectiveRecoveryDeadlineUtc`，回显 scope/上限，并声明 `nativeChargeFeasibilityRequiresFreshCapture`，不承诺充能进度。所提有效 UTC 窗口不得超过原声明 UTC 跨度；凭据消费前绑定单一不可变提案、证据及适用明确授权下对本次新预览的确认；该授权须涵盖披露的期限与充能尝试。不得靠重键、更换 Host 或重建续期；原有效期、tick 最大值/已花值、返程预留及能量/翘曲器底线不变，普通 healthy/default 行为不变。
+
+使用独立 `reauthorize_failed_remote_last_exit` 模式时，须采用本次 fresh 披露的上下文及 `expectedRemoteRecoveryContextFingerprint` 中所有者独立提供的期望承诺。接受令牌前核 `failedRemoteLastExitReauthorizationUsed=true` 及精确匹配的 `remoteRecoveryContextFingerprint`，并依适用明确所有者授权保留 fresh 确认/digest。这是新的明确上下文再授权，不是旧 grant 续期、V4 或旧 V1–V3 证明复用。已知终态失败 action 是控制方核实的事实断言，不是 Native 持久失败证书；未知绝不能如此断言。资格要求 active 未消耗的双凭据、直接两份固定记录、最近落地 tick 加1的精确票据绑定 LastExit，以及原落地/已核销/checkpoint 证据、全文件租约和禁止较新主档回滚检查；不追祖先，不加载成功 checkpoint。复用相同四个扁平窗口参数及固定 scope，两项充能上限不超过直接前次提案及18000 tick/300秒；原 UTC 跨度上限、journey deadline、最大/已耗/返程 tick 与能量/翘曲器底线保持。首帧/bootstrap/strict13 及独立 fresh 返航核心门不变。足部诊断不授重试许可，Pause 不证明物理空闲或恢复；核销原 action 而不重放。
+
+按[协议固定八字段顺序](protocol.zh-CN.md#受保护恢复与导入)从独立保护基线计算该承诺；复制本次 Plugin 预览回显不是独立证据。
 
 单次旧来源兼容开口可同时提供 `priorConsumedResumeToken`、`priorSourceFingerprint` 及可空 `priorActionKnownTerminalFailed`，或三者全不提供；仅适用于此 `default` 窄分支与当前隔离。`true` 表示控制方已核精确原公开恢复 action 为终态失败且非未知；消费记录不是 Native 持久动作终态，未知绝不能作此断言。两份固定消费/授权副本须在只读租约下相符、每份不超过64KiB，具完整原版本授权、匹配的 journey/checkpoint/Journal/当前主档来源与同一 source tick，并保留全部禁止较新主档回滚检查。旧不可变提案与 prior 指纹只用于打开旧 v1 证据指纹，不执行旧提案/action，也不复用其预算。Fresh Prepared 须回显 `priorFailedResumeProvenanceUsed=true` 和 `priorActionTerminalFailureAttested=true`，原确认/digest 门保持；回显缺失或被忽略则阻止兼容。新提案须有当前适用授权；新授权记录标记本次 hop；原三参数路径仍拒绝已标记前驱。原最大/已花/返程 tick 与能量/翘曲器储备不重置，直接路径及普通 v1 路径不变。token/指纹实际值与记录 JSON 留在保护区。
 

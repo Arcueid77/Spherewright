@@ -76,12 +76,14 @@ internal sealed partial class GameSessionTracker : IDisposable
     internal bool TryOpenRemoteResumeEvidence(OwnedWorldResumeTicket ticket, OwnedSaveRecoveryLease source,
         OwnedSaveRecoveryLease primary, out VoyagerRemoteResumeEvidence? evidence, out string rejection,
         VoyagerRecoveryWindowProposal? proposal = null, PriorFailedResumeProof? priorFailedProof = null,
-        string priorSourceFingerprint = "", bool priorActionKnownTerminalFailed = false, string priorLegacySourceFingerprint = "", string priorIntermediateSourceFingerprint = "")
+        string priorSourceFingerprint = "", bool priorActionKnownTerminalFailed = false, string priorLegacySourceFingerprint = "", string priorIntermediateSourceFingerprint = "",
+        bool failedRemoteReauthorization = false, string expectedRemoteContext = "", string validatedJournalHash = "")
     {
         evidence = null; rejection = "test_remote_store_unavailable";
         return RemoteResumeCheckpoints is not null
             && RemoteResumeCheckpoints.TryOpenRemoteResumeEvidence(ticket, source, primary, out evidence, out rejection, proposal,
-                priorFailedProof, priorSourceFingerprint, priorActionKnownTerminalFailed, priorLegacySourceFingerprint, priorIntermediateSourceFingerprint);
+                priorFailedProof, priorSourceFingerprint, priorActionKnownTerminalFailed, priorLegacySourceFingerprint, priorIntermediateSourceFingerprint,
+                failedRemoteReauthorization, expectedRemoteContext, validatedJournalHash);
     }
     internal SessionState CaptureOnMainThread() => Snapshot;
     internal void ExpectNextSessionToBeResumed(OwnedWorldResumeTicket ticket,
