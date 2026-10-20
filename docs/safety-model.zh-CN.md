@@ -64,6 +64,8 @@ Voyager 本地 Move/Harvest 复用普通 RTS 并保留无水快路；有限能�
 
 条件 P 可保留旧零独立扣费证明，或仅为已证明有限的护盾/激光补能上界编列预算。`independentDebitsExcluded` 保持旧含义；`independentDebitsBudgeted` 标识已含的条件上界，不代表实际已支付或执行许可。有界 v2 P 在移动消耗系数结算后只加一次 B，B 不乘 `energyConsumptionCoef`；可空贡献在未证前仍为未知。上界通过已加载物品原型超集、两张 inc 表0..10及回退值覆盖当前和可能的 Native 换燃料，并核有限值/转换/溢出及已预算包络内的生成/补能速度稳定性。空弹药与地面/太空零配置机队槽位仍为必要条件；默认值、满缓冲或和平模式不免除费用，不改玩家设置。`executionPremisesProved` 仍为 false，P 不进入既有 v1 哈希。
 
+核心单项不足的落地补能等待仍属于同一原飞行，不是已准入 idle owner 或新授权。最低 600 tick 稳定不替代原 13P 成功门；7200 tick 接触上限、journey/返程时钟与 30 秒租约继续计时。每个真实 501 须证明原闭合场景/地面/成本/工作包络、所有独立完整预算，以及足以覆盖当前 tick 和失败余部的 2P 储备。自然 GenerateEnergy 可能没有进展；失去证明或时间不足即走原停止/恢复保护，部分补能或保留的首次诊断均不证明成功。独立 fresh 返航核心准入保持不变。
+
 成功远端落地后，同一原 journey 继续守护闲置能耗与原返程时钟，直至已预算的本地动作、受控施工或真实返航接管。失去闲置 Walk、成本或原返程时钟证据时，走精确 owned 绑定的 Pause/quarantine 分支；已成功的飞行或 Move 仍保留成功，后续闲置保护不改写其原结果。 Host 卸载或默认 Save 重载若丢失内存中的 landed-controller 绑定，不得静默重建资格；除非独立确认的精确票据绑定的 LastExit 续接证明新的独立 idle owner，否则只对同一 owned 世界 Pause/quarantine 并拒绝本地/结构化施工。保留 checkpoint 与确认门；普通路径支持同一 Host 内出航、本地作业和正常返航；物流保存恢复续运安排在回母星且 journey 闭合后，远端在途冷恢复尚未验证。
 
 守卫失败、停止/尾返上限到期或调用者/Host 观察丢失时，有限能耗的失败保护仅在原 owned 绑定仍精确匹配时调用正常 GameMain.Pause。当前 LogicFrame 仍可能跑完 player 与无人机的一整个 tick，因此必须支付并保留该整 tick 的储备；只有后续 Native 游戏能耗/派发 tick 冻结。Pause 不证明物理空闲或尾返成功。保留未核销的 outcome_unknown、quarantine 及精确原 action/build/checkpoint，不自动恢复、Load 或重放；绝不暂停替换后的另一世界。Host 真正卸载时先暂停精确 owned 的受保护世界，再拆除钩子；普通 MCP 断线不卸载 DSP 内常驻 Plugin，租约检查继续。暂停不续原墙钟期限。新源码仍须完整 Plugin/回归、准确 SHA CI、Lab 锁/采用、冷部署及实机检查后才计运行信用；不新增公开工具或协议版本。

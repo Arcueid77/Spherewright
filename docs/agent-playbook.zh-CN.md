@@ -319,7 +319,9 @@ prepare/commit 前要求 fresh 前进的原生 tick，并以短于 30 秒控制�
 有限停止使用 `spherewright_prepare_cancel_voyager_flight` 绑定原飞行 `actionId` 与出发地 `planetId`，`spherewright_commit_cancel_voyager_flight` 在同一 writer 锁存 `stopRequested`。持续查询原航程，核原生退出曲速、刹停及真实终态；停止回执不证明恢复完成。未知结果保留原 action/key；checkpoint reload 仍为独立受保护操作，不得回滚较新主档。安全可控的原生失败与精确符合条件的恢复仍是独立实机验收门。
 
 <a id="voyager-local-work-and-structured-construction"></a>
-去程报告 `flight_succeeded` 前，须通过与 `remote_landed` 闲置交接共用的完整严格谓词，仅有落地计数不足。任一条件未证时保留原 action 的失败/unknown 路径，并在 `voyagerFlightReadback.failureReason` 保留精确 predicate code，不以笼统到达结果覆盖细因。该要求约束新结果，不追改已记录的历史成功。`GameMain.Pause` 既不证明物理空闲或恢复完成，也不授予重载权限；checkpoint 恢复仍须独立受保护的 prepare/commit 及其适用确认门。
+去程报告 `flight_succeeded` 前，须通过与 `remote_landed` 闲置交接共用的完整严格谓词，仅有落地计数不足。除下述有界的核心单项落地补能等待外，任一条件未证时保留原 action 的失败/unknown 路径，并在 `voyagerFlightReadback.failureReason` 保留精确 predicate code，不以笼统到达结果覆盖细因。该要求约束新结果，不追改已记录的历史成功。`GameMain.Pause` 既不证明物理空闲或恢复完成，也不授予重载权限；checkpoint 恢复仍须独立受保护的 prepare/commit 及其适用确认门。
+
+飞行在核心单项不足的有界落地补能等待中，继续在 30 秒租约内查询同一原 action。600 tick 最低稳定不是交接成功，原 7200 tick 接触/journey/返程时间不续期。Plugin 须在每个真实 501 以足额 2P 储备 fresh 证明全部独立完整预算及场景/地面/成本/工作包络；只允许 Native GenerateEnergy 自然充能，不保证净增为正。当前完整原 13P 闲置准入通过前，不进入本地工作或声称 checkpoint 成功。保留首次 `firstLandingHandoff`，即使其为 `proved=false` 也不确定最终结果；须以原 action 当前/终态结果为准。等待状态不授施工准入。任一守卫失败或原时间不足均走该原 action 停止/恢复路径，不换新键、不重放。
 
 ## Voyager 本地作业与结构化施工
 

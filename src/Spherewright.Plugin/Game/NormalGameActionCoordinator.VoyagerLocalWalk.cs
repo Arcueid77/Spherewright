@@ -447,6 +447,7 @@ internal sealed partial class NormalGameActionCoordinator
 
     public void UpdateVoyagerLocalPrePlayerTickOnMainThread()
     {
+        GuardVoyagerLandingChargeOnMainThread();
         GuardVoyagerRemoteIdleOnMainThread();
         foreach (var action in _actions.ActiveValues.Where(a => !a.Terminal && IsVoyagerLocalOrder(a)).ToArray())
         {
@@ -571,6 +572,7 @@ internal sealed partial class NormalGameActionCoordinator
     public void StopVoyagerLocalForHostShutdownOnMainThread()
     {
         VoyagerLocalPrePlayerTickAvailable = false;
+        GuardVoyagerLandingChargeOnMainThread(stoppingHost: true);
         GuardVoyagerRemoteIdleOnMainThread(stoppingHost: true);
         foreach (var action in _actions.ActiveValues.Where(a => !a.Terminal && IsVoyagerLocalOrder(a)).ToArray())
             FinishVoyagerLocalOrderUnknown(action, "The original local action lost its host/pre-player hook. Preserve its exact action; physical Native tail is unproved.");

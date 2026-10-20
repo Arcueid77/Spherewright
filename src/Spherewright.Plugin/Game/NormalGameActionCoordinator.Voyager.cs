@@ -148,6 +148,11 @@ internal sealed partial class NormalGameActionCoordinator
             RequestVoyagerStop(action, "The finite flight deadline or original caller's 30-second observation lease expired.");
         if (action.VoyagerStopReason is not null)
         {
+            if (action.VoyagerLandingCharge is not null)
+            {
+                FailVoyagerLandingCharge(action, action.VoyagerStopReason);
+                return;
+            }
             UpdateVoyagerStopOnMainThread(action, player);
             CaptureVoyagerReadback(action);
             return;
@@ -461,6 +466,13 @@ internal sealed partial class NormalGameActionCoordinator
                 continue;
             }
             var clock = EvaluateVoyagerClock(action);
+            if (action.VoyagerLandingCharge is not null && (!VoyagerLandingChargeGuardFresh()
+                || clock.ShouldRequestStop || action.VoyagerStopReason is not null))
+            {
+                FailVoyagerLandingCharge(action, action.VoyagerStopReason ?? clock.StopReasonCode
+                    ?? "The original landing recharge lost its fresh pre-player observer.");
+                continue;
+            }
             if (clock.ShouldRequestStop)
             {
                 RequestVoyagerStop(action, clock.StopReasonCode ?? "The original bounded control lease ended.");
@@ -522,6 +534,11 @@ internal sealed partial class NormalGameActionCoordinator
 
     private void MarkVoyagerOutcomeUnknown(ActionRecord action, string message)
     {
+        if (action.VoyagerLandingCharge is not null)
+        {
+            message += FreezeNativeLocalFailureEnergy(VoyagerBindingMatches(action.Plan));
+            action.VoyagerLandingCharge = null;
+        }
         // A rejected return launch may leave durable phase=return before any
         // Native controller took over. The remote idle owner cannot guard that
         // anomalous phase; freeze before further checkpoint/accounting I/O.
@@ -555,6 +572,11 @@ internal sealed partial class NormalGameActionCoordinator
         VoyagerNativeTickAvailable = false;
         foreach (var action in _actions.ActiveValues.Where(a => a.Plan.VoyagerBudget is not null).ToArray())
         {
+            if (action.VoyagerLandingCharge is not null)
+            {
+                FailVoyagerLandingCharge(action, "The Host stopped before the original landing recharge could hand off to its strict idle guard.");
+                continue;
+            }
             if (VoyagerBindingMatches(action.Plan))
             {
                 var player = action.Plan.VoyagerBinding!.Player;
@@ -821,6 +843,11 @@ internal sealed partial class NormalGameActionCoordinator
         if (!player.isAlive || player.movementState != EMovementState.Walk || player.speed > 0.1f
             || player.planetId != action.VoyagerSelectedDestinationPlanetId || player.warpCommand || player.warpState != 0f)
         {
+            if (action.VoyagerLandingCharge is not null && !action.VoyagerLandingPendingPersistence)
+            {
+                FailVoyagerLandingCharge(action, "The original landing recharge no longer proves its stable living target landing. [remote_idle_landing_stability_unproved]");
+                return;
+            }
             if (action.VoyagerLandingPendingPersistence)
             {
                 var pause = FreezeNativeLocalFailureEnergy(VoyagerBindingMatches(action.Plan));
@@ -854,7 +881,7 @@ internal sealed partial class NormalGameActionCoordinator
                 journey.SpentGameTicks, action.StartedAtGameTick, GameMain.gameTick, action.VoyagerLegAccounted);
             var admission = journey is null || !spent.HasValue
                 ? VoyagerRemoteIdleAdmissionPolicy.Blocked("remote_idle_landing_accounting_unproved")
-                : CaptureVoyagerRemoteIdleAdmission(idleOwner!, journey, scene: null, spent.Value,
+                : CaptureVoyagerRemoteIdleAdmission(idleOwner!, journey, scene: action.VoyagerLandingCharge?.Scene, spent.Value,
                     action.VoyagerLandedAtGameTick ?? GameMain.gameTick, out landedIdleScene,
                     prospectiveRemotePlanetId: action.VoyagerSelectedDestinationPlanetId,
                     captureFacts: facts => firstFacts = facts, captureGround: ground => firstGround = ground,
@@ -884,8 +911,18 @@ internal sealed partial class NormalGameActionCoordinator
                     MarkVoyagerOutcomeUnknown(action, reason + FreezeNativeLocalFailureEnergy(VoyagerBindingMatches(action.Plan)));
                     CaptureVoyagerReadback(action);
                 }
-                else RequestVoyagerStop(action, reason);
+                else if (!TryWaitForVoyagerLandingCore(action, admission, firstFacts, landedIdleScene))
+                    RequestVoyagerStop(action, reason);
                 return;
+            }
+            if (action.VoyagerLandingCharge is not null)
+            {
+                var blocker = VoyagerLandingChargeBlocker(action, firstFacts, continuing: true, postPlayer: true);
+                if (blocker is not null)
+                {
+                    FailVoyagerLandingCharge(action, "The original landing recharge could not seal its strict handoff. [" + blocker + "]");
+                    return;
+                }
             }
         }
         action.VoyagerLandingPendingPersistence = true;
@@ -915,6 +952,7 @@ internal sealed partial class NormalGameActionCoordinator
             _voyagerRemoteIdleScene = landedIdleScene;
         }
         else { _voyagerRemoteIdleOwner = null; _voyagerRemoteIdleScene = null; }
+        action.VoyagerLandingCharge = null;
         action.VoyagerLandingPendingPersistence = false;
         action.State = NormalActionStates.Completed;
         action.Terminal = true;
@@ -1023,6 +1061,8 @@ internal sealed partial class NormalGameActionCoordinator
         public VoyagerCoverSaveProof? VoyagerCoverSaveProof { get; set; }
         public VoyagerFlightReadback? VoyagerFlightReadback { get; set; }
         public VoyagerLandingHandoffReadback? VoyagerLandingHandoff { get; set; }
+        public VoyagerLandingChargeState? VoyagerLandingCharge { get; set; }
+        public bool VoyagerLandingChargeStarted { get; set; }
         public VoyagerJourneyRecord? VoyagerJourney { get; set; }
         public VoyagerWarpControlState VoyagerWarpControl { get; set; } = VoyagerWarpControlState.Ready;
         public string VoyagerPhase { get; set; } = "prepared";
