@@ -259,6 +259,7 @@ internal sealed partial class GameStateReader
                 BodyWorldRotation = TerrainRotation(_body.transform.rotation), BodyWorldLossyScale = TerrainVector(_body.transform.lossyScale),
                 SurfaceColliders = Surface.Select(ObserveTerrainCollider).ToList(),
             };
+            CaptureNativeTerrainRootLocalPose(_root.transform, t);
             return new()
             {
                 SimulatorOrdinal = Ordinal, State = "observed", SameLocalStar = ReferenceEquals(Planet.star, GameMain.localStar),

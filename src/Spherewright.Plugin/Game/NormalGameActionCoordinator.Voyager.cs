@@ -845,6 +845,10 @@ internal sealed partial class NormalGameActionCoordinator
             action.SessionId, action.Plan.VoyagerJourneyId!, action.ActionId, action.ActionId) : null;
         if (!action.Plan.VoyagerReturnLeg)
         {
+            var firstTerrain = action.VoyagerLandingHandoff is null
+                ? GameStateReader.CaptureNativeTerrain(player, "voyager_landing_handoff") : null;
+            VoyagerRemoteIdleAdmissionFacts? firstFacts = null;
+            Spherewright.Contracts.Players.NativePlayerGroundContactSnapshot? firstGround = null;
             var journey = action.VoyagerJourney ?? _flightCheckpoints.VoyagerJourney;
             var spent = journey is null ? null : VoyagerRemoteIdleAdmissionPolicy.ProjectSpentGameTicks(
                 journey.SpentGameTicks, action.StartedAtGameTick, GameMain.gameTick, action.VoyagerLegAccounted);
@@ -852,7 +856,18 @@ internal sealed partial class NormalGameActionCoordinator
                 ? VoyagerRemoteIdleAdmissionPolicy.Blocked("remote_idle_landing_accounting_unproved")
                 : CaptureVoyagerRemoteIdleAdmission(idleOwner!, journey, scene: null, spent.Value,
                     action.VoyagerLandedAtGameTick ?? GameMain.gameTick, out landedIdleScene,
-                    prospectiveRemotePlanetId: action.VoyagerSelectedDestinationPlanetId);
+                    prospectiveRemotePlanetId: action.VoyagerSelectedDestinationPlanetId,
+                    captureFacts: facts => firstFacts = facts, captureGround: ground => firstGround = ground,
+                    groundStage: "voyager_landing_handoff");
+            action.VoyagerLandingHandoff ??= new VoyagerLandingHandoffReadback
+            {
+                CapturedAtGameTick = GameMain.gameTick, Proved = admission.Proved,
+                BlockerCode = admission.BlockerCode, CaptureStage = admission.CaptureStage,
+                CaptureExceptionType = admission.CaptureExceptionType, Terrain = firstTerrain, GroundContact = firstGround?.Copy(),
+                CoreEnergyJoules = VoyagerFiniteObservation(player.mecha.coreEnergy),
+                LoadedEnergyJoules = VoyagerFiniteObservation(CalculateAvailableFlightEnergy(player.mecha)),
+                PerNativeTickEnergyJoules = firstFacts?.MovementReserve?.PerNativeTickEnergyJoules,
+            };
             if (!admission.Proved)
             {
                 // Do not mark the checkpoint successful and then discover that
@@ -988,6 +1003,7 @@ internal sealed partial class NormalGameActionCoordinator
             BindingVerified = true, RemainingDistanceMeters = action.RemainingDistance, FailureReason = action.VoyagerStopReason,
             ControlLeaseExpiresAtUtc = action.VoyagerControlLeaseExpiresAtUtc,
             StopDeadlineGameTick = action.VoyagerStopDeadlineGameTick, StopDeadlineUtc = action.VoyagerStopDeadlineUtc,
+            FirstLandingHandoff = action.VoyagerLandingHandoff?.Copy(),
         };
     }
 
@@ -1006,6 +1022,7 @@ internal sealed partial class NormalGameActionCoordinator
     {
         public VoyagerCoverSaveProof? VoyagerCoverSaveProof { get; set; }
         public VoyagerFlightReadback? VoyagerFlightReadback { get; set; }
+        public VoyagerLandingHandoffReadback? VoyagerLandingHandoff { get; set; }
         public VoyagerJourneyRecord? VoyagerJourney { get; set; }
         public VoyagerWarpControlState VoyagerWarpControl { get; set; } = VoyagerWarpControlState.Ready;
         public string VoyagerPhase { get; set; } = "prepared";

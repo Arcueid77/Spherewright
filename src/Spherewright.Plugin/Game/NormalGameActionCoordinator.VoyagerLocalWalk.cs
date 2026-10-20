@@ -49,37 +49,38 @@ internal sealed partial class NormalGameActionCoordinator
     {
         observedScene = scene;
         var stage = "binding";
+        VoyagerRemoteIdleAdmissionDecision Blocked(string code) => VoyagerRemoteIdleAdmissionPolicy.Blocked(code, stage);
         try
         {
             if (!VoyagerRemoteIdleBindingMatches(owner, journey, prospectiveRemotePlanetId))
-                return VoyagerRemoteIdleAdmissionPolicy.Blocked("remote_idle_binding_unproved");
+                return Blocked("remote_idle_binding_unproved");
             var player = owner.Binding.Player;
             stage = "current_order";
-            if (player.currentOrder is not null) return VoyagerRemoteIdleAdmissionPolicy.Blocked("remote_idle_current_order_active");
+            if (player.currentOrder is not null) return Blocked("remote_idle_current_order_active");
             stage = "scene_capture";
             observedScene ??= CaptureNativeLocalWalkScene();
-            if (observedScene is null) return VoyagerRemoteIdleAdmissionPolicy.Blocked("remote_idle_scene_unproved");
+            if (observedScene is null) return Blocked("remote_idle_scene_unproved");
             stage = "native_mode";
             var nativeBlocker = NativeWalkModeBlocker(player, stationary: false, observedScene,
                 finiteWaterCostWithNativePause: true, allowDrift: true, allowBudgetedRecharge: true, captureGround, groundStage);
             var groundMiss = collectAfterGroundMiss && nativeBlocker == "remote_idle_ground_contact_unproved";
-            if (nativeBlocker is not null && !groundMiss) return VoyagerRemoteIdleAdmissionPolicy.Blocked(nativeBlocker);
+            if (nativeBlocker is not null && !groundMiss) return Blocked(nativeBlocker);
             stage = "order_queue";
-            if (player.orders.orderCount != 0) return VoyagerRemoteIdleAdmissionPolicy.Blocked("remote_idle_order_queue_active");
+            if (player.orders.orderCount != 0) return Blocked("remote_idle_order_queue_active");
             stage = "build_ui";
-            if (!BuildUiIsIdle(player)) return VoyagerRemoteIdleAdmissionPolicy.Blocked("remote_idle_build_ui_active");
+            if (!BuildUiIsIdle(player)) return Blocked("remote_idle_build_ui_active");
             stage = "mecha_work";
-            if (!VoyagerMechaWorkIdle(player)) return VoyagerRemoteIdleAdmissionPolicy.Blocked("remote_idle_mecha_work_active");
+            if (!VoyagerMechaWorkIdle(player)) return Blocked("remote_idle_mecha_work_active");
             stage = "construction_drones";
             if (!TryObserveOwnedConstructionDrones(player.factory, player.mecha.constructionModule, out var dronesIdle, out _))
-                return VoyagerRemoteIdleAdmissionPolicy.Blocked("remote_idle_construction_drones_unobserved");
-            if (!dronesIdle) return VoyagerRemoteIdleAdmissionPolicy.Blocked("remote_idle_construction_drones_active");
+                return Blocked("remote_idle_construction_drones_unobserved");
+            if (!dronesIdle) return Blocked("remote_idle_construction_drones_active");
             stage = "movement_cost";
             var reserve = EvaluateNativeLocalMovementCost(player, modeTransitionsExcluded: true);
-            if (!reserve.Proved) return VoyagerRemoteIdleAdmissionPolicy.Blocked(reserve.BlockerCode ?? "remote_idle_movement_cost_unproved");
+            if (!reserve.Proved) return Blocked(reserve.BlockerCode ?? "remote_idle_movement_cost_unproved");
             stage = "walk_at_rest";
-            if (player.movementState != EMovementState.Walk) return VoyagerRemoteIdleAdmissionPolicy.Blocked("remote_idle_actual_walk_required");
-            if (!(player.speed <= .1f)) return VoyagerRemoteIdleAdmissionPolicy.Blocked("remote_idle_actual_speed_not_at_rest");
+            if (player.movementState != EMovementState.Walk) return Blocked("remote_idle_actual_walk_required");
+            if (!(player.speed <= .1f)) return Blocked("remote_idle_actual_speed_not_at_rest");
             stage = "energy_and_journey";
             var now = DateTimeOffset.UtcNow;
             var facts = new VoyagerRemoteIdleAdmissionFacts
@@ -98,8 +99,9 @@ internal sealed partial class NormalGameActionCoordinator
                 },
             };
             captureFacts?.Invoke(facts);
-            if (groundMiss) return VoyagerRemoteIdleAdmissionPolicy.Blocked("remote_idle_ground_contact_unproved");
-            return VoyagerRemoteIdleAdmissionPolicy.Evaluate(facts);
+            if (groundMiss) return Blocked("remote_idle_ground_contact_unproved");
+            var decision = VoyagerRemoteIdleAdmissionPolicy.Evaluate(facts);
+            return decision.Proved ? decision : Blocked(decision.BlockerCode ?? "remote_idle_journey_unproved");
         }
         catch (Exception exception)
         {
@@ -414,7 +416,8 @@ internal sealed partial class NormalGameActionCoordinator
         if (player.warpCommand || player.warpState != 0f) return "remote_idle_warp_exit_unproved";
         if (player.navigation.navigating || player.navigation.hasTask) return "remote_idle_navigation_active";
         if (c.actionSail.fastTravelling) return "remote_idle_fast_travel_active";
-        if (!NativeLocalWalkSceneProved(player, scene, finiteWaterCostWithNativePause)) return "remote_idle_scene_unproved";
+        var sceneBlocker = NativeLocalWalkSceneBlocker(player, scene, finiteWaterCostWithNativePause);
+        if (sceneBlocker is not null) return sceneBlocker;
         var independent = CaptureNativeMechaBackgroundCosts(player);
         if (!NativeMechaBackgroundCostPolicy.IndependentCombatCoreDebitsExcluded(independent))
         {

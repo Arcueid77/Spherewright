@@ -1,3 +1,5 @@
+using Spherewright.Contracts.Players;
+
 namespace Spherewright.Contracts.Actions;
 
 public sealed class PrepareVoyagerFlightRequest
@@ -52,4 +54,30 @@ public sealed class VoyagerFlightReadback
     public System.DateTimeOffset? StopDeadlineUtc { get; set; }
     public double? RemainingDistanceMeters { get; set; }
     public string? FailureReason { get; set; }
+    public VoyagerLandingHandoffReadback? FirstLandingHandoff { get; set; }
+}
+
+// One detached first-attempt observation, never a later-current reconstruction.
+// Terrain/ground diagnostics do not certify physics or grant execution.
+public sealed class VoyagerLandingHandoffReadback
+{
+    public long CapturedAtGameTick { get; set; }
+    public bool Proved { get; set; }
+    public string? BlockerCode { get; set; }
+    public string? CaptureStage { get; set; }
+    public string? CaptureExceptionType { get; set; }
+    public NativePlanetTerrainPhysicsSnapshot? Terrain { get; set; }
+    public NativePlayerGroundContactSnapshot? GroundContact { get; set; }
+    public double? CoreEnergyJoules { get; set; }
+    public double? LoadedEnergyJoules { get; set; }
+    public double? PerNativeTickEnergyJoules { get; set; }
+
+    public VoyagerLandingHandoffReadback Copy() => new()
+    {
+        CapturedAtGameTick = CapturedAtGameTick, Proved = Proved, BlockerCode = BlockerCode,
+        CaptureStage = CaptureStage, CaptureExceptionType = CaptureExceptionType,
+        Terrain = Terrain?.Copy(), GroundContact = GroundContact?.Copy(),
+        CoreEnergyJoules = CoreEnergyJoules, LoadedEnergyJoules = LoadedEnergyJoules,
+        PerNativeTickEnergyJoules = PerNativeTickEnergyJoules,
+    };
 }

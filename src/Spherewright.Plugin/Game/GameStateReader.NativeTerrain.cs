@@ -30,6 +30,7 @@ internal sealed partial class GameStateReader
             result.RootWorldPosition = TerrainVector(planet.gameObject.transform.position);
             result.RootWorldRotation = TerrainRotation(planet.gameObject.transform.rotation);
             result.RootWorldLossyScale = TerrainVector(planet.gameObject.transform.lossyScale);
+            CaptureNativeTerrainRootLocalPose(planet.gameObject.transform, result);
             result.BodyWorldPosition = TerrainVector(planet.bodyObject.transform.position);
             result.BodyWorldRotation = TerrainRotation(planet.bodyObject.transform.rotation);
             result.BodyWorldLossyScale = TerrainVector(planet.bodyObject.transform.lossyScale);
@@ -55,6 +56,28 @@ internal sealed partial class GameStateReader
         }
         catch (Exception exception) { result.ReasonCode = "native_terrain_capture_unavailable:" + exception.GetType().Name; }
         return result;
+    }
+
+    // Read only: no SyncTransforms, Native update, normalization or scene write.
+    internal static void CaptureNativeTerrainRootLocalPose(Transform root, NativePlanetTerrainPhysicsSnapshot result)
+    {
+        result.RootWorldPosition = TerrainVector(root.position);
+        result.RootWorldRotation = TerrainRotation(root.rotation);
+        result.RootWorldLossyScale = TerrainVector(root.lossyScale);
+        result.RootHasParent = root.parent != null;
+        result.RootLocalPosition = TerrainVector(root.localPosition);
+        result.RootLocalRotation = TerrainRotation(root.localRotation);
+        result.RootLocalScale = TerrainVector(root.localScale);
+        var matrix = root.localToWorldMatrix;
+        var entries = new List<float>(16);
+        for (var row = 0; row < 4; row++)
+            for (var column = 0; column < 4; column++)
+            {
+                var value = matrix[row, column];
+                if (float.IsNaN(value) || float.IsInfinity(value)) return;
+                entries.Add(value);
+            }
+        result.RootLocalToWorldMatrix = entries;
     }
 
     internal static string? CaptureOwnedTerrainFootOverlap(Player player, NativePlanetTerrainPhysicsSnapshot terrain,

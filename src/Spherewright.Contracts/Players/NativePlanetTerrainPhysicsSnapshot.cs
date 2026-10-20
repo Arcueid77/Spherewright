@@ -18,6 +18,12 @@ public sealed class NativePlanetTerrainPhysicsSnapshot
     public Vector3Snapshot? RootWorldPosition { get; set; }
     public QuaternionSnapshot? RootWorldRotation { get; set; }
     public Vector3Snapshot? RootWorldLossyScale { get; set; }
+    public bool? RootHasParent { get; set; }
+    public Vector3Snapshot? RootLocalPosition { get; set; }
+    public QuaternionSnapshot? RootLocalRotation { get; set; }
+    public Vector3Snapshot? RootLocalScale { get; set; }
+    // Sixteen copied finite-or-unknown observations in row-major order.
+    public List<float>? RootLocalToWorldMatrix { get; set; }
     public Vector3Snapshot? BodyWorldPosition { get; set; }
     public QuaternionSnapshot? BodyWorldRotation { get; set; }
     public Vector3Snapshot? BodyWorldLossyScale { get; set; }
@@ -48,6 +54,8 @@ public sealed class NativePlanetTerrainPhysicsSnapshot
         State = State, ReasonCode = ReasonCode, CapturedAtGameTick = CapturedAtGameTick, CaptureStage = CaptureStage,
         Complete = Complete, Truncated = Truncated, GuideComplete = GuideComplete, RootLayer = RootLayer, BodyLayer = BodyLayer,
         RootWorldPosition = Vector(RootWorldPosition), RootWorldRotation = Rotation(RootWorldRotation), RootWorldLossyScale = Vector(RootWorldLossyScale),
+        RootHasParent = RootHasParent, RootLocalPosition = Vector(RootLocalPosition), RootLocalRotation = Rotation(RootLocalRotation),
+        RootLocalScale = Vector(RootLocalScale), RootLocalToWorldMatrix = RootLocalToWorldMatrix?.ToList(),
         BodyWorldPosition = Vector(BodyWorldPosition), BodyWorldRotation = Rotation(BodyWorldRotation), BodyWorldLossyScale = Vector(BodyWorldLossyScale),
         SphereColliderEnabled = SphereColliderEnabled, SphereColliderLayer = SphereColliderLayer,
         OceanColliderEnabled = OceanColliderEnabled, OceanColliderLayer = OceanColliderLayer,
