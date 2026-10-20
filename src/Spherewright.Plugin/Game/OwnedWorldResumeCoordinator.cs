@@ -128,6 +128,7 @@ internal sealed class OwnedWorldResumeCoordinator
             NativeChargeFeasibilityRequiresFreshCapture = payload.RemoteEvidence?.RecoveryProposal is not null,
             PriorFailedResumeProvenanceUsed = payload.RemoteEvidence?.PriorConsumedResumeTokenHash is not null,
             PriorFailedResumeV2ProvenanceUsed = payload.RemoteEvidence?.PriorV2ProvenanceUsed == true,
+            PriorFailedResumeV3ProvenanceUsed = payload.RemoteEvidence?.PriorV3ProvenanceUsed == true,
             PriorActionTerminalFailureAttested = payload.RemoteEvidence?.PriorConsumedResumeTokenHash is not null
                 && payload.Request.PriorActionKnownTerminalFailed == true,
             ExactEmbeddedIdentityVerified = payload.VerifiedRecovery || payload.RequiresConfirmation,
@@ -490,13 +491,14 @@ internal sealed class OwnedWorldResumeCoordinator
                     if (!_tickets.TryCaptureRemoteCredential(ticket.ResumeToken, out var credentialFingerprint, out rejection)) return false;
                     if (hasPriorFailedProof && !_tickets.TryOpenPriorFailedResumeProof(request.PriorConsumedResumeToken,
                         ticket.QuarantineActionId, out priorFailedProof, out rejection,
-                        requireV2Predecessor: !string.IsNullOrEmpty(request.PriorLegacySourceFingerprint))) return false;
+                        requireV2Predecessor: !string.IsNullOrEmpty(request.PriorLegacySourceFingerprint),
+                        requireV3Predecessor: !string.IsNullOrEmpty(request.PriorIntermediateSourceFingerprint))) return false;
                     var proposal = request.RecoveryDeadlineUtc is { } proposedDeadline
                         ? new VoyagerRecoveryWindowProposal(proposedDeadline, request.RecoveryScope,
                             request.MaximumChargeGameTicks, request.MaximumChargeWallSeconds) : null;
                     if (!_sessions.TryOpenRemoteResumeEvidence(ticket, lease, primaryLease, out remoteEvidence, out rejection, proposal,
                         priorFailedProof, request.PriorSourceFingerprint, request.PriorActionKnownTerminalFailed == true,
-                        request.PriorLegacySourceFingerprint))
+                        request.PriorLegacySourceFingerprint, request.PriorIntermediateSourceFingerprint))
                         return false;
                     priorFailedProof = null; // The fresh evidence now owns both prior consumption leases.
                     payload = new OwnedWorldResumePlanPayload(ticket, source, request, lease, provenance, _sessions.Revision,
@@ -741,6 +743,7 @@ internal sealed class OwnedWorldResumeCoordinator
                 MaximumChargeGameTicks = request.MaximumChargeGameTicks, MaximumChargeWallSeconds = request.MaximumChargeWallSeconds,
                 PriorConsumedResumeToken = request.PriorConsumedResumeToken, PriorSourceFingerprint = request.PriorSourceFingerprint,
                 PriorLegacySourceFingerprint = request.PriorLegacySourceFingerprint,
+                PriorIntermediateSourceFingerprint = request.PriorIntermediateSourceFingerprint,
                 PriorActionKnownTerminalFailed = request.PriorActionKnownTerminalFailed,
             };
             MinimumGameTick = lease?.Prefix.GameTick ?? ticket.MinimumGameTick;
@@ -779,6 +782,9 @@ internal sealed class OwnedWorldResumeCoordinator
             if (!string.IsNullOrEmpty(Request.PriorLegacySourceFingerprint))
                 Fingerprint = CanonicalStateHash.Combine("resume-owned-world-prior-failed-v2", Fingerprint,
                     Request.PriorLegacySourceFingerprint);
+            if (!string.IsNullOrEmpty(Request.PriorIntermediateSourceFingerprint))
+                Fingerprint = CanonicalStateHash.Combine("resume-owned-world-prior-failed-v3", Fingerprint,
+                    Request.PriorIntermediateSourceFingerprint);
         }
 
         public OwnedWorldResumeTicket Ticket { get; }

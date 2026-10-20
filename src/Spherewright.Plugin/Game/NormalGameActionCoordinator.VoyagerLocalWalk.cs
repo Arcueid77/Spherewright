@@ -177,6 +177,8 @@ internal sealed partial class NormalGameActionCoordinator
 
     private string? CheckVerifiedVoyagerRemoteResumeOnMainThread(VoyagerRemoteResumeAdoption adoption, bool admit)
     {
+        if (adoption.FirstFrame.Failure is not null || _sessions.ResumeAdoptionError is not null)
+            return "remote_resume_failed_adoption_is_terminal";
         if (admit && (!VoyagerLocalPrePlayerTickAvailable || DateTimeOffset.UtcNow < VoyagerLocalPrePlayerObservedAtUtc
             || DateTimeOffset.UtcNow - VoyagerLocalPrePlayerObservedAtUtc > TimeSpan.FromSeconds(2)))
             return "remote_resume_native_pre_player_guard_unproved";
@@ -201,35 +203,15 @@ internal sealed partial class NormalGameActionCoordinator
         var loadBoundary = !admit && !sameOwner && _sessions.ExactRemoteResumeLoadPreflight(adoption);
         var decision = CaptureVoyagerRemoteIdleAdmission(owner, journey, sameOwner ? _voyagerRemoteIdleScene : null,
             journey.SpentGameTicks, journey.LastLandedGameTick, out var scene, captureFacts: f => captured = f,
-            collectAfterGroundMiss: loadBoundary, captureGround: g => ground = g, groundStage: "load_preflight_before_sync");
-        if (loadBoundary)
-        {
-            _sessions.RecordRemoteResumeGroundObservation(adoption, ground, false);
-            if (decision.BlockerCode == "remote_idle_ground_contact_unproved" && captured is not null
-                && adoption.Authorization is { } syncAuthorization)
-            {
-                // This is only a zero-integration synchronization boundary. A
-                // ground miss is never labelled NativePlayerIdle to fund it.
-                var funding = LoadedGroundSyncFunding(adoption, journey, captured, syncAuthorization);
-                if (funding is not null) return funding;
-                var syncBlocker = SynchronizeExactLoadedRemoteGround(adoption, owner, journey, scene, decision.BlockerCode);
-                if (syncBlocker is not null)
-                {
-                    if (adoption.GroundSync.Attempted)
-                        _sessions.RecordRemoteResumeGroundObservation(adoption,
-                            ReferenceEquals(GameMain.data, adoption.World) && ReferenceEquals(GameMain.mainPlayer, adoption.Player)
-                                ? GameStateReader.CaptureNativeGroundContact(adoption.Player, "load_preflight_after_sync_failed")
-                                : new NativePlayerGroundContactSnapshot { CaptureStage = "load_preflight_after_sync_failed",
-                                    ReasonCode = "native_ground_context_binding_changed" }, true);
-                    return syncBlocker;
-                }
-                captured = null; ground = null;
-                decision = CaptureVoyagerRemoteIdleAdmission(owner, journey, scene,
-                    journey.SpentGameTicks, journey.LastLandedGameTick, out scene, captureFacts: f => captured = f,
-                    captureGround: g => ground = g, groundStage: "load_preflight_after_sync");
-                _sessions.RecordRemoteResumeGroundObservation(adoption, ground, true);
-            }
-        }
+            collectAfterGroundMiss: loadBoundary, captureGround: g => ground = g, groundStage: loadBoundary ? "load_preflight_before_first_frame" : admit ? "native_physics_post501" : "native_universe_post151");
+        if (!sameOwner && adoption.FirstFrame.Armed && captured?.MovementReserve is { Proved: true } frameReserve
+            && (adoption.ChargePerTickUpper != frameReserve.PerNativeTickEnergyJoules
+                || adoption.ChargeCostEnvelope != RemoteResumeChargeCostEnvelope(adoption.Player)))
+            return "remote_resume_charge_cost_envelope_changed";
+        if (loadBoundary && decision.BlockerCode == "remote_idle_ground_contact_unproved" && captured is not null)
+            return ArmVerifiedRemoteFirstFrame(adoption, owner, journey, scene, captured, ground);
+        if (!admit && adoption.FirstFrame.UniverseObserved && adoption.TerrainPostUniverse is { } terrainAfter)
+            _sessions.RecordRemoteResumeTerrain(adoption, terrainAfter, true, ground);
         if (!sameOwner && adoption.Authorization is { } authorization && captured is not null && !decision.Proved)
         {
             var bootstrapBlocker = ValidateRemoteResumeCharge(adoption, journey, captured, authorization);
@@ -258,8 +240,7 @@ internal sealed partial class NormalGameActionCoordinator
         if (environment is not null) return environment;
         var reserve = facts.MovementReserve!;
         var perTick = reserve.PerNativeTickEnergyJoules ?? double.NaN;
-        var envelope = CanonicalStateHash.Combine("remote-charge-fixed-cost-envelope-v1", m.walkSpeed, m.walkPower,
-            m.miningPower, m.replicatePower, m.researchPower, m.reactorPowerConsRatio, m.thrustPowerPerAcc, NativeLocalGravityUpperBound(p));
+        var envelope = RemoteResumeChargeCostEnvelope(p);
         if (adoption.ChargeCostEnvelope is not null && (adoption.ChargeCostEnvelope != envelope || adoption.ChargePerTickUpper != perTick))
             return "remote_resume_charge_cost_envelope_changed";
         var startTick = adoption.ChargeStartedGameTick ?? GameMain.gameTick;

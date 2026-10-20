@@ -23,6 +23,7 @@ internal sealed partial class GameStateReader
             result.SimulationMode = Physics.simulationMode.ToString();
             result.AutoSyncTransforms = Physics.autoSyncTransforms;
             result.GroundContact = CaptureNativeGroundContact(player, "current_player_read");
+            result.Terrain = CaptureNativeTerrain(player, "current_player_read");
             _sessions.CopyRemoteResumeGroundDiagnostics(player, result);
             result.Gravity = NativePhysicsVector(Physics.gravity);
             var controller = player.controller;

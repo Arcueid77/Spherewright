@@ -351,34 +351,50 @@ internal sealed class OwnedWorldResumeTicketStore
         && FixedTimeEquals(expectedFingerprint, actual) && TryConsume(token, authorization);
 
     public bool TryOpenPriorFailedResumeProof(string priorToken, string quarantineActionId,
-        out PriorFailedResumeProof? proof, out string rejection, bool requireV2Predecessor = false)
+        out PriorFailedResumeProof? proof, out string rejection, bool requireV2Predecessor = false,
+        bool requireV3Predecessor = false)
     {
         proof = null; rejection = string.Empty;
         if (string.IsNullOrWhiteSpace(priorToken) || priorToken.Length > 256
+            || requireV3Predecessor && !requireV2Predecessor
             || (_currentTicket is not null && FixedTimeEquals(priorToken, _currentTicket.ResumeToken)))
         { rejection = "remote_resume_prior_credential_invalid"; return false; }
         var tokenHash = HashToken(priorToken);
         if (!TryOpenFixedConsumptionProof(tokenHash, quarantineActionId, !requireV2Predecessor,
             out var immediate, out rejection)) return false;
         if (!requireV2Predecessor) { proof = immediate; return true; }
+        PriorFailedResumeProof? ancestor = null; PriorFailedResumeProof? oldest = null;
         try
         {
             var ancestorHash = immediate!.Authorization.PriorConsumedResumeTokenHash;
             if (!OwnedWorldRecoveryPolicy.IsCanonicalFingerprint("sha256:" + ancestorHash)
                 || FixedTimeEquals(tokenHash, ancestorHash!))
             { rejection = "remote_resume_fixed_v2_ancestor_unproved"; return false; }
-            // Exactly one legacy ancestor, derived from this immutable record's
-            // token hash. Never recurse or accept a caller-selected file/JSON.
-            if (!TryOpenFixedConsumptionProof(ancestorHash!, null, true, out var ancestor, out rejection)) return false;
-            if (ancestor!.Authorization.ResumeActionId == immediate.Authorization.ResumeActionId)
-            { ancestor.Dispose(); rejection = "remote_resume_fixed_v2_actions_not_distinct"; return false; }
-            if (ancestor.ConsumedAtUtc > immediate.Authorization.ConfirmedAtUtc)
-            { ancestor.Dispose(); rejection = "remote_resume_fixed_v2_authorization_order_unproved"; return false; }
-            immediate.AttachLegacyAncestor(ancestor);
+            if (!TryOpenFixedConsumptionProof(ancestorHash!, null, !requireV3Predecessor, out ancestor, out rejection)) return false;
+            if (ancestor!.Authorization.ResumeActionId == immediate.Authorization.ResumeActionId
+                || ancestor.ConsumedAtUtc > immediate.Authorization.ConfirmedAtUtc)
+            { rejection = "remote_resume_fixed_v2_authorization_order_unproved"; return false; }
+            if (requireV3Predecessor)
+            {
+                var oldestHash = ancestor.Authorization.PriorConsumedResumeTokenHash;
+                if (!OwnedWorldRecoveryPolicy.IsCanonicalFingerprint("sha256:" + oldestHash)
+                    || FixedTimeEquals(oldestHash!, tokenHash) || FixedTimeEquals(oldestHash!, ancestorHash!))
+                { rejection = "remote_resume_fixed_v3_ancestor_unproved"; return false; }
+                // Exactly the third fixed pair. A fourth generation has a marked
+                // oldest record and is rejected here, never followed recursively.
+                if (!TryOpenFixedConsumptionProof(oldestHash!, null, true, out oldest, out rejection)) return false;
+                if (oldest!.Authorization.ResumeActionId == immediate.Authorization.ResumeActionId
+                    || oldest.Authorization.ResumeActionId == ancestor.Authorization.ResumeActionId
+                    || oldest.ConsumedAtUtc > ancestor.Authorization.ConfirmedAtUtc)
+                { rejection = "remote_resume_fixed_v3_authorization_order_unproved"; return false; }
+                ancestor.AttachLegacyAncestor(oldest); oldest = null;
+                immediate.AttachFixedV3Ancestor(ancestor); ancestor = null;
+            }
+            else { immediate.AttachLegacyAncestor(ancestor); ancestor = null; }
             proof = immediate; immediate = null;
             return true;
         }
-        finally { immediate?.Dispose(); }
+        finally { oldest?.Dispose(); ancestor?.Dispose(); immediate?.Dispose(); }
     }
 
     private bool TryOpenFixedConsumptionProof(string tokenHash, string? quarantineActionId, bool requireLegacy,
@@ -1000,6 +1016,14 @@ internal sealed class PriorFailedResumeProof : IDisposable
         if (LegacyAncestor is not null || ancestor.LegacyAncestor is not null
             || ancestor.Authorization.PriorConsumedResumeTokenHash is not null)
             throw new InvalidOperationException("Only one fixed legacy ancestor may be attached.");
+        LegacyAncestor = ancestor;
+    }
+    internal void AttachFixedV3Ancestor(PriorFailedResumeProof ancestor)
+    {
+        if (LegacyAncestor is not null || ancestor.Authorization.PriorConsumedResumeTokenHash is null
+            || ancestor.LegacyAncestor is not { } oldest || oldest.LegacyAncestor is not null
+            || oldest.Authorization.PriorConsumedResumeTokenHash is not null)
+            throw new InvalidOperationException("Only the fixed intermediate and unmarked oldest pair may be attached.");
         LegacyAncestor = ancestor;
     }
     public void Dispose() { foreach (var lease in _leases) lease.Dispose(); LegacyAncestor?.Dispose(); }

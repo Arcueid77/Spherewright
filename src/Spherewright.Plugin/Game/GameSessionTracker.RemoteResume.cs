@@ -16,6 +16,7 @@ internal sealed partial class GameSessionTracker
     private VoyagerRecoveryAuthorization? _pendingRecoveryAuthorization;
     private Func<VoyagerRemoteResumeAdoption, string?>? _remoteResumeAdmissionGuard;
     private Func<VoyagerRemoteResumeAdoption, string?>? _remoteResumePreflightGuard;
+    private Func<VoyagerRemoteResumeAdoption, string?>? _remoteResumeUniverseGuard;
     private Func<string?>? _remoteResumeLoadCompleteGuard;
     private GameLoader[]? _remoteResumeLoadersBeforeDispatch;
     private NativeLoadCompletionSubscription<GameLoader>? _remoteResumeLoadSubscription;
@@ -34,9 +35,11 @@ internal sealed partial class GameSessionTracker
     internal bool TryOpenRemoteResumeEvidence(OwnedWorldResumeTicket ticket, OwnedSaveRecoveryLease source,
         OwnedSaveRecoveryLease primary, out VoyagerRemoteResumeEvidence? evidence, out string rejection,
         VoyagerRecoveryWindowProposal? proposal = null, PriorFailedResumeProof? priorFailedProof = null,
-        string priorSourceFingerprint = "", bool priorActionKnownTerminalFailed = false, string priorLegacySourceFingerprint = "") =>
+        string priorSourceFingerprint = "", bool priorActionKnownTerminalFailed = false, string priorLegacySourceFingerprint = "",
+        string priorIntermediateSourceFingerprint = "") =>
         _flightCheckpoints.TryOpenRemoteResumeEvidence(ticket, source, primary, out evidence, out rejection, proposal,
-            priorFailedProof, priorSourceFingerprint, priorActionKnownTerminalFailed, priorLegacySourceFingerprint);
+            priorFailedProof, priorSourceFingerprint, priorActionKnownTerminalFailed, priorLegacySourceFingerprint,
+            priorIntermediateSourceFingerprint);
 
     internal DateTimeOffset EffectiveVoyagerDeadline(VoyagerJourneyRecord journey)
     {
@@ -63,11 +66,12 @@ internal sealed partial class GameSessionTracker
     }
 
     internal void SetRemoteResumeAdmissionGuard(Func<VoyagerRemoteResumeAdoption, string?> guard,
-        Func<VoyagerRemoteResumeAdoption, string?> preflight)
+        Func<VoyagerRemoteResumeAdoption, string?> preflight, Func<VoyagerRemoteResumeAdoption, string?> universe)
     {
         if (_remoteResumeAdmissionGuard is not null) throw new InvalidOperationException("The remote resume guard is already configured.");
         _remoteResumeAdmissionGuard = guard ?? throw new ArgumentNullException(nameof(guard));
         _remoteResumePreflightGuard = preflight ?? throw new ArgumentNullException(nameof(preflight));
+        _remoteResumeUniverseGuard = universe ?? throw new ArgumentNullException(nameof(universe));
     }
 
     internal void SetRemoteResumeLoadCompleteGuard(Func<string?> guard) =>
@@ -172,11 +176,44 @@ internal sealed partial class GameSessionTracker
         { _remoteResumeGroundDiagnosticAdoption = null; return; }
         result.ResumeGroundContactPreSync = a.GroundContactPreSync?.Copy();
         result.ResumeGroundContactPostSync = a.GroundContactPostSync?.Copy();
+        result.ResumeTerrainPreFirstFrame = a.TerrainPreFirstFrame?.Copy();
+        result.ResumeTerrainPostUniverse = a.TerrainPostUniverse?.Copy();
+        result.ResumeGroundContactPostUniverse = a.GroundContactPostUniverse?.Copy();
+    }
+
+    internal void RecordRemoteResumeTerrain(VoyagerRemoteResumeAdoption adoption,
+        NativePlanetTerrainPhysicsSnapshot terrain, bool postUniverse, NativePlayerGroundContactSnapshot? ground = null)
+    {
+        if (!ReferenceEquals(_remoteResumeAdoption, adoption)) return;
+        _remoteResumeGroundDiagnosticAdoption = adoption;
+        if (postUniverse)
+        { adoption.TerrainPostUniverse ??= terrain.Copy(); adoption.GroundContactPostUniverse ??= ground?.Copy(); }
+        else adoption.TerrainPreFirstFrame ??= terrain.Copy();
+    }
+
+    internal bool ObserveRemoteResumeUniverseOnMainThread()
+    {
+        if (_remoteResumeAdoption is not null && (_resumeAdoptionError is not null || _remoteResumeAdoption.FirstFrame.Failure is not null))
+            return FailRemoteResumeAdmission("remote_resume_failed_adoption_is_terminal");
+        if (!HasPendingRemoteResumeAdoption || _remoteResumeAdoption?.FirstFrame is not { Armed: true } frame) return true;
+        if (frame.PhysicsObserved && GameMain.gameTick > frame.SourceGameTick + 1) return true;
+        var blocker = CaptureRemoteResumeAdoption(out var adoption);
+        if (blocker is null)
+            blocker = _remoteResumeUniverseGuard is null ? "remote_resume_universe_guard_unavailable" : _remoteResumeUniverseGuard(adoption!);
+        return blocker is null || FailRemoteResumeAdmission(blocker);
+    }
+
+    internal void StopPendingRemoteFirstFrameOnMainThread()
+    {
+        if (HasPendingRemoteResumeAdoption && _remoteResumeAdoption?.FirstFrame.Armed == true)
+            FailRemoteResumeAdmission("remote_resume_first_frame_native_observer_lost");
     }
 
     private string? CaptureRemoteResumeAdoption(out VoyagerRemoteResumeAdoption? adoption)
     {
         adoption = null;
+        if (_resumeAdoptionError is not null || _remoteResumeAdoption?.FirstFrame.Failure is not null)
+            return "remote_resume_failed_adoption_is_terminal";
         var evidence = _pendingRemoteResumeEvidence;
         if (evidence is null || !_remoteResumeLoadCompleteObserved || !IsCurrentSessionOwned
             || GameMain.mainPlayer is null || !ReferenceEquals(GameMain.data, _remoteResumeCompletedWorld))
@@ -195,6 +232,8 @@ internal sealed partial class GameSessionTracker
 
     internal bool TryAdmitRemoteResumeOnMainThread()
     {
+        if (_remoteResumeAdoption is not null && (_resumeAdoptionError is not null || _remoteResumeAdoption.FirstFrame.Failure is not null))
+            return FailRemoteResumeAdmission("remote_resume_failed_adoption_is_terminal");
         if (_pendingRemoteResumeEvidence is null || _remoteResumeAdmitted) return true;
         if (!_remoteResumeLoadCompleteObserved || !_remoteResumeLoadPreflightPassed)
             return FailRemoteResumeAdmission("remote_resume_before_first_player_preflight_unproved");
@@ -207,6 +246,13 @@ internal sealed partial class GameSessionTracker
         var evidence = _pendingRemoteResumeEvidence;
         var admissionBlocker = CaptureRemoteResumeAdoption(out var adoption);
         if (admissionBlocker is not null) return FailRemoteResumeAdmission(admissionBlocker);
+        if (adoption!.FirstFrame is { Armed: true } first
+            && (!first.PhysicsObserved || GameMain.gameTick <= first.SourceGameTick + 1))
+        {
+            var phaseBlocker = first.ObservePhysics(GameMain.gameTick, !GameMain.isPaused
+                && ReferenceEquals(GameMain.data, adoption.World) && _sessionId == adoption.SessionId);
+            if (phaseBlocker is not null) return FailRemoteResumeAdmission(phaseBlocker);
+        }
         string? blocker;
         try { blocker = _remoteResumeAdmissionGuard is null ? "remote_resume_idle_guard_unavailable" : _remoteResumeAdmissionGuard(adoption!); }
         catch (Exception exception) { blocker = "remote_resume_idle_guard_capture_failed:" + exception.GetType().Name; }
@@ -223,6 +269,8 @@ internal sealed partial class GameSessionTracker
 
     private bool RemoteResumeAllowsPrimaryResave()
     {
+        if (_remoteResumeAdoption is not null && (_resumeAdoptionError is not null || _remoteResumeAdoption.FirstFrame.Failure is not null))
+            return false;
         if (HasPendingRemoteResumeAdoption) return false;
         if (_remoteResumeAdoption is null || _ownedSaveState != OwnedSaveStates.WaitingToSave) return true;
         if (!_remoteResumeAdmitted || !IsCurrentSessionOwned || !ReferenceEquals(GameMain.data, _remoteResumeAdoption.World)
@@ -236,6 +284,7 @@ internal sealed partial class GameSessionTracker
 
     private bool FailRemoteResumeAdmission(string code)
     {
+        if (_remoteResumeAdoption?.FirstFrame.Armed == true) _remoteResumeAdoption.FirstFrame.Fail(code);
         var reason = "The exact remote LastExit continuation could not enter its strict idle guard. [" + code + "]";
         var exactLoadedCandidate = _expectedResumeTicket is { } expected && _resumeSourceLease is not null
             && ReferenceEquals(GameMain.data, _remoteResumeCompletedWorld) && GameMain.data is { } loaded
@@ -303,4 +352,8 @@ internal sealed class VoyagerRemoteResumeAdoption
     public NativeLoadedTransformSyncAttempt GroundSync { get; } = new();
     public NativePlayerGroundContactSnapshot? GroundContactPreSync { get; set; }
     public NativePlayerGroundContactSnapshot? GroundContactPostSync { get; set; }
+    public NativeFirstFrameAdmission FirstFrame { get; } = new();
+    public NativePlanetTerrainPhysicsSnapshot? TerrainPreFirstFrame { get; set; }
+    public NativePlanetTerrainPhysicsSnapshot? TerrainPostUniverse { get; set; }
+    public NativePlayerGroundContactSnapshot? GroundContactPostUniverse { get; set; }
 }

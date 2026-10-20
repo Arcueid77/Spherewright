@@ -27,6 +27,55 @@ public sealed class SpherewrightToolsTests
 {
     [Theory]
     [InlineData(true)] [InlineData(false)]
+    public async Task FixedV3RealSchemaForwardsTheIntermediateWitnessAndWithholdsIgnoredProof(bool supported)
+    {
+        var plan = WindowPlan(DateTimeOffset.UtcNow.AddMinutes(30)); plan.PriorFailedResumeProvenanceUsed = true;
+        plan.PriorActionTerminalFailureAttested = true; plan.PriorFailedResumeV2ProvenanceUsed = true;
+        plan.PriorFailedResumeV3ProvenanceUsed = supported;
+        var bridge = new FakeBridgeClient(SuccessResult()) { ResumePlan = plan };
+        var services = new ServiceCollection(); services.AddSingleton<IBridgeClient>(bridge);
+        services.AddMcpServer().WithToolsFromAssembly(typeof(SpherewrightTools).Assembly);
+        using var provider = services.BuildServiceProvider();
+        var tool = Assert.Single(provider.GetServices<McpServerTool>(), t => t.ProtocolTool.Name == "spherewright_prepare_resume_owned_game");
+        Assert.True(tool.ProtocolTool.InputSchema.GetProperty("properties").TryGetProperty("priorIntermediateSourceFingerprint", out _));
+        if (tool.ProtocolTool.InputSchema.TryGetProperty("required", out var required))
+            Assert.DoesNotContain(required.EnumerateArray(), p => p.GetString() == "priorIntermediateSourceFingerprint");
+        var witness = CanonicalStateHash.Combine("synthetic-middle-source");
+        await using var server = McpServer.Create(new StreamServerTransport(Stream.Null, Stream.Null), new McpServerOptions(), null, provider);
+        var args = new CallToolRequestParams { Name = tool.ProtocolTool.Name, Arguments = new Dictionary<string, JsonElement>
+        {
+            ["resumeToken"] = JsonSerializer.SerializeToElement("synthetic-current"),
+            ["priorConsumedResumeToken"] = JsonSerializer.SerializeToElement("synthetic-prior"),
+            ["priorSourceFingerprint"] = JsonSerializer.SerializeToElement(CanonicalStateHash.Combine("synthetic-newest")),
+            ["priorLegacySourceFingerprint"] = JsonSerializer.SerializeToElement(CanonicalStateHash.Combine("synthetic-oldest")),
+            ["priorIntermediateSourceFingerprint"] = JsonSerializer.SerializeToElement(witness),
+            ["priorActionKnownTerminalFailed"] = JsonSerializer.SerializeToElement(true),
+        } };
+        var context = new RequestContext<CallToolRequestParams>(server,
+            new JsonRpcRequest { Id = new RequestId(1), Method = "tools/call" }, args) { Services = provider };
+        var result = await tool.InvokeAsync(context);
+        Assert.Equal(witness, bridge.LastResumePrepareRequest!.PriorIntermediateSourceFingerprint);
+        Assert.Equal(!supported, result.IsError);
+        if (supported) Assert.True(result.StructuredContent!.Value.GetProperty("result").GetProperty("priorFailedResumeV3ProvenanceUsed").GetBoolean());
+        else Assert.DoesNotContain("planToken", result.StructuredContent!.Value.GetRawText());
+    }
+
+    [Theory]
+    [InlineData("missing_oldest")] [InlineData("missing_token")] [InlineData("wrong_format")] [InlineData("unknown_outcome")]
+    public async Task FixedV3PartialOrUnknownInputDoesNotReachBridge(string fault)
+    {
+        var bridge = new FakeBridgeClient(SuccessResult());
+        var result = await SpherewrightTools.PrepareOwnedWorldResumeAsync(bridge, "synthetic-current",
+            priorConsumedResumeToken: fault == "missing_token" ? "" : "synthetic-prior",
+            priorSourceFingerprint: CanonicalStateHash.Combine("synthetic-newest"),
+            priorActionKnownTerminalFailed: fault == "unknown_outcome" ? null : true,
+            priorLegacySourceFingerprint: fault == "missing_oldest" ? "" : CanonicalStateHash.Combine("synthetic-oldest"),
+            priorIntermediateSourceFingerprint: fault == "wrong_format" ? "not-a-fingerprint" : CanonicalStateHash.Combine("synthetic-middle"));
+        Assert.True(result.IsError); Assert.Null(bridge.LastResumePrepareRequest);
+    }
+
+    [Theory]
+    [InlineData(true)] [InlineData(false)]
     public async Task FixedV2WitnessUsesRealOptionalSchemaForwardingAndRequiresItsExactEcho(bool supported)
     {
         var plan = WindowPlan(DateTimeOffset.UtcNow.AddMinutes(30)); plan.PriorFailedResumeProvenanceUsed = true;

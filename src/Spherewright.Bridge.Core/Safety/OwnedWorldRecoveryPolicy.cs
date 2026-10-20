@@ -17,6 +17,10 @@ public static class OwnedWorldRecoveryPolicy
         if (!string.IsNullOrEmpty(request.PriorLegacySourceFingerprint)
             && !IsCanonicalFingerprint(request.PriorLegacySourceFingerprint))
             return "The fixed V2 predecessor proof requires its exact additional legacy source fingerprint; no file path or JSON is accepted.";
+        if (!string.IsNullOrEmpty(request.PriorIntermediateSourceFingerprint)
+            && (!IsCanonicalFingerprint(request.PriorIntermediateSourceFingerprint)
+                || !IsCanonicalFingerprint(request.PriorLegacySourceFingerprint)))
+            return "The fixed V3 predecessor requires the exact newest, intermediate and oldest source witnesses together.";
         var window = request.RecoveryDeadlineUtc.HasValue || !string.IsNullOrEmpty(request.RecoveryScope)
             || request.MaximumChargeGameTicks != 0 || request.MaximumChargeWallSeconds != 0d;
         if (window && (request.RecoveryMode != OwnedWorldResumeModes.Default || !request.RecoveryDeadlineUtc.HasValue
@@ -50,7 +54,8 @@ public static class OwnedWorldRecoveryPolicy
 
     public static bool HasPriorFailedResumeWitness(PrepareOwnedWorldResumeRequest request) =>
         !string.IsNullOrEmpty(request.PriorConsumedResumeToken) || !string.IsNullOrEmpty(request.PriorSourceFingerprint)
-        || request.PriorActionKnownTerminalFailed.HasValue || !string.IsNullOrEmpty(request.PriorLegacySourceFingerprint);
+        || request.PriorActionKnownTerminalFailed.HasValue || !string.IsNullOrEmpty(request.PriorLegacySourceFingerprint)
+        || !string.IsNullOrEmpty(request.PriorIntermediateSourceFingerprint);
 
     public static bool IsCanonicalFingerprint(string? value)
     {

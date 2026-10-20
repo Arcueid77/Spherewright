@@ -28,6 +28,7 @@ public sealed class PrepareOwnedWorldResumeRequest
     public string PriorConsumedResumeToken { get; set; } = string.Empty;
     public string PriorSourceFingerprint { get; set; } = string.Empty;
     public string PriorLegacySourceFingerprint { get; set; } = string.Empty;
+    public string PriorIntermediateSourceFingerprint { get; set; } = string.Empty;
     public bool? PriorActionKnownTerminalFailed { get; set; }
 }
 
@@ -65,6 +66,7 @@ public sealed class PreparedOwnedWorldResumePlan
     public bool NativeChargeFeasibilityRequiresFreshCapture { get; set; }
     public bool PriorFailedResumeProvenanceUsed { get; set; }
     public bool PriorFailedResumeV2ProvenanceUsed { get; set; }
+    public bool PriorFailedResumeV3ProvenanceUsed { get; set; }
     public bool PriorActionTerminalFailureAttested { get; set; }
 
     public long? CandidateGameTick { get; set; }

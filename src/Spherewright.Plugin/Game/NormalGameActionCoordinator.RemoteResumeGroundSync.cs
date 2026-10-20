@@ -9,7 +9,7 @@ internal sealed partial class NormalGameActionCoordinator
     private string? LoadedGroundSyncFunding(VoyagerRemoteResumeAdoption adoption, VoyagerJourneyRecord journey,
         VoyagerRemoteIdleAdmissionFacts facts, VoyagerRecoveryAuthorization authorization)
     {
-        // This is a zero-integration boundary, not idle admission. The contact
+        // This is only first-frame funding, not idle admission. The contact
         // query failed, so this projection must retain NativePlayerIdle=false.
         var f = facts.JourneyBudget; var p = adoption.Player; var now = DateTimeOffset.UtcNow;
         var deadline = _sessions.EffectiveVoyagerDeadline(journey);
@@ -34,18 +34,6 @@ internal sealed partial class NormalGameActionCoordinator
             journey.SpentGameTicks, GameMain.gameTick - journey.LastLandedGameTick!.Value,
             journey.MaximumGameTicks, journey.ReturnReserveGameTicks, 0, authorization.Proposal.MaximumChargeGameTicks,
             0d, authorization.Proposal.MaximumChargeWallSeconds, now, deadline);
-    }
-
-    private string? SynchronizeExactLoadedRemoteGround(VoyagerRemoteResumeAdoption adoption, VoyagerRemoteIdleOwner owner,
-        VoyagerJourneyRecord journey, NativeLocalWalkSceneBinding? scene, string? blocker)
-    {
-        var snapshot = new LoadedGroundSyncState(adoption.Player);
-        if (!snapshot.Finite) return "remote_resume_ground_sync_nonfinite_state";
-        bool Bound() => _sessions.ExactRemoteResumeLoadPreflight(adoption)
-            && VoyagerRemoteIdleBindingMatches(owner, journey) && scene is not null && scene.MatchesCurrent()
-            && _flightCheckpoints.RemoteResumeEvidenceStillMatches(adoption.Evidence) && snapshot.Matches(adoption.Player);
-        return adoption.GroundSync.TrySynchronize(blocker, _sessions.ExactRemoteResumeLoadPreflight(adoption),
-            Bound, Physics.SyncTransforms, Bound);
     }
 
     private static string? RemoteResumeChargeEnvironmentBlocker(Player p)
@@ -110,9 +98,10 @@ internal sealed partial class NormalGameActionCoordinator
         private static bool FiniteUniversal(double n) => !double.IsNaN(n) && !double.IsInfinity(n);
         private static bool FiniteRotation(Quaternion q) => FiniteScalar(q.x) && FiniteScalar(q.y) && FiniteScalar(q.z) && FiniteScalar(q.w)
             && q.x * q.x + q.y * q.y + q.z * q.z + q.w * q.w is > .99f and < 1.01f;
-        public bool Matches(Player p) => Finite && ReferenceEquals(p, _player) && ReferenceEquals(p.controller, _controller)
+        public bool Matches(Player p) => MatchesAtTick(p, _tick);
+        public bool MatchesAtTick(Player p, long expectedTick) => Finite && ReferenceEquals(p, _player) && ReferenceEquals(p.controller, _controller)
             && ReferenceEquals(p.transform, _transform) && ReferenceEquals(_transform.parent, _parent)
-            && ReferenceEquals(_controller.rigid, _body) && GameMain.gameTick == _tick
+            && ReferenceEquals(_controller.rigid, _body) && GameMain.gameTick == expectedTick
             && p.position.Equals(_position) && _transform.localRotation.Equals(_rotation) && _transform.lossyScale.Equals(_scale)
             && p.uPosition.x == _uPosition.x && p.uPosition.y == _uPosition.y && p.uPosition.z == _uPosition.z
             && p.uRotation.Equals(_uRotation) && _body.velocity.Equals(_bodyVelocity) && _body.angularVelocity.Equals(_angularVelocity)
