@@ -114,6 +114,44 @@ public sealed class NativeFirstFrameAdmissionTests
         Assert.Equal(failure, f.ObservePhysics(102, true)); Assert.Equal(failure, f.Arm(102, true, true, true, true));
         Assert.Equal(failure, f.Failure);
     }
+    [Theory]
+    [InlineData("wrong_tick")] [InlineData("missing151")] [InlineData("binding")]
+    public void RetainedStateCallbackCannotRunBeforeTheExactReal501Boundary(string fault)
+    {
+        var calls = 0; var f = new NativeFirstFrameAdmission();
+        Assert.Null(f.Arm(100, true, true, true, true, () => { calls++; return null; }));
+        if (fault != "missing151") Assert.Null(f.ObserveUniverse(101, true, true, true));
+        Assert.NotNull(f.ObservePhysics(fault == "wrong_tick" ? 102 : 101, fault != "binding"));
+        Assert.Equal(0, calls); Assert.False(f.PhysicsObserved);
+    }
+    [Theory]
+    [InlineData(false)] [InlineData(true)]
+    public void RecheckFailureOrExceptionIsStickyAndNeverPublishesPhysicsObservation(bool throws)
+    {
+        var calls = 0; var f = new NativeFirstFrameAdmission();
+        Assert.Null(f.Arm(100, true, true, true, true, () =>
+        { calls++; if (throws) throw new InvalidDataException(); return "synthetic_retained_binding_lost"; }));
+        Assert.Null(f.ObserveUniverse(101, true, true, true));
+        var failure = f.ObservePhysics(101, true);
+        Assert.NotNull(failure); Assert.False(f.PhysicsObserved); Assert.Equal(1, calls);
+        Assert.Equal(failure, f.ObservePhysics(102, true)); Assert.Equal(failure, f.ObserveUniverse(102, true, true, true));
+        Assert.Equal(1, calls);
+    }
+    [Fact]
+    public void SuccessfulCallbackRunsOnceAndCannotBeReplacedOrReviveAStoppedAdoption()
+    {
+        var calls = 0; var f = new NativeFirstFrameAdmission();
+        Assert.Null(f.Arm(100, true, true, true, true, () => { calls++; return null; }));
+        Assert.Null(f.ObserveUniverse(101, true, true, true)); Assert.Null(f.ObservePhysics(101, true));
+        Assert.True(f.PhysicsObserved); Assert.Equal(1, calls);
+        var failure = f.Fail("synthetic_observer_lost");
+        Assert.Equal(failure, f.Arm(102, true, true, true, true, () => throw new Exception()));
+        Assert.Equal(failure, f.ObservePhysics(102, true)); Assert.Equal(1, calls);
+        var armed = new NativeFirstFrameAdmission();
+        Assert.Null(armed.Arm(100, true, true, true, true, () => { calls++; return null; }));
+        Assert.NotNull(armed.Arm(100, true, true, true, true, () => throw new Exception()));
+        Assert.NotNull(armed.ObserveUniverse(101, true, true, true)); Assert.Equal(1, calls);
+    }
     private static NativePlanetTerrainPhysicsSnapshot Terrain() => new()
     {
         State = "observed", Complete = true, GuideComplete = true, RootLayer = 31, BodyLayer = 31,

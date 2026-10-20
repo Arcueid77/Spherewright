@@ -99,6 +99,26 @@ public sealed class NativeTerrainFootHitObservationTests
             "{\"state\":\"observed\",\"footOverlapCount\":2,\"footOverlapComplete\":true,\"footOverlapsOwnedSurfaceOnly\":false}")!;
         Assert.Null(old.FootHits); Assert.Null(old.FootHitDetailsComplete);
         Assert.False(old.SafetyCertified); Assert.NotNull(NativeTerrainObservationPolicy.FootBlocker(old));
+        Assert.Null(old.RegisteredTerrainOwners); Assert.Null(old.RegisteredTerrainOwnersComplete);
+        Assert.Null(old.RegisteredPostPhysicsVerified);
+    }
+
+    [Fact]
+    public void RegisteredOwnerDetailsAndBothNativeStageResultsAreDeepCopiedOutsideV1Hashes()
+    {
+        var t = NativeRegisteredTerrainOwnerPolicyTests.Preflight();
+        t.RegisteredPostPhysicsCapturedAtGameTick = 101; t.RegisteredPostPhysicsVerified = false;
+        t.RegisteredPostPhysicsReasonCode = "synthetic_binding_changed";
+        var copy = t.Copy(); copy.RegisteredTerrainOwners![0].Terrain!.SurfaceColliders![0].WorldPosition!.X = 5;
+        copy.RegisteredTerrainOwners[0].SphereCenter!.Y = 7;
+        copy.FootHits![1].UniqueRegisteredSimulatorOrdinal = 9;
+        Assert.Equal(0, t.RegisteredTerrainOwners![0].Terrain!.SurfaceColliders![0].WorldPosition!.X);
+        Assert.Equal(0, t.RegisteredTerrainOwners[0].SphereCenter!.Y);
+        Assert.Equal(1, t.FootHits![1].UniqueRegisteredSimulatorOrdinal);
+        Assert.False(copy.RegisteredPostPhysicsVerified); Assert.Equal(101, copy.RegisteredPostPhysicsCapturedAtGameTick);
+        var player = new PlayerStateSnapshot(); var before = CanonicalStateHash.Player(player); var action = CanonicalStateHash.PlayerAction(player);
+        player.NativePhysics = new() { Terrain = t, ResumeTerrainPostUniverse = copy };
+        Assert.Equal(before, CanonicalStateHash.Player(player)); Assert.Equal(action, CanonicalStateHash.PlayerAction(player));
     }
 
     private static NativeTerrainFootHitPhysicsSnapshot SurfaceHit() => new()

@@ -11,12 +11,14 @@ public sealed class NativeFirstFrameAdmission
     public bool PhysicsObserved { get; private set; }
     public long SourceGameTick { get; private set; }
     public string? Failure { get; private set; }
-    public string? Arm(long sourceTick, bool exactLoader, bool guideComplete, bool terrainOwned31FootHit, bool funded)
+    private Func<string?>? _recheckAtPhysics;
+    public string? Arm(long sourceTick, bool exactLoader, bool guideComplete, bool terrainOwned31FootHit, bool funded,
+        Func<string?>? recheckAtPhysics = null)
     {
         if (Failure is not null) return Failure;
         if (Armed || sourceTick < 0 || sourceTick == long.MaxValue || !exactLoader || !guideComplete || !terrainOwned31FootHit || !funded)
             return Fail("remote_resume_first_frame_preflight_unproved");
-        SourceGameTick = sourceTick; Armed = true; return null;
+        SourceGameTick = sourceTick; _recheckAtPhysics = recheckAtPhysics; Armed = true; return null;
     }
     public string? ObserveUniverse(long tick, bool exactBinding, bool unchangedPlayer, bool expectedTerrain)
     {
@@ -30,6 +32,13 @@ public sealed class NativeFirstFrameAdmission
         if (Failure is not null) return Failure;
         if (!Armed || !UniverseObserved || PhysicsObserved || tick != SourceGameTick + 1 || !exactBinding)
             return Fail("remote_resume_first_frame_physics_unproved");
+        try
+        {
+            var retained = _recheckAtPhysics?.Invoke();
+            if (retained is not null) return Fail(retained);
+        }
+        catch (Exception exception) { return Fail("remote_resume_first_frame_physics_capture_unavailable:" + exception.GetType().Name); }
+        if (Failure is not null) return Failure;
         PhysicsObserved = true; return null;
     }
     public string Fail(string code) => Failure ??= code;
@@ -61,6 +70,113 @@ public static class NativeTerrainObservationPolicy
     private static bool Finite(float n) => !float.IsNaN(n) && !float.IsInfinity(n);
     private static bool Vector(Vector3Snapshot? p) => p is not null && Finite(p.X) && Finite(p.Y) && Finite(p.Z);
     private static bool Scale(Vector3Snapshot? p) => Vector(p) && p!.X > 0 && p.Y > 0 && p.Z > 0;
+    private static bool Rotation(QuaternionSnapshot? q) => q is not null && Finite(q.X) && Finite(q.Y) && Finite(q.Z) && Finite(q.W)
+        && q.X * q.X + q.Y * q.Y + q.Z * q.Z + q.W * q.W is > .99f and < 1.01f;
+}
+
+/// <summary>Necessary copied-value checks; the Plugin must also retain and recheck the exact live Native references.</summary>
+public static class NativeRegisteredTerrainOwnerPolicy
+{
+    public const int MaximumRegisteredSimulators = 16;
+
+    public static string? PreflightBlocker(NativePlanetTerrainPhysicsSnapshot s)
+    {
+        // Preserve the original all-current route. New diagnostic fields cannot change that decision.
+        if (NativeTerrainObservationPolicy.FootBlocker(s) is null) return null;
+        var geometry = NativeTerrainObservationPolicy.Blocker(s, 31);
+        if (geometry is not null) return geometry;
+        if (s.NativeGroundSphereHit != false || s.GuideComplete != true || s.FootOverlapComplete != true
+            || s.FootOverlapCount is not (> 0 and <= NativeTerrainObservationPolicy.MaximumSurfaceColliders)
+            || s.RegisteredSimulatorCount is not (> 0 and <= MaximumRegisteredSimulators)
+            || s.RegisteredTerrainOwnersComplete != true || s.FootOverlapsCurrentOrRegisteredSurfaceOnly != true
+            || s.FootHits is null || s.FootHits.Count != s.FootOverlapCount
+            || s.RegisteredTerrainOwners is not { Count: > 0 and < MaximumRegisteredSimulators } owners)
+            return "remote_resume_registered_terrain_foot_unproved";
+        if (owners.Any(o => o is null) || owners.Select(o => o.SimulatorOrdinal).Distinct().Count() != owners.Count)
+            return "remote_resume_registered_terrain_ambiguous";
+        foreach (var owner in owners)
+        {
+            var blocker = OwnerPreflightBlocker(owner, s.RegisteredSimulatorCount.Value);
+            if (blocker is not null) return blocker;
+        }
+        var current = 0; var other = 0;
+        foreach (var hit in s.FootHits)
+        {
+            if (hit is null || hit.State != "observed" || !Collider(hit, 31) || hit.UnknownOwner != false
+                || hit.RegisteredSurfaceReferenceMatchCount != 1)
+                return "remote_resume_registered_terrain_hit_unproved";
+            if (hit.IsCurrentSurface == true && hit.IsOtherRegisteredSurface == false
+                && hit.UniqueSurfaceIndex is >= 0 && hit.UniqueSurfaceIndex < s.SurfaceColliders!.Count) current++;
+            else if (hit.IsCurrentSurface == false && hit.IsOtherRegisteredSurface == true
+                && hit.UniqueRegisteredSimulatorOrdinal is { } ordinal && hit.UniqueRegisteredSurfaceIndex is >= 0
+                && owners.SingleOrDefault(o => o.SimulatorOrdinal == ordinal) is { } owner
+                && hit.UniqueRegisteredSurfaceIndex < owner.Terrain!.SurfaceColliders!.Count) other++;
+            else return "remote_resume_registered_terrain_hit_unproved";
+        }
+        if (current < 1 || other < 1 || current != s.FootCurrentSurfaceHitCount || other != s.FootRegisteredSurfaceHitCount
+            || owners.Any(o => !s.FootHits.Any(h => h.IsOtherRegisteredSurface == true && h.UniqueRegisteredSimulatorOrdinal == o.SimulatorOrdinal)))
+            return "remote_resume_registered_terrain_current_contact_unproved";
+        return null;
+    }
+
+    public static string? OwnerPreflightBlocker(NativeRegisteredTerrainOwnerPhysicsSnapshot owner, int registeredCount)
+    {
+        if (registeredCount is < 1 or > MaximumRegisteredSimulators || owner.SimulatorOrdinal < 0 || owner.SimulatorOrdinal >= registeredCount
+            || owner.State != "observed" || owner.SameLocalStar != true || owner.SlotMatchesPlanet != true
+            || owner.SimulatorMatchesPlanet != true || owner.PlanetMeshArrayMatches != true || owner.IsCurrentPlanet != false
+            || owner.IsSolid != true || owner.Loaded != true || owner.Loading != false || owner.FactoryLoading != false
+            || owner.Terrain is null || NativeTerrainObservationPolicy.Blocker(owner.Terrain, 31) is not null)
+            return "remote_resume_registered_terrain_owner_unproved";
+        // Native nonlocal flag2=false only enters its disable branch when the sphere is disabled.
+        if (!Collider(owner.Sphere, "sphere", 31, false) || !Finite(owner.SphereRadius) || owner.SphereRadius <= 0
+            || !Vector(owner.SphereCenter) || owner.OceanPresent is null
+            || (owner.OceanPresent == true && !Collider(owner.Ocean, null, 31, null, allowKnownTrigger: true))
+            || (owner.OceanPresent == false && owner.Ocean is not null))
+            return "remote_resume_registered_terrain_disable_branch_unproved";
+        return null;
+    }
+
+    public static string? PostUniverseFootBlocker(NativePlanetTerrainPhysicsSnapshot s) =>
+        NativeTerrainObservationPolicy.Blocker(s, 9)
+        ?? (s.NativeGroundSphereHit == true && s.GuideComplete == true && s.FootOverlapComplete == true
+            && s.FootOverlapsOwnedSurfaceOnly == true
+            && s.FootOverlapCount is > 0 and <= NativeTerrainObservationPolicy.MaximumSurfaceColliders
+                ? null : "remote_resume_registered_terrain_post_universe_contact_unproved");
+
+    public static string? OwnerPostUniverseBlocker(NativeRegisteredTerrainOwnerPhysicsSnapshot owner, int registeredCount)
+    {
+        if (registeredCount is < 1 or > MaximumRegisteredSimulators || owner.SimulatorOrdinal < 0 || owner.SimulatorOrdinal >= registeredCount
+            || owner.State != "observed" || owner.SameLocalStar != true || owner.SlotMatchesPlanet != true
+            || owner.SimulatorMatchesPlanet != true || owner.PlanetMeshArrayMatches != true || owner.IsCurrentPlanet != false
+            || owner.IsSolid != true || owner.Loaded != true || owner.Loading != false || owner.FactoryLoading != false
+            || owner.PoseMatchesNativeAfterUniverse != true
+            || owner.Terrain is not { State: "observed", Complete: true, Truncated: false, RootLayer: 0, BodyLayer: 9 } t
+            || !Vector(t.RootWorldPosition) || !Rotation(t.RootWorldRotation) || !Scale(t.RootWorldLossyScale)
+            || !Vector(t.BodyWorldPosition) || !Rotation(t.BodyWorldRotation) || !Scale(t.BodyWorldLossyScale)
+            || t.SurfaceColliders is not { Count: > 0 and <= NativeTerrainObservationPolicy.MaximumSurfaceColliders } surfaces
+            || surfaces.Any(c => !Collider(c, "mesh", 9, false)))
+            return "remote_resume_registered_terrain_post_universe_owner_unproved";
+        if (!Collider(owner.Sphere, "sphere", 9, true) || !Finite(owner.SphereRadius) || owner.SphereRadius <= 0
+            || !Vector(owner.SphereCenter) || owner.SphereFootClearAfterUniverse != true || owner.OceanPresent is null
+            || (owner.OceanPresent == true && (owner.ExpectedOceanLayerAfterUniverse is not (4 or 9)
+                || owner.ExpectedOceanTriggerAfterUniverse is null || owner.Ocean?.IsTrigger != owner.ExpectedOceanTriggerAfterUniverse
+                || !Collider(owner.Ocean, null, owner.ExpectedOceanLayerAfterUniverse.Value, false, allowKnownTrigger: true)))
+            || (owner.OceanPresent == false && owner.Ocean is not null))
+            return "remote_resume_registered_terrain_post_universe_disable_unproved";
+        return null;
+    }
+
+    private static bool Collider(NativeTerrainFootHitPhysicsSnapshot c, int layer) => c.Type == "mesh" && c.Enabled == true
+        && c.ActiveInHierarchy == true && c.Layer == layer && c.IsTrigger == false && c.SharedMeshPresent == true
+        && c.SameDefaultPhysicsScene == true && Vector(c.WorldPosition) && Rotation(c.WorldRotation) && Scale(c.WorldLossyScale);
+    private static bool Collider(NativeTerrainColliderPhysicsSnapshot? c, string? type, int layer, bool? enabled, bool allowKnownTrigger = false) => c is not null
+        && (type is null || c.Type == type) && c.Enabled is not null && (enabled is null || c.Enabled == enabled)
+        && c.ActiveInHierarchy == true && c.Layer == layer && (allowKnownTrigger ? c.IsTrigger is not null : c.IsTrigger == false)
+        && (c.Type != "mesh" || c.SharedMeshPresent == true) && c.SameDefaultPhysicsScene == true
+        && Vector(c.WorldPosition) && Rotation(c.WorldRotation) && Scale(c.WorldLossyScale);
+    private static bool Finite(float? v) => v is { } n && !float.IsNaN(n) && !float.IsInfinity(n);
+    private static bool Vector(Vector3Snapshot? v) => v is not null && Finite(v.X) && Finite(v.Y) && Finite(v.Z);
+    private static bool Scale(Vector3Snapshot? v) => Vector(v) && v!.X > 0 && v.Y > 0 && v.Z > 0;
     private static bool Rotation(QuaternionSnapshot? q) => q is not null && Finite(q.X) && Finite(q.Y) && Finite(q.Z) && Finite(q.W)
         && q.X * q.X + q.Y * q.Y + q.Z * q.Z + q.W * q.W is > .99f and < 1.01f;
 }

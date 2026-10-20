@@ -84,7 +84,7 @@ Voyager 本地 Move/Harvest 复用普通 RTS 并保留无水快路；有限能�
 当前用户保护的 Gameplay Journal 使用由存档身份推导的内部 key，并记录声明的跟踪边界、连续序列、持久检查点及显式 pending/error 状态。`attached_existing_save` 保留 `historicalCoverageComplete=false`；缺失早期事件不证明事件从未发生。保留原条目前缀，不能补造时间戳或强制每个操作新增事件。恢复必须在加载前及接管后证明同一原 Journal 与最低持久序号。旧凭据仅沿支持的兼容路径使用，并在之后健康保存时获得更强检查点。
 
 <a id="protected-recovery-and-version-changes"></a>
-可选的地形逐足部命中诊断只保留原同次有界查询结果及当前 simulator 的精确引用匹配。缺失、外部、重复或不完整事实不能认证归属；列表完整或已知 ocean/sphere 命中也不能替代原 owned surface 聚合与首帧守卫。观察仍为深拷贝且 `safetyCertified=false`，不进入既有 v1 哈希。
+可选足部逐命中诊断复用原有界查询；未匹配当前 simulator 仍为未知，不证明 foreign/ocean/另一星球归属。Unity 相等、诊断完整及 registered owner 标量不替代带鲜活保留 Native 绑定的唯一精确引用归属。未知、歧义、错 world/star/slot、未就绪或超限证据仍拒绝。观察保持深拷贝及 `safetyCertified=false`，不进入既有 v1 哈希。
 
 ## 受保护恢复与版本变化
 
@@ -117,6 +117,8 @@ Journal 起始版本和历史保持不变，最多允许五次已研究的持久
 显式 V2 前驱开口还要求非空 `priorLegacySourceFingerprint` 与原三个字段齐备。`priorSourceFingerprint` 指向直接前驱源，新字段指向它更旧的 legacy 祖先。四份固定有界记录均持租约：直接前驱一对与旧祖先一对，各对内字节相同、每份不超过64KiB，旧祖先不得有兼容标记。当前隔离须匹配公开已知终态失败的前驱 action 及控制方断言；两层来源均须在同一 source tick 打开精确 route/checkpoint/Journal/完整源/当前主档证据，并保留禁止较新主档回滚及全部原预算检查。Prepared 除原来源/终态断言回显外，还须返回 `priorFailedResumeV2ProvenanceUsed=true`；必需回显缺失或 false 时，MCP 不发令牌。新指纹域绑定全部证据，不改变 v1 玩家哈希。后继不能再作 V2 前驱，因为其祖先已带标记；此有限开口不是任意链、旧动作重放、推进 tick 或续预算。不提供新字段时，原三参数行为不变。
 
 显式 V3 零进度来源开口还要求非空 `priorIntermediateSourceFingerprint`、全部原 prior 字段及已知终态失败断言。`priorSourceFingerprint` 是最新前驱源，`priorIntermediateSourceFingerprint` 是中间源，`priorLegacySourceFingerprint` 是最旧 legacy 源。六份固定有界记录持租约，组成三对字节相同副本及三个精确证据开口，最旧祖先未带标记。当前隔离须匹配精确失败前驱 action；三层 route/checkpoint/Journal/完整源/当前主档 witness、零进度/source-tick、禁止较新主档回滚检查及原预算均须成立。Prepared 必须返回 `priorFailedResumeV3ProvenanceUsed=true`，原来源、V2 及终态断言回显也均须 true；V3 acknowledgement 缺失/false 时 MCP 不发令牌。新域绑定全部三层 witness；后继不能再作 V3 前驱，第四代拒绝。新输入为空时保留 v1/V2 行为。证据开口本身不推进 tick，获准自然首帧须另受守卫并计费；不授予旧动作重放、未知断言、任意链、重开已耗时/上限或额外授权。
+
+受限的已注册 Native 地形分支保留精确当前 surface 的正接触及全部原 bootstrap 前提。只有鲜活精确 world/star/注册 slot/ready 绑定、唯一精确引用归属与已证 sphere-disabled 原生分支前提齐备，才可计入本地星的其他 simulator；上限16个 simulator、各256个 surface，原257结果查询仍有界。正常 Native 注册可能早于真实 Universe(151) 的定位/层生命周期，这种可能性本身不为已采集 hit 定归属。真实151完成后，须 fresh 证明已注册非当前 surface 及其存在的 ocean 已禁用、sphere 已启用并完成预期 Native 定位，且无残留非当前足部占用；同时核当前 layer9、仅当前接触与 fresh ground。随后才可经真实501继续原 strict13，当前601余部仍须足额资金覆盖。复用既有首帧证据，不直接调用 SetLayers、UniverseTick、Simulate 或 gameplay 姿态/能量 setter。未知或生命周期后置条件未满足时，只对精确 owned 世界拒绝/Pause/隔离。已退役的 all-current-query 尝试仍退役，本源码适配不授额外盲 Load；既有六项可选恢复输入、fresh 模式回显及固定八字段上下文承诺不变。
 
 仅精确 owned、精确票据绑定的 LastExit 接管，在真实足下探测命中精确 owned 地形碰撞体 layer31，且其余模式/scene/输入/命令/UI/身份/原源文件前提全过时，才可有条件放行一次自然调度的首帧。已核足原2P储备的 bootstrap 及全部已耗时/充能/loaded返程/tick/UTC/翘曲器预算须已成立。此路径不调用 SyncTransforms、不手动调用 Native Update/GameTick，不写 gameplay 变换/速度/能量。须观察真实 Native post-Universe(151) 地形/接触结果，再经真实 pre-player(501) 检查；预检不冒充已观察任务轮次或 idle 准入。即使已请求 Pause，当前 Native 帧仍可能跑完 player(601) 余部，其费用仍须有足额储备并计入 Native 实际读回。接触及 bootstrap 前提成立后，仅原有有界、逐 tick 守护的充能可继续，直到真实501证明 strict13；独立 fresh 返航核心门不变。仍有未证前提就保持精确 owned 拒绝/Pause/quarantine。一次首帧不重开已耗时/上限，也不证明地面已修复、物理空闲或恢复成功。
 

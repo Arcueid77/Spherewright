@@ -58,10 +58,21 @@ internal sealed partial class GameStateReader
     }
 
     internal static string? CaptureOwnedTerrainFootOverlap(Player player, NativePlanetTerrainPhysicsSnapshot terrain,
-        Collider[] ownedSurface)
+        Collider[] ownedSurface) => CaptureTerrainFootOverlap(player, terrain, ownedSurface, 31, false, out _);
+
+    internal static string? CaptureFirstFrameTerrainFootOverlap(Player player, NativePlanetTerrainPhysicsSnapshot terrain,
+        Collider[] ownedSurface, out RegisteredTerrainCapture? registered) =>
+        CaptureTerrainFootOverlap(player, terrain, ownedSurface, 31, true, out registered);
+
+    internal static string? CapturePostUniverseTerrainFootOverlap(Player player, NativePlanetTerrainPhysicsSnapshot terrain,
+        Collider[] ownedSurface) => CaptureTerrainFootOverlap(player, terrain, ownedSurface, 9, false, out _);
+
+    private static string? CaptureTerrainFootOverlap(Player player, NativePlanetTerrainPhysicsSnapshot terrain,
+        Collider[] ownedSurface, int expectedLayer, bool allowRegistered, out RegisteredTerrainCapture? registered)
     {
+        registered = null;
         terrain.FootHits = null; terrain.FootHitDetailsComplete = null;
-        var blocker = NativeTerrainObservationPolicy.Blocker(terrain, 31);
+        var blocker = NativeTerrainObservationPolicy.Blocker(terrain, expectedLayer);
         if (blocker is not null) return blocker;
         try
         {
@@ -75,18 +86,25 @@ internal sealed partial class GameStateReader
             CaptureTerrainFootHitDetails(player, terrain, results, count);
             terrain.FootOverlapsOwnedSurfaceOnly = count > 0 && count < results.Length
                 && results.Take(count).All(c => c != null && c is MeshCollider mesh && mesh.sharedMesh != null
-                    && c.enabled && c.gameObject.activeInHierarchy && !c.isTrigger && c.gameObject.layer == 31
+                    && c.enabled && c.gameObject.activeInHierarchy && !c.isTrigger && c.gameObject.layer == expectedLayer
                     && ownedSurface.Any(o => ReferenceEquals(c, o))
                     && c.gameObject.scene.IsValid() && c.gameObject.scene.isLoaded
                     && c.gameObject.scene.GetPhysicsScene().Equals(Physics.defaultPhysicsScene));
-            return NativeTerrainObservationPolicy.FootBlocker(terrain);
+            var captured = CaptureRegisteredTerrainFootOwners(player, terrain, results, count);
+            if (expectedLayer == 9) return NativeRegisteredTerrainOwnerPolicy.PostUniverseFootBlocker(terrain);
+            blocker = NativeTerrainObservationPolicy.FootBlocker(terrain);
+            if (blocker is null || !allowRegistered) return blocker;
+            blocker = NativeRegisteredTerrainOwnerPolicy.PreflightBlocker(terrain);
+            if (blocker is null && captured is not null && captured.ConditionalOwners.Length > 0 && captured.MatchesBeforeUniverse())
+            { registered = captured; return null; }
+            return blocker ?? "remote_resume_registered_terrain_binding_unproved";
         }
         catch (Exception exception)
         { terrain.FootHitDetailsComplete = false; return "remote_resume_first_frame_foot_query_failed:" + exception.GetType().Name; }
     }
 
     // This consumes the original query array before its original aggregate guard returns.
-    // It never discovers ownership outside these three exact current simulator collections.
+    // Current reference membership is preserved separately from Unity-equality diagnostics.
     private static void CaptureTerrainFootHitDetails(Player player, NativePlanetTerrainPhysicsSnapshot terrain,
         Collider[] results, int count)
     {
@@ -134,6 +152,9 @@ internal sealed partial class GameStateReader
                         row.IsCurrentSurface = matches > 0;
                         row.UniqueSurfaceIndex = matches == 1 ? slot : (int?)null;
                         row.SameCurrentOcean = ReferenceEquals(c, ocean); row.SameCurrentSphere = ReferenceEquals(c, sphere);
+                        row.CurrentSurfaceUnityMatchCount = surface.Count(o => o != null && c == o);
+                        row.SameCurrentOceanUnity = ocean != null && c == ocean;
+                        row.SameCurrentSphereUnity = sphere != null && c == sphere;
                         row.UnknownOwner = matches == 0 && row.SameCurrentOcean != true && row.SameCurrentSphere != true;
                         if (matches > 1) row.ReasonType = "non_unique_current_surface";
                         else if (row.UnknownOwner == true) row.ReasonType = "owner_outside_current_simulator";
