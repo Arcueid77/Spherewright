@@ -43,6 +43,21 @@ public sealed class NativePhysicsHashCompatibilityTests
         Assert.Equal(complete, CanonicalStateHash.Player(player));
         Assert.Equal(action, CanonicalStateHash.PlayerAction(player));
 
+        player.ConstructionDrones.NativeSpeedMetersPerSecond = 20;
+        player.ConstructionDrones.NativeEnergyPerMeterJoules = 15000;
+        player.ConstructionDrones.NativeEjectEnergyJoules = 100000;
+        player.ConstructionDrones.NativeRepairEnergyPerTickJoules = 8000;
+        player.ConstructionDrones.NativePendingJumpTicks = 0;
+        Assert.Equal(complete, CanonicalStateHash.Player(player));
+        Assert.Equal(action, CanonicalStateHash.PlayerAction(player));
+        player.ConstructionDrones.NativeSpeedMetersPerSecond = null;
+        player.ConstructionDrones.NativeEnergyPerMeterJoules = null;
+        player.ConstructionDrones.NativeEjectEnergyJoules = null;
+        player.ConstructionDrones.NativeRepairEnergyPerTickJoules = null;
+        player.ConstructionDrones.NativePendingJumpTicks = 12;
+        Assert.Equal(complete, CanonicalStateHash.Player(player));
+        Assert.Equal(action, CanonicalStateHash.PlayerAction(player));
+
         player.Inventory[0].Count++;
         Assert.NotEqual(complete, CanonicalStateHash.Player(player));
         Assert.NotEqual(action, CanonicalStateHash.PlayerAction(player));

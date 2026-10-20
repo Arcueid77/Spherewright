@@ -149,4 +149,12 @@ public sealed class ConstructionDroneSnapshot
     public int PendingBuildTargets { get; set; }
 
     public int PendingRepairTargets { get; set; }
+
+    // Copied Native observations only. Null is unavailable, never zero or permission.
+    public double? NativeSpeedMetersPerSecond { get; set; }
+    public double? NativeEnergyPerMeterJoules { get; set; }
+    public double? NativeEjectEnergyJoules { get; set; }
+    // The Native per-tick repair debit; do not apply the 60-tick rate twice.
+    public double? NativeRepairEnergyPerTickJoules { get; set; }
+    public int? NativePendingJumpTicks { get; set; }
 }

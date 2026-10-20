@@ -255,6 +255,7 @@ internal sealed partial class GameStateReader
                 PendingBuildTargets = construction.buildTargetTotalCount,
                 PendingRepairTargets = construction.repairTargetTotalCount,
             };
+            CaptureConstructionDroneNativeObservations(result.ConstructionDrones, player);
         }
 
         // The public action fingerprint must remain stable while DSP performs
@@ -270,6 +271,42 @@ internal sealed partial class GameStateReader
                 : null;
         return GameCallResult<PlayerStateSnapshot>.Succeeded(result);
     }
+
+    private static void CaptureConstructionDroneNativeObservations(ConstructionDroneSnapshot snapshot, Player player)
+    {
+        // The enclosing player capture already runs on the Unity main thread.
+        // Match CaptureConstructionReserve's Native inputs without certifying its gates.
+        try
+        {
+            snapshot.NativeSpeedMetersPerSecond = ConstructionNonnegativeObservation(GameMain.history?.constructionDroneSpeed);
+            var mode = Configs.freeMode;
+            if (mode is not null)
+            {
+                snapshot.NativeEnergyPerMeterJoules = ConstructionNonnegativeObservation(mode.droneEnergyPerMeter);
+                snapshot.NativeEjectEnergyJoules = ConstructionNonnegativeObservation(mode.droneEjectEnergy);
+                // CaptureConstructionReserve multiplies these Native ints. Preserve
+                // its exact value only when that multiplication cannot overflow.
+                if (mode.droneRepairHpPerTick >= 0 && mode.droneRepairEnergyCostPerHP >= 0)
+                {
+                    var repair = (long)mode.droneRepairHpPerTick * mode.droneRepairEnergyCostPerHP;
+                    if (repair <= int.MaxValue) snapshot.NativeRepairEnergyPerTickJoules = repair;
+                }
+            }
+            var pendingJump = player.controller?.actionWalk?.jumpDelayTick;
+            snapshot.NativePendingJumpTicks = pendingJump.HasValue && pendingJump.Value >= 0 ? pendingJump : null;
+        }
+        catch
+        {
+            snapshot.NativeSpeedMetersPerSecond = null;
+            snapshot.NativeEnergyPerMeterJoules = null;
+            snapshot.NativeEjectEnergyJoules = null;
+            snapshot.NativeRepairEnergyPerTickJoules = null;
+            snapshot.NativePendingJumpTicks = null;
+        }
+    }
+
+    private static double? ConstructionNonnegativeObservation(double? value) => value.HasValue
+        && !double.IsNaN(value.Value) && !double.IsInfinity(value.Value) && value.Value >= 0d ? value : null;
 
     public GameCallResult<ProgressionStateSnapshot> GetProgressionStateOnMainThread(
         string? requestedSessionId,
