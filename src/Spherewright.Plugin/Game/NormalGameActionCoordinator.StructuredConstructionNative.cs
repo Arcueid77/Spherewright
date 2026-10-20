@@ -63,6 +63,8 @@ internal sealed partial class NormalGameActionCoordinator
         var background = movement.Proved ? movement.WorkPowerUpperWatts!.Value : double.NaN;
         var anchor = build.ConstructionControl is not null ? ToVector(build.ConstructionControl.Anchor) : player.position;
         var ejectAnchor = anchor.normalized * (anchor.magnitude + 2.8f);
+        var liveEject = player.position.normalized * (player.position.magnitude + 2.8f);
+        var ejectDisplacement = Vector3.Distance(ejectAnchor, liveEject);
         var reach = 0d;
         foreach (var spec in build.Site.Objects)
         {
@@ -84,6 +86,9 @@ internal sealed partial class NormalGameActionCoordinator
             costHash = CanonicalStateHash.Combine("native-structured-drone-cost-bounded-independent-v2", costHash,
                 budgeted.WeaponPowerUpperWatts, budgeted.ShieldRechargeEnergyPerNativeTickUpperJoules,
                 budgeted.LaserRechargeEnergyPerNativeTickUpperJoules, budgeted.PerNativeTickEnergyUpperJoules);
+        if (NativeConstructionDroneReservePolicy.ReturnClosureFraction(speed, ejectDisplacement) > .25d)
+            costHash = CanonicalStateHash.Combine("native-structured-drone-return-eleven-twentieths-v1", costHash,
+                NativeConstructionDroneReservePolicy.MaximumTighterReturnEjectDisplacementMeters);
         return NativeConstructionDroneReservePolicy.Evaluate(new NativeConstructionDroneFacts
         {
             MaximumMechaDrones = module.droneCount, NativeSpeedMetersPerSecond = speed,
@@ -91,6 +96,7 @@ internal sealed partial class NormalGameActionCoordinator
             OtherMechaPowerUpperWatts = background, AnchorRadiusMeters = anchor.magnitude,
             MaximumTargetDistanceMeters = reach,
             NativePendingJumpTicks = player.controller.actionWalk.jumpDelayTick,
+            FixedToLiveEjectDistanceMeters = ejectDisplacement,
             IndependentMechaCosts = independent,
             AllowBudgetedIndependentRecharge = movement.BudgetedRecharge?.Proved == true,
             BoundedRechargeCosts = rechargeFacts,
@@ -186,7 +192,8 @@ internal sealed partial class NormalGameActionCoordinator
                     Vector3.Distance(binding.Player.position, fixedAnchor), Vector3.Distance(position, fixedEject),
                     drone.stage == 4 ? 0d : Vector3.Distance(target, fixedEject),
                     Math.Sqrt(Math.Pow(next.X - fixedEject.x, 2d) + Math.Pow(next.Y - fixedEject.y, 2d) + Math.Pow(next.Z - fixedEject.z, 2d)),
-                    NativeConstructionDroneReservePolicy.CopiedStepWouldNativeRecycle(motion)))
+                    NativeConstructionDroneReservePolicy.CopiedStepWouldNativeRecycle(motion),
+                    Vector3.Distance(fixedEject, liveEject)))
                 return false;
         }
         return true;

@@ -66,6 +66,8 @@ Controlled construction still holds Walk at its fixed anchor and retains its sep
 
 The existing finite native construction adapter may explicitly use the same bounded-refill proof only when its background budget already includes the same captured B; it verifies that budget relationship and does not add B twice. Legacy exclusion remains the default. Generation/recharge-speed stability must cover the full paid work and drone tail plus2ticks. Fixed Walk/anchor,16m targets/28m drones, original geometry, core/loaded/return floors and unknown/drain gates remain unchanged; this adds no construction scope or layout capability.
 
+Legacy construction facts without the optional internal eject-distance observation retain the return-closure lower bound `s/4`, where `s=v/60` is distance per Native tick (m/tick) for Native speed `v` in m/s. The conservative `11s/20` branch requires Native speed `10..12`m/s and a fresh float-computed fixed/live eject distance `<=0.0109m`, with a separate cost-hash domain. Loss of either premise does not inherit that certificate and triggers existing protection. Original geometry, `16m` target reach, `28m` drone envelope, `0.01m` anchor tolerance, `64` stage-1 plus `32` near plus `2` ticks, core/loaded/return floors, work window, every-tick copied Native guards and actual drain proof remain unchanged. This optional internal evidence adds no public tool or protocol-schema field and proves no actual energy sufficiency.
+
 ## Ownership, creation, import and Journal
 
 Factory/save reads and ordinary writes require the exact world created or explicitly adopted by Spherewright. An unrelated loaded session reveals only opaque restricted session metadata and import availability.

@@ -14,6 +14,9 @@ public sealed class NativeConstructionDroneFacts
     public double? AnchorRadiusMeters { get; set; }
     public double? MaximumTargetDistanceMeters { get; set; }
     public int? NativePendingJumpTicks { get; set; }
+    // A fresh distance between the fixed and live Native float eject points.
+    // Missing observations retain the original quarter-step return reserve.
+    public double? FixedToLiveEjectDistanceMeters { get; set; }
     public NativeMechaBackgroundCostFacts? IndependentMechaCosts { get; set; }
     public bool AllowBudgetedIndependentRecharge { get; set; }
     public NativeMechaRechargeFacts? BoundedRechargeCosts { get; set; }
@@ -44,6 +47,13 @@ public static class NativeConstructionDroneReservePolicy
     public const double MaximumTargetDistanceMeters = 16d;
     public const double MaximumDroneDistanceMeters = 28d;
     public const double MaximumAnchorDisplacementMeters = .01d;
+    public const double MaximumTighterReturnEjectDisplacementMeters = .0109d;
+
+    public static double ReturnClosureFraction(double speedMetersPerSecond, double? fixedToLiveEjectDistanceMeters)
+        => Finite(speedMetersPerSecond) && speedMetersPerSecond >= 10d && speedMetersPerSecond <= 12d
+            && fixedToLiveEjectDistanceMeters.HasValue && Finite(fixedToLiveEjectDistanceMeters.Value)
+            && fixedToLiveEjectDistanceMeters.Value <= MaximumTighterReturnEjectDisplacementMeters
+                ? 11d / 20d : 1d / 4d;
 
     // DSP29151's ordinary return is normalized chord interpolation followed
     // by radial interpolation. For D <= q/4 and D >= 2s, its extra radial
@@ -94,7 +104,16 @@ public static class NativeConstructionDroneReservePolicy
             || !Finite(reach) || reach > MaximumTargetDistanceMeters
             || MaximumDroneDistanceMeters > (radius + 2.8d) / 4d)
             return Blocked("native_drone_finite_local_envelope_unproved");
-        var ticks = 64d + Math.Ceiling(4d * MaximumDroneDistanceMeters / speed * 60d) + 32d;
+        // In the explicitly observed 10..12m/s subset every moving Native
+        // distance >=.5m exceeds 2*speed/60: no radial-clamp branch occurs.
+        // Ideal normalized-chord closure is >=5s/6 for D<=q/4. Native
+        // arithmetic <=.01m, two live/fixed offsets <=.022m, current-distance
+        // error <=.001m and .01m copied-step guard slack total .043m, below
+        // (5/6-11/20)*(10/60) = .047222...m. Keep all other allowances/gates.
+        var closure = ReturnClosureFraction(speed, f.FixedToLiveEjectDistanceMeters);
+        var ticks = 64d + (closure > .25d
+            ? Math.Ceiling(MaximumDroneDistanceMeters / (closure * speed / 60d))
+            : Math.Ceiling(4d * MaximumDroneDistanceMeters / speed * 60d)) + 32d;
         var power = n * (speed * rate + repair * 60d) + background;
         // Eject energy is a conservative allowance, not a claim that DSP's
         // mecha EjectMechaDrone path actually debits the battle-base eject cost.
@@ -111,7 +130,7 @@ public static class NativeConstructionDroneReservePolicy
     // operations at radii <=6000m; the separate .01m anchor bound is mandatory.
     public static bool CopiedDroneStepPreservesEnvelope(int stage, double speedMetersPerSecond,
         double anchorDisplacementMeters, double droneDistanceMeters, double targetDistanceMeters,
-        double nextDroneDistanceMeters, bool nativeWouldRecycle = false)
+        double nextDroneDistanceMeters, bool nativeWouldRecycle = false, double? fixedToLiveEjectDistanceMeters = null)
     {
         if (stage < 1 || stage > 4 || !Finite(speedMetersPerSecond) || speedMetersPerSecond < 6d
             || speedMetersPerSecond > 120d || !Finite(anchorDisplacementMeters)
@@ -123,7 +142,8 @@ public static class NativeConstructionDroneReservePolicy
         if (stage != 4 || droneDistanceMeters < .5d || nativeWouldRecycle) return true;
         var step = speedMetersPerSecond / 60d;
         return droneDistanceMeters >= 2d * step
-            ? nextDroneDistanceMeters + .01d <= droneDistanceMeters - step / 4d
+            ? nextDroneDistanceMeters + .01d <= droneDistanceMeters
+                - step * ReturnClosureFraction(speedMetersPerSecond, fixedToLiveEjectDistanceMeters)
             : nextDroneDistanceMeters + .01d <= .75d * droneDistanceMeters + .04d;
     }
 

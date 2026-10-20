@@ -116,6 +116,127 @@ public sealed class NativeConstructionDroneReservePolicyTests
             floor + reserve.TailAndNextTickEnergyJoules - reserve.PowerUpperWatts / 60, floor, reserve.TailAndNextTickEnergyJoules));
     }
 
+    [Theory]
+    [InlineData(10d, null)] [InlineData(12d, null)] [InlineData(9.999999d, 0d)]
+    [InlineData(12.000001d, 0d)] [InlineData(10d, .010900001d)]
+    [InlineData(10d, -1d)] [InlineData(10d, double.NaN)] [InlineData(10d, double.PositiveInfinity)]
+    public void MissingOrOutsideTighterSubsetRetainsTheExactOriginalTail(double speed, double? ejectDisplacement)
+    {
+        var facts = Facts(); facts.NativeSpeedMetersPerSecond = speed;
+        facts.FixedToLiveEjectDistanceMeters = ejectDisplacement;
+        var reserve = NativeConstructionDroneReservePolicy.Evaluate(facts);
+        Assert.True(reserve.Proved);
+        Assert.Equal(.25d, NativeConstructionDroneReservePolicy.ReturnClosureFraction(speed, ejectDisplacement));
+        Assert.Equal((long)(64 + Math.Ceiling(4 * 28 / speed * 60) + 32), reserve.TailGameTicks);
+    }
+
+    [Theory]
+    [InlineData(10d, 0d, 402L)] [InlineData(10d, .0109d, 402L)]
+    [InlineData(12d, .0109d, 351L)]
+    public void MeasuredTighterSubsetStillPaysOriginalLaunchNearAndTwoSpareTicks(double speed, double drift, long ticks)
+    {
+        var facts = Facts(); facts.NativeSpeedMetersPerSecond = speed;
+        facts.FixedToLiveEjectDistanceMeters = drift;
+        var reserve = NativeConstructionDroneReservePolicy.Evaluate(facts);
+        Assert.True(reserve.Proved);
+        Assert.Equal(ticks, reserve.TailGameTicks);
+        Assert.Equal(reserve.PowerUpperWatts * (ticks + 2) / 60 + 4 * 1000,
+            reserve.TailAndNextTickEnergyJoules);
+        facts.NativePendingJumpTicks = 1;
+        Assert.False(NativeConstructionDroneReservePolicy.Evaluate(facts).Proved);
+    }
+
+    [Fact]
+    public void TighterReserveNeverLetsLoadedFuelPayForMissingCoreOrReturnFuel()
+    {
+        var facts = Facts(); facts.MaximumMechaDrones = 3; facts.NativeSpeedMetersPerSecond = 10;
+        facts.NativeEnergyPerMeter = 9000; facts.NativeRepairEnergyPerTick = 3600;
+        facts.NativeEjectEnergyJoules = 60000; facts.OtherMechaPowerUpperWatts = 228_000_000;
+        var original = NativeConstructionDroneReservePolicy.Evaluate(facts);
+        facts.FixedToLiveEjectDistanceMeters = .0109;
+        var measured = NativeConstructionDroneReservePolicy.Evaluate(facts);
+        const double coreCapacity = 1_600_000_000, floor = 5_000_000_000;
+        Assert.True(original.TailAndNextTickEnergyJoules > coreCapacity);
+        Assert.True(measured.TailAndNextTickEnergyJoules < coreCapacity);
+        Assert.True(NativeConstructionDroneReservePolicy.CanFundNativeTail(coreCapacity,
+            floor + measured.TailAndNextTickEnergyJoules, floor, measured.TailAndNextTickEnergyJoules));
+        Assert.False(NativeConstructionDroneReservePolicy.CanFundNativeTail(measured.TailAndNextTickEnergyJoules - 1,
+            floor + original.TailAndNextTickEnergyJoules, floor, measured.TailAndNextTickEnergyJoules));
+        Assert.False(NativeConstructionDroneReservePolicy.CanFundNativeTail(coreCapacity,
+            floor + measured.TailAndNextTickEnergyJoules - 1, floor, measured.TailAndNextTickEnergyJoules));
+    }
+
+    [Fact]
+    public void TighterPaidTailRequiresStrongerCopiedStepThanLegacy()
+    {
+        Assert.True(NativeConstructionDroneReservePolicy.CopiedDroneStepPreservesEnvelope(4, 10, 0, 10, 0, 9.94));
+        Assert.False(NativeConstructionDroneReservePolicy.CopiedDroneStepPreservesEnvelope(4, 10, 0, 10, 0, 9.94,
+            fixedToLiveEjectDistanceMeters: .0109));
+        Assert.True(NativeConstructionDroneReservePolicy.CopiedDroneStepPreservesEnvelope(4, 10, 0, 10, 0, 9.89,
+            fixedToLiveEjectDistanceMeters: .0109));
+    }
+
+    [Fact]
+    public void ActualFloatThresholdRoundingFailsConservativelyWithoutAnUnobservedTolerance()
+    {
+        var roundedUp = (double).0109f;
+        var roundedDown = (double)MathF.BitDecrement(.0109f);
+        Assert.True(roundedUp > .0109d);
+        Assert.True(roundedDown < .0109d);
+        Assert.Equal(.25d, NativeConstructionDroneReservePolicy.ReturnClosureFraction(10, roundedUp));
+        Assert.Equal(.55d, NativeConstructionDroneReservePolicy.ReturnClosureFraction(10, roundedDown));
+    }
+
+    [Theory]
+    [InlineData(120d, 10f)] [InlineData(200d, 10f)] [InlineData(6000d, 10f)]
+    [InlineData(120d, 12f)] [InlineData(200d, 12f)] [InlineData(6000d, 12f)]
+    public void CopiedNativeReturnConvergesWithRoundedCoordinatesAndOpposingEjectOffsets(double radius, float speed)
+    {
+        foreach (var sign in new[] { -1d, 1d })
+        foreach (var startDistance in new[] { .4995d, .5d, .51d, 7.5d, 16d, 27.99d })
+        foreach (var radialWeight in new[] { -1d, 0d, 1d })
+        {
+            var unit = 1 / Math.Sqrt(3);
+            var fixedEject = new Vector3Snapshot
+            { X = (float)((radius + 2.8) * unit), Y = (float)((radius + 2.8) * unit), Z = (float)((radius + 2.8) * unit) };
+            var liveEject = new Vector3Snapshot
+            { X = (float)(fixedEject.X + sign * .0105), Y = fixedEject.Y, Z = fixedEject.Z };
+            var drift = FloatDistance(new() { X = liveEject.X, Y = liveEject.Y, Z = liveEject.Z }, fixedEject);
+            var direction = new[] { 1d + radialWeight, -1d + radialWeight, radialWeight };
+            var magnitude = Math.Sqrt(direction.Sum(x => x * x));
+            var motion = Motion(radius, speed); motion.Target = liveEject; motion.Eject = liveEject;
+            motion.Position = new()
+            {
+                X = fixedEject.X + startDistance * direction[0] / magnitude,
+                Y = fixedEject.Y + startDistance * direction[1] / magnitude,
+                Z = fixedEject.Z + startDistance * direction[2] / magnitude,
+            };
+            var facts = Facts(); facts.AnchorRadiusMeters = radius; facts.NativeSpeedMetersPerSecond = speed;
+            facts.FixedToLiveEjectDistanceMeters = drift;
+            var tail = NativeConstructionDroneReservePolicy.Evaluate(facts);
+            Assert.True(tail.Proved); Assert.Equal(.55, NativeConstructionDroneReservePolicy.ReturnClosureFraction(speed, drift));
+            var ticks = 0;
+            while (!NativeConstructionDroneReservePolicy.CopiedStepWouldNativeRecycle(motion) && ticks < tail.TailGameTicks - 64)
+            {
+                var current = FloatDistance(motion.Position, fixedEject);
+                var next = NativeConstructionDroneReservePolicy.PredictCopiedOrdinaryStep(motion);
+                Assert.NotNull(next);
+                // Never exclude a next point that exits the envelope from the sample.
+                Assert.True(NativeConstructionDroneReservePolicy.CopiedDroneStepPreservesEnvelope(4, speed, 0,
+                    current, 0, Distance(next!, fixedEject), fixedToLiveEjectDistanceMeters: drift));
+                motion.Position = next!; ticks++;
+            }
+            Assert.True(NativeConstructionDroneReservePolicy.CopiedStepWouldNativeRecycle(motion));
+            Assert.True(ticks < tail.TailGameTicks - 64);
+        }
+    }
+
+    private static double FloatDistance(UniversalPositionSnapshot position, Vector3Snapshot target)
+    {
+        var x = (float)position.X - target.X; var y = (float)position.Y - target.Y; var z = (float)position.Z - target.Z;
+        return (float)Math.Sqrt(x * x + y * y + z * z);
+    }
+
     private static NativeConstructionDroneFacts Facts() => new()
     {
         MaximumMechaDrones = 4, NativeSpeedMetersPerSecond = 12, NativeEnergyPerMeter = 200,
