@@ -48,3 +48,25 @@ internal sealed class NativeLoadCompletionSubscription<T> : IDisposable where T 
         _unsubscribe(_handler);
     }
 }
+
+// A single call-boundary latch, not an admission controller. The caller must
+// re-run its complete strict gate even when synchronization returns normally.
+internal sealed class NativeLoadedTransformSyncAttempt
+{
+    public bool Attempted { get; private set; }
+    public string? TrySynchronize(string? blocker, bool exactLoadedSourceBoundary,
+        Func<bool> beforeUnchanged, Action synchronize, Func<bool> afterUnchanged)
+    {
+        if (blocker != "remote_idle_ground_contact_unproved" || !exactLoadedSourceBoundary)
+            return blocker ?? "remote_resume_ground_sync_boundary_unproved";
+        if (Attempted) return "remote_resume_ground_sync_already_attempted";
+        try
+        {
+            if (!beforeUnchanged()) return "remote_resume_ground_sync_boundary_changed";
+            Attempted = true; // Even a partial/throwing Native call is never repeated.
+            synchronize();
+            return afterUnchanged() ? null : "remote_resume_ground_sync_state_changed";
+        }
+        catch (Exception exception) { return "remote_resume_ground_sync_failed:" + exception.GetType().Name; }
+    }
+}

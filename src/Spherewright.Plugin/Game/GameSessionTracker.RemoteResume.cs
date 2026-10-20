@@ -1,5 +1,6 @@
 using Spherewright.Bridge.Core.Safety;
 using Spherewright.Contracts.Sessions;
+using Spherewright.Contracts.Players;
 using Spherewright.Plugin.RuntimeDescriptor;
 using Spherewright.Plugin.Transport;
 
@@ -22,6 +23,8 @@ internal sealed partial class GameSessionTracker
     private GameData? _remoteResumeCompletedWorld;
     private bool _remoteResumeLoadCompleteObserved;
     private bool _remoteResumeLoadPreflightPassed;
+    private bool _remoteResumeLoadPreflightRunning;
+    private VoyagerRemoteResumeAdoption? _remoteResumeGroundDiagnosticAdoption;
 
     internal bool RequiresRemoteResumeEvidence => _flightCheckpoints.VoyagerJourney?.Phase == "remote_landed"
         || _flightCheckpoints.VoyagerJourneyLoadError is not null;
@@ -31,9 +34,9 @@ internal sealed partial class GameSessionTracker
     internal bool TryOpenRemoteResumeEvidence(OwnedWorldResumeTicket ticket, OwnedSaveRecoveryLease source,
         OwnedSaveRecoveryLease primary, out VoyagerRemoteResumeEvidence? evidence, out string rejection,
         VoyagerRecoveryWindowProposal? proposal = null, PriorFailedResumeProof? priorFailedProof = null,
-        string priorSourceFingerprint = "", bool priorActionKnownTerminalFailed = false) =>
+        string priorSourceFingerprint = "", bool priorActionKnownTerminalFailed = false, string priorLegacySourceFingerprint = "") =>
         _flightCheckpoints.TryOpenRemoteResumeEvidence(ticket, source, primary, out evidence, out rejection, proposal,
-            priorFailedProof, priorSourceFingerprint, priorActionKnownTerminalFailed);
+            priorFailedProof, priorSourceFingerprint, priorActionKnownTerminalFailed, priorLegacySourceFingerprint);
 
     internal DateTimeOffset EffectiveVoyagerDeadline(VoyagerJourneyRecord journey)
     {
@@ -110,8 +113,11 @@ internal sealed partial class GameSessionTracker
                 return;
             }
             _remoteResumeLoadCompleteObserved = true;
-            var blocker = _remoteResumeLoadCompleteGuard is null ? "remote_resume_native_loader_guard_unavailable"
-                : _remoteResumeLoadCompleteGuard();
+            string? blocker;
+            _remoteResumeLoadPreflightRunning = true;
+            try { blocker = _remoteResumeLoadCompleteGuard is null ? "remote_resume_native_loader_guard_unavailable"
+                : _remoteResumeLoadCompleteGuard(); }
+            finally { _remoteResumeLoadPreflightRunning = false; }
             if (blocker is not null) { FailRemoteResumeAdmission(blocker); return; }
             _remoteResumeLoadPreflightPassed = true;
         }
@@ -137,6 +143,35 @@ internal sealed partial class GameSessionTracker
         if (blocker is not null) return blocker;
         return _remoteResumePreflightGuard is null ? "remote_resume_loader_strict_preflight_unavailable"
             : _remoteResumePreflightGuard(adoption!);
+    }
+
+    internal bool ExactRemoteResumeLoadPreflight(VoyagerRemoteResumeAdoption adoption) =>
+        _remoteResumeLoadPreflightRunning && _remoteResumeLoadCompleteObserved && !_remoteResumeLoadPreflightPassed
+        && HasPendingRemoteResumeAdoption && ReferenceEquals(_remoteResumeAdoption, adoption)
+        && _remoteResumeExpectedLoader != null && _remoteResumeExpectedLoader.frame == 10 && !_remoteResumeExpectedLoader.enabled
+        && ReferenceEquals(GameMain.data, _remoteResumeCompletedWorld) && ReferenceEquals(GameMain.data, adoption.World)
+        && ReferenceEquals(GameMain.mainPlayer, adoption.Player) && IsCurrentSessionOwned && _sessionId == adoption.SessionId
+        && _remoteResumeJournalConfirmed && _pendingJournalResumeTicket is null && _resumeSourceLease is not null
+        && GameMain.gameTick == adoption.Evidence.SourceGameTick
+        && _flightCheckpoints.RemoteResumeEvidenceStillMatches(adoption.Evidence);
+
+    internal void RecordRemoteResumeGroundObservation(VoyagerRemoteResumeAdoption adoption,
+        NativePlayerGroundContactSnapshot? observation, bool afterSync)
+    {
+        if (observation is null || !ReferenceEquals(_remoteResumeAdoption, adoption)) return;
+        _remoteResumeGroundDiagnosticAdoption = adoption;
+        if (afterSync) adoption.GroundContactPostSync ??= observation.Copy();
+        else adoption.GroundContactPreSync ??= observation.Copy();
+    }
+
+    internal void CopyRemoteResumeGroundDiagnostics(Player player, NativePlayerPhysicsSnapshot result)
+    {
+        var a = _remoteResumeGroundDiagnosticAdoption;
+        if (a is null || !IsCurrentSessionOwned || _sessionId != a.SessionId
+            || !ReferenceEquals(GameMain.data, a.World) || !ReferenceEquals(player, a.Player))
+        { _remoteResumeGroundDiagnosticAdoption = null; return; }
+        result.ResumeGroundContactPreSync = a.GroundContactPreSync?.Copy();
+        result.ResumeGroundContactPostSync = a.GroundContactPostSync?.Copy();
     }
 
     private string? CaptureRemoteResumeAdoption(out VoyagerRemoteResumeAdoption? adoption)
@@ -229,6 +264,7 @@ internal sealed partial class GameSessionTracker
         _pendingRemoteResumeEvidence = null;
         _pendingRemoteResumeActionId = null;
         _remoteResumeAdoption = null;
+        _remoteResumeGroundDiagnosticAdoption = null; // Session/Host cancellation ends diagnostic ownership too.
         _remoteResumeAdmitted = false;
         _remoteResumeJournalConfirmed = false;
         _remoteResumeLoadSubscription?.Dispose();
@@ -238,6 +274,7 @@ internal sealed partial class GameSessionTracker
         _remoteResumeCompletedWorld = null;
         _remoteResumeLoadCompleteObserved = false;
         _remoteResumeLoadPreflightPassed = false;
+        _remoteResumeLoadPreflightRunning = false;
         _pendingRecoveryAuthorization = null;
     }
 }
@@ -263,4 +300,7 @@ internal sealed class VoyagerRemoteResumeAdoption
     public string? ChargeCostEnvelope { get; set; }
     public double? ChargePerTickUpper { get; set; }
     public double? ChargeGenerationLowerBoundWatts { get; set; }
+    public NativeLoadedTransformSyncAttempt GroundSync { get; } = new();
+    public NativePlayerGroundContactSnapshot? GroundContactPreSync { get; set; }
+    public NativePlayerGroundContactSnapshot? GroundContactPostSync { get; set; }
 }

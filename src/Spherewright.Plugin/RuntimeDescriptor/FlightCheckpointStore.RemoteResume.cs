@@ -10,7 +10,7 @@ internal sealed partial class FlightCheckpointStore
     public bool TryOpenRemoteResumeEvidence(OwnedWorldResumeTicket ticket, OwnedSaveRecoveryLease source,
         OwnedSaveRecoveryLease primary, out VoyagerRemoteResumeEvidence? evidence, out string rejection,
         VoyagerRecoveryWindowProposal? recoveryProposal = null, PriorFailedResumeProof? priorFailedProof = null,
-        string priorSourceFingerprint = "", bool priorActionKnownTerminalFailed = false)
+        string priorSourceFingerprint = "", bool priorActionKnownTerminalFailed = false, string priorLegacySourceFingerprint = "")
     {
         evidence = null;
         rejection = string.Empty;
@@ -36,14 +36,37 @@ internal sealed partial class FlightCheckpointStore
                 if (!priorActionKnownTerminalFailed || originalActionMatches
                     || source.Prefix.GameTick != ticket.MinimumGameTick
                     || !OwnedWorldRecoveryPolicy.IsCanonicalFingerprint(priorSourceFingerprint)
-                    || priorFailedProof.Authorization.ResumeActionId != ticket.QuarantineActionId
-                    || priorFailedProof.Authorization.PriorConsumedResumeTokenHash is not null)
+                    || priorFailedProof.Authorization.ResumeActionId != ticket.QuarantineActionId)
                 { rejection = "remote_resume_prior_failed_zero_progress_unproved"; return false; }
                 // Same Unity serializer/runtime as the original commitment. Do not accept
                 // caller-supplied JSON, paths or desktop-normalized floating-point lexemes.
-                var opening = VoyagerRemoteResumeEvidence.LegacyFingerprint(journeyJson, checkpointJson,
-                    priorSourceFingerprint, primary.Fingerprint, source.Prefix.GameTick, primary.Prefix.GameTick,
-                    journalJson, priorFailedProof.Authorization.Proposal);
+                string opening;
+                if (priorFailedProof.LegacyAncestor is { } ancestor)
+                {
+                    if (!OwnedWorldRecoveryPolicy.IsCanonicalFingerprint(priorLegacySourceFingerprint)
+                        || ancestor.Authorization.PriorConsumedResumeTokenHash is not null
+                        || priorFailedProof.Authorization.PriorConsumedResumeTokenHash != ancestor.TokenHash)
+                    { rejection = "remote_resume_fixed_v2_ancestor_unproved"; return false; }
+                    var legacyOpening = VoyagerRemoteResumeEvidence.LegacyFingerprint(journeyJson, checkpointJson,
+                        priorLegacySourceFingerprint, primary.Fingerprint, source.Prefix.GameTick, primary.Prefix.GameTick,
+                        journalJson, ancestor.Authorization.Proposal);
+                    if (legacyOpening != ancestor.Authorization.EvidenceFingerprint)
+                    { rejection = "remote_resume_fixed_v2_legacy_opening_failed"; return false; }
+                    var previousCore = VoyagerRemoteResumeEvidence.LegacyFingerprint(journeyJson, checkpointJson,
+                        priorSourceFingerprint, primary.Fingerprint, source.Prefix.GameTick, primary.Prefix.GameTick,
+                        journalJson, priorFailedProof.Authorization.Proposal);
+                    opening = CanonicalStateHash.Combine("voyager-remote-last-exit-prior-failed-v1", previousCore,
+                        ancestor.Fingerprint, priorLegacySourceFingerprint, ancestor.Authorization.ResumeActionId, true);
+                }
+                else
+                {
+                    if (priorFailedProof.Authorization.PriorConsumedResumeTokenHash is not null
+                        || !string.IsNullOrEmpty(priorLegacySourceFingerprint))
+                    { rejection = "remote_resume_prior_failed_legacy_required"; return false; }
+                    opening = VoyagerRemoteResumeEvidence.LegacyFingerprint(journeyJson, checkpointJson,
+                        priorSourceFingerprint, primary.Fingerprint, source.Prefix.GameTick, primary.Prefix.GameTick,
+                        journalJson, priorFailedProof.Authorization.Proposal);
+                }
                 if (!string.Equals(opening, priorFailedProof.Authorization.EvidenceFingerprint, StringComparison.Ordinal))
                 { rejection = "remote_resume_prior_commitment_opening_failed"; return false; }
                 originalActionMatches = true; // Exact current route/CP/Journal/primary commitment opened.
@@ -84,7 +107,7 @@ internal sealed partial class FlightCheckpointStore
             evidence = new VoyagerRemoteResumeEvidence(journeyJson, checkpointJson,
                 source.Fingerprint, primary.Fingerprint, source.Prefix.GameTick, primary.Prefix.GameTick,
                 ticket.GameplayJournalCheckpoint!, recoveryProposal, priorFailedProof, priorSourceFingerprint,
-                ticket.QuarantineActionId, ticketLease, journeyLease, checkpointLease);
+                ticket.QuarantineActionId, priorLegacySourceFingerprint, ticketLease, journeyLease, checkpointLease);
             ticketLease = null; journeyLease = null; checkpointLease = null;
             return true;
         }
@@ -114,12 +137,12 @@ internal sealed class VoyagerRemoteResumeEvidence : IDisposable
         string primaryFingerprint, long sourceGameTick, long primaryGameTick, OwnedWorldGameplayJournalCheckpoint journal,
         VoyagerRecoveryWindowProposal? recoveryProposal, params IDisposable[] leases)
         : this(journeyJson, checkpointJson, sourceFingerprint, primaryFingerprint, sourceGameTick, primaryGameTick,
-            journal, recoveryProposal, null, "", "", leases) { }
+            journal, recoveryProposal, null, "", "", "", leases) { }
 
     public VoyagerRemoteResumeEvidence(string journeyJson, string checkpointJson, string sourceFingerprint,
         string primaryFingerprint, long sourceGameTick, long primaryGameTick, OwnedWorldGameplayJournalCheckpoint journal,
         VoyagerRecoveryWindowProposal? recoveryProposal, PriorFailedResumeProof? priorFailedProof,
-        string priorSourceFingerprint, string quarantineActionId, params IDisposable[] leases)
+        string priorSourceFingerprint, string quarantineActionId, string priorLegacySourceFingerprint, params IDisposable[] leases)
     {
         JourneyJson = journeyJson; CheckpointJson = checkpointJson; SourceFingerprint = sourceFingerprint;
         PrimaryFingerprint = primaryFingerprint; SourceGameTick = sourceGameTick; PrimaryGameTick = primaryGameTick;
@@ -131,6 +154,11 @@ internal sealed class VoyagerRemoteResumeEvidence : IDisposable
         Fingerprint = priorFailedProof is null ? currentFingerprint
             : CanonicalStateHash.Combine("voyager-remote-last-exit-prior-failed-v1", currentFingerprint,
                 priorFailedProof.Fingerprint, priorSourceFingerprint, quarantineActionId, true);
+        PriorV2ProvenanceUsed = priorFailedProof?.LegacyAncestor is not null;
+        if (PriorV2ProvenanceUsed)
+            Fingerprint = CanonicalStateHash.Combine("voyager-remote-last-exit-prior-failed-v2", currentFingerprint,
+                priorFailedProof!.Fingerprint, priorFailedProof.LegacyAncestor!.Fingerprint,
+                priorSourceFingerprint, priorLegacySourceFingerprint, quarantineActionId, true);
     }
     internal static string LegacyFingerprint(string journeyJson, string checkpointJson, string sourceFingerprint,
         string primaryFingerprint, long sourceGameTick, long primaryGameTick, string journalJson,
@@ -138,6 +166,7 @@ internal sealed class VoyagerRemoteResumeEvidence : IDisposable
         CanonicalStateHash.Combine("voyager-remote-last-exit-v1", journeyJson, checkpointJson, sourceFingerprint,
             primaryFingerprint, sourceGameTick, primaryGameTick, journalJson, PluginJson.Serialize(proposal));
     public string? PriorConsumedResumeTokenHash { get; }
+    public bool PriorV2ProvenanceUsed { get; }
     public string JourneyJson { get; }
     public string CheckpointJson { get; }
     public string SourceFingerprint { get; }

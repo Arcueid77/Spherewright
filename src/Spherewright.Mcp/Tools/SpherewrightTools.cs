@@ -1463,7 +1463,8 @@ public static partial class SpherewrightTools
         [Description("Optional natural-charge wall cap, greater than0 and at most300 seconds; never extends the original five-minute adoption lease.")] double maximumChargeWallSeconds = 0d,
         [Description("Optional already-consumed credential for exactly one prior failed remote resume; requires priorSourceFingerprint and priorActionKnownTerminalFailed together. Never replays that action or selects a file.")] string priorConsumedResumeToken = "",
         [Description("Exact sha256 source-fingerprint witness for the prior consumed authorization. The Plugin opens its original commitment against current route, checkpoint, Journal and primary; no path or JSON input.")] string priorSourceFingerprint = "",
-        [Description("Explicit caller attestation, supported by the original action receipt, that the exact prior resume terminally failed with no unknown outcome. Consumption is not a Native durable terminal certificate. Unknown or unobserved outcomes must not be asserted as failed.")] bool? priorActionKnownTerminalFailed = null)
+        [Description("Explicit caller attestation, supported by the original action receipt, that the exact prior resume terminally failed with no unknown outcome. Consumption is not a Native durable terminal certificate. Unknown or unobserved outcomes must not be asserted as failed.")] bool? priorActionKnownTerminalFailed = null,
+        [Description("Optional additional exact legacy source fingerprint for one explicitly formatted V2 predecessor. Requires all three prior-failure fields; binds exactly four fixed consumed-record replicas and two commitment openings. No arbitrary ancestry, path or JSON input.")] string priorLegacySourceFingerprint = "")
     {
         var request = new PrepareOwnedWorldResumeRequest
         {
@@ -1474,6 +1475,7 @@ public static partial class SpherewrightTools
             MaximumChargeGameTicks = maximumChargeGameTicks, MaximumChargeWallSeconds = maximumChargeWallSeconds,
             PriorConsumedResumeToken = priorConsumedResumeToken, PriorSourceFingerprint = priorSourceFingerprint,
             PriorActionKnownTerminalFailed = priorActionKnownTerminalFailed,
+            PriorLegacySourceFingerprint = priorLegacySourceFingerprint,
         };
         var invalid = OwnedWorldRecoveryPolicy.ValidateRequest(request);
         if (invalid is not null)
@@ -1490,6 +1492,11 @@ public static partial class SpherewrightTools
             result = BridgeCallResult<PreparedOwnedWorldResumePlan>.Failed(BridgeError.Create(BridgeErrorCodes.BridgeNotReady,
                 "The Plugin did not echo the exact prior failed-resume provenance and caller attestation; no plan token is exposed.", false,
                 "Use matching Plugin/MCP bytes. A consumed record alone does not prove a terminal outcome."));
+        if (!string.IsNullOrEmpty(priorLegacySourceFingerprint) && result.Success
+            && result.Value?.PriorFailedResumeV2ProvenanceUsed != true)
+            result = BridgeCallResult<PreparedOwnedWorldResumePlan>.Failed(BridgeError.Create(BridgeErrorCodes.BridgeNotReady,
+                "The Plugin did not echo the exact fixed V2 predecessor proof; no plan token is exposed.", false,
+                "Use matching Plugin/MCP bytes. Do not commit a plan that ignored the extra witness."));
         if (recoveryDeadlineUtc.HasValue && result.Success && (result.Value is not { } window
             || window.EffectiveRecoveryDeadlineUtc != recoveryDeadlineUtc || !window.OriginalJourneyDeadlineUtc.HasValue
             || window.RecoveryScope != recoveryScope || window.MaximumChargeGameTicks != maximumChargeGameTicks

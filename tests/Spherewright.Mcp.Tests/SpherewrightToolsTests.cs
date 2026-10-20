@@ -25,6 +25,52 @@ namespace Spherewright.Mcp.Tests;
 
 public sealed class SpherewrightToolsTests
 {
+    [Theory]
+    [InlineData(true)] [InlineData(false)]
+    public async Task FixedV2WitnessUsesRealOptionalSchemaForwardingAndRequiresItsExactEcho(bool supported)
+    {
+        var plan = WindowPlan(DateTimeOffset.UtcNow.AddMinutes(30)); plan.PriorFailedResumeProvenanceUsed = true;
+        plan.PriorActionTerminalFailureAttested = true; plan.PriorFailedResumeV2ProvenanceUsed = supported;
+        var bridge = new FakeBridgeClient(SuccessResult()) { ResumePlan = plan };
+        var services = new ServiceCollection(); services.AddSingleton<IBridgeClient>(bridge);
+        services.AddMcpServer().WithToolsFromAssembly(typeof(SpherewrightTools).Assembly);
+        using var provider = services.BuildServiceProvider();
+        var tool = Assert.Single(provider.GetServices<McpServerTool>(), t => t.ProtocolTool.Name == "spherewright_prepare_resume_owned_game");
+        var schema = tool.ProtocolTool.InputSchema;
+        Assert.True(schema.GetProperty("properties").TryGetProperty("priorLegacySourceFingerprint", out _));
+        if (schema.TryGetProperty("required", out var required))
+            Assert.DoesNotContain(required.EnumerateArray(), p => p.GetString() == "priorLegacySourceFingerprint");
+        var witness = CanonicalStateHash.Combine("synthetic-legacy-source");
+        await using var server = McpServer.Create(new StreamServerTransport(Stream.Null, Stream.Null), new McpServerOptions(), null, provider);
+        var args = new CallToolRequestParams { Name = tool.ProtocolTool.Name, Arguments = new Dictionary<string, JsonElement>
+        {
+            ["resumeToken"] = JsonSerializer.SerializeToElement("synthetic-current"),
+            ["priorConsumedResumeToken"] = JsonSerializer.SerializeToElement("synthetic-prior"),
+            ["priorSourceFingerprint"] = JsonSerializer.SerializeToElement(CanonicalStateHash.Combine("synthetic-source")),
+            ["priorActionKnownTerminalFailed"] = JsonSerializer.SerializeToElement(true),
+            ["priorLegacySourceFingerprint"] = JsonSerializer.SerializeToElement(witness),
+        } };
+        var context = new RequestContext<CallToolRequestParams>(server,
+            new JsonRpcRequest { Id = new RequestId(1), Method = "tools/call" }, args) { Services = provider };
+        var result = await tool.InvokeAsync(context);
+        Assert.Equal(witness, bridge.LastResumePrepareRequest!.PriorLegacySourceFingerprint);
+        Assert.Equal(!supported, result.IsError);
+        if (supported) Assert.True(result.StructuredContent!.Value.GetProperty("result").GetProperty("priorFailedResumeV2ProvenanceUsed").GetBoolean());
+        else Assert.DoesNotContain("planToken", result.StructuredContent!.Value.GetRawText());
+    }
+
+    [Theory]
+    [InlineData("partial")] [InlineData("format")] [InlineData("unattested")]
+    public async Task FixedV2PartialOrUnattestedInputNeverReachesBridge(string fault)
+    {
+        var bridge = new FakeBridgeClient(SuccessResult());
+        var result = await SpherewrightTools.PrepareOwnedWorldResumeAsync(bridge, "synthetic-current",
+            priorConsumedResumeToken: fault == "partial" ? "" : "synthetic-prior",
+            priorSourceFingerprint: CanonicalStateHash.Combine("synthetic-source"),
+            priorActionKnownTerminalFailed: fault == "unattested" ? null : true,
+            priorLegacySourceFingerprint: fault == "format" ? "not-a-fingerprint" : CanonicalStateHash.Combine("synthetic-legacy"));
+        Assert.True(result.IsError); Assert.Null(bridge.LastResumePrepareRequest);
+    }
     [Fact]
     public async Task PriorFailedResumeUsesOptionalPublicSchemaAndForwardsThreeExactJsonArguments()
     {

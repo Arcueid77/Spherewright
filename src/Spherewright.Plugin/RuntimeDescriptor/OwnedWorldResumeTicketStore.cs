@@ -351,16 +351,43 @@ internal sealed class OwnedWorldResumeTicketStore
         && FixedTimeEquals(expectedFingerprint, actual) && TryConsume(token, authorization);
 
     public bool TryOpenPriorFailedResumeProof(string priorToken, string quarantineActionId,
+        out PriorFailedResumeProof? proof, out string rejection, bool requireV2Predecessor = false)
+    {
+        proof = null; rejection = string.Empty;
+        if (string.IsNullOrWhiteSpace(priorToken) || priorToken.Length > 256
+            || (_currentTicket is not null && FixedTimeEquals(priorToken, _currentTicket.ResumeToken)))
+        { rejection = "remote_resume_prior_credential_invalid"; return false; }
+        var tokenHash = HashToken(priorToken);
+        if (!TryOpenFixedConsumptionProof(tokenHash, quarantineActionId, !requireV2Predecessor,
+            out var immediate, out rejection)) return false;
+        if (!requireV2Predecessor) { proof = immediate; return true; }
+        try
+        {
+            var ancestorHash = immediate!.Authorization.PriorConsumedResumeTokenHash;
+            if (!OwnedWorldRecoveryPolicy.IsCanonicalFingerprint("sha256:" + ancestorHash)
+                || FixedTimeEquals(tokenHash, ancestorHash!))
+            { rejection = "remote_resume_fixed_v2_ancestor_unproved"; return false; }
+            // Exactly one legacy ancestor, derived from this immutable record's
+            // token hash. Never recurse or accept a caller-selected file/JSON.
+            if (!TryOpenFixedConsumptionProof(ancestorHash!, null, true, out var ancestor, out rejection)) return false;
+            if (ancestor!.Authorization.ResumeActionId == immediate.Authorization.ResumeActionId)
+            { ancestor.Dispose(); rejection = "remote_resume_fixed_v2_actions_not_distinct"; return false; }
+            if (ancestor.ConsumedAtUtc > immediate.Authorization.ConfirmedAtUtc)
+            { ancestor.Dispose(); rejection = "remote_resume_fixed_v2_authorization_order_unproved"; return false; }
+            immediate.AttachLegacyAncestor(ancestor);
+            proof = immediate; immediate = null;
+            return true;
+        }
+        finally { immediate?.Dispose(); }
+    }
+
+    private bool TryOpenFixedConsumptionProof(string tokenHash, string? quarantineActionId, bool requireLegacy,
         out PriorFailedResumeProof? proof, out string rejection)
     {
         proof = null; rejection = string.Empty;
         FileStream? runtime = null; FileStream? handoff = null;
         try
         {
-            if (string.IsNullOrWhiteSpace(priorToken) || priorToken.Length > 256
-                || (_currentTicket is not null && FixedTimeEquals(priorToken, _currentTicket.ResumeToken)))
-                throw new InvalidDataException("The prior credential must be distinct and bounded.");
-            var tokenHash = HashToken(priorToken);
             var handoffDirectory = Path.GetDirectoryName(_handoffTicketPath)!;
             var firstPath = GetTombstonePath(_runtimeDirectory, tokenHash);
             var secondPath = GetTombstonePath(handoffDirectory, tokenHash);
@@ -383,9 +410,10 @@ internal sealed class OwnedWorldResumeTicketStore
                 || !FixedTimeEquals(first.ResumeTokenHash, tokenHash) || !FixedTimeEquals(second.ResumeTokenHash, tokenHash)
                 || first.GameVersion != _gameVersion || second.GameVersion != _gameVersion
                 || first.ConsumedAtUtc == default || authorization is null
-                || authorization.PriorConsumedResumeTokenHash is not null
+                || (requireLegacy ? authorization.PriorConsumedResumeTokenHash is not null
+                    : authorization.PriorConsumedResumeTokenHash is null)
                 || !Guid.TryParse(authorization.ResumeActionId, out _)
-                || !string.Equals(authorization.ResumeActionId, quarantineActionId, StringComparison.Ordinal)
+                || (quarantineActionId is not null && !string.Equals(authorization.ResumeActionId, quarantineActionId, StringComparison.Ordinal))
                 || !OwnedWorldRecoveryPolicy.IsCanonicalFingerprint(authorization.EvidenceFingerprint)
                 || !OwnedWorldRecoveryPolicy.IsCanonicalFingerprint(authorization.ConfirmationDigest)
                 || authorization.ConfirmedAtUtc == default || authorization.ConfirmedAtUtc > first.ConsumedAtUtc
@@ -399,11 +427,11 @@ internal sealed class OwnedWorldResumeTicketStore
             // This is consumption/authorization evidence, never a durable action outcome.
             proof = new PriorFailedResumeProof(tokenHash, authorization,
                 CanonicalStateHash.Combine("prior-remote-consumption-v1", tokenHash, HashToken(firstJson), HashToken(secondJson)),
-                runtime, handoff);
+                runtime, handoff) { ConsumedAtUtc = first.ConsumedAtUtc };
             runtime = null; handoff = null;
             return true;
         }
-        catch (Exception exception) when (exception is IOException || exception is UnauthorizedAccessException
+        catch (Exception exception) when (exception is IOException || exception is InvalidDataException || exception is UnauthorizedAccessException
             || exception is ArgumentException || exception is Newtonsoft.Json.JsonException)
         { rejection = "remote_resume_prior_consumption_unproved:" + exception.GetType().Name; return false; }
         finally { runtime?.Dispose(); handoff?.Dispose(); }
@@ -965,5 +993,14 @@ internal sealed class PriorFailedResumeProof : IDisposable
     public string TokenHash { get; }
     public VoyagerRecoveryAuthorization Authorization { get; }
     public string Fingerprint { get; }
-    public void Dispose() { foreach (var lease in _leases) lease.Dispose(); }
+    public DateTimeOffset ConsumedAtUtc { get; internal set; }
+    public PriorFailedResumeProof? LegacyAncestor { get; private set; }
+    internal void AttachLegacyAncestor(PriorFailedResumeProof ancestor)
+    {
+        if (LegacyAncestor is not null || ancestor.LegacyAncestor is not null
+            || ancestor.Authorization.PriorConsumedResumeTokenHash is not null)
+            throw new InvalidOperationException("Only one fixed legacy ancestor may be attached.");
+        LegacyAncestor = ancestor;
+    }
+    public void Dispose() { foreach (var lease in _leases) lease.Dispose(); LegacyAncestor?.Dispose(); }
 }

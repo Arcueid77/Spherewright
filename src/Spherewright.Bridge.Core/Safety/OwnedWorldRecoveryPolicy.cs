@@ -14,6 +14,9 @@ public static class OwnedWorldRecoveryPolicy
             || string.IsNullOrWhiteSpace(request.PriorConsumedResumeToken) || request.PriorConsumedResumeToken.Length > 256
             || !IsCanonicalFingerprint(request.PriorSourceFingerprint) || request.PriorActionKnownTerminalFailed != true))
             return "Prior failed-resume proof requires the consumed token, exact source fingerprint and an explicit caller attestation of the original action's known terminal failure together, in default mode only.";
+        if (!string.IsNullOrEmpty(request.PriorLegacySourceFingerprint)
+            && !IsCanonicalFingerprint(request.PriorLegacySourceFingerprint))
+            return "The fixed V2 predecessor proof requires its exact additional legacy source fingerprint; no file path or JSON is accepted.";
         var window = request.RecoveryDeadlineUtc.HasValue || !string.IsNullOrEmpty(request.RecoveryScope)
             || request.MaximumChargeGameTicks != 0 || request.MaximumChargeWallSeconds != 0d;
         if (window && (request.RecoveryMode != OwnedWorldResumeModes.Default || !request.RecoveryDeadlineUtc.HasValue
@@ -47,7 +50,7 @@ public static class OwnedWorldRecoveryPolicy
 
     public static bool HasPriorFailedResumeWitness(PrepareOwnedWorldResumeRequest request) =>
         !string.IsNullOrEmpty(request.PriorConsumedResumeToken) || !string.IsNullOrEmpty(request.PriorSourceFingerprint)
-        || request.PriorActionKnownTerminalFailed.HasValue;
+        || request.PriorActionKnownTerminalFailed.HasValue || !string.IsNullOrEmpty(request.PriorLegacySourceFingerprint);
 
     public static bool IsCanonicalFingerprint(string? value)
     {

@@ -44,7 +44,8 @@ internal sealed partial class NormalGameActionCoordinator
     private VoyagerRemoteIdleAdmissionDecision CaptureVoyagerRemoteIdleAdmission(VoyagerRemoteIdleOwner owner,
         VoyagerJourneyRecord journey, NativeLocalWalkSceneBinding? scene, long spentGameTicks,
         long? lastLandedGameTick, out NativeLocalWalkSceneBinding? observedScene, int? prospectiveRemotePlanetId = null,
-        Action<VoyagerRemoteIdleAdmissionFacts>? captureFacts = null)
+        Action<VoyagerRemoteIdleAdmissionFacts>? captureFacts = null, bool collectAfterGroundMiss = false,
+        Action<NativePlayerGroundContactSnapshot>? captureGround = null, string groundStage = "native_guard")
     {
         observedScene = scene;
         var stage = "binding";
@@ -60,8 +61,9 @@ internal sealed partial class NormalGameActionCoordinator
             if (observedScene is null) return VoyagerRemoteIdleAdmissionPolicy.Blocked("remote_idle_scene_unproved");
             stage = "native_mode";
             var nativeBlocker = NativeWalkModeBlocker(player, stationary: false, observedScene,
-                finiteWaterCostWithNativePause: true, allowDrift: true, allowBudgetedRecharge: true);
-            if (nativeBlocker is not null) return VoyagerRemoteIdleAdmissionPolicy.Blocked(nativeBlocker);
+                finiteWaterCostWithNativePause: true, allowDrift: true, allowBudgetedRecharge: true, captureGround, groundStage);
+            var groundMiss = collectAfterGroundMiss && nativeBlocker == "remote_idle_ground_contact_unproved";
+            if (nativeBlocker is not null && !groundMiss) return VoyagerRemoteIdleAdmissionPolicy.Blocked(nativeBlocker);
             stage = "order_queue";
             if (player.orders.orderCount != 0) return VoyagerRemoteIdleAdmissionPolicy.Blocked("remote_idle_order_queue_active");
             stage = "build_ui";
@@ -85,7 +87,7 @@ internal sealed partial class NormalGameActionCoordinator
                 MovementReserve = reserve, CoreEnergyJoules = player.mecha.coreEnergy,
                 JourneyBudget = new VoyagerLocalActionBudgetFacts
                 {
-                    ExactRemoteBinding = true, NativePlayerIdle = true, CurrentGameTick = GameMain.gameTick,
+                    ExactRemoteBinding = true, NativePlayerIdle = !groundMiss, CurrentGameTick = GameMain.gameTick,
                     LastLandedGameTick = lastLandedGameTick, SpentGameTicks = spentGameTicks,
                     MaximumGameTicks = journey.MaximumGameTicks, ReturnReserveGameTicks = journey.ReturnReserveGameTicks,
                     WorkGameTicks = 1, TailGameTicks = VoyagerLocalWalkReservePolicy.StopGameTicks,
@@ -96,6 +98,7 @@ internal sealed partial class NormalGameActionCoordinator
                 },
             };
             captureFacts?.Invoke(facts);
+            if (groundMiss) return VoyagerRemoteIdleAdmissionPolicy.Blocked("remote_idle_ground_contact_unproved");
             return VoyagerRemoteIdleAdmissionPolicy.Evaluate(facts);
         }
         catch (Exception exception)
@@ -194,8 +197,39 @@ internal sealed partial class NormalGameActionCoordinator
         var owner = sameOwner ? existing! : new VoyagerRemoteIdleOwner(new VoyagerNativeBinding(adoption.World, adoption.Player),
             adoption.SessionId, journey.JourneyId, adoption.ResumeActionId, journey.ActiveActionId, adoption);
         VoyagerRemoteIdleAdmissionFacts? captured = null;
+        NativePlayerGroundContactSnapshot? ground = null;
+        var loadBoundary = !admit && !sameOwner && _sessions.ExactRemoteResumeLoadPreflight(adoption);
         var decision = CaptureVoyagerRemoteIdleAdmission(owner, journey, sameOwner ? _voyagerRemoteIdleScene : null,
-            journey.SpentGameTicks, journey.LastLandedGameTick, out var scene, captureFacts: f => captured = f);
+            journey.SpentGameTicks, journey.LastLandedGameTick, out var scene, captureFacts: f => captured = f,
+            collectAfterGroundMiss: loadBoundary, captureGround: g => ground = g, groundStage: "load_preflight_before_sync");
+        if (loadBoundary)
+        {
+            _sessions.RecordRemoteResumeGroundObservation(adoption, ground, false);
+            if (decision.BlockerCode == "remote_idle_ground_contact_unproved" && captured is not null
+                && adoption.Authorization is { } syncAuthorization)
+            {
+                // This is only a zero-integration synchronization boundary. A
+                // ground miss is never labelled NativePlayerIdle to fund it.
+                var funding = LoadedGroundSyncFunding(adoption, journey, captured, syncAuthorization);
+                if (funding is not null) return funding;
+                var syncBlocker = SynchronizeExactLoadedRemoteGround(adoption, owner, journey, scene, decision.BlockerCode);
+                if (syncBlocker is not null)
+                {
+                    if (adoption.GroundSync.Attempted)
+                        _sessions.RecordRemoteResumeGroundObservation(adoption,
+                            ReferenceEquals(GameMain.data, adoption.World) && ReferenceEquals(GameMain.mainPlayer, adoption.Player)
+                                ? GameStateReader.CaptureNativeGroundContact(adoption.Player, "load_preflight_after_sync_failed")
+                                : new NativePlayerGroundContactSnapshot { CaptureStage = "load_preflight_after_sync_failed",
+                                    ReasonCode = "native_ground_context_binding_changed" }, true);
+                    return syncBlocker;
+                }
+                captured = null; ground = null;
+                decision = CaptureVoyagerRemoteIdleAdmission(owner, journey, scene,
+                    journey.SpentGameTicks, journey.LastLandedGameTick, out scene, captureFacts: f => captured = f,
+                    captureGround: g => ground = g, groundStage: "load_preflight_after_sync");
+                _sessions.RecordRemoteResumeGroundObservation(adoption, ground, true);
+            }
+        }
         if (!sameOwner && adoption.Authorization is { } authorization && captured is not null && !decision.Proved)
         {
             var bootstrapBlocker = ValidateRemoteResumeCharge(adoption, journey, captured, authorization);
@@ -215,28 +249,13 @@ internal sealed partial class NormalGameActionCoordinator
     private string? ValidateRemoteResumeCharge(VoyagerRemoteResumeAdoption adoption, VoyagerJourneyRecord journey,
         VoyagerRemoteIdleAdmissionFacts facts, VoyagerRecoveryAuthorization authorization)
     {
-        var p = adoption.Player; var m = p.mecha; var h = GameMain.history; var factory = p.factory;
-        var module = m.constructionModule;
+        var p = adoption.Player; var m = p.mecha;
         var now = DateTimeOffset.UtcNow;
         var effectiveDeadline = _sessions.EffectiveVoyagerDeadline(journey);
         var originalBudgetBlocker = VoyagerRecoveryWindowPolicy.ChargeBudgetBlocker(facts.JourneyBudget, now, effectiveDeadline);
         if (originalBudgetBlocker is not null) return originalBudgetBlocker;
-        if (p.controller.actionWalk.rtsVelocity.sqrMagnitude != 0f || p.controller.actionWalk.moveVelocity.sqrMagnitude != 0f
-            || p.controller.actionDrift.rtsVelocity.sqrMagnitude != 0f || p.controller.actionDrift.moveVelocity.sqrMagnitude != 0f)
-            return "remote_resume_charge_rts_or_manual_velocity_nonzero";
-        // Tech completion can change this envelope; empty local mecha research
-        // alone is insufficient. Native queue is a fixed array of zero entries.
-        if (h is null || h.currentTech != 0 || h.techQueue is null || h.techQueue.Length != 32
-            || h.techQueue.Any(id => id != 0)) return "remote_resume_charge_global_research_active";
-        // This bootstrap is for an unbuilt remote site. No cached/current or
-        // destroyed prebuild may launch a drone during the paid Player frame.
-        if (factory is null || factory.entityCount != 0 || factory.entityCursor > 1
-            || factory.prebuildCount != 0 || factory.prebuildCursor > 1
-            || module.buildTargetTotalCount != 0 || module.repairTargetTotalCount != 0 || module.autoReconstructTargetTotalCount != 0
-            || module.buildTargets is { } bt && (bt.Length > 256 || bt.Any(t => t.objectId != 0))
-            || module.repairTargets is { } rt && (rt.Length > 256 || rt.Any(t => t.objectId != 0))
-            || module.autoReconstructTargets is { } at && (at.Length > 256 || at.Any(t => t.objectId != 0)))
-            return "remote_resume_charge_native_construction_not_empty";
+        var environment = RemoteResumeChargeEnvironmentBlocker(p);
+        if (environment is not null) return environment;
         var reserve = facts.MovementReserve!;
         var perTick = reserve.PerNativeTickEnergyJoules ?? double.NaN;
         var envelope = CanonicalStateHash.Combine("remote-charge-fixed-cost-envelope-v1", m.walkSpeed, m.walkPower,
@@ -400,7 +419,8 @@ internal sealed partial class NormalGameActionCoordinator
         NativeWalkModeBlocker(player, stationary, scene, finiteWaterCostWithNativePause, allowDrift, allowBudgetedRecharge) is null;
 
     private static string? NativeWalkModeBlocker(Player player, bool stationary, NativeLocalWalkSceneBinding? scene,
-        bool finiteWaterCostWithNativePause, bool allowDrift, bool allowBudgetedRecharge = false)
+        bool finiteWaterCostWithNativePause, bool allowDrift, bool allowBudgetedRecharge = false,
+        Action<NativePlayerGroundContactSnapshot>? captureGround = null, string groundStage = "native_guard")
     {
         var c = player.controller; var w = c.actionWalk;
         var vertical = c.vertSpeed;
@@ -432,8 +452,12 @@ internal sealed partial class NormalGameActionCoordinator
         if (float.IsNaN(vertical) || float.IsInfinity(vertical) || !allowDrift && !(Math.Abs(vertical) <= .01f)) return "remote_idle_vertical_velocity_unproved";
         if (!(c.overridePlayerSpeed >= 0f && c.overridePlayerSpeed <= .01f)) return "remote_idle_override_speed_unproved";
         if (!(c.softLandingRecover >= 0f && c.softLandingRecover <= 1f)) return "remote_idle_soft_landing_unproved";
-        if (!(allowDrift && player.movementState == EMovementState.Drift)
-            && !Physics.CheckSphere(player.position + player.position.normalized * .15f, .35f, 15873)) return "remote_idle_ground_contact_unproved";
+        if (!(allowDrift && player.movementState == EMovementState.Drift))
+        {
+            var sphereHit = Physics.CheckSphere(player.position + player.position.normalized * .15f, .35f, 15873);
+            captureGround?.Invoke(GameStateReader.CaptureNativeGroundContact(player, groundStage, sphereHit));
+            if (!sphereHit) return "remote_idle_ground_contact_unproved";
+        }
         return null;
     }
 
