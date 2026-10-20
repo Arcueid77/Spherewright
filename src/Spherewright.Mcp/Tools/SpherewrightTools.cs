@@ -1457,10 +1457,13 @@ public static partial class SpherewrightTools
         [Description("Caller attests to actual explicit user confirmation in the conversation; never infer it.")] bool userConfirmedInConversation = false,
         [Description("Known latest progress that must not be rolled back; required only for verified recovery.")] long? minimumRecoveryGameTick = null,
         [Description("Exact explicitly authorized newer candidate tick; required for verified_newer_lastexit and both fixed AutoSave0 modes. No slot selection.")] long? expectedRecoveryGameTick = null,
-        [Description("Optional one-shot absolute UTC cap for a quarantined remote default continuation. Requires a new prepared disclosure and subsequent explicit confirmation; never renews the original journey budget.")] DateTimeOffset? recoveryDeadlineUtc = null,
+        [Description("Optional one-shot absolute UTC cap for a quarantined remote default continuation. Requires a fresh disclosed proposal, applicable explicit conversation authority and its exact confirmationDigest; matching existing authority does not require asking again. Never renews the original journey budget.")] DateTimeOffset? recoveryDeadlineUtc = null,
         [Description("Only continue_original_finite_task is supported with recoveryDeadlineUtc; otherwise empty.")] string recoveryScope = "",
         [Description("Optional natural-charge tick cap, 1..18000, inside the original remaining game ticks and five-minute adoption limit.")] long maximumChargeGameTicks = 0,
-        [Description("Optional natural-charge wall cap, greater than0 and at most300 seconds; never extends the original five-minute adoption lease.")] double maximumChargeWallSeconds = 0d)
+        [Description("Optional natural-charge wall cap, greater than0 and at most300 seconds; never extends the original five-minute adoption lease.")] double maximumChargeWallSeconds = 0d,
+        [Description("Optional already-consumed credential for exactly one prior failed remote resume; requires priorSourceFingerprint and priorActionKnownTerminalFailed together. Never replays that action or selects a file.")] string priorConsumedResumeToken = "",
+        [Description("Exact sha256 source-fingerprint witness for the prior consumed authorization. The Plugin opens its original commitment against current route, checkpoint, Journal and primary; no path or JSON input.")] string priorSourceFingerprint = "",
+        [Description("Explicit caller attestation, supported by the original action receipt, that the exact prior resume terminally failed with no unknown outcome. Consumption is not a Native durable terminal certificate. Unknown or unobserved outcomes must not be asserted as failed.")] bool? priorActionKnownTerminalFailed = null)
     {
         var request = new PrepareOwnedWorldResumeRequest
         {
@@ -1469,6 +1472,8 @@ public static partial class SpherewrightTools
             MinimumRecoveryGameTick = minimumRecoveryGameTick, ExpectedRecoveryGameTick = expectedRecoveryGameTick,
             RecoveryDeadlineUtc = recoveryDeadlineUtc, RecoveryScope = recoveryScope,
             MaximumChargeGameTicks = maximumChargeGameTicks, MaximumChargeWallSeconds = maximumChargeWallSeconds,
+            PriorConsumedResumeToken = priorConsumedResumeToken, PriorSourceFingerprint = priorSourceFingerprint,
+            PriorActionKnownTerminalFailed = priorActionKnownTerminalFailed,
         };
         var invalid = OwnedWorldRecoveryPolicy.ValidateRequest(request);
         if (invalid is not null)
@@ -1477,6 +1482,14 @@ public static partial class SpherewrightTools
         var result = await bridgeClient.PrepareOwnedWorldResumeAsync(
             request,
             cancellationToken).ConfigureAwait(false);
+        if (OwnedWorldRecoveryPolicy.HasPriorFailedResumeWitness(request) && result.Success
+            && (result.Value is not { } prior || !prior.Prepared || prior.RecoveryMode != OwnedWorldResumeModes.Default
+                || !prior.PriorFailedResumeProvenanceUsed || !prior.PriorActionTerminalFailureAttested
+                || prior.CommitAllowedNow || !prior.UserConfirmationRequired || !prior.ExactEmbeddedIdentityVerified
+                || prior.RecoveryEvidenceVersion < 1 || string.IsNullOrEmpty(prior.ConfirmationDigest)))
+            result = BridgeCallResult<PreparedOwnedWorldResumePlan>.Failed(BridgeError.Create(BridgeErrorCodes.BridgeNotReady,
+                "The Plugin did not echo the exact prior failed-resume provenance and caller attestation; no plan token is exposed.", false,
+                "Use matching Plugin/MCP bytes. A consumed record alone does not prove a terminal outcome."));
         if (recoveryDeadlineUtc.HasValue && result.Success && (result.Value is not { } window
             || window.EffectiveRecoveryDeadlineUtc != recoveryDeadlineUtc || !window.OriginalJourneyDeadlineUtc.HasValue
             || window.RecoveryScope != recoveryScope || window.MaximumChargeGameTicks != maximumChargeGameTicks

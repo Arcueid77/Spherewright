@@ -10,6 +10,10 @@ public static class OwnedWorldRecoveryPolicy
 
     public static string? ValidateRequest(PrepareOwnedWorldResumeRequest request)
     {
+        if (HasPriorFailedResumeWitness(request) && (request.RecoveryMode != OwnedWorldResumeModes.Default
+            || string.IsNullOrWhiteSpace(request.PriorConsumedResumeToken) || request.PriorConsumedResumeToken.Length > 256
+            || !IsCanonicalFingerprint(request.PriorSourceFingerprint) || request.PriorActionKnownTerminalFailed != true))
+            return "Prior failed-resume proof requires the consumed token, exact source fingerprint and an explicit caller attestation of the original action's known terminal failure together, in default mode only.";
         var window = request.RecoveryDeadlineUtc.HasValue || !string.IsNullOrEmpty(request.RecoveryScope)
             || request.MaximumChargeGameTicks != 0 || request.MaximumChargeWallSeconds != 0d;
         if (window && (request.RecoveryMode != OwnedWorldResumeModes.Default || !request.RecoveryDeadlineUtc.HasValue
@@ -39,6 +43,18 @@ public static class OwnedWorldRecoveryPolicy
             || request.ExpectedRecoveryGameTick is not long expected || expected < minimum)
             return "The known progress floor and exact approved candidate tick are required.";
         return null;
+    }
+
+    public static bool HasPriorFailedResumeWitness(PrepareOwnedWorldResumeRequest request) =>
+        !string.IsNullOrEmpty(request.PriorConsumedResumeToken) || !string.IsNullOrEmpty(request.PriorSourceFingerprint)
+        || request.PriorActionKnownTerminalFailed.HasValue;
+
+    public static bool IsCanonicalFingerprint(string? value)
+    {
+        if (value is null || value.Length != 71 || !value.StartsWith("sha256:", StringComparison.Ordinal)) return false;
+        for (var i = 7; i < value.Length; i++)
+            if (!(value[i] >= '0' && value[i] <= '9') && !(value[i] >= 'a' && value[i] <= 'f')) return false;
+        return true;
     }
 
     public static string? ValidateCandidate(PrepareOwnedWorldResumeRequest request,

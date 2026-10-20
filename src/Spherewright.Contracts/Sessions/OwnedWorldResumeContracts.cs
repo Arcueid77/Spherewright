@@ -25,6 +25,9 @@ public sealed class PrepareOwnedWorldResumeRequest
     public string RecoveryScope { get; set; } = string.Empty;
     public long MaximumChargeGameTicks { get; set; }
     public double MaximumChargeWallSeconds { get; set; }
+    public string PriorConsumedResumeToken { get; set; } = string.Empty;
+    public string PriorSourceFingerprint { get; set; } = string.Empty;
+    public bool? PriorActionKnownTerminalFailed { get; set; }
 }
 
 public sealed class CommitOwnedWorldResumeRequest
@@ -59,6 +62,8 @@ public sealed class PreparedOwnedWorldResumePlan
     public long MaximumChargeGameTicks { get; set; }
     public double MaximumChargeWallSeconds { get; set; }
     public bool NativeChargeFeasibilityRequiresFreshCapture { get; set; }
+    public bool PriorFailedResumeProvenanceUsed { get; set; }
+    public bool PriorActionTerminalFailureAttested { get; set; }
 
     public long? CandidateGameTick { get; set; }
 

@@ -14,14 +14,17 @@ public sealed class VoyagerRecoveryWindowProposal
 public sealed class VoyagerRecoveryAuthorization
 {
     public VoyagerRecoveryAuthorization(string resumeActionId, string evidenceFingerprint, string confirmationDigest,
-        DateTimeOffset confirmedAtUtc, VoyagerRecoveryWindowProposal proposal)
+        DateTimeOffset confirmedAtUtc, VoyagerRecoveryWindowProposal proposal, string? priorConsumedResumeTokenHash = null)
     { ResumeActionId = resumeActionId; EvidenceFingerprint = evidenceFingerprint; ConfirmationDigest = confirmationDigest;
-      ConfirmedAtUtc = confirmedAtUtc; Proposal = proposal; }
+      ConfirmedAtUtc = confirmedAtUtc; Proposal = proposal; PriorConsumedResumeTokenHash = priorConsumedResumeTokenHash; }
     public string ResumeActionId { get; }
     public string EvidenceFingerprint { get; }
     public string ConfirmationDigest { get; }
     public DateTimeOffset ConfirmedAtUtc { get; }
     public VoyagerRecoveryWindowProposal Proposal { get; }
+    public string? PriorConsumedResumeTokenHash { get; }
+    // Json.NET convention: legacy authorizations retain their exact serialized shape.
+    public bool ShouldSerializePriorConsumedResumeTokenHash() => PriorConsumedResumeTokenHash is not null;
 }
 
 public static class VoyagerRecoveryWindowPolicy

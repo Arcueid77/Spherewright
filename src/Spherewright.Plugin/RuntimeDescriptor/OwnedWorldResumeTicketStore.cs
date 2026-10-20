@@ -350,6 +350,77 @@ internal sealed class OwnedWorldResumeTicketStore
         TryCaptureRemoteCredential(token, out var actual, out _)
         && FixedTimeEquals(expectedFingerprint, actual) && TryConsume(token, authorization);
 
+    public bool TryOpenPriorFailedResumeProof(string priorToken, string quarantineActionId,
+        out PriorFailedResumeProof? proof, out string rejection)
+    {
+        proof = null; rejection = string.Empty;
+        FileStream? runtime = null; FileStream? handoff = null;
+        try
+        {
+            if (string.IsNullOrWhiteSpace(priorToken) || priorToken.Length > 256
+                || (_currentTicket is not null && FixedTimeEquals(priorToken, _currentTicket.ResumeToken)))
+                throw new InvalidDataException("The prior credential must be distinct and bounded.");
+            var tokenHash = HashToken(priorToken);
+            var handoffDirectory = Path.GetDirectoryName(_handoffTicketPath)!;
+            var firstPath = GetTombstonePath(_runtimeDirectory, tokenHash);
+            var secondPath = GetTombstonePath(handoffDirectory, tokenHash);
+            if ((File.GetAttributes(firstPath) & FileAttributes.ReparsePoint) != 0
+                || (File.GetAttributes(secondPath) & FileAttributes.ReparsePoint) != 0)
+                throw new InvalidDataException("The fixed proof replicas must be regular files.");
+            runtime = new FileStream(firstPath, FileMode.Open, FileAccess.Read, FileShare.Read);
+            handoff = new FileStream(secondPath, FileMode.Open, FileAccess.Read, FileShare.Read);
+            if (runtime.Length < 1 || runtime.Length > 65536 || handoff.Length < 1 || handoff.Length > 65536)
+                throw new InvalidDataException("The fixed proof exceeds its finite bound.");
+            var firstBytes = ReadConsumptionBytes(runtime); var secondBytes = ReadConsumptionBytes(handoff);
+            if (!firstBytes.SequenceEqual(secondBytes)) throw new InvalidDataException("The prior consumption bytes differ.");
+            var utf8 = new UTF8Encoding(false, true);
+            var firstJson = utf8.GetString(firstBytes); var secondJson = utf8.GetString(secondBytes);
+            var first = PluginJson.Deserialize<OwnedWorldResumeConsumptionTombstone>(firstJson);
+            var second = PluginJson.Deserialize<OwnedWorldResumeConsumptionTombstone>(secondJson);
+            var authorization = first?.RecoveryAuthorization;
+            if (!string.Equals(firstJson, secondJson, StringComparison.Ordinal)
+                || first is null || second is null || first.Version != 1 || second.Version != 1
+                || !FixedTimeEquals(first.ResumeTokenHash, tokenHash) || !FixedTimeEquals(second.ResumeTokenHash, tokenHash)
+                || first.GameVersion != _gameVersion || second.GameVersion != _gameVersion
+                || first.ConsumedAtUtc == default || authorization is null
+                || authorization.PriorConsumedResumeTokenHash is not null
+                || !Guid.TryParse(authorization.ResumeActionId, out _)
+                || !string.Equals(authorization.ResumeActionId, quarantineActionId, StringComparison.Ordinal)
+                || !OwnedWorldRecoveryPolicy.IsCanonicalFingerprint(authorization.EvidenceFingerprint)
+                || !OwnedWorldRecoveryPolicy.IsCanonicalFingerprint(authorization.ConfirmationDigest)
+                || authorization.ConfirmedAtUtc == default || authorization.ConfirmedAtUtc > first.ConsumedAtUtc
+                || authorization.Proposal is not { } proposal
+                || proposal.DeadlineUtc <= authorization.ConfirmedAtUtc
+                || proposal.Scope != VoyagerRecoveryWindowProposal.TaskScope
+                || proposal.MaximumChargeGameTicks < 1 || proposal.MaximumChargeGameTicks > 18000
+                || double.IsNaN(proposal.MaximumChargeWallSeconds) || double.IsInfinity(proposal.MaximumChargeWallSeconds)
+                || proposal.MaximumChargeWallSeconds <= 0d || proposal.MaximumChargeWallSeconds > 300d)
+                throw new InvalidDataException("The fixed prior consumption proof is incomplete, changed or already a compatibility hop.");
+            // This is consumption/authorization evidence, never a durable action outcome.
+            proof = new PriorFailedResumeProof(tokenHash, authorization,
+                CanonicalStateHash.Combine("prior-remote-consumption-v1", tokenHash, HashToken(firstJson), HashToken(secondJson)),
+                runtime, handoff);
+            runtime = null; handoff = null;
+            return true;
+        }
+        catch (Exception exception) when (exception is IOException || exception is UnauthorizedAccessException
+            || exception is ArgumentException || exception is Newtonsoft.Json.JsonException)
+        { rejection = "remote_resume_prior_consumption_unproved:" + exception.GetType().Name; return false; }
+        finally { runtime?.Dispose(); handoff?.Dispose(); }
+    }
+
+    private static byte[] ReadConsumptionBytes(FileStream stream)
+    {
+        var bytes = new byte[(int)stream.Length]; var offset = 0;
+        while (offset < bytes.Length)
+        {
+            var read = stream.Read(bytes, offset, bytes.Length - offset);
+            if (read == 0) throw new InvalidDataException("The bounded consumption proof was truncated.");
+            offset += read;
+        }
+        return bytes;
+    }
+
     // Unlike TryGetActiveTicket this grants no loading capability. It only authenticates
     // provenance for a fresh short-lived plan. Commit still requires its mode-specific
     // explicit conversation authority and exact disclosure digest, never implicit fallback.
@@ -883,4 +954,16 @@ internal sealed class OwnedWorldResumeConsumptionTombstone
     public string GameVersion { get; set; } = string.Empty;
 
     public DateTimeOffset ConsumedAtUtc { get; set; }
+}
+
+internal sealed class PriorFailedResumeProof : IDisposable
+{
+    private readonly IDisposable[] _leases;
+    public PriorFailedResumeProof(string tokenHash, VoyagerRecoveryAuthorization authorization, string fingerprint,
+        params IDisposable[] leases)
+    { TokenHash = tokenHash; Authorization = authorization; Fingerprint = fingerprint; _leases = leases; }
+    public string TokenHash { get; }
+    public VoyagerRecoveryAuthorization Authorization { get; }
+    public string Fingerprint { get; }
+    public void Dispose() { foreach (var lease in _leases) lease.Dispose(); }
 }

@@ -30,8 +30,10 @@ internal sealed partial class GameSessionTracker
 
     internal bool TryOpenRemoteResumeEvidence(OwnedWorldResumeTicket ticket, OwnedSaveRecoveryLease source,
         OwnedSaveRecoveryLease primary, out VoyagerRemoteResumeEvidence? evidence, out string rejection,
-        VoyagerRecoveryWindowProposal? proposal = null) =>
-        _flightCheckpoints.TryOpenRemoteResumeEvidence(ticket, source, primary, out evidence, out rejection, proposal);
+        VoyagerRecoveryWindowProposal? proposal = null, PriorFailedResumeProof? priorFailedProof = null,
+        string priorSourceFingerprint = "", bool priorActionKnownTerminalFailed = false) =>
+        _flightCheckpoints.TryOpenRemoteResumeEvidence(ticket, source, primary, out evidence, out rejection, proposal,
+            priorFailedProof, priorSourceFingerprint, priorActionKnownTerminalFailed);
 
     internal DateTimeOffset EffectiveVoyagerDeadline(VoyagerJourneyRecord journey)
     {

@@ -26,6 +26,81 @@ namespace Spherewright.Mcp.Tests;
 public sealed class SpherewrightToolsTests
 {
     [Fact]
+    public async Task PriorFailedResumeUsesOptionalPublicSchemaAndForwardsThreeExactJsonArguments()
+    {
+        var deadline = DateTimeOffset.UtcNow.AddMinutes(30);
+        var plan = WindowPlan(deadline); plan.PriorFailedResumeProvenanceUsed = true; plan.PriorActionTerminalFailureAttested = true;
+        var bridge = new FakeBridgeClient(SuccessResult()) { ResumePlan = plan };
+        var services = new ServiceCollection(); services.AddSingleton<IBridgeClient>(bridge);
+        services.AddMcpServer().WithToolsFromAssembly(typeof(SpherewrightTools).Assembly);
+        using var provider = services.BuildServiceProvider();
+        var tool = Assert.Single(provider.GetServices<McpServerTool>(), t => t.ProtocolTool.Name == "spherewright_prepare_resume_owned_game");
+        var schema = tool.ProtocolTool.InputSchema;
+        foreach (var name in new[] { "priorConsumedResumeToken", "priorSourceFingerprint", "priorActionKnownTerminalFailed" })
+        {
+            Assert.True(schema.GetProperty("properties").TryGetProperty(name, out _));
+            if (schema.TryGetProperty("required", out var required)) Assert.DoesNotContain(required.EnumerateArray(), p => p.GetString() == name);
+        }
+        var source = CanonicalStateHash.Combine("synthetic-prior-source");
+        await using var server = McpServer.Create(new StreamServerTransport(Stream.Null, Stream.Null), new McpServerOptions(), null, provider);
+        var parameters = new CallToolRequestParams { Name = tool.ProtocolTool.Name, Arguments = new Dictionary<string, JsonElement>
+        {
+            ["resumeToken"] = JsonSerializer.SerializeToElement("synthetic-current-ticket"),
+            ["priorConsumedResumeToken"] = JsonSerializer.SerializeToElement("synthetic-consumed-ticket"),
+            ["priorSourceFingerprint"] = JsonSerializer.SerializeToElement(source),
+            ["priorActionKnownTerminalFailed"] = JsonSerializer.SerializeToElement(true),
+        } };
+        var context = new RequestContext<CallToolRequestParams>(server, new JsonRpcRequest { Id = new RequestId(1), Method = "tools/call" }, parameters)
+        { Services = provider };
+        var result = await tool.InvokeAsync(context);
+        Assert.False(result.IsError);
+        var request = bridge.LastResumePrepareRequest!;
+        Assert.Equal("synthetic-consumed-ticket", request.PriorConsumedResumeToken);
+        Assert.Equal(source, request.PriorSourceFingerprint); Assert.True(request.PriorActionKnownTerminalFailed);
+        var echo = result.StructuredContent!.Value.GetProperty("result");
+        Assert.True(echo.GetProperty("priorFailedResumeProvenanceUsed").GetBoolean());
+        Assert.True(echo.GetProperty("priorActionTerminalFailureAttested").GetBoolean());
+    }
+
+    [Theory]
+    [InlineData("token")] [InlineData("source")] [InlineData("ack_unknown")]
+    [InlineData("ack_false")] [InlineData("mode")]
+    public async Task PartialOrUnknownPriorFailureNeverReachesTheBridge(string fault)
+    {
+        var bridge = new FakeBridgeClient(SuccessResult());
+        var result = await SpherewrightTools.PrepareOwnedWorldResumeAsync(bridge, "synthetic-current-ticket",
+            recoveryMode: fault == "mode" ? OwnedWorldResumeModes.VerifiedNewerLastExit : OwnedWorldResumeModes.Default,
+            priorConsumedResumeToken: fault == "token" ? "" : "synthetic-consumed-ticket",
+            priorSourceFingerprint: fault == "source" ? "" : CanonicalStateHash.Combine("synthetic-prior-source"),
+            priorActionKnownTerminalFailed: fault == "ack_unknown" ? null : fault != "ack_false");
+        Assert.True(result.IsError); Assert.Null(bridge.LastResumePrepareRequest);
+        Assert.DoesNotContain("planToken", result.StructuredContent!.Value.GetRawText());
+    }
+
+    [Theory]
+    [InlineData("old_plugin")] [InlineData("provenance")] [InlineData("attestation")]
+    [InlineData("confirmation")] [InlineData("identity")] [InlineData("digest")]
+    public async Task PriorFailureCannotExposeAPlanWhosePluginIgnoredTheProof(string fault)
+    {
+        var plan = WindowPlan(DateTimeOffset.UtcNow.AddMinutes(30));
+        plan.PriorFailedResumeProvenanceUsed = true; plan.PriorActionTerminalFailureAttested = true;
+        switch (fault)
+        {
+            case "old_plugin": plan.PriorFailedResumeProvenanceUsed = false; plan.PriorActionTerminalFailureAttested = false; break;
+            case "provenance": plan.PriorFailedResumeProvenanceUsed = false; break;
+            case "attestation": plan.PriorActionTerminalFailureAttested = false; break;
+            case "confirmation": plan.UserConfirmationRequired = false; break;
+            case "identity": plan.ExactEmbeddedIdentityVerified = false; break;
+            case "digest": plan.ConfirmationDigest = ""; break;
+        }
+        var bridge = new FakeBridgeClient(SuccessResult()) { ResumePlan = plan };
+        var result = await SpherewrightTools.PrepareOwnedWorldResumeAsync(bridge, "synthetic-current-ticket",
+            priorConsumedResumeToken: "synthetic-consumed-ticket", priorSourceFingerprint: CanonicalStateHash.Combine("synthetic-prior-source"),
+            priorActionKnownTerminalFailed: true);
+        Assert.True(result.IsError); Assert.DoesNotContain("planToken", result.StructuredContent!.Value.GetRawText());
+    }
+
+    [Fact]
     public async Task ConditionalRecoveryWindowHasOptionalSchemaAndForwardsRealJsonToolArgumentsAndEcho()
     {
         var deadline = DateTimeOffset.UtcNow.AddMinutes(30);

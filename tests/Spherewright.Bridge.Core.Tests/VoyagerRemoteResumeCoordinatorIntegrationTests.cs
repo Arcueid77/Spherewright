@@ -15,7 +15,7 @@ namespace Spherewright.Bridge.Core.Tests;
 // Production coordinator/store, synthetic prefixes and native/session substitutes.
 // This does not run Unity, adopt a real world or certify Windows ACLs.
 [Collection("Owned resume native substitutes")]
-public sealed class VoyagerRemoteResumeCoordinatorIntegrationTests
+public sealed partial class VoyagerRemoteResumeCoordinatorIntegrationTests
 {
     [Fact]
     public void ExpiredOriginalUtcNeedsANewExactDisclosureAndOneDurableNonRenewableAuthorization()
@@ -225,7 +225,7 @@ public sealed class VoyagerRemoteResumeCoordinatorIntegrationTests
         Assert.False(s.Tickets.TryGetActiveTicket(s.Token, out _, out _));
     }
 
-    private sealed class Scenario : IDisposable
+    private sealed partial class Scenario : IDisposable
     {
         internal const string Identity = "synthetic-remote-resume-world";
         private const string Version = "0.10.34.28529";
@@ -243,7 +243,7 @@ public sealed class VoyagerRemoteResumeCoordinatorIntegrationTests
         internal FlightCheckpointStore Checkpoints { get; }
         internal GameSessionTracker Sessions { get; }
         private OwnedWorldResumeCoordinator Coordinator { get; }
-        internal string Token { get; }
+        internal string Token { get; private set; }
         internal DateTimeOffset OriginalDeadline { get; private set; }
         private string CheckpointSaveName { get; }
         internal IEnumerable<string> ProtectedEvidencePaths => new[] { GameSave.SavePath(GameSave.LastExit), GameSave.SavePath(Identity),
