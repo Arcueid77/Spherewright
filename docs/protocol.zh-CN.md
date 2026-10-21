@@ -414,7 +414,7 @@ Native 独立核当前精确隔离 action/票据、源 session、同 owned 身�
 
 原生加载前绑定固定源与当前主档的完整文件证据、精确同版本 owned/和平身份、原 Journal 及已成功 checkpoint/journey 来源；任何不可变恢复窗口授权须先持久化，再持久消费受保护凭据。成功 checkpoint 只作证据，绝不是加载源，也不伪造旧 `ActionRecord`。精确新 Native GameLoader 在 frame10 已完成且禁用的 `onLoadComplete` 同步回调，须在 Begin/InitLogic 后、首个 player(601) tick 前绑定新 Native logic，证明 owned 身份、原 Journal 与闭合 bootstrap 包络。在实时证明的运行前提下，bootstrap 要求核心至少2P、loaded 能量至少为受保护返程底线加2P；队列及可能无人机派发须闭合，独立护盾/激光扣费须被排除或由同一已证明的 P 覆盖。充能只使用新加载世界中自然运行的 Native GenerateEnergy，绝不 Resume 原隔离世界。该预检不伪称 Native tick 可用，也不发布 idle owner；证明未决禁止自动主档重存及本地/结构化写入。真实 Native pre-player(501) 须逐 tick 守护 bootstrap，只有某次证明原完整 strict13（核心至少13P、loaded 至少为原受保护返程底线加13P，以及原 tick/墙钟/翘曲器门）后，才可准入 idle owner、释放租约并允许重存，紧邻重存前仍须再核严格条件。原返航核心最低值仍是独立 fresh 返航起飞门，不追加为恢复接管条件。可行性须依 P/g 及 fresh 预算判定，不保证自然充能、后续 Move、任务或返程完成，也不降门或续预算。事后 Update 或轮询不能补首 tick 证明。充能在声明的 tick/墙钟任一上限先到时停止，且仍受原五分钟总接管上限约束；进入充能或更换 Host 均不重开。失败只暂停精确 owned 世界并隔离，不证明物理空闲，也不授予自动 Resume、Load 或重放。保留原 UTC 原件、最大/已花/返程预留 tick 及核心/loaded/翘曲器底线；原剩余储备不足则拒绝。
 
-恢复模式、证据 1–6、精确候选、下限、确认、租约、消耗、迁移见[安全模型](safety-model.zh-CN.md#protected-recovery-and-version-changes)。有效迁移只允许 `29104→29131`/5 或 `29131→29145`/6，过期主模式只允许已研究有向链。过期主模式仅新增已研究的 `29145→29151`，Journal 最多五次持久转换，默认仍限同版本。不增加选择器、回退、ticket 编辑或消耗后自动重放。
+恢复模式、证据 1–6、精确候选、下限、确认、租约、消耗、迁移见[安全模型](safety-model.zh-CN.md#protected-recovery-and-version-changes)。有效迁移只允许 `29104→29131`/5 或 `29131→29145`/6，过期主模式只允许已研究有向链，包括 `29145→29151` 和经过证明的直达 `29088→29151`。Journal 最多五次持久转换，只记录真实接管并保留全部旧链，默认仍限同版本。不增加选择器、回退、ticket 编辑或消耗后自动重放。
 
 飞行 commit 先验证独立内部检查点。只恢复匹配失败或中断飞行，稳定到达或覆盖主进度会使能力退役。过渡时 `NO_LOCAL_PLANET` 不允许再飞行或加载。
 
