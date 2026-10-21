@@ -54,7 +54,7 @@ public sealed partial class VoyagerRemoteResumeCoordinatorIntegrationTests
 
     [Theory]
     [InlineData("context")] [InlineData("journal_text")] [InlineData("journal_prefix")] [InlineData("newer_journal")]
-    [InlineData("advanced")] [InlineData("accounted")] [InlineData("cp_success")] [InlineData("newer_primary")]
+    [InlineData("source_after_min")] [InlineData("accounted")] [InlineData("cp_success")] [InlineData("newer_primary")]
     [InlineData("source_version")] [InlineData("identity")] [InlineData("wrong_q")] [InlineData("wrong_token")]
     [InlineData("pair_raw")] [InlineData("pair_missing")] [InlineData("pair_partial")] [InlineData("pair_oversize")]
     [InlineData("no_auth")] [InlineData("auth_version")] [InlineData("reverse_time")] [InlineData("future_consumed")]
@@ -71,7 +71,7 @@ public sealed partial class VoyagerRemoteResumeCoordinatorIntegrationTests
             case "newer_journal":
                 var j = PluginJson.Deserialize<GameplayJournalDocument>(File.ReadAllText(s.JournalPath))!;
                 j.Entries.Add(new() { Sequence = 2 }); File.WriteAllText(s.JournalPath, PluginJson.Serialize(j)); break;
-            case "advanced": s.WriteSave(GameSave.LastExit, 12502); s.RearmQuarantine(s.PriorAuthorization!.ResumeActionId, minimum: 12502); r.ExpectedRemoteRecoveryContextFingerprint = s.CurrentOwnerContext(); break;
+            case "source_after_min": s.WriteSave(GameSave.LastExit, 12502); r.ExpectedRemoteRecoveryContextFingerprint = s.CurrentOwnerContext(); break;
             case "accounted": var journey = s.Checkpoints.VoyagerJourney!; journey.LastAccountedGameTick++; Assert.True(s.Checkpoints.TryPersistVoyagerJourney(journey, out _)); r.ExpectedRemoteRecoveryContextFingerprint = s.CurrentOwnerContext(); break;
             case "cp_success":
                 var cpPath = Path.Combine(s.Handoff, "flight-checkpoint.json");
@@ -100,6 +100,50 @@ public sealed partial class VoyagerRemoteResumeCoordinatorIntegrationTests
         Assert.False(s.PrepareResult(r).Success); Assert.Equal(0, DSPGame.LoadCalls);
         foreach (var path in s.ZeroProgressEvidencePaths.Where(File.Exists))
             using (new FileStream(path, FileMode.Open, FileAccess.ReadWrite, FileShare.None)) { }
+    }
+
+    [Theory]
+    [InlineData(null)] [InlineData("budget")] [InlineData("accounted")]
+    public void CurrentNativeMinimumAfterLocalWorkStillRequiresOriginalAccountingAndReturnBudget(string? fault)
+    {
+        using var s = new Scenario(expiredJourney: true); var r = s.SeedZeroProgressReauthorization();
+        var journey = s.Checkpoints.VoyagerJourney!;
+        var sourceTick = journey.LastLandedGameTick!.Value + 600;
+        if (fault == "budget")
+            sourceTick = journey.LastLandedGameTick.Value + journey.MaximumGameTicks - journey.SpentGameTicks
+                - journey.ReturnReserveGameTicks - 1 - VoyagerLocalWalkReservePolicy.StopGameTicks + 1;
+        if (fault == "accounted")
+        {
+            journey.LastAccountedGameTick++;
+            Assert.True(s.Checkpoints.TryPersistVoyagerJourney(journey, out _));
+        }
+        s.WriteSave(GameSave.LastExit, sourceTick);
+        s.RearmQuarantine(s.PriorAuthorization!.ResumeActionId, minimum: sourceTick);
+        r.ExpectedRemoteRecoveryContextFingerprint = s.CurrentOwnerContext();
+        var originalJourney = File.ReadAllBytes(Path.Combine(s.Handoff, "voyager-journey.json"));
+        var originalCheckpoint = File.ReadAllBytes(Path.Combine(s.Handoff, "flight-checkpoint.json"));
+
+        var prepared = s.PrepareResult(r);
+        if (fault is not null)
+        {
+            Assert.False(prepared.Success); Assert.Equal(0, DSPGame.LoadCalls);
+            foreach (var path in s.ZeroProgressEvidencePaths)
+                using (new FileStream(path, FileMode.Open, FileAccess.ReadWrite, FileShare.None)) { }
+            return;
+        }
+        Assert.True(prepared.Success, prepared.Error?.Message);
+        var p = prepared.Value!;
+        Assert.Equal(sourceTick, p.CandidateGameTick); Assert.Equal(sourceTick, p.MinimumGameTick);
+        Assert.Equal(s.OriginalDeadline, p.OriginalJourneyDeadlineUtc);
+        Assert.Equal(r.RecoveryDeadlineUtc, p.EffectiveRecoveryDeadlineUtc);
+        Assert.True(p.FailedRemoteLastExitReauthorizationUsed); Assert.True(p.PriorActionTerminalFailureAttested);
+        Assert.False(p.PriorFailedResumeProvenanceUsed); Assert.False(p.PriorFailedResumeV2ProvenanceUsed);
+        Assert.False(p.PriorFailedResumeV3ProvenanceUsed);
+        DSPGame.BeforeLoad = () => Assert.False(s.Tickets.TryGetActiveTicket(s.Token, out _, out _));
+        var accepted = s.Commit(p); Assert.True(accepted.Success, accepted.Error?.Message);
+        Assert.Equal(1, DSPGame.LoadCalls); Assert.Equal(GameSave.LastExit, DSPGame.LoadedName);
+        Assert.Equal(originalJourney, File.ReadAllBytes(Path.Combine(s.Handoff, "voyager-journey.json")));
+        Assert.Equal(originalCheckpoint, File.ReadAllBytes(Path.Combine(s.Handoff, "flight-checkpoint.json")));
     }
 
     [Theory]

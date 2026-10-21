@@ -182,6 +182,9 @@ internal sealed partial class GameSessionTracker
         result.ResumeTerrainPreFirstFrame = a.TerrainPreFirstFrame?.Copy();
         result.ResumeTerrainPostUniverse = a.TerrainPostUniverse?.Copy();
         result.ResumeGroundContactPostUniverse = a.GroundContactPostUniverse?.Copy();
+        result.ResumeNearSupportPreFirstFrame = a.NearSupportPreFirstFrame?.Copy();
+        result.ResumeNearSupportPostUniverse = a.NearSupportPostUniverse?.Copy();
+        result.ResumeNearSupportLatest = a.NearSupportLatest?.Copy();
     }
 
     internal void RecordRemoteResumeTerrain(VoyagerRemoteResumeAdoption adoption,
@@ -199,7 +202,7 @@ internal sealed partial class GameSessionTracker
         if (_remoteResumeAdoption is not null && (_resumeAdoptionError is not null || _remoteResumeAdoption.FirstFrame.Failure is not null))
             return FailRemoteResumeAdmission("remote_resume_failed_adoption_is_terminal");
         if (!HasPendingRemoteResumeAdoption || _remoteResumeAdoption?.FirstFrame is not { Armed: true } frame) return true;
-        if (frame.PhysicsObserved && GameMain.gameTick > frame.SourceGameTick + 1) return true;
+        if (frame.PhysicsObserved && GameMain.gameTick > frame.SourceGameTick + 1 && !_remoteResumeAdoption.NativeContactPending) return true;
         var blocker = CaptureRemoteResumeAdoption(out var adoption);
         if (blocker is null)
             blocker = _remoteResumeUniverseGuard is null ? "remote_resume_universe_guard_unavailable" : _remoteResumeUniverseGuard(adoption!);
@@ -259,7 +262,7 @@ internal sealed partial class GameSessionTracker
         string? blocker;
         try { blocker = _remoteResumeAdmissionGuard is null ? "remote_resume_idle_guard_unavailable" : _remoteResumeAdmissionGuard(adoption!); }
         catch (Exception exception) { blocker = "remote_resume_idle_guard_capture_failed:" + exception.GetType().Name; }
-        if (blocker == VoyagerRecoveryWindowPolicy.ChargingPending) return false;
+        if (blocker == VoyagerRecoveryWindowPolicy.ChargingPending || blocker == NativeResumeContactPolicy.GroundingPending) return false;
         if (blocker is not null) return FailRemoteResumeAdmission(blocker);
         _remoteResumeAdmitted = true;
         // The journal has been confirmed and the exact first idle owner now
@@ -359,4 +362,8 @@ internal sealed class VoyagerRemoteResumeAdoption
     public NativePlanetTerrainPhysicsSnapshot? TerrainPreFirstFrame { get; set; }
     public NativePlanetTerrainPhysicsSnapshot? TerrainPostUniverse { get; set; }
     public NativePlayerGroundContactSnapshot? GroundContactPostUniverse { get; set; }
+    public NativeNearGroundSupportSnapshot? NearSupportPreFirstFrame { get; set; }
+    public NativeNearGroundSupportSnapshot? NearSupportPostUniverse { get; set; }
+    public NativeNearGroundSupportSnapshot? NearSupportLatest { get; set; }
+    public bool NativeContactPending { get; set; }
 }

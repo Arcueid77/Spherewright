@@ -7,6 +7,28 @@ namespace Spherewright.Bridge.Core.Tests;
 
 public sealed class NativeFirstFrameAdmissionTests
 {
+    [Theory]
+    [InlineData("support")] [InlineData("recheck")] [InlineData("funding")]
+    public void NearSupportRequiresItsOwnRetainedProofAndNeverReplacesMissingTerrainFootEvidence(string fault)
+    {
+        var frame = new NativeFirstFrameAdmission();
+        Assert.NotNull(frame.ArmNearSupport(100, true, true, fault != "support", fault != "funding",
+            fault == "recheck" ? null! : () => null));
+        Assert.False(frame.Armed);
+        Assert.NotNull(frame.Arm(100, true, true, true, true));
+        var original = new NativeFirstFrameAdmission();
+        Assert.NotNull(original.Arm(100, true, true, false, true));
+    }
+    [Fact]
+    public void NearSupport151NeverAdmitsIdleAndRetainedSupportMustBeRecheckedAfterTheActual501()
+    {
+        var calls = 0; var frame = new NativeFirstFrameAdmission();
+        Assert.Null(frame.ArmNearSupport(100, true, true, true, true, () => { calls++; return null; }));
+        Assert.Null(frame.ObserveUniverse(101, true, true, true));
+        Assert.Equal(0, calls); Assert.False(frame.PhysicsObserved);
+        Assert.Null(frame.ObservePhysics(101, true)); Assert.Equal(1, calls);
+        Assert.NotNull(frame.ObservePhysics(101, true)); Assert.Equal(1, calls);
+    }
     [Fact]
     public void OnlyActualSourcePlusOneUniverseThenPhysicsCanCompleteTheOneFrameLatch()
     {

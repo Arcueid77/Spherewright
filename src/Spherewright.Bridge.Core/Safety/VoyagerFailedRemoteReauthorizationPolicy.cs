@@ -48,8 +48,11 @@ public static class VoyagerFailedRemoteReauthorizationPolicy
         if (!OwnedWorldRecoveryPolicy.IsCanonicalFingerprint(expectedContext)
             || !string.Equals(expectedContext, actualContext, StringComparison.Ordinal))
             return "remote_reauthorization_owner_context_mismatch";
+        // The current Native source/minimum edge may follow finite local work.
+        // This does not certify an old action's outcome; all local elapsed ticks
+        // remain charged by RemainingJourneyBlocker against the original budget.
         if (!f.LastLandedGameTick.HasValue || f.LastLandedGameTick < 0 || f.LastLandedGameTick == long.MaxValue
-            || f.SourceGameTick != f.TicketMinimumGameTick || f.SourceGameTick != f.LastLandedGameTick.Value + 1
+            || f.SourceGameTick != f.TicketMinimumGameTick || f.SourceGameTick <= f.LastLandedGameTick.Value
             || f.LastAccountedGameTick != f.LastLandedGameTick || successfulFlightTick != f.LastLandedGameTick)
             return "remote_reauthorization_zero_progress_edge_unproved";
         if (priorProposal is null || f.RecoveryProposal is null

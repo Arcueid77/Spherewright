@@ -10,6 +10,7 @@ internal sealed partial class NormalGameActionCoordinator
     private VoyagerRemoteResumeAdoption? _firstFrameAdoption;
     private LoadedGroundSyncState? _firstFramePlayerState;
     private FirstFrameSurfaceState? _firstFrameSurfaceState;
+    private RemoteResumeContactState? _firstFrameContact;
 
     private string? ArmVerifiedRemoteFirstFrame(VoyagerRemoteResumeAdoption adoption, VoyagerRemoteIdleOwner owner,
         VoyagerJourneyRecord journey, NativeLocalWalkSceneBinding? scene, VoyagerRemoteIdleAdmissionFacts facts,
@@ -28,6 +29,9 @@ internal sealed partial class NormalGameActionCoordinator
         terrain.NativeGroundSphereHit = ground.CheckSphereHit;
         var blocker = GameStateReader.CaptureFirstFrameTerrainFootOverlap(adoption.Player, terrain, scene.Surface, out var registered);
         _sessions.RecordRemoteResumeTerrain(adoption, terrain, false);
+        if (blocker is not null && terrain.FootOverlapComplete == true && terrain.FootOverlapCount == 0
+            && terrain.GuideComplete == true && NativeTerrainObservationPolicy.Blocker(terrain, 31) is null)
+            return ArmVerifiedRemoteNaturalContact(adoption, journey, scene, facts, playerState, terrain);
         if (blocker is not null) return blocker;
         if (!playerState.Matches(adoption.Player) || !scene.MatchesCurrent()
             || !_sessions.ExactRemoteResumeLoadPreflight(adoption)) return "remote_resume_first_frame_query_binding_changed";
@@ -38,6 +42,7 @@ internal sealed partial class NormalGameActionCoordinator
             registered is null ? null : () => RecheckRegisteredTerrainAtPhysics(adoption));
         if (blocker is not null) return blocker;
         _firstFrameAdoption = adoption; _firstFramePlayerState = playerState;
+        _firstFrameContact = null;
         _firstFrameSurfaceState = surfaceState;
         // Start the existing finite charge accounting at the original source,
         // before allowing its one normal frame. No energy is debited or granted.
@@ -52,6 +57,11 @@ internal sealed partial class NormalGameActionCoordinator
     {
         if (adoption.FirstFrame.Failure is not null || _sessions.ResumeAdoptionError is not null)
             return "remote_resume_failed_adoption_is_terminal";
+        // Contact attempts keep a real151 check on every pending frame; the
+        // original one-frame latch is neither repeated nor borrowed as proof.
+        if (adoption.NativeContactPending && adoption.FirstFrame.PhysicsObserved
+            && GameMain.gameTick > adoption.Evidence.SourceGameTick + 1)
+            return CheckVerifiedVoyagerRemoteResumeOnMainThread(adoption, admit: false);
         var journey = _flightCheckpoints.VoyagerJourney;
         var terrain = GameStateReader.CaptureNativeTerrain(adoption.Player, "native_universe_post151");
         NativePlayerGroundContactSnapshot? ground = null;
@@ -62,6 +72,12 @@ internal sealed partial class NormalGameActionCoordinator
             terrain.NativeGroundSphereHit = ground.CheckSphereHit;
             var foot = GameStateReader.CapturePostUniverseTerrainFootOverlap(adoption.Player, terrain, _firstFrameSurfaceState.Surface);
             retainedTerrain = _firstFrameSurfaceState.ObserveAfterUniverse(terrain) && retainedTerrain && foot is null;
+        }
+        if (ReferenceEquals(_firstFrameAdoption, adoption) && _firstFrameContact is { } contact && _firstFrameSurfaceState is { } surface)
+        {
+            var supportBlocker = contact.Support.Recheck(adoption.Player, "native_universe_post151", surface.Surface, out var support);
+            adoption.NearSupportPostUniverse = support.Copy(); adoption.NearSupportLatest = support.Copy();
+            retainedTerrain = retainedTerrain && supportBlocker is null;
         }
         _sessions.RecordRemoteResumeTerrain(adoption, terrain, true, ground);
         var bound = ReferenceEquals(_firstFrameAdoption, adoption) && _sessions.IsCurrentSessionOwned
@@ -125,6 +141,7 @@ internal sealed partial class NormalGameActionCoordinator
         private readonly Vector3[] _positions, _scales;
         private readonly Quaternion[] _rotations;
         public Collider[] Surface => _scene.Surface;
+        public NativeLocalWalkSceneBinding Scene => _scene;
         public bool HasRegisteredOwners => _registered is not null;
         public FirstFrameSurfaceState(NativeLocalWalkSceneBinding scene, GameStateReader.RegisteredTerrainCapture? registered)
         {

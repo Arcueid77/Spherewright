@@ -14,9 +14,20 @@ public sealed class NativeFirstFrameAdmission
     private Func<string?>? _recheckAtPhysics;
     public string? Arm(long sourceTick, bool exactLoader, bool guideComplete, bool terrainOwned31FootHit, bool funded,
         Func<string?>? recheckAtPhysics = null)
+        => ArmBound(sourceTick, exactLoader, guideComplete, terrainOwned31FootHit, funded, recheckAtPhysics);
+
+    // Separate evidence kind: a current-pool support cast is not a terrain foot
+    // hit or a landing. The Plugin retains it and owns the finite contact guard.
+    public string? ArmNearSupport(long sourceTick, bool exactLoader, bool guideComplete, bool exactCurrentSupport, bool funded,
+        Func<string?> recheckAtPhysics)
+        => recheckAtPhysics is null ? Fail("remote_resume_near_support_recheck_unavailable")
+            : ArmBound(sourceTick, exactLoader, guideComplete, exactCurrentSupport, funded, recheckAtPhysics);
+
+    private string? ArmBound(long sourceTick, bool exactLoader, bool guideComplete, bool supportProved, bool funded,
+        Func<string?>? recheckAtPhysics)
     {
         if (Failure is not null) return Failure;
-        if (Armed || sourceTick < 0 || sourceTick == long.MaxValue || !exactLoader || !guideComplete || !terrainOwned31FootHit || !funded)
+        if (Armed || sourceTick < 0 || sourceTick == long.MaxValue || !exactLoader || !guideComplete || !supportProved || !funded)
             return Fail("remote_resume_first_frame_preflight_unproved");
         SourceGameTick = sourceTick; _recheckAtPhysics = recheckAtPhysics; Armed = true; return null;
     }
