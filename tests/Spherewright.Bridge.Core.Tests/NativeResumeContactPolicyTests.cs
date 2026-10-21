@@ -130,4 +130,47 @@ public sealed class NativeResumeContactPolicyTests
         var p = new NativeResumeContactPolicy(100, Now); var f = Good(); f.PerNativeTickEnergyJoules = bad;
         Assert.NotNull(p.PreflightBlocker(f));
     }
+
+    [Fact]
+    public void FirstActualGroupedPredicateIsRetainedWithoutChangingTheCompatibleFailureCode()
+    {
+        var p = new NativeResumeContactPolicy(100, Now); var f = Good(101);
+        f.ExactRecoveryBinding = false; f.NonGroundNativePremisesProved = false;
+        Assert.Equal("remote_resume_contact_native_support_unproved", p.ObserveUniverse(f));
+        Assert.Equal("contact_exact_recovery_binding_unproved", p.FailureDetail);
+        f.ExactRecoveryBinding = true;
+        Assert.NotNull(p.ObserveUniverse(f));
+        p.Reject("later_failure", "later_detail");
+        Assert.Equal("remote_resume_contact_native_support_unproved", p.Failure);
+        Assert.Equal("contact_exact_recovery_binding_unproved", p.FailureDetail);
+    }
+
+    [Theory]
+    [InlineData(0, "contact_facts_missing")]
+    [InlineData(1, "contact_non_ground_native_premises_unproved")]
+    [InlineData(2, "contact_current_support_reference_unproved")]
+    [InlineData(3, "contact_foot_query_incomplete")]
+    [InlineData(4, "contact_native_ground_query_unavailable")]
+    [InlineData(5, "contact_foot_count_unproved")]
+    [InlineData(6, "contact_airborne_foot_overlap")]
+    [InlineData(7, "contact_grounded_foot_owner_unproved")]
+    [InlineData(8, "contact_idle_without_native_ground")]
+    public void GroupDetailsComeFromTheOriginalDecisionFacts(int fault, string detail)
+    {
+        var p = new NativeResumeContactPolicy(100, Now); var f = Good(101);
+        switch (fault)
+        {
+            case 0: f = null!; break;
+            case 1: f.NonGroundNativePremisesProved = false; break;
+            case 2: f.CurrentSupportReferenceProved = false; break;
+            case 3: f.FootQueryComplete = false; break;
+            case 4: f.NativeGroundSphereHit = null; break;
+            case 5: f.FootOverlapCount = -1; break;
+            case 6: f.FootOverlapCount = 1; break;
+            case 7: f.NativeGroundSphereHit = true; f.FootOverlapCount = 1; break;
+            case 8: f.StrictPhysicalIdleProved = true; break;
+        }
+        Assert.Equal("remote_resume_contact_native_support_unproved", p.ObserveUniverse(f));
+        Assert.Equal(detail, p.FailureDetail);
+    }
 }

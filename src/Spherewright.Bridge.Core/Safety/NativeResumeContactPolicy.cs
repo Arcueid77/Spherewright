@@ -46,6 +46,7 @@ public sealed class NativeResumeContactPolicy
     public DateTimeOffset StartedUtc { get; }
     public bool Retired { get; private set; }
     public string? Failure { get; private set; }
+    public string? FailureDetail { get; private set; }
 
     public NativeResumeContactPolicy(long sourceGameTick, DateTimeOffset startedUtc)
     {
@@ -57,7 +58,7 @@ public sealed class NativeResumeContactPolicy
 
     public string? PreflightBlocker(NativeResumeContactFacts f)
     {
-        var blocker = CommonBlocker(f);
+        var blocker = CommonBlocker(f, out _);
         if (blocker is not null) return blocker;
         return f.OriginalJourney!.CurrentGameTick == SourceGameTick && f.NativeGroundSphereHit == false
             && !f.StrictPhysicalIdleProved && f.FootOverlapCount == 0
@@ -69,11 +70,11 @@ public sealed class NativeResumeContactPolicy
     {
         if (Failure is not null) return Failure;
         if (Retired) return "remote_resume_contact_attempt_retired";
-        var blocker = CommonBlocker(f);
+        var blocker = CommonBlocker(f, out var detail);
         var tick = f?.OriginalJourney?.CurrentGameTick;
         if (blocker is not null || tick != LastObservedGameTick + 1 || tick > SourceGameTick + MaximumNativeWorkTicks
             || LastUniverseGameTick != LastObservedGameTick)
-        { Reject(blocker ?? "remote_resume_contact_universe_sequence_unproved"); return Failure; }
+        { Reject(blocker ?? "remote_resume_contact_universe_sequence_unproved", detail); return Failure; }
         LastUniverseGameTick = tick!.Value;
         return null;
     }
@@ -82,8 +83,8 @@ public sealed class NativeResumeContactPolicy
     {
         if (Failure is not null) return NativeResumeContactStep.Rejected;
         if (Retired) return NativeResumeContactStep.AlreadyRetired;
-        var blocker = CommonBlocker(f);
-        if (blocker is not null) return Reject(blocker);
+        var blocker = CommonBlocker(f, out var detail);
+        if (blocker is not null) return Reject(blocker, detail);
         var tick = f.OriginalJourney!.CurrentGameTick;
         if (tick != LastObservedGameTick + 1 || tick != LastUniverseGameTick || tick > SourceGameTick + MaximumNativeWorkTicks)
             return Reject("remote_resume_contact_sequence_unproved");
@@ -97,23 +98,31 @@ public sealed class NativeResumeContactPolicy
             : Reject("remote_resume_contact_attempt_exhausted");
     }
 
-    public NativeResumeContactStep Reject(string reason)
+    public NativeResumeContactStep Reject(string reason, string? detail = null)
     {
-        Failure ??= reason;
+        if (Failure is null) { Failure = reason; FailureDetail = detail; }
         return NativeResumeContactStep.Rejected;
     }
 
-    private string? CommonBlocker(NativeResumeContactFacts f)
+    private string? CommonBlocker(NativeResumeContactFacts f, out string? detail)
     {
-        if (f is null || !f.ExactRecoveryBinding || !f.NonGroundNativePremisesProved
-            || !f.CurrentSupportReferenceProved || !f.FootQueryComplete || !f.NativeGroundSphereHit.HasValue
-            || f.FootOverlapCount < 0 || f.FootOverlapCount > NativeTerrainObservationPolicy.MaximumSurfaceColliders
-            || (f.NativeGroundSphereHit == false ? f.FootOverlapCount != 0 : f.FootOverlapCount < 1 || !f.AllFootHitsOwned)
-            || f.StrictPhysicalIdleProved && f.NativeGroundSphereHit != true)
-            return "remote_resume_contact_native_support_unproved";
+        // Classify the predicate used by this decision, never re-query Native
+        // after Pause or infer a cause from a later player snapshot.
+        if (f is null) { detail = "contact_facts_missing"; return "remote_resume_contact_native_support_unproved"; }
+        detail = !f.ExactRecoveryBinding ? "contact_exact_recovery_binding_unproved"
+            : !f.NonGroundNativePremisesProved ? "contact_non_ground_native_premises_unproved"
+            : !f.CurrentSupportReferenceProved ? "contact_current_support_reference_unproved"
+            : !f.FootQueryComplete ? "contact_foot_query_incomplete"
+            : !f.NativeGroundSphereHit.HasValue ? "contact_native_ground_query_unavailable"
+            : f.FootOverlapCount < 0 || f.FootOverlapCount > NativeTerrainObservationPolicy.MaximumSurfaceColliders ? "contact_foot_count_unproved"
+            : f.NativeGroundSphereHit == false && f.FootOverlapCount != 0 ? "contact_airborne_foot_overlap"
+            : f.NativeGroundSphereHit == true && (f.FootOverlapCount < 1 || !f.AllFootHitsOwned) ? "contact_grounded_foot_owner_unproved"
+            : f.StrictPhysicalIdleProved && f.NativeGroundSphereHit != true ? "contact_idle_without_native_ground"
+            : null;
+        if (detail is not null) return "remote_resume_contact_native_support_unproved";
         if (f.NowUtc == default || f.NowUtc < StartedUtc || (f.NowUtc - StartedUtc).TotalSeconds >= MaximumWallSeconds)
             return "remote_resume_contact_wall_exhausted";
-        if (!f.NativeGroundSphereHit.Value && (!Known(f.CastDistanceMeters) || f.CastDistanceMeters > MaximumCastDistanceMeters
+        if (f.NativeGroundSphereHit == false && (!Known(f.CastDistanceMeters) || f.CastDistanceMeters > MaximumCastDistanceMeters
             || !Finite(f.CastNormalDotUp) || f.CastNormalDotUp < MinimumNormalDotUp || f.CastNormalDotUp > 1d))
             return "remote_resume_contact_near_support_unproved";
         if (!Finite(f.InwardDisplacementMeters) || f.InwardDisplacementMeters < -.01d
