@@ -23,7 +23,10 @@ public static class OwnedWorldVersionCompatibilityPolicy
         || (source == TargetPatchVersion && target == CurrentPatchVersion)
         || (source == CurrentPatchVersion && target == LatestPatchVersion)
         || (source == LatestPatchVersion && target == NextPatchVersion)
-        || (source == NextPatchVersion && target == CurrentNativeVersion);
+        || (source == NextPatchVersion && target == CurrentNativeVersion)
+        // A direct native adoption records one real transition, not synthetic
+        // adoptions of the releases that this owned world never loaded.
+        || (source == TargetPatchVersion && target == CurrentNativeVersion);
 
     public static bool AllowsReauthorization(string source, string target) =>
         !string.IsNullOrWhiteSpace(source) && (source == target || IsSupportedMigration(source, target));

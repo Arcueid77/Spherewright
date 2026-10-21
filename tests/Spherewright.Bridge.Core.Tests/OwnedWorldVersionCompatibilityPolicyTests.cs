@@ -19,6 +19,7 @@ public sealed class OwnedWorldVersionCompatibilityPolicyTests
         Assert.True(OwnedWorldVersionCompatibilityPolicy.IsSupportedMigration(CurrentPatch, LatestPatch));
         Assert.True(OwnedWorldVersionCompatibilityPolicy.IsSupportedMigration(LatestPatch, NextPatch));
         Assert.True(OwnedWorldVersionCompatibilityPolicy.IsSupportedMigration(NextPatch, CurrentNative));
+        Assert.True(OwnedWorldVersionCompatibilityPolicy.IsSupportedMigration(TargetPatch, CurrentNative));
         Assert.False(OwnedWorldVersionCompatibilityPolicy.IsSupportedMigration(LatestPatch, CurrentNative));
         Assert.False(OwnedWorldVersionCompatibilityPolicy.IsSupportedMigration(CurrentNative, NextPatch));
         Assert.False(OwnedWorldVersionCompatibilityPolicy.IsSupportedMigration(NextPatch, "0.10.35.29152"));
@@ -129,6 +130,27 @@ public sealed class OwnedWorldVersionCompatibilityPolicyTests
     {
         Assert.False(OwnedWorldVersionCompatibilityPolicy.AllowsReauthorization(null!, Target));
         Assert.False(OwnedWorldVersionCompatibilityPolicy.AllowsReauthorization(Source, null!));
+    }
+
+    [Fact]
+    public void Direct29088AdoptionPreservesTheRealPrefixWithoutInventingIntermediateAdoptions()
+    {
+        var first = ValidTransition(to: TargetPatch);
+        var direct = ValidTransition(from: TargetPatch, to: CurrentNative, adoptedAt: AdoptedTick + 1);
+        var history = new[] { first, direct };
+
+        Assert.True(OwnedWorldVersionCompatibilityPolicy.AllowsReauthorization(TargetPatch, CurrentNative));
+        Assert.True(OwnedWorldVersionCompatibilityPolicy.CanAppendTransition(
+            Source, new[] { first }, EntryCount, TargetPatch, CurrentNative, direct));
+        Assert.True(OwnedWorldVersionCompatibilityPolicy.JournalMatches(Source, history, EntryCount, CurrentNative));
+        Assert.Same(first, history[0]);
+        Assert.Equal(2, history.Length);
+        Assert.False(OwnedWorldVersionCompatibilityPolicy.JournalMatches(
+            Source, new[] { direct }, EntryCount, CurrentNative));
+        Assert.False(OwnedWorldVersionCompatibilityPolicy.CanAppendTransition(
+            Source, history, EntryCount, TargetPatch, CurrentNative, direct));
+        Assert.False(OwnedWorldVersionCompatibilityPolicy.AllowsReauthorization(CurrentNative, TargetPatch));
+        Assert.False(OwnedWorldVersionCompatibilityPolicy.AllowsReauthorization(TargetPatch, "0.10.35.29152"));
     }
 
     [Theory]

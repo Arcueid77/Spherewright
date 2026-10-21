@@ -164,6 +164,51 @@ public sealed class OwnedWorldResumeTicketStoreIntegrationTests
         Assert.False(store.TryGetFixedAutosaveProvenance(scenario.Token, out _, out _, out _));
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void Direct29088ExpiredPrimaryPreparationKeepsTheExactOriginalEvidence(bool missingFirst)
+    {
+        var first = OriginalTwoTransitions().Take(1).ToArray();
+        using var scenario = VersionTransitionScenario.CreateExpired(
+            TargetPatchGameVersion, CurrentNativeGameVersion, GameVersion,
+            missingFirst ? Array.Empty<GameplayJournalVersionTransition>() : first);
+        var beforeTicket = File.ReadAllBytes(scenario.RuntimeTicketPath);
+        var beforeHandoff = File.ReadAllBytes(scenario.HandoffTicketPath);
+
+        Assert.False(scenario.Store.TryGetActiveTicket(scenario.Token, out _, out _));
+        Assert.False(scenario.Store.TryGetVersionChangedPrimaryProvenance(scenario.Token, out _, out _, out _));
+        Assert.False(scenario.Store.TryGetFixedAutosaveProvenance(scenario.Token, out _, out _, out _));
+        Assert.Equal(!missingFirst, scenario.Store.TryGetExpiredPrimaryProvenance(
+            scenario.Token, out var ticket, out _, out _));
+        if (!missingFirst) Assert.Equal(TargetPatchGameVersion, ticket!.GameVersion);
+        Assert.Equal(beforeTicket, File.ReadAllBytes(scenario.RuntimeTicketPath));
+        Assert.Equal(beforeHandoff, File.ReadAllBytes(scenario.HandoffTicketPath));
+        Assert.False(File.Exists(scenario.RuntimeAttemptPath));
+        Assert.False(File.Exists(scenario.RuntimeTombstonePath));
+    }
+
+    [Fact]
+    public void Direct29088AdoptionNeedsItsRealDurableTransitionForLaterNormalResume()
+    {
+        var first = OriginalTwoTransitions().Take(1).ToArray();
+        var direct = new GameplayJournalVersionTransition
+        {
+            FromGameVersion = TargetPatchGameVersion, ToGameVersion = CurrentNativeGameVersion,
+            AdoptedAtGameTick = MinimumTick, DurableThroughSequence = 2, RecordedAtUtc = "2026-10-21T00:00:00Z",
+        };
+        using var complete = VersionTransitionScenario.CreateActive(
+            CurrentNativeGameVersion, GameVersion, first.Append(direct).ToArray());
+        Assert.True(complete.Store.TryGetActiveTicket(complete.Token, out _, out _));
+        using var missing = VersionTransitionScenario.CreateActive(CurrentNativeGameVersion, GameVersion, first);
+        Assert.False(missing.Store.TryGetActiveTicket(missing.Token, out _, out _));
+        using var activeOld = VersionTransitionScenario.CreateActive(TargetPatchGameVersion, GameVersion, first);
+        var targetStore = activeOld.OpenStore(CurrentNativeGameVersion);
+        Assert.False(targetStore.TryGetActiveTicket(activeOld.Token, out _, out _));
+        Assert.False(targetStore.TryGetExpiredPrimaryProvenance(activeOld.Token, out _, out _, out _));
+        Assert.False(targetStore.TryGetVersionChangedPrimaryProvenance(activeOld.Token, out _, out _, out _));
+    }
+
     [Fact]
     public void Normal29151ResumeNeedsItsDurableFifthTransitionAndKeepsDefaultSameVersionOnly()
     {

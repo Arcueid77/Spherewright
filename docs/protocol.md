@@ -252,7 +252,7 @@ Import prepare binds restricted current session/revision without content. Only a
 
 Resume uses the current protected token. At the menu `gameLoaded=false` is expected: fresh prepare checks native preload/menu/no-loader, exact source and Journal without loading. Availability alone proves neither valid expiry nor final readiness.
 
-The six modes, evidence versions 1–6, exact candidate/floor/confirmation requirements, leases, consumption and migrations are in [safety](safety-model.md#protected-recovery-and-version-changes). Active migration permits only `29104→29131`/5 or `29131→29145`/6; expired-primary has only researched directional links. Expired-primary adds only the researched `29145→29151` pair; Journal permits ≤5 durable transitions. Default remains exact-version-only. No selector, fallback, ticket edit or post-consumption automatic replay.
+The six modes, evidence versions 1–6, exact candidate/floor/confirmation requirements, leases, consumption and migrations are in [safety](safety-model.md#protected-recovery-and-version-changes). Active migration permits only `29104→29131`/5 or `29131→29145`/6; expired-primary has only researched directional links, including `29145→29151` and the proven direct `29088→29151`. Journal permits ≤5 durable transitions and records only actual adoptions, preserving every old link. Default remains exact-version-only. No selector, fallback, ticket edit or post-consumption automatic replay.
 
 Flight commit verifies a separate internal checkpoint first. Reload only accepts the matching failed/interrupted flight; stable arrival/covering primary progress retires it. Transition-time `NO_LOCAL_PLANET` is not permission for another flight/load.
 
