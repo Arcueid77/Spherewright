@@ -380,6 +380,8 @@ Codex、MCP Host 关闭、重启、断连、上下文压缩、回合结束，均
 
 加载完成后，初始化最多等待 8 次 host pump / 2 秒墙钟时间；准确 owned 世界保持 Native 暂停，source tick、actor、物料/能量及证据租约均保持不变。集合为空或明确仍待碰撞体刷新时，等待普通 Native Update/LateUpdate 稳定后才首次绑定支撑。就绪要求集合非空且明确无待刷新；刷新状态未知即拒绝。fresh resume 时若再次待刷新也拒绝，后续观察或重新绑定不能消除此拒绝。不手工调用 Update/Init/LateUpdate、不替换保留引用，也不把 pending 当作 idle。可空 `registeredColliderCount` 只是有限范围只读计数，不证明归属或接地；未观测仍为 null。fresh 初始化证明后至多一次 NativeResume，再走既有 151 到 501 / 至多 8 个实际 601 / 2 秒 / 14P 接触尝试；不预设实际计数或恢复成功。
 
+既有首帧失败 code 保持不变。Core 内部 `FailureDetail` 随首次失败锁存固定标签的首个失效前提；既有 action `Message` 保留 `[原 code]` 并附 `First failed premise: ...`。细因来自同次真实 151/501 对保留 player 精确不变、scene/terrain、support 及阶段顺序的实际判断，不放松任何检查。缺失或尚未到达的观察仍未证明，不能推断为 false 测量或已通过。不新增 DTO、工具或 schema；既有公开 bool API 保持兼容，细因不改变 canonical hash 或授权，也不授自动重试。使用 Native 替身、链接生产谓词的回归不证明 Native 实机健康、已安装或恢复成功。
+
 精确恢复加载后，可在原预算内作一次有界接触尝试：至多8个实际 Native 601 tick（包含失败 Pause 当帧）及2秒墙钟时间。每步先经当 tick 真实151核验，再由同 tick 真实501消费；普通 Update 不消费步数。在该501 fresh 核同一 world/scene/当前支撑、全部非接地前提与成本、14P储备（当前 tick 加原13 tick停止尾部），以及原 elapsed/spent/max、返程/能量/翘曲器及 UTC 限制。只有实际 Native sphere 接地并且严格物理空闲，才可接入既有补能/Save链；守卫失败或尝试耗尽则 NativePause 并隔离。不写 gameplay 姿态、速度或缓存接地状态，不重放旧 Move 或失败 Load，不新增工具或参数。原已注册地形、确认及较新主档保护保持；源码实现不代表实机验收。
 
 仅精确 owned、精确票据绑定的 LastExit 接管，在真实足下探测命中精确 owned 地形碰撞体 layer31，且其余模式/scene/输入/命令/UI/身份/原源文件前提全过时，才可有条件放行一次自然调度的首帧。已核足原2P储备的 bootstrap 及全部已耗时/充能/loaded返程/tick/UTC/翘曲器预算须已成立。此路径不调用 SyncTransforms、不手动调用 Native Update/GameTick，不写 gameplay 变换/速度/能量。须观察真实 Native post-Universe(151) 地形/接触结果，再经真实 pre-player(501) 检查；预检不冒充已观察任务轮次或 idle 准入。即使已请求 Pause，当前 Native 帧仍可能跑完 player(601) 余部，其费用仍须有足额储备并计入 Native 实际读回。接触及 bootstrap 前提成立后，仅原有有界、逐 tick 守护的充能可继续，直到真实501证明 strict13；独立 fresh 返航核心门不变。仍有未证前提就保持精确 owned 拒绝/Pause/quarantine。一次首帧不重开已耗时/上限，也不证明地面已修复、物理空闲或恢复成功。

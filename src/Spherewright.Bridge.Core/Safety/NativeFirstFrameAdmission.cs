@@ -11,6 +11,7 @@ public sealed class NativeFirstFrameAdmission
     public bool PhysicsObserved { get; private set; }
     public long SourceGameTick { get; private set; }
     public string? Failure { get; private set; }
+    public string? FailureDetail { get; private set; }
     private Func<string?>? _recheckAtPhysics;
     public string? Arm(long sourceTick, bool exactLoader, bool guideComplete, bool terrainOwned31FootHit, bool funded,
         Func<string?>? recheckAtPhysics = null)
@@ -32,17 +33,32 @@ public sealed class NativeFirstFrameAdmission
         SourceGameTick = sourceTick; _recheckAtPhysics = recheckAtPhysics; Armed = true; return null;
     }
     public string? ObserveUniverse(long tick, bool exactBinding, bool unchangedPlayer, bool expectedTerrain)
+        => ObserveUniverse(tick, exactBinding, unchangedPlayer, expectedTerrain, null, null, null);
+    public string? ObserveUniverse(long tick, bool exactBinding, bool unchangedPlayer, bool expectedTerrain,
+        string? bindingBlocker, string? playerBlocker, string? terrainBlocker)
     {
         if (Failure is not null) return Failure;
-        if (!Armed || UniverseObserved || PhysicsObserved || tick != SourceGameTick + 1 || !exactBinding || !unchangedPlayer || !expectedTerrain)
-            return Fail("remote_resume_first_frame_universe_unproved");
+        // Retain the first decision, not a later explanatory re-capture. Detail
+        // cannot turn a false premise into success or replace a prior failure.
+        var detail = !Armed ? "universe_not_armed"
+            : UniverseObserved ? "universe_already_observed"
+            : PhysicsObserved ? "universe_after_physics"
+            : tick != SourceGameTick + 1 ? "universe_tick_changed"
+            : !exactBinding ? bindingBlocker ?? "universe_binding_unproved"
+            : !unchangedPlayer ? playerBlocker ?? "universe_player_unproved"
+            : !expectedTerrain ? terrainBlocker ?? "universe_terrain_unproved" : null;
+        if (detail is not null) return Fail("remote_resume_first_frame_universe_unproved", detail);
         UniverseObserved = true; return null;
     }
     public string? ObservePhysics(long tick, bool exactBinding)
     {
         if (Failure is not null) return Failure;
-        if (!Armed || !UniverseObserved || PhysicsObserved || tick != SourceGameTick + 1 || !exactBinding)
-            return Fail("remote_resume_first_frame_physics_unproved");
+        var detail = !Armed ? "physics_not_armed"
+            : !UniverseObserved ? "physics_before_universe"
+            : PhysicsObserved ? "physics_already_observed"
+            : tick != SourceGameTick + 1 ? "physics_tick_changed"
+            : !exactBinding ? "physics_binding_unproved" : null;
+        if (detail is not null) return Fail("remote_resume_first_frame_physics_unproved", detail);
         try
         {
             var retained = _recheckAtPhysics?.Invoke();
@@ -52,7 +68,13 @@ public sealed class NativeFirstFrameAdmission
         if (Failure is not null) return Failure;
         PhysicsObserved = true; return null;
     }
-    public string Fail(string code) => Failure ??= code;
+    public string Fail(string code) => Fail(code, null);
+    public string Fail(string code, string? detail)
+    {
+        if (Failure is not null) return Failure;
+        FailureDetail = detail;
+        return Failure = code;
+    }
 }
 
 public static class NativeTerrainObservationPolicy

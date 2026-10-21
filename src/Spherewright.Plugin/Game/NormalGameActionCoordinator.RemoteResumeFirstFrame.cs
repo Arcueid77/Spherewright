@@ -65,55 +65,74 @@ internal sealed partial class NormalGameActionCoordinator
         var journey = _flightCheckpoints.VoyagerJourney;
         var terrain = GameStateReader.CaptureNativeTerrain(adoption.Player, "native_universe_post151");
         NativePlayerGroundContactSnapshot? ground = null;
-        var retainedTerrain = _firstFrameSurfaceState?.Matches() == true && NativeTerrainObservationPolicy.Blocker(terrain, 9) is null;
+        var terrainBlocker = _firstFrameSurfaceState is { } retainedSurface
+            ? retainedSurface.CurrentBlocker() : "first_frame_surface_state_missing";
+        terrainBlocker ??= NativeTerrainObservationPolicy.Blocker(terrain, 9);
         if (_firstFrameSurfaceState?.HasRegisteredOwners == true)
         {
             ground = GameStateReader.CaptureNativeGroundContact(adoption.Player, "native_universe_post151");
             terrain.NativeGroundSphereHit = ground.CheckSphereHit;
             var foot = GameStateReader.CapturePostUniverseTerrainFootOverlap(adoption.Player, terrain, _firstFrameSurfaceState.Surface);
-            retainedTerrain = _firstFrameSurfaceState.ObserveAfterUniverse(terrain) && retainedTerrain && foot is null;
+            var registeredObserved = _firstFrameSurfaceState.ObserveAfterUniverse(terrain);
+            if (!registeredObserved) terrainBlocker ??= "first_frame_registered_surface_unproved";
+            terrainBlocker ??= foot;
         }
         if (ReferenceEquals(_firstFrameAdoption, adoption) && _firstFrameContact is { } contact && _firstFrameSurfaceState is { } surface)
         {
             var supportBlocker = contact.Support.Recheck(adoption.Player, "native_universe_post151", surface.Surface, out var support);
             adoption.NearSupportPostUniverse = support.Copy(); adoption.NearSupportLatest = support.Copy();
-            retainedTerrain = retainedTerrain && supportBlocker is null;
+            terrainBlocker ??= supportBlocker;
         }
         _sessions.RecordRemoteResumeTerrain(adoption, terrain, true, ground);
-        var bound = ReferenceEquals(_firstFrameAdoption, adoption) && _sessions.IsCurrentSessionOwned
-            && _sessions.SessionId == adoption.SessionId && ReferenceEquals(GameMain.data, adoption.World)
-            && ReferenceEquals(GameMain.mainPlayer, adoption.Player) && !GameMain.isPaused && GameMain.data.guideComplete
-            && journey is not null && _flightCheckpoints.RemoteResumeEvidenceStillMatches(adoption.Evidence);
-        var blocker = adoption.FirstFrame.ObserveUniverse(GameMain.gameTick, bound,
-            _firstFramePlayerState?.MatchesAtTick(adoption.Player, adoption.Evidence.SourceGameTick + 1) == true,
-            retainedTerrain);
+        var bindingBlocker = RemoteFirstFrameBindingBlocker(adoption, journey);
+        var playerBlocker = _firstFramePlayerState is { } retainedPlayer
+            ? retainedPlayer.CurrentBlockerAtTick(adoption.Player, adoption.Evidence.SourceGameTick + 1)
+            : "first_frame_player_state_missing";
+        var blocker = adoption.FirstFrame.ObserveUniverse(GameMain.gameTick, bindingBlocker is null,
+            playerBlocker is null, terrainBlocker is null, bindingBlocker, playerBlocker, terrainBlocker);
         if (blocker is not null) return blocker;
         // Full contact/mode/cost/floor re-capture, but still no501 availability,
         // idle owner, lease release or Save. A failure still pays current601.
         return CheckVerifiedVoyagerRemoteResumeOnMainThread(adoption, admit: false);
     }
 
+    private string? RemoteFirstFrameBindingBlocker(VoyagerRemoteResumeAdoption adoption, VoyagerJourneyRecord? journey)
+    {
+        if (!ReferenceEquals(_firstFrameAdoption, adoption)) return "first_frame_adoption_changed";
+        if (!_sessions.IsCurrentSessionOwned) return "first_frame_session_not_owned";
+        if (_sessions.SessionId != adoption.SessionId) return "first_frame_session_changed";
+        if (!ReferenceEquals(GameMain.data, adoption.World)) return "first_frame_world_changed";
+        if (!ReferenceEquals(GameMain.mainPlayer, adoption.Player)) return "first_frame_player_changed";
+        if (GameMain.isPaused) return "first_frame_native_paused";
+        if (!GameMain.data.guideComplete) return "first_frame_guide_incomplete";
+        if (journey is null) return "first_frame_journey_missing";
+        return _flightCheckpoints.RemoteResumeEvidenceStillMatches(adoption.Evidence)
+            ? null : "first_frame_evidence_changed";
+    }
+
     private string? RecheckRegisteredTerrainAtPhysics(VoyagerRemoteResumeAdoption adoption)
     {
-        string? blocker;
+        string? blocker; string? detail = null;
         try
         {
-            if (adoption.FirstFrame.Failure is not null || _sessions.ResumeAdoptionError is not null
-                || !ReferenceEquals(_firstFrameAdoption, adoption) || _firstFrameSurfaceState?.HasRegisteredOwners != true
-                || !_sessions.IsCurrentSessionOwned || _sessions.SessionId != adoption.SessionId
-                || !ReferenceEquals(GameMain.data, adoption.World) || !ReferenceEquals(GameMain.mainPlayer, adoption.Player)
-                || GameMain.isPaused || GameMain.gameTick != adoption.Evidence.SourceGameTick + 1
-                || !VoyagerLocalPrePlayerTickAvailable || !_flightCheckpoints.RemoteResumeEvidenceStillMatches(adoption.Evidence))
+            detail = RegisteredTerrainPhysicsBindingBlocker(adoption);
+            if (detail is not null)
                 blocker = "remote_resume_registered_terrain_physics_binding_unproved";
             else
             {
+                var surface = _firstFrameSurfaceState!;
                 var terrain = GameStateReader.CaptureNativeTerrain(adoption.Player, "native_physics_post501");
                 var ground = GameStateReader.CaptureNativeGroundContact(adoption.Player, "native_physics_post501");
                 terrain.NativeGroundSphereHit = ground.CheckSphereHit;
-                blocker = GameStateReader.CapturePostUniverseTerrainFootOverlap(adoption.Player, terrain, _firstFrameSurfaceState.Surface);
-                if (!_firstFrameSurfaceState.Matches() || !_firstFrameSurfaceState.ObserveAfterUniverse(terrain)
-                    || _firstFramePlayerState?.MatchesAtTick(adoption.Player, adoption.Evidence.SourceGameTick + 1) != true)
-                    blocker ??= "remote_resume_registered_terrain_physics_state_unproved";
+                blocker = GameStateReader.CapturePostUniverseTerrainFootOverlap(adoption.Player, terrain, surface.Surface);
+                var stateBlocker = surface.CurrentBlocker();
+                if (stateBlocker is null && !surface.ObserveAfterUniverse(terrain)) stateBlocker = "first_frame_registered_surface_unproved";
+                if (stateBlocker is null) stateBlocker = _firstFramePlayerState is { } player
+                    ? player.CurrentBlockerAtTick(adoption.Player, adoption.Evidence.SourceGameTick + 1) : "first_frame_player_state_missing";
+                // The earlier foot-query failure retains priority, even though
+                // the original state/registered callbacks must still run.
+                if (blocker is null && stateBlocker is not null)
+                { blocker = "remote_resume_registered_terrain_physics_state_unproved"; detail = stateBlocker; }
             }
         }
         catch (Exception exception) { blocker = "remote_resume_registered_terrain_physics_capture_unavailable:" + exception.GetType().Name; }
@@ -123,7 +142,25 @@ internal sealed partial class NormalGameActionCoordinator
             observed.RegisteredPostPhysicsVerified = blocker is null;
             observed.RegisteredPostPhysicsReasonCode = blocker;
         }
+        if (blocker is not null) adoption.FirstFrame.Fail(blocker, detail);
         return blocker;
+    }
+
+    private string? RegisteredTerrainPhysicsBindingBlocker(VoyagerRemoteResumeAdoption adoption)
+    {
+        if (adoption.FirstFrame.Failure is not null) return "first_frame_already_failed";
+        if (_sessions.ResumeAdoptionError is not null) return "first_frame_adoption_already_failed";
+        if (!ReferenceEquals(_firstFrameAdoption, adoption)) return "first_frame_adoption_changed";
+        if (_firstFrameSurfaceState?.HasRegisteredOwners != true) return "first_frame_registered_state_missing";
+        if (!_sessions.IsCurrentSessionOwned) return "first_frame_session_not_owned";
+        if (_sessions.SessionId != adoption.SessionId) return "first_frame_session_changed";
+        if (!ReferenceEquals(GameMain.data, adoption.World)) return "first_frame_world_changed";
+        if (!ReferenceEquals(GameMain.mainPlayer, adoption.Player)) return "first_frame_player_changed";
+        if (GameMain.isPaused) return "first_frame_native_paused";
+        if (GameMain.gameTick != adoption.Evidence.SourceGameTick + 1) return "first_frame_physics_tick_changed";
+        if (!VoyagerLocalPrePlayerTickAvailable) return "first_frame_native_501_unavailable";
+        return _flightCheckpoints.RemoteResumeEvidenceStillMatches(adoption.Evidence)
+            ? null : "first_frame_evidence_changed";
     }
 
     private static string RemoteResumeChargeCostEnvelope(Player p)
@@ -150,9 +187,22 @@ internal sealed partial class NormalGameActionCoordinator
             _rotations = scene.Surface.Select(c => c.transform.rotation).ToArray();
             _scales = scene.Surface.Select(c => c.transform.lossyScale).ToArray();
         }
-        public bool Matches() => _scene.MatchesCurrent() && _scene.Surface.Select((c, i) => c is MeshCollider mesh
-            && ReferenceEquals(mesh.sharedMesh, _meshes[i]) && c.transform.position.Equals(_positions[i])
-            && c.transform.rotation.Equals(_rotations[i]) && c.transform.lossyScale.Equals(_scales[i])).All(v => v);
+        public bool Matches() => CurrentBlocker() is null;
+        public string? CurrentBlocker()
+        {
+            var blocker = _scene.CurrentBlocker();
+            if (blocker is not null) return blocker;
+            for (var i = 0; i < _scene.Surface.Length; i++)
+            {
+                var c = _scene.Surface[i];
+                if (c is not MeshCollider mesh) return "first_frame_surface_not_mesh";
+                if (!ReferenceEquals(mesh.sharedMesh, _meshes[i])) return "first_frame_shared_mesh_changed";
+                if (!c.transform.position.Equals(_positions[i])) return "first_frame_surface_position_changed";
+                if (!c.transform.rotation.Equals(_rotations[i])) return "first_frame_surface_rotation_changed";
+                if (!c.transform.lossyScale.Equals(_scales[i])) return "first_frame_surface_scale_changed";
+            }
+            return null;
+        }
         public bool MatchesBeforeUniverse() => Matches() && (_registered is null || _registered.MatchesBeforeUniverse());
         public bool ObserveAfterUniverse(NativePlanetTerrainPhysicsSnapshot terrain) => _registered is not null
             && Matches() && _registered.ObserveAfterUniverse(terrain);

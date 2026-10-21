@@ -6,7 +6,7 @@ namespace Spherewright.Plugin.Game;
 
 // TEST ONLY. The production start methods/store are linked. These native and
 // session substitutes prove ordering/identity, never Unity flight or real saves.
-internal static class GameMain
+internal static partial class GameMain
 {
     internal static long gameTick;
     internal static string? gameName;

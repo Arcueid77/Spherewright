@@ -235,6 +235,26 @@ public sealed partial class VoyagerRemoteResumeCoordinatorIntegrationTests
     }
 
     [Fact]
+    public void FirstFrameDetailReachesTheOriginalFailedActionAndCannotBeReplacedByLaterSessionState()
+    {
+        using var s = new Scenario(expiredJourney: true); var r = s.SeedZeroProgressReauthorization();
+        var accepted = s.Commit(s.Prepare(r)); Assert.True(accepted.Success);
+        const string reason = "The exact remote LastExit continuation could not enter its strict idle guard. "
+            + "[remote_resume_first_frame_universe_unproved] First failed premise: player_universal_position_changed.";
+        // The real coordinator consumes the session error; Native/session
+        // substitutes do not prove the Host or actual Save/load callbacks.
+        s.Sessions.ResumeAdoptionError = reason;
+        Assert.True(s.Result(accepted.Value!.ActionId, out var failed));
+        Assert.True(failed!.Terminal); Assert.False(failed.Succeeded); Assert.Equal(reason, failed.Message);
+        Assert.Equal(NormalActionStates.ActionFailed, failed.State); Assert.Equal(1, DSPGame.LoadCalls);
+        s.Sessions.ResumeAdoptionError = "later_cancel";
+        s.Sessions.Snapshot.OwnedSaveState = OwnedSaveStates.Saved;
+        Assert.True(s.Result(accepted.Value.ActionId, out var unchanged));
+        Assert.Equal(reason, unchanged!.Message); Assert.Equal(NormalActionStates.ActionFailed, unchanged.State);
+        Assert.False(s.PrepareResult(r).Success); Assert.Equal(1, DSPGame.LoadCalls);
+    }
+
+    [Fact]
     public void AReportedTerminalFailureNeverBecomesSuccessWhenACredentialArrivesLater()
     {
         using var s = new Scenario(expiredJourney: true); var r = s.SeedZeroProgressReauthorization();

@@ -22,6 +22,7 @@
     <Compile Include="..\..\src\Spherewright.Plugin\Game\NativeLoadCompletionSubscription.cs" Link="PluginGame\NativeLoadCompletionSubscription.cs" />
     <Compile Include="..\..\src\Spherewright.Plugin\Game\FlightCheckpointReloadCoordinator.cs" Link="PluginGame\FlightCheckpointReloadCoordinator.cs" />
     <Compile Include="..\..\src\Spherewright.Plugin\Game\NormalGameActionCoordinator.FlightStart.cs" Link="PluginGame\NormalGameActionCoordinator.FlightStart.cs" />
+    <Compile Include="..\..\src\Spherewright.Plugin\Game\NormalGameActionCoordinator.LoadedGroundSyncState.cs" Link="PluginGame\NormalGameActionCoordinator.LoadedGroundSyncState.cs" />
     <Compile Include="..\..\src\Spherewright.Plugin\RuntimeDescriptor\OwnedWorldResumeTicketStore.cs" Link="PluginRuntimeDescriptor\OwnedWorldResumeTicketStore.cs" />
     <Compile Include="..\..\src\Spherewright.Plugin\RuntimeDescriptor\FlightCheckpointStore.cs" Link="PluginRuntimeDescriptor\FlightCheckpointStore.cs" />
     <Compile Include="..\..\src\Spherewright.Plugin\RuntimeDescriptor\FlightCheckpointStore.Voyager.cs" Link="PluginRuntimeDescriptor\FlightCheckpointStore.Voyager.cs" />

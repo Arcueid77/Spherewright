@@ -7,6 +7,77 @@ namespace Spherewright.Bridge.Core.Tests;
 
 public sealed class NativeFirstFrameAdmissionTests
 {
+    [Fact]
+    public void FailureInsidePhysicsRecheckCannotBeHiddenByANullReturnOrLaterCancellation()
+    {
+        var frame = new NativeFirstFrameAdmission(); var calls = 0;
+        Assert.Null(frame.Arm(100, true, true, true, true, () =>
+        {
+            calls++;
+            frame.Fail("remote_resume_near_support_first_physics_binding_unproved", "player_body_velocity_changed");
+            return null;
+        }));
+        Assert.Null(frame.ObserveUniverse(101, true, true, true));
+        Assert.Equal("remote_resume_near_support_first_physics_binding_unproved", frame.ObservePhysics(101, true));
+        Assert.False(frame.PhysicsObserved); Assert.Equal(1, calls);
+        frame.Fail("later_cancel", "later_detail");
+        Assert.Equal("player_body_velocity_changed", frame.FailureDetail);
+        Assert.NotNull(frame.ObservePhysics(102, true)); Assert.Equal(1, calls);
+    }
+
+    [Theory]
+    [InlineData("unarmed", "universe_not_armed")]
+    [InlineData("duplicate151", "universe_already_observed")]
+    [InlineData("tick", "universe_tick_changed")]
+    [InlineData("binding", "synthetic_binding_changed")]
+    [InlineData("player", "synthetic_player_changed")]
+    [InlineData("terrain", "synthetic_support_changed")]
+    public void SameUniverseDecisionKeepsTheFirstFailedPremiseAndLegacyFailureCode(string fault, string expected)
+    {
+        var frame = new NativeFirstFrameAdmission();
+        if (fault != "unarmed") Assert.Null(frame.Arm(100, true, true, true, true));
+        if (fault == "duplicate151") Assert.Null(frame.ObserveUniverse(101, true, true, true));
+        Assert.Equal("remote_resume_first_frame_universe_unproved", frame.ObserveUniverse(fault == "tick" ? 102 : 101,
+            fault != "binding", fault is not ("binding" or "player"), fault is not ("binding" or "player" or "terrain"),
+            "synthetic_binding_changed", "synthetic_player_changed", "synthetic_support_changed"));
+        Assert.Equal(expected, frame.FailureDetail);
+        frame.Fail("later_cancel", "later_detail");
+        Assert.NotNull(frame.ObservePhysics(101, true));
+        Assert.Equal(expected, frame.FailureDetail);
+        Assert.Equal("remote_resume_first_frame_universe_unproved", frame.Failure);
+    }
+
+    [Fact]
+    public void DetailCannotOverrideABooleanDecisionOrDecorateAnEarlierFailure()
+    {
+        var frame = new NativeFirstFrameAdmission(); Assert.Null(frame.Arm(100, true, true, true, true));
+        Assert.Null(frame.ObserveUniverse(101, true, true, true, "unused", "unused", "unused"));
+        Assert.Null(frame.FailureDetail); Assert.True(frame.UniverseObserved);
+        var earlier = new NativeFirstFrameAdmission(); earlier.Fail("earlier_failure");
+        Assert.Equal("earlier_failure", earlier.ObserveUniverse(101, false, false, false, "new", "new", "new"));
+        Assert.Null(earlier.FailureDetail);
+        var missing = new NativeFirstFrameAdmission(); Assert.Null(missing.Arm(100, true, true, true, true));
+        Assert.NotNull(missing.ObserveUniverse(101, true, false, true));
+        Assert.Equal("universe_player_unproved", missing.FailureDetail);
+    }
+
+    [Theory]
+    [InlineData("unarmed", "physics_not_armed")]
+    [InlineData("before151", "physics_before_universe")]
+    [InlineData("duplicate501", "physics_already_observed")]
+    [InlineData("tick", "physics_tick_changed")]
+    [InlineData("binding", "physics_binding_unproved")]
+    public void PhysicsSequenceFailureNeverRunsTheRecheckAndKeepsItsOwnFirstDetail(string fault, string expected)
+    {
+        var calls = 0; var frame = new NativeFirstFrameAdmission();
+        if (fault != "unarmed") Assert.Null(frame.Arm(100, true, true, true, true, () => { calls++; return null; }));
+        if (fault is not ("unarmed" or "before151")) Assert.Null(frame.ObserveUniverse(101, true, true, true));
+        if (fault == "duplicate501") Assert.Null(frame.ObservePhysics(101, true));
+        var before = calls;
+        Assert.Equal("remote_resume_first_frame_physics_unproved", frame.ObservePhysics(fault == "tick" ? 102 : 101, fault != "binding"));
+        Assert.Equal(expected, frame.FailureDetail); Assert.Equal(before, calls);
+    }
+
     [Theory]
     [InlineData("support")] [InlineData("recheck")] [InlineData("funding")]
     public void NearSupportRequiresItsOwnRetainedProofAndNeverReplacesMissingTerrainFootEvidence(string fault)

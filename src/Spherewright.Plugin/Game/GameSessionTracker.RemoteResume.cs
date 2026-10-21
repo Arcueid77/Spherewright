@@ -361,6 +361,8 @@ internal sealed partial class GameSessionTracker
         _remoteResumeInitializationPending = false;
         if (_remoteResumeAdoption?.FirstFrame.Armed == true) _remoteResumeAdoption.FirstFrame.Fail(code);
         var reason = "The exact remote LastExit continuation could not enter its strict idle guard. [" + code + "]";
+        if (_remoteResumeAdoption?.FirstFrame.FailureDetail is { } detail)
+            reason += " First failed premise: " + detail + ".";
         var exactLoadedCandidate = _expectedResumeTicket is { } expected && _resumeSourceLease is not null
             && ReferenceEquals(GameMain.data, _remoteResumeCompletedWorld) && GameMain.data is { } loaded
             && TryValidateResumeCandidate(loaded, expected, _resumeSourceLease.Prefix.GameTick, out _, out _);

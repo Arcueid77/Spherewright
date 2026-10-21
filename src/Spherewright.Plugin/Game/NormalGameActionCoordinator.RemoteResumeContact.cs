@@ -45,20 +45,43 @@ internal sealed partial class NormalGameActionCoordinator
     }
 
     private bool ExactRemoteContactBinding(VoyagerRemoteResumeAdoption adoption, VoyagerJourneyRecord journey,
-        NativeLocalWalkSceneBinding scene) => _sessions.IsCurrentSessionOwned && _sessions.SessionId == adoption.SessionId
-        && ReferenceEquals(GameMain.data, adoption.World) && ReferenceEquals(GameMain.mainPlayer, adoption.Player)
-        && !GameMain.isPaused && GameMain.data.guideComplete && scene.MatchesCurrent()
-        && journey.Phase == "remote_landed"
-        && _flightCheckpoints.RemoteResumeRetainedJourneyStillMatches(journey, adoption.Evidence);
+        NativeLocalWalkSceneBinding scene) => RemoteContactBindingBlocker(adoption, journey, scene) is null;
+
+    private string? RemoteContactBindingBlocker(VoyagerRemoteResumeAdoption adoption, VoyagerJourneyRecord journey,
+        NativeLocalWalkSceneBinding scene)
+    {
+        if (!_sessions.IsCurrentSessionOwned) return "contact_session_not_owned";
+        if (_sessions.SessionId != adoption.SessionId) return "contact_session_changed";
+        if (!ReferenceEquals(GameMain.data, adoption.World)) return "contact_world_changed";
+        if (!ReferenceEquals(GameMain.mainPlayer, adoption.Player)) return "contact_player_changed";
+        if (GameMain.isPaused) return "contact_native_paused";
+        if (!GameMain.data.guideComplete) return "contact_guide_incomplete";
+        var blocker = scene.CurrentBlocker();
+        if (blocker is not null) return blocker;
+        if (journey.Phase != "remote_landed") return "contact_journey_phase_changed";
+        return _flightCheckpoints.RemoteResumeRetainedJourneyStillMatches(journey, adoption.Evidence)
+            ? null : "contact_journey_evidence_changed";
+    }
 
     private string? RecheckRemoteContactFirstPhysics(VoyagerRemoteResumeAdoption adoption)
     {
-        if (!ReferenceEquals(_firstFrameAdoption, adoption) || _firstFrameContact is not { } contact
-            || _firstFrameSurfaceState is not { } surface || _flightCheckpoints.VoyagerJourney is not { } journey
-            || !ExactRemoteContactBinding(adoption, journey, surface.Scene) || !VoyagerLocalPrePlayerTickAvailable
-            || GameMain.gameTick != adoption.Evidence.SourceGameTick + 1
-            || _firstFramePlayerState?.MatchesAtTick(adoption.Player, GameMain.gameTick) != true || !surface.Matches())
-            return "remote_resume_near_support_first_physics_binding_unproved";
+        string? bindingBlocker;
+        if (!ReferenceEquals(_firstFrameAdoption, adoption)) bindingBlocker = "contact_adoption_changed";
+        else if (_firstFrameContact is null) bindingBlocker = "contact_state_missing";
+        else if (_firstFrameSurfaceState is null) bindingBlocker = "contact_surface_state_missing";
+        else if (_flightCheckpoints.VoyagerJourney is not { } journey) bindingBlocker = "contact_journey_missing";
+        else
+        {
+            bindingBlocker = RemoteContactBindingBlocker(adoption, journey, _firstFrameSurfaceState.Scene);
+            if (bindingBlocker is null && !VoyagerLocalPrePlayerTickAvailable) bindingBlocker = "contact_native_501_unavailable";
+            if (bindingBlocker is null && GameMain.gameTick != adoption.Evidence.SourceGameTick + 1) bindingBlocker = "contact_first_physics_tick_changed";
+            if (bindingBlocker is null) bindingBlocker = _firstFramePlayerState is { } player
+                ? player.CurrentBlockerAtTick(adoption.Player, GameMain.gameTick) : "first_frame_player_state_missing";
+            bindingBlocker ??= _firstFrameSurfaceState.CurrentBlocker();
+        }
+        if (bindingBlocker is not null)
+            return adoption.FirstFrame.Fail("remote_resume_near_support_first_physics_binding_unproved", bindingBlocker);
+        var surface = _firstFrameSurfaceState!; var contact = _firstFrameContact!;
         var terrain = GameStateReader.CaptureNativeTerrain(adoption.Player, "native_physics_post501");
         var blocker = NativeTerrainObservationPolicy.Blocker(terrain, 9);
         if (blocker is not null) return blocker;
@@ -70,10 +93,18 @@ internal sealed partial class NormalGameActionCoordinator
     private string? ObserveVerifiedRemoteNaturalContact(VoyagerRemoteResumeAdoption adoption, VoyagerJourneyRecord journey,
         VoyagerRemoteIdleAdmissionFacts? captured, NativePlayerGroundContactSnapshot? ground, bool atPhysics)
     {
-        if (_firstFrameContact is not { } contact || _firstFrameSurfaceState is not { } surface || captured is null
-            || adoption.Authorization is not { } authorization || !ReferenceEquals(_firstFrameAdoption, adoption)
-            || !ExactRemoteContactBinding(adoption, journey, surface.Scene) || !surface.Matches())
-            return "remote_resume_contact_current_binding_unproved";
+        string? bindingBlocker;
+        if (_firstFrameContact is null) bindingBlocker = "contact_state_missing";
+        else if (_firstFrameSurfaceState is null) bindingBlocker = "contact_surface_state_missing";
+        else if (captured is null) bindingBlocker = "contact_idle_facts_missing";
+        else if (adoption.Authorization is null) bindingBlocker = "contact_authorization_missing";
+        else if (!ReferenceEquals(_firstFrameAdoption, adoption)) bindingBlocker = "contact_adoption_changed";
+        else bindingBlocker = RemoteContactBindingBlocker(adoption, journey, _firstFrameSurfaceState.Scene)
+            ?? _firstFrameSurfaceState.CurrentBlocker();
+        if (bindingBlocker is not null)
+            return adoption.FirstFrame.Fail("remote_resume_contact_current_binding_unproved", bindingBlocker);
+        var contact = _firstFrameContact!; var surface = _firstFrameSurfaceState!;
+        var authorization = adoption.Authorization!; var currentFacts = captured!;
         var terrain = GameStateReader.CaptureNativeTerrain(adoption.Player, atPhysics ? "native_physics_post501" : "native_universe_post151");
         var blocker = NativeTerrainObservationPolicy.Blocker(terrain, 9);
         if (blocker is not null) return blocker;
@@ -88,13 +119,13 @@ internal sealed partial class NormalGameActionCoordinator
         // this is a numeric check, never an idle=true projection.
         blocker = VoyagerRecoveryWindowPolicy.ChargeBlocker(adoption.Player.mecha.coreEnergy, adoption.Player.mecha.coreEnergyCap,
             CalculateAvailableFlightEnergy(adoption.Player.mecha), journey.ReturnEnergyFloorJoules,
-            captured.MovementReserve!.PerNativeTickEnergyJoules ?? double.NaN, journey.ReturnCoreEnergyMinimumJoules,
+            currentFacts.MovementReserve!.PerNativeTickEnergyJoules ?? double.NaN, journey.ReturnCoreEnergyMinimumJoules,
             journey.SpentGameTicks, GameMain.gameTick - journey.LastLandedGameTick!.Value, journey.MaximumGameTicks,
             journey.ReturnReserveGameTicks, GameMain.gameTick - adoption.ChargeStartedGameTick!.Value,
             authorization.Proposal.MaximumChargeGameTicks, (DateTimeOffset.UtcNow - adoption.ChargeStartedUtc!.Value).TotalSeconds,
             authorization.Proposal.MaximumChargeWallSeconds, DateTimeOffset.UtcNow, _sessions.EffectiveVoyagerDeadline(journey));
         if (blocker is not null) return blocker;
-        var facts = contact.Facts(adoption.Player, captured, support, true);
+        var facts = contact.Facts(adoption.Player, currentFacts, support, true);
         if (!atPhysics) return contact.Policy.ObserveUniverse(facts);
         var step = contact.Policy.Observe(facts);
         if (step == NativeResumeContactStep.Ready) adoption.NativeContactPending = false;
