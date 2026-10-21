@@ -76,7 +76,7 @@ internal sealed partial class NormalGameActionCoordinator
             if (bindingBlocker is null && !VoyagerLocalPrePlayerTickAvailable) bindingBlocker = "contact_native_501_unavailable";
             if (bindingBlocker is null && GameMain.gameTick != adoption.Evidence.SourceGameTick + 1) bindingBlocker = "contact_first_physics_tick_changed";
             if (bindingBlocker is null) bindingBlocker = _firstFramePlayerState is { } player
-                ? player.CurrentBlockerAtTick(adoption.Player, GameMain.gameTick) : "first_frame_player_state_missing";
+                ? player.CurrentBlockerAtNativePhysicsTick(adoption.Player, GameMain.gameTick) : "first_frame_player_state_missing";
             bindingBlocker ??= _firstFrameSurfaceState.CurrentBlocker();
         }
         if (bindingBlocker is not null)

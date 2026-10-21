@@ -23,7 +23,8 @@ internal sealed partial class NormalGameActionCoordinator
             return "remote_resume_first_frame_exact_source_unproved";
         var funding = LoadedGroundSyncFunding(adoption, journey, facts, authorization);
         if (funding is not null) return funding;
-        var playerState = new LoadedGroundSyncState(adoption.Player);
+        var playerState = LoadedGroundSyncState.FromNativeFrame(adoption.Player,
+            GameMain.data.relativePos, GameMain.data.relativeRot);
         if (!playerState.Finite) return "remote_resume_first_frame_nonfinite_state";
         var terrain = GameStateReader.CaptureNativeTerrain(adoption.Player, "load_preflight_before_first_frame");
         terrain.NativeGroundSphereHit = ground.CheckSphereHit;
@@ -85,12 +86,17 @@ internal sealed partial class NormalGameActionCoordinator
         }
         _sessions.RecordRemoteResumeTerrain(adoption, terrain, true, ground);
         var bindingBlocker = RemoteFirstFrameBindingBlocker(adoption, journey);
-        var playerBlocker = _firstFramePlayerState is { } retainedPlayer
-            ? retainedPlayer.CurrentBlockerAtTick(adoption.Player, adoption.Evidence.SourceGameTick + 1)
+        var retainedPlayer = _firstFramePlayerState;
+        VectorLF3 observedUniversalPosition = default;
+        var playerBlocker = retainedPlayer is not null
+            ? retainedPlayer.CurrentBlockerAtNativeUniverseTick(adoption.Player, adoption.Evidence.SourceGameTick + 1,
+                out observedUniversalPosition)
             : "first_frame_player_state_missing";
         var blocker = adoption.FirstFrame.ObserveUniverse(GameMain.gameTick, bindingBlocker is null,
             playerBlocker is null, terrainBlocker is null, bindingBlocker, playerBlocker, terrainBlocker);
         if (blocker is not null) return blocker;
+        if (retainedPlayer is null || !retainedPlayer.TryPinNativeUniversePosition(observedUniversalPosition))
+            return adoption.FirstFrame.Fail("remote_resume_first_frame_universe_unproved", "player_native_universe_pin_unproved");
         // Full contact/mode/cost/floor re-capture, but still no501 availability,
         // idle owner, lease release or Save. A failure still pays current601.
         return CheckVerifiedVoyagerRemoteResumeOnMainThread(adoption, admit: false);
@@ -128,7 +134,7 @@ internal sealed partial class NormalGameActionCoordinator
                 var stateBlocker = surface.CurrentBlocker();
                 if (stateBlocker is null && !surface.ObserveAfterUniverse(terrain)) stateBlocker = "first_frame_registered_surface_unproved";
                 if (stateBlocker is null) stateBlocker = _firstFramePlayerState is { } player
-                    ? player.CurrentBlockerAtTick(adoption.Player, adoption.Evidence.SourceGameTick + 1) : "first_frame_player_state_missing";
+                    ? player.CurrentBlockerAtNativePhysicsTick(adoption.Player, adoption.Evidence.SourceGameTick + 1) : "first_frame_player_state_missing";
                 // The earlier foot-query failure retains priority, even though
                 // the original state/registered callbacks must still run.
                 if (blocker is null && stateBlocker is not null)
