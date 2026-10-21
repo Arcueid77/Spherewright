@@ -375,6 +375,10 @@ public sealed class PreparedNormalAction
 
     public bool CommitAllowedNow { get; set; }
 
+    // Zero/missing is legacy or unproved. Version 1 advertises an ordinary
+    // enqueue's same-tick queue, research-progress and material readback.
+    public int ResearchQueueReadbackVersion { get; set; }
+
     public double EstimatedDistance { get; set; }
 
     public long EstimatedGameTicks { get; set; }

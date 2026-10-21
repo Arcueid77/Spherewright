@@ -130,6 +130,8 @@ Recipe metadata adds heat/type and nullable `acceptedAsMechaFuel`, requiring pro
 
 Research prepare uses `expectedSelectionStateHash`. Default enqueue checks native prerequisites. `prioritizeQueued=true` only reorders an eligible non-head queued technology through `SortTechQueue`, preserving other slots/progress/inventory and returning immediate `researchQueueReadback`. Terminal means reordered, not researched.
 
+Ordinary enqueue now advertises `researchQueueReadbackVersion=1` in its prepared plan and returns an immediate `researchQueueReadback` only after proving the exact appended queue/current head, unchanged technology progress, package counts/inc/slots, held and fuel items, and native mecha research buffers in the same game tick. A failed preservation proof follows the existing unknown/quarantine path. Missing or zero capability is legacy/unproved; callers requiring this evidence must refuse before commit. The action's `expectedStateHash` is `CanonicalStateHash.Combine("select-research", sessionId, planetId, selectionStateHash, techId, false)`, not the selection hash itself. `itemBudget` direction `research-consumption` reports this level's native total requirement, not an enqueue debit or remaining requirement; `int.MaxValue` may be a capped projection. Research still consumes materials/time normally after enqueue. Commits require a UUID idempotency key; caller-specific string prefixes are not UUIDs.
+
 The owned Journal reports first manual/line outputs independently, technology/upgrade selections, tracking boundary, durable sequence and persistence state without raw save identity/path. `attached_existing_save` preserves incomplete historical coverage. Origin, effective version and transitions remain separate.
 
 ## Overseer
