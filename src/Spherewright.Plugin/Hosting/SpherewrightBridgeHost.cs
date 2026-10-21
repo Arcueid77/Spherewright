@@ -134,7 +134,8 @@ internal sealed class SpherewrightBridgeHost : IDisposable
             logger);
         sessionTracker.SetRemoteResumeAdmissionGuard(normalActionCoordinator.AdmitVerifiedVoyagerRemoteResumeOnMainThread,
             normalActionCoordinator.PreflightVerifiedVoyagerRemoteResumeOnMainThread,
-            normalActionCoordinator.ObserveVerifiedRemoteResumeUniverseOnMainThread);
+            normalActionCoordinator.ObserveVerifiedRemoteResumeUniverseOnMainThread,
+            normalActionCoordinator.ContinueVerifiedRemoteInitializationOnMainThread);
         var testWorldCoordinator = new TestWorldCoordinator(
             configuration.AllowWrites,
             configuration.PlanTokenLifetimeSeconds,
@@ -231,6 +232,7 @@ internal sealed class SpherewrightBridgeHost : IDisposable
 
         RefreshVoyagerNativeTickBinding();
         RefreshVoyagerLocalPrePlayerBinding();
+        _sessionTracker.PumpRemoteResumeInitializationOnMainThread();
         _sessionTracker.UpdateOnMainThread();
         _statusProvider.UpdateGameLoadedOnMainThread(_sessionTracker.GameLoaded);
         _gameplayJournalManager.UpdateOnMainThread();

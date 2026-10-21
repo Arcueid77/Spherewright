@@ -17,6 +17,8 @@ public sealed class NativeNearGroundSupportContractTests
         Assert.Null(old.ResumeNearSupportLatest);
         var support = new NativeNearGroundSupportSnapshot();
         Assert.Equal("unavailable", support.State);
+        Assert.Null(support.RegisteredColliderCount);
+        Assert.Null(support.Copy().RegisteredColliderCount);
         Assert.Null(support.ActualGroundSphereHit);
         Assert.Null(support.CastAttempted);
         Assert.Null(support.CastHit);
@@ -35,6 +37,7 @@ public sealed class NativeNearGroundSupportContractTests
         var source = new NativeNearGroundSupportSnapshot
         {
             State = "observed", ReasonCode = "synthetic-detail", CapturedAtGameTick = 12,
+            RegisteredColliderCount = 19,
             CaptureStage = "synthetic-preflight", ActualGroundSphereHit = false,
             CastAttempted = true, CastHit = true, CastDistance = .24f,
             HitPoint = new() { X = 1, Y = 2, Z = 3 }, HitNormal = new() { Y = 1 }, NormalDotUp = .9f,
@@ -49,12 +52,13 @@ public sealed class NativeNearGroundSupportContractTests
         Assert.NotSame(source.HitPoint, copy.HitPoint);
         Assert.NotSame(source.HitNormal, copy.HitNormal);
         source.HitPoint!.X = 90; source.HitNormal!.Y = 0; source.CastDistance = null;
-        source.OwnerType = "changed"; source.NativeLiveFlag = true;
+        source.OwnerType = "changed"; source.NativeLiveFlag = true; source.RegisteredColliderCount = null;
         Assert.Equal(1, copy.HitPoint!.X);
         Assert.Equal(1, copy.HitNormal!.Y);
         Assert.Equal(.24f, copy.CastDistance);
         Assert.Equal("vegetable", copy.OwnerType);
         Assert.False(copy.NativeLiveFlag);
+        Assert.Equal(19, copy.RegisteredColliderCount);
         Assert.True(copy.LiveObject);
         Assert.False(copy.SafetyCertified);
     }
@@ -69,8 +73,25 @@ public sealed class NativeNearGroundSupportContractTests
         Assert.True(value.CastHit);
         Assert.True(value.LiveObject);
         Assert.False(value.NativeLiveFlag);
+        Assert.Null(value.RegisteredColliderCount);
         Assert.False(value.SafetyCertified);
         Assert.False(value.Copy().SafetyCertified);
+    }
+
+    [Theory]
+    [InlineData(0)] [InlineData(1)] [InlineData(4096)]
+    public void RegisteredCountRoundTripsWithoutInventingOwnerOrGround(int count)
+    {
+        var observation = new NativeNearGroundSupportSnapshot { State = "observed", RegisteredColliderCount = count };
+        var json = JsonSerializer.Serialize(observation, Options);
+        var roundTrip = JsonSerializer.Deserialize<NativeNearGroundSupportSnapshot>(json, Options)!;
+        Assert.Equal(count, roundTrip.RegisteredColliderCount);
+        Assert.Equal(count, roundTrip.Copy().RegisteredColliderCount);
+        Assert.Null(roundTrip.CurrentPoolReference);
+        Assert.Null(roundTrip.LiveObject);
+        Assert.Null(roundTrip.ActualGroundSphereHit);
+        Assert.Null(roundTrip.CastHit);
+        Assert.False(roundTrip.SafetyCertified);
     }
 
     [Fact]

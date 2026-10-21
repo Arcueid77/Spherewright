@@ -11,13 +11,15 @@ internal sealed partial class GameStateReader
     internal static string? TryCaptureNativeNearSupport(Player player, string stage, Collider[] currentTerrainSurface,
         out NativeNearGroundSupportSnapshot snapshot, out NativeNearGroundSupportBinding? binding)
     {
-        snapshot = new NativeNearGroundSupportSnapshot { CaptureStage = stage };
+        snapshot = new NativeNearGroundSupportSnapshot { CaptureStage = stage, CapturedAtGameTick = GameMain.gameTick };
         binding = null;
         try
         {
-            var candidate = new NativeNearGroundSupportBinding(player, currentTerrainSurface);
+            var candidate = new NativeNearGroundSupportBinding(player, currentTerrainSurface, snapshot);
             var blocker = candidate.Capture(player, stage, currentTerrainSurface, true, out snapshot);
-            if (blocker is null) binding = candidate;
+            // An empty, exactly bound collection is an initialization witness,
+            // not a support owner. Callers still must handle the blocker.
+            if (blocker is null || blocker == "remote_resume_near_support_registered_collection_empty") binding = candidate;
             return blocker;
         }
         catch (Exception exception)
@@ -67,7 +69,7 @@ internal sealed partial class GameStateReader
         private int _chainRoot;
         private List<NativeNearSupportCell>? _chain;
 
-        internal NativeNearGroundSupportBinding(Player player, Collider[] surface)
+        internal NativeNearGroundSupportBinding(Player player, Collider[] surface, NativeNearGroundSupportSnapshot initial)
         {
             _world = GameMain.data ?? throw new NativeNearSupportException("world_unavailable");
             _player = player ?? throw new NativeNearSupportException("player_unavailable");
@@ -86,7 +88,8 @@ internal sealed partial class GameStateReader
             _chunks = _physics.colChunks;
             Require(_chunks is { Length: 600 } && ReferenceEquals(ReadPrivate<ColliderContainer[]>(_near, "colChunks"), _chunks), "chunk_table_unproved");
             _registered = ReadPrivate<Dictionary<int, ColliderObject>>(_near, "colliderObjs");
-            Require(_registered.Count is > 0 and <= MaximumRegisteredColliders, "registered_collection_unproved");
+            initial.RegisteredColliderCount = _registered.Count;
+            Require(_registered.Count <= MaximumRegisteredColliders, "registered_collection_limit_exceeded");
             _simulator = _planet.gameObject == null ? null! : _planet.gameObject.GetComponent<PlanetSimulator>();
             Require(_simulator != null && ReferenceEquals(_simulator.planetData, _planet)
                 && surface is { Length: > 0 and <= 256 } && _simulator.surfaceCollider is { } native && native.Length == surface.Length,
@@ -107,6 +110,14 @@ internal sealed partial class GameStateReader
         internal string? Recheck(Player player, string stage, Collider[] currentTerrainSurface,
             out NativeNearGroundSupportSnapshot snapshot) => Capture(player, stage, currentTerrainSurface, false, out snapshot);
 
+        internal bool TryObserveInitialization(Player player, Collider[] surface, out int? count)
+        {
+            count = null;
+            if (System.Threading.Thread.CurrentThread.ManagedThreadId != _threadId || !ContextMatches(player, surface)) return false;
+            count = _registered.Count;
+            return true;
+        }
+
         internal string? Capture(Player player, string stage, Collider[] surface, bool initial,
             out NativeNearGroundSupportSnapshot snapshot)
         {
@@ -117,6 +128,9 @@ internal sealed partial class GameStateReader
                 Require(System.Threading.Thread.CurrentThread.ManagedThreadId == _threadId, "thread_changed");
                 snapshot.CapturedAtGameTick = GameMain.gameTick;
                 Require(ContextMatches(player, surface), "context_changed");
+                snapshot.RegisteredColliderCount = _registered.Count;
+                Require(_registered.Count <= MaximumRegisteredColliders, "registered_collection_limit_exceeded");
+                Require(_registered.Count > 0, "registered_collection_empty");
                 var p = player.position;
                 Require(Finite(p) && Finite(p.sqrMagnitude) && p.sqrMagnitude > 1f, "player_position_unproved");
                 var up = p.normalized;
@@ -222,7 +236,6 @@ internal sealed partial class GameStateReader
                 || _colliderPool == null || !ReferenceEquals(ColliderPool.instance, _colliderPool)
                 || !ReferenceEquals(_physics.colChunks, _chunks) || !ReferenceEquals(ReadPrivate<ColliderContainer[]>(_near, "colChunks"), _chunks)
                 || !ReferenceEquals(ReadPrivate<Dictionary<int, ColliderObject>>(_near, "colliderObjs"), _registered)
-                || _registered.Count is <= 0 or > MaximumRegisteredColliders
                 || _simulator == null || !ReferenceEquals(_simulator.planetData, _planet)
                 || _planet.gameObject == null || !ReferenceEquals(_planet.gameObject.GetComponent<PlanetSimulator>(), _simulator)
                 || !ReferenceEquals(_simulator.surfaceCollider, _nativeTerrain) || surface is null || surface.Length != _terrain.Length

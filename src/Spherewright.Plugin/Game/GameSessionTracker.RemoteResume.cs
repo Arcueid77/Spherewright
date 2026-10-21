@@ -17,6 +17,7 @@ internal sealed partial class GameSessionTracker
     private Func<VoyagerRemoteResumeAdoption, string?>? _remoteResumeAdmissionGuard;
     private Func<VoyagerRemoteResumeAdoption, string?>? _remoteResumePreflightGuard;
     private Func<VoyagerRemoteResumeAdoption, string?>? _remoteResumeUniverseGuard;
+    private Func<VoyagerRemoteResumeAdoption, string?>? _remoteResumeInitializationGuard;
     private Func<string?>? _remoteResumeLoadCompleteGuard;
     private GameLoader[]? _remoteResumeLoadersBeforeDispatch;
     private NativeLoadCompletionSubscription<GameLoader>? _remoteResumeLoadSubscription;
@@ -25,6 +26,8 @@ internal sealed partial class GameSessionTracker
     private bool _remoteResumeLoadCompleteObserved;
     private bool _remoteResumeLoadPreflightPassed;
     private bool _remoteResumeLoadPreflightRunning;
+    private bool _remoteResumeInitializationPending;
+    private bool _remoteResumeInitializationCompleting;
     private VoyagerRemoteResumeAdoption? _remoteResumeGroundDiagnosticAdoption;
 
     internal bool RequiresRemoteResumeEvidence => _flightCheckpoints.VoyagerJourney?.Phase == "remote_landed"
@@ -69,12 +72,14 @@ internal sealed partial class GameSessionTracker
     }
 
     internal void SetRemoteResumeAdmissionGuard(Func<VoyagerRemoteResumeAdoption, string?> guard,
-        Func<VoyagerRemoteResumeAdoption, string?> preflight, Func<VoyagerRemoteResumeAdoption, string?> universe)
+        Func<VoyagerRemoteResumeAdoption, string?> preflight, Func<VoyagerRemoteResumeAdoption, string?> universe,
+        Func<VoyagerRemoteResumeAdoption, string?> initialization)
     {
         if (_remoteResumeAdmissionGuard is not null) throw new InvalidOperationException("The remote resume guard is already configured.");
         _remoteResumeAdmissionGuard = guard ?? throw new ArgumentNullException(nameof(guard));
         _remoteResumePreflightGuard = preflight ?? throw new ArgumentNullException(nameof(preflight));
         _remoteResumeUniverseGuard = universe ?? throw new ArgumentNullException(nameof(universe));
+        _remoteResumeInitializationGuard = initialization ?? throw new ArgumentNullException(nameof(initialization));
     }
 
     internal void SetRemoteResumeLoadCompleteGuard(Func<string?> guard) =>
@@ -125,6 +130,19 @@ internal sealed partial class GameSessionTracker
             try { blocker = _remoteResumeLoadCompleteGuard is null ? "remote_resume_native_loader_guard_unavailable"
                 : _remoteResumeLoadCompleteGuard(); }
             finally { _remoteResumeLoadPreflightRunning = false; }
+            if (blocker == NativeResumeInitializationPolicy.PendingCode)
+            {
+                if (_remoteResumeAdoption is null || _remoteResumeInitializationGuard is null
+                    || !ReferenceEquals(GameMain.data, _remoteResumeAdoption.World) || GameMain.isPaused)
+                { FailRemoteResumeAdmission("remote_resume_initialization_pause_binding_unproved"); return; }
+                // Native Update still initializes local physics while Pause
+                // prevents FixedUpdate from dispatching any player601.
+                GameMain.Pause();
+                if (!GameMain.isPaused)
+                { FailRemoteResumeAdmission("remote_resume_initialization_pause_unproved"); return; }
+                _remoteResumeInitializationPending = true;
+                return;
+            }
             if (blocker is not null) { FailRemoteResumeAdmission(blocker); return; }
             _remoteResumeLoadPreflightPassed = true;
         }
@@ -155,12 +173,61 @@ internal sealed partial class GameSessionTracker
     internal bool ExactRemoteResumeLoadPreflight(VoyagerRemoteResumeAdoption adoption) =>
         _remoteResumeLoadPreflightRunning && _remoteResumeLoadCompleteObserved && !_remoteResumeLoadPreflightPassed
         && HasPendingRemoteResumeAdoption && ReferenceEquals(_remoteResumeAdoption, adoption)
-        && _remoteResumeExpectedLoader != null && _remoteResumeExpectedLoader.frame == 10 && !_remoteResumeExpectedLoader.enabled
+        && (_remoteResumeInitializationCompleting && _remoteResumeInitializationPending
+            || _remoteResumeExpectedLoader != null && _remoteResumeExpectedLoader.frame == 10 && !_remoteResumeExpectedLoader.enabled)
         && ReferenceEquals(GameMain.data, _remoteResumeCompletedWorld) && ReferenceEquals(GameMain.data, adoption.World)
         && ReferenceEquals(GameMain.mainPlayer, adoption.Player) && IsCurrentSessionOwned && _sessionId == adoption.SessionId
         && _remoteResumeJournalConfirmed && _pendingJournalResumeTicket is null && _resumeSourceLease is not null
         && GameMain.gameTick == adoption.Evidence.SourceGameTick
         && _flightCheckpoints.RemoteResumeEvidenceStillMatches(adoption.Evidence);
+
+    internal bool ExactRemoteResumeInitializationHold(VoyagerRemoteResumeAdoption adoption) =>
+        _remoteResumeInitializationPending && !_remoteResumeInitializationCompleting
+        && _remoteResumeLoadCompleteObserved && !_remoteResumeLoadPreflightPassed && _resumeAdoptionError is null
+        && HasPendingRemoteResumeAdoption && ReferenceEquals(_remoteResumeAdoption, adoption)
+        && ReferenceEquals(GameMain.data, _remoteResumeCompletedWorld) && ReferenceEquals(GameMain.data, adoption.World)
+        && ReferenceEquals(GameMain.mainPlayer, adoption.Player) && IsCurrentSessionOwned && _sessionId == adoption.SessionId
+        && _remoteResumeJournalConfirmed && _pendingJournalResumeTicket is null && _resumeSourceLease is not null
+        && GameMain.gameTick == adoption.Evidence.SourceGameTick
+        && _flightCheckpoints.RemoteResumeEvidenceStillMatches(adoption.Evidence);
+
+    internal void PumpRemoteResumeInitializationOnMainThread()
+    {
+        if (!_remoteResumeInitializationPending || _resumeAdoptionError is not null) return;
+        try
+        {
+            var blocker = CaptureRemoteResumeAdoption(out var adoption);
+            if (blocker is null)
+                blocker = _remoteResumeInitializationGuard is null ? "remote_resume_initialization_guard_unavailable"
+                    : _remoteResumeInitializationGuard(adoption!);
+            if (blocker == NativeResumeInitializationPolicy.PendingCode) return;
+            if (blocker is not null) { FailRemoteResumeAdmission(blocker); return; }
+            if (adoption is null || !ExactRemoteResumeInitializationHold(adoption) || !GameMain.isPaused)
+            { FailRemoteResumeAdmission("remote_resume_initialization_resume_binding_unproved"); return; }
+            // The unique observed loader completion is retained as a receipt;
+            // its destroyed Unity object is never searched for or dereferenced.
+            // The fresh source/actor/owner proof authorizes just this Resume.
+            _remoteResumeInitializationCompleting = true;
+            _remoteResumeLoadPreflightRunning = true;
+            try
+            {
+                GameMain.Resume();
+                blocker = GameMain.isPaused ? "remote_resume_initialization_native_resume_unproved"
+                    : _remoteResumeLoadCompleteGuard is null ? "remote_resume_native_loader_guard_unavailable"
+                    : _remoteResumeLoadCompleteGuard();
+            }
+            finally
+            {
+                _remoteResumeLoadPreflightRunning = false;
+                _remoteResumeInitializationCompleting = false;
+            }
+            if (blocker is not null) { FailRemoteResumeAdmission(blocker); return; }
+            _remoteResumeInitializationPending = false;
+            _remoteResumeLoadPreflightPassed = true;
+        }
+        catch (Exception exception)
+        { FailRemoteResumeAdmission("remote_resume_initialization_callback_failed:" + exception.GetType().Name); }
+    }
 
     internal void RecordRemoteResumeGroundObservation(VoyagerRemoteResumeAdoption adoption,
         NativePlayerGroundContactSnapshot? observation, bool afterSync)
@@ -211,7 +278,8 @@ internal sealed partial class GameSessionTracker
 
     internal void StopPendingRemoteFirstFrameOnMainThread()
     {
-        if (HasPendingRemoteResumeAdoption && _remoteResumeAdoption?.FirstFrame.Armed == true)
+        if (HasPendingRemoteResumeAdoption
+            && (_remoteResumeInitializationPending || _remoteResumeAdoption?.FirstFrame.Armed == true))
             FailRemoteResumeAdmission("remote_resume_first_frame_native_observer_lost");
     }
 
@@ -290,6 +358,7 @@ internal sealed partial class GameSessionTracker
 
     private bool FailRemoteResumeAdmission(string code)
     {
+        _remoteResumeInitializationPending = false;
         if (_remoteResumeAdoption?.FirstFrame.Armed == true) _remoteResumeAdoption.FirstFrame.Fail(code);
         var reason = "The exact remote LastExit continuation could not enter its strict idle guard. [" + code + "]";
         var exactLoadedCandidate = _expectedResumeTicket is { } expected && _resumeSourceLease is not null
@@ -330,6 +399,8 @@ internal sealed partial class GameSessionTracker
         _remoteResumeLoadCompleteObserved = false;
         _remoteResumeLoadPreflightPassed = false;
         _remoteResumeLoadPreflightRunning = false;
+        _remoteResumeInitializationPending = false;
+        _remoteResumeInitializationCompleting = false;
         _pendingRecoveryAuthorization = null;
     }
 }

@@ -99,7 +99,9 @@ internal sealed partial class NormalGameActionCoordinator
         private static bool FiniteRotation(Quaternion q) => FiniteScalar(q.x) && FiniteScalar(q.y) && FiniteScalar(q.z) && FiniteScalar(q.w)
             && q.x * q.x + q.y * q.y + q.z * q.z + q.w * q.w is > .99f and < 1.01f;
         public bool Matches(Player p) => MatchesAtTick(p, _tick);
-        public bool MatchesAtTick(Player p, long expectedTick) => Finite && ReferenceEquals(p, _player) && ReferenceEquals(p.controller, _controller)
+        public bool MatchesDuringNativeInitializationPause(Player p) => !_paused && MatchesState(p, _tick, true);
+        public bool MatchesAtTick(Player p, long expectedTick) => MatchesState(p, expectedTick, _paused);
+        private bool MatchesState(Player p, long expectedTick, bool expectedPaused) => Finite && ReferenceEquals(p, _player) && ReferenceEquals(p.controller, _controller)
             && ReferenceEquals(p.transform, _transform) && ReferenceEquals(_transform.parent, _parent)
             && ReferenceEquals(_controller.rigid, _body) && GameMain.gameTick == expectedTick
             && p.position.Equals(_position) && _transform.localRotation.Equals(_rotation) && _transform.lossyScale.Equals(_scale)
@@ -109,7 +111,7 @@ internal sealed partial class NormalGameActionCoordinator
             && p.currentOrder is null && p.orders.orderCount == 0 && LocalRawMovementInputIdle()
             && p.mecha.coreEnergy == _core && p.mecha.reactorEnergy == _reactor && CalculateAvailableFlightEnergy(p.mecha) == _loaded
             && p.speed == _speed && _controller.vertSpeed == _vertical && p.movementState == _mode && _controller.movementStateInFrame == _frameMode
-            && p.warpState == _warp && p.warpCommand == _warpCommand && GameMain.isPaused == _paused
+            && p.warpState == _warp && p.warpCommand == _warpCommand && GameMain.isPaused == expectedPaused
             && Physics.autoSyncTransforms == _autoSync && Physics.queriesHitTriggers == _triggers;
     }
 }

@@ -16,6 +16,9 @@ internal sealed partial class NormalGameActionCoordinator
         var blocker = GameStateReader.TryCaptureNativeNearSupport(adoption.Player, "load_preflight_before_first_frame",
             scene.Surface, out var support, out var binding);
         adoption.NearSupportPreFirstFrame = support.Copy(); adoption.NearSupportLatest = support.Copy();
+        if (blocker == "remote_resume_near_support_registered_collection_empty" && binding is not null)
+            return HoldRemoteResumeForNativeInitialization(adoption, journey, new FirstFrameSurfaceState(scene, null),
+                playerState, binding, facts);
         if (blocker is not null || binding is null) return blocker ?? "remote_resume_near_support_binding_unproved";
         var contact = new RemoteResumeContactState(adoption.Player, binding, adoption.Evidence.SourceGameTick);
         blocker = contact.Policy.PreflightBlocker(contact.Facts(adoption.Player, facts, support,

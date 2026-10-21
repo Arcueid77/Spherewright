@@ -10,6 +10,8 @@ public sealed class NativeNearGroundSupportSnapshot
     public long? CapturedAtGameTick { get; set; }
     public string CaptureStage { get; set; } = string.Empty;
     public bool SafetyCertified => false;
+    /// <summary>Bounded Native registered-collider count; unknown before observation, never ownership or ground proof.</summary>
+    public int? RegisteredColliderCount { get; set; }
     public bool? ActualGroundSphereHit { get; set; }
     public bool? CastAttempted { get; set; }
     public bool? CastHit { get; set; }
@@ -40,6 +42,7 @@ public sealed class NativeNearGroundSupportSnapshot
     public NativeNearGroundSupportSnapshot Copy() => new()
     {
         State = State, ReasonCode = ReasonCode, CapturedAtGameTick = CapturedAtGameTick, CaptureStage = CaptureStage,
+        RegisteredColliderCount = RegisteredColliderCount,
         ActualGroundSphereHit = ActualGroundSphereHit, CastAttempted = CastAttempted, CastHit = CastHit,
         CastDistance = CastDistance, HitPoint = CopyVector(HitPoint), HitNormal = CopyVector(HitNormal), NormalDotUp = NormalDotUp,
         Layer = Layer, Shape = Shape, IsTrigger = IsTrigger, Enabled = Enabled, ActiveInHierarchy = ActiveInHierarchy,
