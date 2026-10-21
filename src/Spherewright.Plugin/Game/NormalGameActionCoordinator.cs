@@ -412,6 +412,7 @@ internal sealed partial class NormalGameActionCoordinator
                 : "DSP's normal technology queue contains the requested technology and currentTech reflects the queue head.");
         if (prepared.Success && prepared.Value is not null)
         {
+            if (!request.PrioritizeQueued) prepared.Value.ResearchQueueReadbackVersion = 1;
             foreach (var requirement in techState.ItemRequirements)
             {
                 prepared.Value.ItemBudget.Add(new ActionItemBudget
@@ -807,14 +808,7 @@ internal sealed partial class NormalGameActionCoordinator
                     ExecuteResearchPriorityOnMainThread(action);
                     break;
                 }
-                GameMain.history.EnqueueTech(plan.TechId);
-                if (!GameMain.history.techQueue.Contains(plan.TechId))
-                {
-                    Fail(action, "DSP did not add the technology to its normal research queue.");
-                    break;
-                }
-
-                Complete(action, "DSP's normal technology queue accepted the requested technology.");
+                ExecuteResearchEnqueueOnMainThread(action);
                 break;
             case NormalActionKinds.Build:
                 if (IsStructuredConstruction(plan)) { StartStructuredConstructionOnMainThread(action); break; }

@@ -1220,7 +1220,7 @@ public static partial class SpherewrightTools
         Destructive = false,
         Idempotent = false,
         OpenWorld = false)]
-    [Description("Validates a runtime technology, prerequisites, level, and queue without mutation. Default enqueues normally. Explicit prioritizeQueued=true only moves an already queued non-head technology with all native prerequisites completed to the front, preserving other queue order, progress and inventory. Fresh selection hash required; paused, duplicate-level or invalid queues reject. No research progress or unlocks are granted.")]
+    [Description("Validates a runtime technology, prerequisites, level, and queue without mutation. Default enqueues normally and advertises researchQueueReadbackVersion=1 for its immediate queue/progress/material preservation receipt; missing/zero is legacy or unproved. itemBudget research-consumption is this level's native total requirement, not an enqueue debit or remaining cost; int.MaxValue may be a capped projection. Explicit prioritizeQueued=true only moves an already queued non-head technology with all native prerequisites completed to the front, preserving other queue order, progress and inventory. Fresh selection hash required; paused, duplicate-level or invalid queues reject. No research progress or unlocks are granted.")]
     public static async Task<CallToolResult> PrepareSelectResearchAsync(
         IBridgeClient bridgeClient,
         string sessionId,

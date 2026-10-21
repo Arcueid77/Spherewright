@@ -235,6 +235,8 @@ Move/Harvest 复用既有普通 RTS 动作并保留无水快路。有限能耗�
 
 研究 prepare 使用 `expectedSelectionStateHash`。默认入队查原生前置条件。`prioritizeQueued=true` 仅通过 `SortTechQueue` 重排一个合格的非队首科技，保留其他槽位、进度、库存并返回即时 `researchQueueReadback`。终态表示重排，不是研究完成。
 
+普通入队的 prepared 计划现在声明 `researchQueueReadbackVersion=1`；只有在同一游戏 tick 证明精确队尾追加/当前队首、科技进度、背包数量/inc/格占用、手持及燃料物品和原生机甲科研缓冲均保全后，才返回即时 `researchQueueReadback`。保全证明失败沿既有 unknown/隔离路径处理。能力标记缺失或为零表示旧版/未证明，要求此证据的调用方必须在 commit 前拒绝。动作 `expectedStateHash` 为 `CanonicalStateHash.Combine("select-research", sessionId, planetId, selectionStateHash, techId, false)`，不等于选择状态 hash。`itemBudget` 的 `research-consumption` 表示该等级原生总需求，不是入队扣料或剩余需求；`int.MaxValue` 可能是截断投影。入队后仍由正常游戏规则消耗材料和时间。commit 要求 UUID 幂等键，调用方自加的字符串前缀不构成 UUID。
+
 受管 Journal 分别报告首次手动、产线产出、科技与升级选择、跟踪边界、持久序号及持久化状态，不暴露原存档身份或路径。`attached_existing_save` 保留历史覆盖不完整；起始、有效版本与转换分开呈现。
 
 <a id="overseer"></a>
