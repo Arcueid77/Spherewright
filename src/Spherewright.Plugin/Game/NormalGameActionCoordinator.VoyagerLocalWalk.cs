@@ -403,7 +403,8 @@ internal sealed partial class NormalGameActionCoordinator
 
     private static string? NativeWalkModeBlocker(Player player, bool stationary, NativeLocalWalkSceneBinding? scene,
         bool finiteWaterCostWithNativePause, bool allowDrift, bool allowBudgetedRecharge = false,
-        Action<NativePlayerGroundContactSnapshot>? captureGround = null, string groundStage = "native_guard")
+        Action<NativePlayerGroundContactSnapshot>? captureGround = null, string groundStage = "native_guard",
+        Action<bool>? captureSphere = null)
     {
         var c = player.controller; var w = c.actionWalk;
         var vertical = c.vertSpeed;
@@ -439,10 +440,181 @@ internal sealed partial class NormalGameActionCoordinator
         if (!(allowDrift && player.movementState == EMovementState.Drift))
         {
             var sphereHit = Physics.CheckSphere(player.position + player.position.normalized * .15f, .35f, 15873);
+            captureSphere?.Invoke(sphereHit);
             captureGround?.Invoke(GameStateReader.CaptureNativeGroundContact(player, groundStage, sphereHit));
             if (!sphereHit) return "remote_idle_ground_contact_unproved";
         }
         return null;
+    }
+
+    private void CaptureVoyagerMoveStrictStart(ActionRecord action)
+    {
+        if (!IsVoyagerLocalOrder(action) || action.ActionKind != NormalActionKinds.Move
+            || !VoyagerLocalReferencesMatch(action)) return;
+        var p = action.Plan.VoyagerLocalBinding!.Player;
+        var reserve = CaptureVoyagerLocalWalkReserve(p, p.currentOrder is null, action.Plan.VoyagerLocalWalkScene);
+        var journey = _flightCheckpoints.VoyagerJourney;
+        if (reserve.Proved && journey is not null && journey.JourneyId == action.Plan.VoyagerLocalJourneyId
+            && journey.Phase == "remote_landed" && journey.RemotePlanetId == action.PlanetId
+            && VoyagerOwnedJourneyMatchesCurrentSession(journey, action.SessionId)
+            && CountVoyagerWarpers(p.mecha.warpStorage) >= 1 + journey.ExtraWarperReserve
+            && VoyagerLocalWalkReservePolicy.CanFund(p.mecha.coreEnergy, CalculateAvailableFlightEnergy(p.mecha),
+                journey.ReturnEnergyFloorJoules, reserve.PerNativeTickEnergyJoules, VoyagerLocalWalkReservePolicy.StopGameTicks)
+            && p.orders.orderCount == 0 && p.movementState == EMovementState.Walk
+            && p.controller.movementStateInFrame == EMovementState.Walk && p.speed <= .1f
+            && p.controller.actionWalk.rtsVelocity.sqrMagnitude == 0f
+            && p.controller.actionDrift.rtsVelocity.sqrMagnitude == 0f)
+            action.VoyagerMoveGroundGap = new VoyagerActiveMoveGroundGapPolicy(GameMain.gameTick);
+    }
+
+    private bool DeferVoyagerMoveGroundGapArrival(ActionRecord action)
+    {
+        if (action.VoyagerMoveGroundGap is not { } gap) return false;
+        if (gap.Rejected || gap.StopLatched || gap.GapStartedGameTick.HasValue) return true;
+        // Update is not a Native501 certificate and cannot clear/start a gap.
+        var p = action.Plan.VoyagerLocalBinding!.Player;
+        return !Physics.CheckSphere(p.position + p.position.normalized * .15f, .35f, 15873);
+    }
+
+    private VoyagerActiveMoveGroundGapFacts CaptureVoyagerMoveGroundGapFacts(ActionRecord action, bool stopping,
+        out string? blocker)
+    {
+        var p = action.Plan.VoyagerLocalBinding!.Player;
+        bool? ground = null;
+        blocker = NativeWalkModeBlocker(p, false, action.Plan.VoyagerLocalWalkScene, true, true, true,
+            captureSphere: hit => ground = hit);
+        // Native Drift skips Walk's sphere. A mode switch is not positive
+        // contact evidence and cannot reset the same original eight-tick gap.
+        if (blocker is null && !ground.HasValue)
+            ground = Physics.CheckSphere(p.position + p.position.normalized * .15f, .35f, 15873);
+        var exactOrder = stopping ? p.currentOrder is null
+            : ReferenceEquals(p.currentOrder, action.PlayerOrder)
+                || p.currentOrder is null && action.PlayerOrder?.targetReached == true;
+        var subset = exactOrder && (blocker is null || blocker == "remote_idle_ground_contact_unproved")
+            && p.orders.orderCount == 0 && BuildUiIsIdle(p) && VoyagerMechaWorkIdle(p)
+            && TryObserveOwnedConstructionDrones(p.factory, p.mecha.constructionModule, out var idle, out _) && idle;
+        var reserve = EvaluateNativeLocalMovementCost(p, subset);
+        blocker ??= reserve.BlockerCode;
+        var journey = _flightCheckpoints.VoyagerJourney;
+        var now = DateTimeOffset.UtcNow;
+        var exactJourney = journey is not null && journey.JourneyId == action.Plan.VoyagerLocalJourneyId
+            && journey.Phase == "remote_landed" && journey.RemotePlanetId == action.PlanetId
+            && VoyagerOwnedJourneyMatchesCurrentSession(journey, action.SessionId);
+        return new VoyagerActiveMoveGroundGapFacts
+        {
+            ExactActiveStrictMove = !action.Terminal && action.ActionKind == NormalActionKinds.Move
+                && action.VoyagerMoveGroundGap is not null && exactJourney && VoyagerLocalReferencesMatch(action),
+            NonGroundNativePremisesProved = subset && reserve.Proved,
+            GroundSphereHit = ground,
+            ControlLeaseOpen = now >= action.Plan.VoyagerLocalStartedAtUtc
+                && now < action.VoyagerLocalObservationLeaseExpiresAtUtc && VoyagerLocalPrePlayerTickAvailable
+                && now >= VoyagerLocalPrePlayerObservedAtUtc
+                && now - VoyagerLocalPrePlayerObservedAtUtc <= TimeSpan.FromSeconds(1),
+            OriginalWorkWindowOpen = action.Plan.VoyagerLocalDeadlineGameTick.HasValue
+                && VoyagerLocalActionBudgetPolicy.LocalWindowStillOpen(action.Plan.VoyagerLocalStartedGameTick,
+                    GameMain.gameTick, action.Plan.VoyagerLocalDeadlineGameTick.Value,
+                    action.Plan.VoyagerLocalStartedAtUtc, now, action.Plan.VoyagerLocalDeadlineUtc),
+            CoreEnergyJoules = p.mecha.coreEnergy, PerNativeTickEnergyJoules = reserve.PerNativeTickEnergyJoules,
+            OriginalJourney = journey is null ? null : new VoyagerLocalActionBudgetFacts
+            {
+                ExactRemoteBinding = exactJourney, NativePlayerIdle = false,
+                CurrentGameTick = GameMain.gameTick, LastLandedGameTick = journey.LastLandedGameTick,
+                SpentGameTicks = journey.SpentGameTicks, MaximumGameTicks = journey.MaximumGameTicks,
+                ReturnReserveGameTicks = journey.ReturnReserveGameTicks,
+                NowUtc = now, JourneyDeadlineUtc = _sessions.EffectiveVoyagerDeadline(journey),
+                AvailableLoadedEnergyJoules = CalculateAvailableFlightEnergy(p.mecha),
+                LockedReturnFloorJoules = journey.ReturnEnergyFloorJoules,
+                NativeWarperCount = CountVoyagerWarpers(p.mecha.warpStorage), OriginalExtraWarperReserve = journey.ExtraWarperReserve,
+            },
+        };
+    }
+
+    // Return true only when this tick is handled by the bounded missing-contact
+    // work/stop path. Ordinary grounded work retains its original strict guard.
+    private bool ObserveVoyagerMoveGroundGap(ActionRecord action)
+    {
+        var gap = action.VoyagerMoveGroundGap!;
+        var facts = CaptureVoyagerMoveGroundGapFacts(action, false, out var blocker);
+        switch (gap.Observe(facts))
+        {
+            case VoyagerMoveGroundGapStep.Grounded: return false;
+            case VoyagerMoveGroundGapStep.ContinueGap: return true;
+            case VoyagerMoveGroundGapStep.Stop:
+                ArmVoyagerMoveGroundGapStop(action, facts, "The original Move's finite ground-contact gap ended; stop its exact order.");
+                return true;
+            case VoyagerMoveGroundGapStep.Duplicate: return true;
+            default:
+                FinishVoyagerLocalOrderUnknown(action, "The active Move's non-ground Native envelope is unproved. ["
+                    + (blocker ?? gap.BlockerCode) + "]");
+                return true;
+        }
+    }
+
+    private void ArmVoyagerMoveGroundGapStop(ActionRecord action, VoyagerActiveMoveGroundGapFacts facts, string message)
+    {
+        if (action.Terminal || action.VoyagerLocalStopDeadlineTick.HasValue) return;
+        if (action.VoyagerMoveGroundGap!.Rejected || !facts.ExactActiveStrictMove || !facts.NonGroundNativePremisesProved
+            || !VoyagerActiveMoveGroundGapPolicy.OriginalBudgetAllows(facts, 0, VoyagerLocalWalkReservePolicy.StopGameTicks,
+                VoyagerLocalStopWallSeconds)
+            || !VoyagerActiveMoveGroundGapPolicy.CanFund(facts, VoyagerLocalWalkReservePolicy.StopGameTicks))
+        { FinishVoyagerLocalOrderUnknown(action, "The original Move cannot fund its unchanged finite contact-loss stop. " + message); return; }
+        action.VoyagerMoveGroundGap!.LatchStop("voyager_move_ground_contact_gap_ended");
+        AbortPlayerOrderIfOwned(action, forLocalNativeStop: true);
+        action.VoyagerMoveGroundGapStopping = true;
+        action.VoyagerMoveGroundStopArmedAtTick = GameMain.gameTick;
+        action.VoyagerMoveGroundStopArmedAtUtc = DateTimeOffset.UtcNow;
+        action.VoyagerLocalStopDeadlineTick = checked(GameMain.gameTick + VoyagerLocalWalkReservePolicy.StopGameTicks);
+        action.VoyagerLocalStopDeadlineUtc = action.VoyagerMoveGroundStopArmedAtUtc.Value.AddSeconds(VoyagerLocalStopWallSeconds);
+        action.VoyagerLocalStopSucceeded = false;
+        action.VoyagerLocalStopMessage = message;
+        action.FailureKind = "voyager_move_ground_contact_gap_ended";
+        action.State = NormalActionStates.WaitingForGame;
+        action.Message = "The exact original Move stopped; strict grounded Walk and physical zero-tail readback remain required.";
+    }
+
+    private void ObserveVoyagerMoveGroundGapDrain(ActionRecord action)
+    {
+        if (!VoyagerLocalReferencesMatch(action)) { GuardVoyagerLocalAction(action); return; }
+        var gap = action.VoyagerMoveGroundGap!;
+        var facts = CaptureVoyagerMoveGroundGapFacts(action, true, out var blocker);
+        var tick = GameMain.gameTick;
+        var now = facts.OriginalJourney?.NowUtc ?? DateTimeOffset.UtcNow;
+        var remaining = (int)Math.Min(VoyagerLocalWalkReservePolicy.StopGameTicks,
+            Math.Max(1m, (decimal)action.VoyagerLocalStopDeadlineTick!.Value - tick));
+        var wall = Math.Max(0d, (action.VoyagerLocalStopDeadlineUtc!.Value - now).TotalSeconds);
+        if (gap.Rejected || !action.VoyagerMoveGroundStopArmedAtTick.HasValue
+            || !action.VoyagerMoveGroundStopArmedAtUtc.HasValue
+            || !facts.ExactActiveStrictMove || !facts.NonGroundNativePremisesProved
+            || !VoyagerActiveMoveGroundGapPolicy.OriginalBudgetAllows(facts, 0, remaining, wall)
+            || !VoyagerActiveMoveGroundGapPolicy.CanFund(facts, remaining))
+        { FinishVoyagerLocalOrderUnknown(action, "The original contact-loss stop envelope changed. [" + (blocker ?? gap.BlockerCode) + "]"); return; }
+        if (facts.GroundSphereHit == false && !action.VoyagerMoveGroundGapStopping)
+        {
+            // The stop was already armed by ordinary arrival/watchdog logic.
+            // Preserve that exact end tick/UTC, but never turn contact loss
+            // into task success when the physical tail eventually settles.
+            gap.LatchStop("voyager_move_ground_contact_lost_during_stop");
+            action.VoyagerMoveGroundGapStopping = true;
+            action.VoyagerLocalStopSucceeded = false;
+            action.FailureKind = "voyager_move_ground_contact_gap_ended";
+            action.VoyagerLocalStopMessage += " Ground contact was lost during the original finite stop.";
+        }
+        var p = action.Plan.VoyagerLocalBinding!.Player;
+        if (facts.GroundSphereHit == true && p.movementState == EMovementState.Walk
+            && p.controller.movementStateInFrame == EMovementState.Walk && p.speed <= .1f
+            && p.controller.actionWalk.rtsVelocity.sqrMagnitude == 0f && p.controller.actionWalk.moveVelocity.sqrMagnitude == 0f
+            && p.controller.actionDrift.rtsVelocity.sqrMagnitude == 0f && p.controller.actionDrift.moveVelocity.sqrMagnitude == 0f)
+        {
+            action.VoyagerLocalCompleting = true;
+            if (action.VoyagerLocalStopSucceeded)
+                Complete(action, action.VoyagerLocalStopMessage + " Native grounded Walk and zero RTS tail are physically verified.");
+            else
+                Fail(action, action.VoyagerLocalStopMessage + " Native grounded Walk and zero RTS tail are physically verified; retain the failed Move.");
+            return;
+        }
+        if (VoyagerActiveMoveGroundGapPolicy.MustPauseBeforeCurrentTick(action.VoyagerMoveGroundStopArmedAtTick!.Value,
+            tick, action.VoyagerMoveGroundStopArmedAtUtc!.Value, now, action.VoyagerLocalStopDeadlineUtc.Value))
+            FinishVoyagerLocalOrderUnknown(action, "The unchanged contact-loss stop bound ended before strict physical settlement; its failure601 remains funded.");
     }
 
     public void UpdateVoyagerLocalPrePlayerTickOnMainThread()
@@ -460,11 +632,19 @@ internal sealed partial class NormalGameActionCoordinator
                 if (action.VoyagerLocalLastPrePlayerTick == tick) continue;
                 if (tick < previousTick || tick - previousTick > 2)
                 { FinishVoyagerLocalOrderUnknown(action, "The original pre-player tick sequence was interrupted or reversed."); continue; }
+                if (action.VoyagerMoveGroundGap is not null && action.VoyagerLocalStopDeadlineTick.HasValue
+                    && tick - previousTick != 1)
+                { FinishVoyagerLocalOrderUnknown(action, "The original Move stop lost its per-tick Native observation."); continue; }
                 action.VoyagerLocalLastPrePlayerTick = tick;
                 action.Plan.VoyagerLocalLastObservedGameTick = tick;
                 if (action.VoyagerLocalStopDeadlineTick.HasValue)
-                { ObserveVoyagerLocalOrderDrain(action); continue; }
+                {
+                    if (action.VoyagerMoveGroundGap is not null) ObserveVoyagerMoveGroundGapDrain(action);
+                    else ObserveVoyagerLocalOrderDrain(action);
+                    continue;
+                }
                 if (!GuardVoyagerLocalAction(action)) continue;
+                if (action.VoyagerMoveGroundGap is not null && ObserveVoyagerMoveGroundGap(action)) continue;
                 var player = action.Plan.VoyagerLocalBinding!.Player;
                 var reserve = CaptureVoyagerLocalWalkReserve(player, ReferenceEquals(player.currentOrder, action.PlayerOrder)
                     || player.currentOrder is null && action.PlayerOrder?.targetReached == true, action.Plan.VoyagerLocalWalkScene);
@@ -488,6 +668,13 @@ internal sealed partial class NormalGameActionCoordinator
         if (action.Terminal || action.VoyagerLocalStopDeadlineTick.HasValue) return;
         if (!VoyagerLocalReferencesMatch(action)) { GuardVoyagerLocalAction(action); return; }
         var player = action.Plan.VoyagerLocalBinding!.Player;
+        if (action.VoyagerMoveGroundGap is { } gap && (gap.GapStartedGameTick.HasValue
+            || !Physics.CheckSphere(player.position + player.position.normalized * .15f, .35f, 15873)))
+        {
+            var facts = CaptureVoyagerMoveGroundGapFacts(action, false, out _);
+            ArmVoyagerMoveGroundGapStop(action, facts, message);
+            return;
+        }
         var reserve = CaptureVoyagerLocalWalkReserve(player, ReferenceEquals(player.currentOrder, action.PlayerOrder)
             || player.currentOrder is null && action.PlayerOrder?.targetReached == true, action.Plan.VoyagerLocalWalkScene);
         var journey = _flightCheckpoints.VoyagerJourney;
@@ -498,7 +685,13 @@ internal sealed partial class NormalGameActionCoordinator
         { FinishVoyagerLocalOrderUnknown(action, "The original order stopped without a proved remaining Native Walk tail. " + message); return; }
         AbortPlayerOrderIfOwned(action, forLocalNativeStop: true); // Empty queue proved; Native velocity is never written.
         action.VoyagerLocalStopDeadlineTick = GameMain.gameTick + VoyagerLocalWalkReservePolicy.StopGameTicks;
-        action.VoyagerLocalStopDeadlineUtc = DateTimeOffset.UtcNow.AddSeconds(VoyagerLocalStopWallSeconds);
+        var stopStartedUtc = DateTimeOffset.UtcNow;
+        action.VoyagerLocalStopDeadlineUtc = stopStartedUtc.AddSeconds(VoyagerLocalStopWallSeconds);
+        if (action.VoyagerMoveGroundGap is not null)
+        {
+            action.VoyagerMoveGroundStopArmedAtTick = GameMain.gameTick;
+            action.VoyagerMoveGroundStopArmedAtUtc = stopStartedUtc;
+        }
         action.VoyagerLocalStopSucceeded = succeeded;
         action.VoyagerLocalStopMessage = message;
         action.State = NormalActionStates.WaitingForGame;
@@ -539,6 +732,7 @@ internal sealed partial class NormalGameActionCoordinator
     private void FinishVoyagerLocalOrderUnknown(ActionRecord action, string message)
     {
         if (action.Terminal) return;
+        action.VoyagerMoveGroundGap?.Reject("voyager_move_ground_gap_original_outcome_unknown");
         var exact = VoyagerLocalReferencesMatch(action);
         message += FreezeNativeLocalFailureEnergy(exact);
         if (exact)
@@ -587,5 +781,9 @@ internal sealed partial class NormalGameActionCoordinator
         public bool VoyagerLocalStopSucceeded { get; set; }
         public string? VoyagerLocalStopMessage { get; set; }
         public bool VoyagerLocalCompleting { get; set; }
+        public VoyagerActiveMoveGroundGapPolicy? VoyagerMoveGroundGap { get; set; }
+        public bool VoyagerMoveGroundGapStopping { get; set; }
+        public long? VoyagerMoveGroundStopArmedAtTick { get; set; }
+        public DateTimeOffset? VoyagerMoveGroundStopArmedAtUtc { get; set; }
     }
 }

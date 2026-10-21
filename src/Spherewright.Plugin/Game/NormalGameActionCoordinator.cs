@@ -748,6 +748,7 @@ internal sealed partial class NormalGameActionCoordinator
         switch (action.ActionKind)
         {
             case NormalActionKinds.Move:
+                CaptureVoyagerMoveStrictStart(action);
                 action.MovementProgress = new MovementProgressWatchdog(
                     GameMain.gameTick,
                     player.position.x,
@@ -965,7 +966,7 @@ internal sealed partial class NormalGameActionCoordinator
     {
         var player = GameMain.mainPlayer;
         var distance = Vector3.Distance(player.position, action.Plan.TargetPosition);
-        if (distance <= action.Plan.ArrivalTolerance)
+        if (distance <= action.Plan.ArrivalTolerance && !DeferVoyagerMoveGroundGapArrival(action))
         {
             AbortPlayerOrderIfOwned(action);
             Complete(action, $"Player reached the surface target within {distance:F2} metres through normal movement ticks.");

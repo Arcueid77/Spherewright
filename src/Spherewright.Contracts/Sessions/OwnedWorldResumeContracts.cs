@@ -32,6 +32,8 @@ public sealed class PrepareOwnedWorldResumeRequest
     public string PriorIntermediateSourceFingerprint { get; set; } = string.Empty;
     public bool? PriorActionKnownTerminalFailed { get; set; }
     public string ExpectedRemoteRecoveryContextFingerprint { get; set; } = string.Empty;
+    public string LegacyLocalMoveUnknownEvidenceJson { get; set; } = string.Empty;
+    public string ExpectedLegacyLocalMoveUnknownEvidenceHash { get; set; } = string.Empty;
 }
 
 public sealed class CommitOwnedWorldResumeRequest
@@ -72,6 +74,10 @@ public sealed class PreparedOwnedWorldResumePlan
     public bool PriorActionTerminalFailureAttested { get; set; }
     public bool FailedRemoteLastExitReauthorizationUsed { get; set; }
     public string RemoteRecoveryContextFingerprint { get; set; } = string.Empty;
+    public bool LegacyLocalMoveUnknownProvenanceUsed { get; set; }
+    public string LegacyLocalMoveUnknownEvidenceHash { get; set; } = string.Empty;
+    public bool LegacyLocalMoveUnknownKindCallerAttested { get; set; }
+    public bool NativeOriginalOutcomeProved => false;
 
     public long? CandidateGameTick { get; set; }
 

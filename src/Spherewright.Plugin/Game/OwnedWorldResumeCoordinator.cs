@@ -94,7 +94,7 @@ internal sealed class OwnedWorldResumeCoordinator
             blockers.Add(new WriteBlocker
             {
                 Code = BridgeErrorCodes.UserConfirmationRequired,
-                Message = payload.ActiveFixedAutosaveRecovery || payload.FailedRemoteReauthorization
+                Message = payload.ActiveFixedAutosaveRecovery || payload.FailedRemoteReauthorization || payload.LegacyLocalMoveUnknown
                     ? "Verify this exact disclosed owned candidate is covered by explicit conversation authority; an existing matching grant needs no repeated question."
                     : "Display this plan's disclosure and wait for subsequent explicit conversation confirmation before commit.",
             });
@@ -135,11 +135,16 @@ internal sealed class OwnedWorldResumeCoordinator
                 && payload.Request.PriorActionKnownTerminalFailed == true,
             FailedRemoteLastExitReauthorizationUsed = payload.RemoteEvidence?.FailedRemoteLastExitReauthorization == true,
             RemoteRecoveryContextFingerprint = payload.RemoteEvidence?.RemoteRecoveryContextFingerprint ?? string.Empty,
+            LegacyLocalMoveUnknownProvenanceUsed = payload.LegacyLocalMoveUnknown,
+            LegacyLocalMoveUnknownEvidenceHash = payload.RemoteEvidence?.LegacyLocalMoveUnknownEvidenceHash ?? string.Empty,
+            LegacyLocalMoveUnknownKindCallerAttested = payload.LegacyLocalMoveUnknown,
             ExactEmbeddedIdentityVerified = payload.VerifiedRecovery || payload.RequiresConfirmation,
             UserConfirmationRequired = payload.RequiresConfirmation,
             SourceGameVersion = ticket.GameVersion,
             TargetGameVersion = _tickets.CurrentGameVersion,
-            ConfirmationPrompt = (payload.FailedRemoteReauthorization
+            ConfirmationPrompt = (payload.LegacyLocalMoveUnknown
+                ? VoyagerLegacyLocalMoveUnknownPolicy.Disclosure + " "
+                : payload.FailedRemoteReauthorization
                 ? $"Review this fixed LastExit at tick {payload.MinimumGameTick} and the exact owner-supplied current context fingerprint. This is new explicit authority for the current zero-progress remote context, not an opening or extension of an old authorization. The caller attests only that the immediately prior action was observed known terminally failed; its two consumed records are not a Native outcome certificate. No ancestor is followed. "
                 : payload.RemoteEvidence?.PriorConsumedResumeTokenHash is not null
                 ? "The caller attests that the exact prior resume action was observed terminally failed without an unknown outcome. The fixed consumed records prove authorization/provenance, not a durable Native action outcome. This is one compatibility hop only; the old proposal is proof-only and grants no execution or renewed budget. " : string.Empty)
@@ -153,7 +158,9 @@ internal sealed class OwnedWorldResumeCoordinator
             ConfirmationDigest = payload.RequiresConfirmation ? payload.Fingerprint : string.Empty,
             CommitAllowedNow = blockers.Count == 0,
             CommitBlockers = blockers,
-            CompletionCondition = payload.FailedRemoteReauthorization
+            CompletionCondition = payload.LegacyLocalMoveUnknown
+                ? "Only this exact fixed LastExit and immutable caller-attested legacy local-Move capture may proceed under the disclosed authority and digest. Original outcome_unknown remains unknown; the raw hash is not Native authentication. Current source/primary/checkpoint/Journal and active credentials are rechecked before durable consumption. The existing first-frame and strict501 ground/scene/energy handoff still decides admission, without successful-checkpoint loading, isolated-RAM Resume, renewed ticks or rewritten original deadlines."
+                : payload.FailedRemoteReauthorization
                 ? "Only the disclosed zero-progress fixed LastExit and independently supplied exact current-context fingerprint may load under applicable explicit authority and this plan's digest. The immediate consumed pair proves prior authorization, not its Native terminal outcome. Active credentials are durably consumed once; original ticks, elapsed accounting, energy/warper floors and checkpoint remain unchanged. Original strict contact/first-frame/2P/13P gates still apply. Normal owned primary save and a matching renewed credential are required for success; no replay or automatic renewal."
                 : payload.RemoteEvidence?.RecoveryProposal is not null
                 ? "Only this fixed LastExit, exact immutable one-shot UTC authorization and original task limits may continue after subsequent explicit confirmation. Native guarded charging remains pending until full original strict13 idle admission; the original return core minimum remains an independent fresh return-flight gate. Fresh positive route proof precedes flight. A failed attempt pauses and cannot rekey or renew."
@@ -506,6 +513,7 @@ internal sealed class OwnedWorldResumeCoordinator
         var hasRecoveryWindow = request.RecoveryDeadlineUtc.HasValue || !string.IsNullOrEmpty(request.RecoveryScope)
             || request.MaximumChargeGameTicks != 0 || request.MaximumChargeWallSeconds != 0d;
         var hasPriorFailedProof = OwnedWorldRecoveryPolicy.HasPriorFailedResumeWitness(request);
+        var legacyLocalMoveUnknown = VoyagerLegacyLocalMoveUnknownPolicy.HasEvidence(request);
         var failedRemoteReauthorization = request.RecoveryMode == OwnedWorldResumeModes.ReauthorizeFailedRemoteLastExit;
         if (hasRecoveryWindow && (!request.RecoveryDeadlineUtc.HasValue
             || request.RecoveryMode != OwnedWorldResumeModes.Default && !failedRemoteReauthorization))
@@ -524,7 +532,8 @@ internal sealed class OwnedWorldResumeCoordinator
                 {
                     lease = OwnedSaveRecoveryLease.Open(GameSave.SavePath(GameSave.LastExit), ticket.OwnedSaveName);
                     primaryLease = OwnedSaveRecoveryLease.Open(GameSave.SavePath(ticket.OwnedSaveName), ticket.OwnedSaveName);
-                    remoteJournal = _tickets.OpenRemoteResumeJournalLease(ticket, out var journalFingerprint, failedRemoteReauthorization);
+                    remoteJournal = _tickets.OpenRemoteResumeJournalLease(ticket, out var journalFingerprint,
+                        failedRemoteReauthorization || legacyLocalMoveUnknown);
                     string credentialFingerprint;
                     if (failedRemoteReauthorization)
                     {
@@ -532,6 +541,11 @@ internal sealed class OwnedWorldResumeCoordinator
                         credentialFingerprint = credentialLease!.Fingerprint;
                         if (!_tickets.TryOpenImmediateFailedRemoteProof(request.PriorConsumedResumeToken, ticket,
                             out priorFailedProof, out rejection)) return false;
+                    }
+                    else if (legacyLocalMoveUnknown)
+                    {
+                        if (!_tickets.TryOpenRemoteCredential(ticket.ResumeToken, out credentialLease, out rejection)) return false;
+                        credentialFingerprint = credentialLease!.Fingerprint;
                     }
                     else if (!_tickets.TryCaptureRemoteCredential(ticket.ResumeToken, out credentialFingerprint, out rejection)) return false;
                     if (!failedRemoteReauthorization && hasPriorFailedProof && !_tickets.TryOpenPriorFailedResumeProof(request.PriorConsumedResumeToken,
@@ -544,7 +558,11 @@ internal sealed class OwnedWorldResumeCoordinator
                     if (!_sessions.TryOpenRemoteResumeEvidence(ticket, lease, primaryLease, out remoteEvidence, out rejection, proposal,
                         priorFailedProof, request.PriorSourceFingerprint, request.PriorActionKnownTerminalFailed == true,
                         request.PriorLegacySourceFingerprint, request.PriorIntermediateSourceFingerprint,
-                        failedRemoteReauthorization, request.ExpectedRemoteRecoveryContextFingerprint, journalFingerprint))
+                        failedRemoteReauthorization, request.ExpectedRemoteRecoveryContextFingerprint,
+                        // Legacy raw captures bind the complete Journal file bytes; existing modes retain their text fingerprint.
+                        legacyLocalMoveUnknown ? FlightCheckpointStore.HashResumeRecord(remoteJournal) : journalFingerprint,
+                        request.LegacyLocalMoveUnknownEvidenceJson, request.ExpectedLegacyLocalMoveUnknownEvidenceHash,
+                        credentialLease?.RawFingerprint ?? string.Empty))
                         return false;
                     priorFailedProof = null; // The fresh evidence now owns both prior consumption leases.
                     payload = new OwnedWorldResumePlanPayload(ticket, source, request, lease, provenance, _sessions.Revision,
@@ -561,6 +579,7 @@ internal sealed class OwnedWorldResumeCoordinator
                 }
             }
             if (failedRemoteReauthorization) { rejection = "remote_reauthorization_active_quarantined_remote_last_exit_required"; return false; }
+            if (legacyLocalMoveUnknown) { rejection = "legacy_local_move_active_quarantined_remote_last_exit_required"; return false; }
             if (hasRecoveryWindow) { rejection = "remote_resume_recovery_window_quarantined_remote_only"; return false; }
             if (hasPriorFailedProof) { rejection = "remote_resume_prior_failed_quarantined_remote_only"; return false; }
             payload = new OwnedWorldResumePlanPayload(ticket, source, request, null, provenance, _sessions.Revision);
@@ -795,6 +814,8 @@ internal sealed class OwnedWorldResumeCoordinator
                 PriorIntermediateSourceFingerprint = request.PriorIntermediateSourceFingerprint,
                 PriorActionKnownTerminalFailed = request.PriorActionKnownTerminalFailed,
                 ExpectedRemoteRecoveryContextFingerprint = request.ExpectedRemoteRecoveryContextFingerprint,
+                LegacyLocalMoveUnknownEvidenceJson = request.LegacyLocalMoveUnknownEvidenceJson,
+                ExpectedLegacyLocalMoveUnknownEvidenceHash = request.ExpectedLegacyLocalMoveUnknownEvidenceHash,
             };
             MinimumGameTick = lease?.Prefix.GameTick ?? ticket.MinimumGameTick;
             var fingerprint = CanonicalStateHash.Combine(
@@ -839,6 +860,9 @@ internal sealed class OwnedWorldResumeCoordinator
             if (!string.IsNullOrEmpty(Request.PriorIntermediateSourceFingerprint))
                 Fingerprint = CanonicalStateHash.Combine("resume-owned-world-prior-failed-v3", Fingerprint,
                     Request.PriorIntermediateSourceFingerprint);
+            if (LegacyLocalMoveUnknown)
+                Fingerprint = CanonicalStateHash.Combine("resume-owned-world-legacy-local-move-unknown-v1", Fingerprint,
+                    Request.ExpectedLegacyLocalMoveUnknownEvidenceHash);
         }
 
         public OwnedWorldResumeTicket Ticket { get; }
@@ -854,6 +878,7 @@ internal sealed class OwnedWorldResumeCoordinator
         public RemoteResumeCredentialLease? RemoteCredentialLease { get; }
         public bool FailedRemoteReauthorization => Request.RecoveryMode == OwnedWorldResumeModes.ReauthorizeFailedRemoteLastExit;
         public bool RemoteContinuation => RemoteEvidence is not null;
+        public bool LegacyLocalMoveUnknown => !string.IsNullOrEmpty(RemoteEvidence?.LegacyLocalMoveUnknownEvidenceHash);
         public bool RequiresConfirmation => Reauthorizing || RemoteContinuation;
 
         public bool FixedAutosaveRecovery => OwnedWorldAutosaveRecoveryPolicy.IsFixedAutosaveMode(Request.RecoveryMode);

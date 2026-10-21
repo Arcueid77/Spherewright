@@ -1466,7 +1466,9 @@ public static partial class SpherewrightTools
         [Description("Explicit caller attestation, supported by the original action receipt, that the exact prior resume terminally failed with no unknown outcome. Consumption is not a Native durable terminal certificate. Unknown or unobserved outcomes must not be asserted as failed.")] bool? priorActionKnownTerminalFailed = null,
         [Description("Optional additional exact legacy source fingerprint for one explicitly formatted V2 predecessor. Requires all three prior-failure fields; binds exactly four fixed consumed-record replicas and two commitment openings. No arbitrary ancestry, path or JSON input.")] string priorLegacySourceFingerprint = "",
         [Description("Optional exact middle source fingerprint for one fixed V3 predecessor. Requires the newest priorSourceFingerprint, oldest priorLegacySourceFingerprint, consumed token and explicit known-terminal-failure attestation. Exactly six fixed replicas and three openings; no fourth generation or arbitrary ancestry.")] string priorIntermediateSourceFingerprint = "",
-        [Description("Required only for recoveryMode=reauthorize_failed_remote_last_exit: independently captured exact current remote-context sha256 fingerprint, not a path or JSON. Requires the immediate consumed token and known-terminal-failed caller attestation, with no legacy source witnesses. Active quarantined fixed LastExit only, exact zero-progress landed+1 edge, complete Journal/current primary/original checkpoint binding and charge caps no greater than prior authorization. Fresh disclosure and applicable explicit authority are required; this is new current-context authorization, never an opened old commitment or durable Native terminal certificate.")] string expectedRemoteRecoveryContextFingerprint = "")
+        [Description("Required only for recoveryMode=reauthorize_failed_remote_last_exit: independently captured exact current remote-context sha256 fingerprint, not a path or JSON. Requires the immediate consumed token and known-terminal-failed caller attestation, with no legacy source witnesses. Active quarantined fixed LastExit only, exact zero-progress landed+1 edge, complete Journal/current primary/original checkpoint binding and charge caps no greater than prior authorization. Fresh disclosure and applicable explicit authority are required; this is new current-context authorization, never an opened old commitment or durable Native terminal certificate.")] string expectedRemoteRecoveryContextFingerprint = "",
+        [Description("Optional default-only legacy local-Move outcome_unknown carrier, at most64KiB immutable UTF-8 JSON; no path. Kind/failure/source revision are caller-attested protected public captures, not authenticated Native outcome proof. Exact documented eight-field schema, current quarantined ticket/full LastExit/primary/successful checkpoint/Journal binding and fresh strict adoption remain required. Cannot combine with prior-failure witnesses or another recovery mode.")] string legacyLocalMoveUnknownEvidenceJson = "",
+        [Description("Lowercase64hex SHA256 of the exact UTF-8 legacyLocalMoveUnknownEvidenceJson, required together. A matching hash binds bytes, not their truth. MCP withholds a plan unless the Plugin echoes this exact hash and explicit caller-attestation disclosure; commit retains the original unknown result.")] string expectedLegacyLocalMoveUnknownEvidenceHash = "")
     {
         var request = new PrepareOwnedWorldResumeRequest
         {
@@ -1480,6 +1482,8 @@ public static partial class SpherewrightTools
             PriorLegacySourceFingerprint = priorLegacySourceFingerprint,
             PriorIntermediateSourceFingerprint = priorIntermediateSourceFingerprint,
             ExpectedRemoteRecoveryContextFingerprint = expectedRemoteRecoveryContextFingerprint,
+            LegacyLocalMoveUnknownEvidenceJson = legacyLocalMoveUnknownEvidenceJson,
+            ExpectedLegacyLocalMoveUnknownEvidenceHash = expectedLegacyLocalMoveUnknownEvidenceHash,
         };
         var invalid = OwnedWorldRecoveryPolicy.ValidateRequest(request);
         if (invalid is not null)
@@ -1488,6 +1492,11 @@ public static partial class SpherewrightTools
         var result = await bridgeClient.PrepareOwnedWorldResumeAsync(
             request,
             cancellationToken).ConfigureAwait(false);
+        if (VoyagerLegacyLocalMoveUnknownPolicy.HasEvidence(request) && result.Success
+            && (result.Value is null || !VoyagerLegacyLocalMoveUnknownPolicy.HasMatchingEcho(request, result.Value)))
+            result = BridgeCallResult<PreparedOwnedWorldResumePlan>.Failed(BridgeError.Create(BridgeErrorCodes.BridgeNotReady,
+                "The Plugin did not echo this exact legacy local-Move-unknown carrier and its caller-attestation trust boundary; no plan token is exposed.", false,
+                "Use matching Plugin/MCP bytes. A raw hash is not Native authentication, and the original Move remains unknown."));
         if (recoveryMode == OwnedWorldResumeModes.ReauthorizeFailedRemoteLastExit && result.Success
             && (result.Value is null || !VoyagerFailedRemoteReauthorizationPolicy.HasMatchingEcho(request, result.Value)))
             result = BridgeCallResult<PreparedOwnedWorldResumePlan>.Failed(BridgeError.Create(BridgeErrorCodes.BridgeNotReady,

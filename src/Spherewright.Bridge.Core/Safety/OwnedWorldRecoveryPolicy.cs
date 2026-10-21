@@ -10,6 +10,8 @@ public static class OwnedWorldRecoveryPolicy
 
     public static string? ValidateRequest(PrepareOwnedWorldResumeRequest request)
     {
+        if (VoyagerLegacyLocalMoveUnknownPolicy.ValidateRequest(request) is { } legacyInvalid)
+            return legacyInvalid;
         if (request.RecoveryMode == OwnedWorldResumeModes.ReauthorizeFailedRemoteLastExit)
             return VoyagerFailedRemoteReauthorizationPolicy.ValidateRequest(request);
         if (!string.IsNullOrEmpty(request.ExpectedRemoteRecoveryContextFingerprint))

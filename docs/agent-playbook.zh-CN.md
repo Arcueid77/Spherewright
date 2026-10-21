@@ -362,6 +362,10 @@ Codex、MCP Host 关闭、重启、断连、上下文压缩、回合结束，均
 
 按[协议固定八字段顺序](https://github.com/Arcueid77/Spherewright/blob/main/docs/protocol.zh-CN.md#%E5%8F%97%E4%BF%9D%E6%8A%A4%E6%81%A2%E5%A4%8D%E4%B8%8E%E5%AF%BC%E5%85%A5)从独立保护基线计算该承诺；复制本次 Plugin 预览回显不是独立证据。
 
+仅严格接地起步的活动 Move 可在单独接触缺失时保原订单最多8个真实 Native tick，每 tick fresh 核全部非接地守卫及覆盖当前 tick 加原13 tick尾部的14P储备。真实 sphere 命中才清 gap，越界停止；尾部缺地保持任务失败，只有 fresh 接地 Walk 且真实零速度才可报已知失败，否则保持 unknown。不可将此许可用于 idle/施工/Harvest/飞行，也不续原期限或返程储备。
+
+独立旧本地 Move `outcome_unknown` 输入须在正常关闭前保护原公开 action/session 响应文本及完整票据/journey/checkpoint/Journal 文件字节。两项有界 JSON/哈希输入依[协议 carrier schema](https://github.com/Arcueid77/Spherewright/blob/main/docs/protocol.zh-CN.md#protected-resume-and-import)；种类/失败/源码版本仍为调用方断言，不是 Native 认证。核精确哈希/断言回显、明确披露及 `nativeOriginalOutcomeProved=false`。保原 Move 未知，仅用 fresh 精确票据绑定 LastExit 及原当前授权/digest 门，不换成功 checkpoint、旧 primary、失败恢复 witness 或已关闭调用预算。当前 Native 证明与首帧/接触/能量准入仍可拒绝，此输入不保证恢复。
+
 单次旧来源兼容开口可同时提供 `priorConsumedResumeToken`、`priorSourceFingerprint` 及可空 `priorActionKnownTerminalFailed`，或三者全不提供；仅适用于此 `default` 窄分支与当前隔离。`true` 表示控制方已核精确原公开恢复 action 为终态失败且非未知；消费记录不是 Native 持久动作终态，未知绝不能作此断言。两份固定消费/授权副本须在只读租约下相符、每份不超过64KiB，具完整原版本授权、匹配的 journey/checkpoint/Journal/当前主档来源与同一 source tick，并保留全部禁止较新主档回滚检查。旧不可变提案与 prior 指纹只用于打开旧 v1 证据指纹，不执行旧提案/action，也不复用其预算。Fresh Prepared 须回显 `priorFailedResumeProvenanceUsed=true` 和 `priorActionTerminalFailureAttested=true`，原确认/digest 门保持；回显缺失或被忽略则阻止兼容。新提案须有当前适用授权；新授权记录标记本次 hop；原三参数路径仍拒绝已标记前驱。原最大/已花/返程 tick 与能量/翘曲器储备不重置，直接路径及普通 v1 路径不变。token/指纹实际值与记录 JSON 留在保护区。
 
 显式 V2 前驱开口还要求非空 `priorLegacySourceFingerprint` 与原三个字段齐备。`priorSourceFingerprint` 指向直接前驱源，新字段指向它更旧的 legacy 祖先。四份固定有界记录均持租约：直接前驱一对与旧祖先一对，各对内字节相同、每份不超过64KiB，旧祖先不得有兼容标记。当前隔离须匹配公开已知终态失败的前驱 action 及控制方断言；两层来源均须在同一 source tick 打开精确 route/checkpoint/Journal/完整源/当前主档证据，并保留禁止较新主档回滚及全部原预算检查。Prepared 除原来源/终态断言回显外，还须返回 `priorFailedResumeV2ProvenanceUsed=true`；必需回显缺失或 false 时，MCP 不发令牌。新指纹域绑定全部证据，不改变 v1 玩家哈希。后继不能再作 V2 前驱，因为其祖先已带标记；此有限开口不是任意链、旧动作重放、推进 tick 或续预算。不提供新字段时，原三参数行为不变。

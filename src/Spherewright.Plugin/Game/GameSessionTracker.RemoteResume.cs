@@ -37,10 +37,12 @@ internal sealed partial class GameSessionTracker
         VoyagerRecoveryWindowProposal? proposal = null, PriorFailedResumeProof? priorFailedProof = null,
         string priorSourceFingerprint = "", bool priorActionKnownTerminalFailed = false, string priorLegacySourceFingerprint = "",
         string priorIntermediateSourceFingerprint = "", bool failedRemoteReauthorization = false,
-        string expectedRemoteContext = "", string validatedJournalHash = "") =>
+        string expectedRemoteContext = "", string validatedJournalHash = "", string legacyLocalMoveEvidenceJson = "",
+        string legacyLocalMoveEvidenceHash = "", string legacyCredentialRawFingerprint = "") =>
         _flightCheckpoints.TryOpenRemoteResumeEvidence(ticket, source, primary, out evidence, out rejection, proposal,
             priorFailedProof, priorSourceFingerprint, priorActionKnownTerminalFailed, priorLegacySourceFingerprint,
-            priorIntermediateSourceFingerprint, failedRemoteReauthorization, expectedRemoteContext, validatedJournalHash);
+            priorIntermediateSourceFingerprint, failedRemoteReauthorization, expectedRemoteContext, validatedJournalHash,
+            legacyLocalMoveEvidenceJson, legacyLocalMoveEvidenceHash, legacyCredentialRawFingerprint);
 
     internal DateTimeOffset EffectiveVoyagerDeadline(VoyagerJourneyRecord journey)
     {

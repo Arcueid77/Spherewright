@@ -26,6 +26,79 @@ namespace Spherewright.Mcp.Tests;
 public sealed class SpherewrightToolsTests
 {
     [Theory]
+    [InlineData("supported")] [InlineData("missing_echo")] [InlineData("wrong_hash")]
+    [InlineData("unattested")] [InlineData("prior_claim")] [InlineData("no_disclosure")]
+    [InlineData("no_identity")] [InlineData("evidence_zero")]
+    public async Task LegacyLocalMoveUsesOptionalSchemaAndWithholdsUnsupportedOrMisleadingProof(string fault)
+    {
+        const string raw = "{\"fixture\":\"原 UTF-8 bytes\"}"; // Native parser/leases are tested separately.
+        var hash = VoyagerLegacyLocalMoveUnknownPolicy.HashEvidence(raw)!;
+        var plan = WindowPlan(DateTimeOffset.UtcNow.AddMinutes(25));
+        plan.LegacyLocalMoveUnknownProvenanceUsed = true;
+        plan.LegacyLocalMoveUnknownEvidenceHash = hash;
+        plan.LegacyLocalMoveUnknownKindCallerAttested = true;
+        plan.CandidateGameTick = 123; plan.MinimumGameTick = 123;
+        plan.ConfirmationPrompt = VoyagerLegacyLocalMoveUnknownPolicy.Disclosure;
+        plan.ConfirmationDigest = CanonicalStateHash.Combine("synthetic-legacy-plan");
+        switch (fault)
+        {
+            case "missing_echo": plan.LegacyLocalMoveUnknownProvenanceUsed = false; break;
+            case "wrong_hash": plan.LegacyLocalMoveUnknownEvidenceHash = new string('0', 64); break;
+            case "unattested": plan.LegacyLocalMoveUnknownKindCallerAttested = false; break;
+            case "prior_claim": plan.PriorActionTerminalFailureAttested = true; break;
+            case "no_disclosure": plan.ConfirmationPrompt = "Hash is not a disclosure."; break;
+            case "no_identity": plan.ExactEmbeddedIdentityVerified = false; break;
+            case "evidence_zero": plan.RecoveryEvidenceVersion = 0; break;
+        }
+        var bridge = new FakeBridgeClient(SuccessResult()) { ResumePlan = plan };
+        var services = new ServiceCollection(); services.AddSingleton<IBridgeClient>(bridge);
+        services.AddMcpServer().WithToolsFromAssembly(typeof(SpherewrightTools).Assembly);
+        using var provider = services.BuildServiceProvider();
+        var tool = Assert.Single(provider.GetServices<McpServerTool>(), t => t.ProtocolTool.Name == "spherewright_prepare_resume_owned_game");
+        foreach (var name in new[] { "legacyLocalMoveUnknownEvidenceJson", "expectedLegacyLocalMoveUnknownEvidenceHash" })
+        {
+            Assert.Equal("string", tool.ProtocolTool.InputSchema.GetProperty("properties").GetProperty(name).GetProperty("type").GetString());
+            if (tool.ProtocolTool.InputSchema.TryGetProperty("required", out var required))
+                Assert.DoesNotContain(required.EnumerateArray(), p => p.GetString() == name);
+        }
+        await using var server = McpServer.Create(new StreamServerTransport(Stream.Null, Stream.Null), new McpServerOptions(), null, provider);
+        var args = new CallToolRequestParams { Name = tool.ProtocolTool.Name, Arguments = new Dictionary<string, JsonElement>
+        {
+            ["resumeToken"] = JsonSerializer.SerializeToElement("synthetic-current"),
+            ["legacyLocalMoveUnknownEvidenceJson"] = JsonSerializer.SerializeToElement(raw),
+            ["expectedLegacyLocalMoveUnknownEvidenceHash"] = JsonSerializer.SerializeToElement(hash),
+        } };
+        var call = new RequestContext<CallToolRequestParams>(server,
+            new JsonRpcRequest { Id = new RequestId(1), Method = "tools/call" }, args) { Services = provider };
+        var result = await tool.InvokeAsync(call);
+        Assert.Equal(raw, bridge.LastResumePrepareRequest!.LegacyLocalMoveUnknownEvidenceJson);
+        Assert.Equal(hash, bridge.LastResumePrepareRequest.ExpectedLegacyLocalMoveUnknownEvidenceHash);
+        Assert.Equal(fault != "supported", result.IsError);
+        if (fault == "supported")
+        {
+            var echoed = result.StructuredContent!.Value.GetProperty("result");
+            Assert.True(echoed.GetProperty("legacyLocalMoveUnknownProvenanceUsed").GetBoolean());
+            Assert.False(echoed.GetProperty("nativeOriginalOutcomeProved").GetBoolean());
+            Assert.False(echoed.GetProperty("priorActionTerminalFailureAttested").GetBoolean());
+        }
+        else Assert.DoesNotContain("planToken", result.StructuredContent!.Value.GetRawText());
+    }
+
+    [Theory]
+    [InlineData("hash")] [InlineData("prior")] [InlineData("mode")]
+    public async Task LegacyLocalMoveInvalidPairOrMixedAuthorityNeverReachesBridge(string fault)
+    {
+        const string raw = "{}";
+        var bridge = new FakeBridgeClient(SuccessResult());
+        var result = await SpherewrightTools.PrepareOwnedWorldResumeAsync(bridge, "synthetic-current",
+            recoveryMode: fault == "mode" ? OwnedWorldResumeModes.VerifiedNewerLastExit : OwnedWorldResumeModes.Default,
+            priorActionKnownTerminalFailed: fault == "prior" ? true : null,
+            legacyLocalMoveUnknownEvidenceJson: raw,
+            expectedLegacyLocalMoveUnknownEvidenceHash: fault == "hash" ? new string('0', 64) : VoyagerLegacyLocalMoveUnknownPolicy.HashEvidence(raw)!);
+        Assert.True(result.IsError); Assert.Null(bridge.LastResumePrepareRequest);
+    }
+
+    [Theory]
     [InlineData("supported")] [InlineData("missing_echo")] [InlineData("wrong_context")]
     [InlineData("old_mode")] [InlineData("legacy_claim")] [InlineData("unattested")] [InlineData("evidence_zero")]
     public async Task FailedRemoteReauthorizationUsesRealOptionalSchemaAndRequiresItsIndependentEcho(string fault)

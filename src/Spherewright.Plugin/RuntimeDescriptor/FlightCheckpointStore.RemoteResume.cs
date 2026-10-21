@@ -1,5 +1,10 @@
 using System.Text;
+using System.Security.Cryptography;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using Spherewright.Bridge.Core.Safety;
+using Spherewright.Contracts.Actions;
+using Spherewright.Contracts.Sessions;
 using Spherewright.Plugin.Game;
 using Spherewright.Plugin.Transport;
 
@@ -12,14 +17,16 @@ internal sealed partial class FlightCheckpointStore
         VoyagerRecoveryWindowProposal? recoveryProposal = null, PriorFailedResumeProof? priorFailedProof = null,
         string priorSourceFingerprint = "", bool priorActionKnownTerminalFailed = false, string priorLegacySourceFingerprint = "",
         string priorIntermediateSourceFingerprint = "", bool failedRemoteReauthorization = false,
-        string expectedRemoteContext = "", string validatedJournalHash = "")
+        string expectedRemoteContext = "", string validatedJournalHash = "",
+        string legacyLocalMoveEvidenceJson = "", string legacyLocalMoveEvidenceHash = "", string legacyCredentialRawFingerprint = "")
     {
         evidence = null;
         rejection = string.Empty;
         FileStream? ticketLease = null; FileStream? journeyLease = null; OwnedSaveRecoveryLease? checkpointLease = null;
         try
         {
-            if (failedRemoteReauthorization && ((File.GetAttributes(_ticketPath) & FileAttributes.ReparsePoint) != 0
+            if ((failedRemoteReauthorization || !string.IsNullOrEmpty(legacyLocalMoveEvidenceJson))
+                && ((File.GetAttributes(_ticketPath) & FileAttributes.ReparsePoint) != 0
                 || (File.GetAttributes(VoyagerJourneyPath) & FileAttributes.ReparsePoint) != 0))
                 throw new InvalidDataException("The current original context must use regular protected records.");
             ticketLease = new FileStream(_ticketPath, FileMode.Open, FileAccess.Read, FileShare.Read);
@@ -139,6 +146,30 @@ internal sealed partial class FlightCheckpointStore
                 ? VoyagerFailedRemoteReauthorizationPolicy.ContextFingerprint(journeyJson, checkpointJson,
                     checkpointLease.Fingerprint, primary.Fingerprint, source.Prefix.GameTick, primary.Prefix.GameTick,
                     journalJson, validatedJournalHash) : string.Empty;
+            if (!string.IsNullOrEmpty(legacyLocalMoveEvidenceJson))
+            {
+                if (priorFailedProof is not null || failedRemoteReauthorization
+                    || VoyagerLegacyLocalMoveUnknownPolicy.HashEvidence(legacyLocalMoveEvidenceJson) != legacyLocalMoveEvidenceHash)
+                { rejection = "legacy_local_move_evidence_hash_or_mode_mismatch"; return false; }
+                var capture = ParseLegacyLocalMoveCapture(legacyLocalMoveEvidenceJson);
+                rejection = VoyagerLegacyLocalMoveUnknownPolicy.Blocker(capture, new LegacyLocalMoveUnknownBinding
+                {
+                    OwnedSaveName = ticket.OwnedSaveName, SourceSessionId = ticket.SourceSessionId,
+                    NativeVersion = ticket.GameVersion, QuarantineActionId = ticket.QuarantineActionId,
+                    SuccessfulFlightActionId = journey.ActiveActionId, RemotePlanetId = journey.RemotePlanetId,
+                    CredentialRawFingerprint = legacyCredentialRawFingerprint,
+                    JourneySha256 = HashResumeRecord(journeyLease), CheckpointSha256 = HashResumeRecord(ticketLease),
+                    JournalSha256 = validatedJournalHash,
+                }, facts) ?? string.Empty;
+                if (rejection.Length != 0) return false;
+                evidence = VoyagerRemoteResumeEvidence.CreateLegacyLocalMoveUnknown(journeyJson, checkpointJson,
+                    source.Fingerprint, primary.Fingerprint, source.Prefix.GameTick, primary.Prefix.GameTick,
+                    ticket.GameplayJournalCheckpoint!, recoveryProposal, legacyLocalMoveEvidenceJson,
+                    legacyLocalMoveEvidenceHash, ticket.QuarantineActionId, ticket.SourceSessionId,
+                    ticketLease, journeyLease, checkpointLease);
+                ticketLease = null; journeyLease = null; checkpointLease = null;
+                return true;
+            }
             rejection = failedRemoteReauthorization
                 ? VoyagerFailedRemoteReauthorizationPolicy.Blocker(facts, expectedRemoteContext, currentContext,
                     priorFailedProof is not null && priorFailedProof.LegacyAncestor is null
@@ -165,6 +196,57 @@ internal sealed partial class FlightCheckpointStore
             || exception is Newtonsoft.Json.JsonException || exception is ArgumentException)
         { rejection = "remote_resume_original_evidence_unavailable:" + exception.GetType().Name; return false; }
         finally { ticketLease?.Dispose(); journeyLease?.Dispose(); checkpointLease?.Dispose(); }
+    }
+
+    internal static string HashResumeRecord(FileStream stream)
+    {
+        var position = stream.Position;
+        try
+        {
+            stream.Position = 0;
+            using var hash = SHA256.Create();
+            return BitConverter.ToString(hash.ComputeHash(stream)).Replace("-", "").ToLowerInvariant();
+        }
+        finally { stream.Position = position; }
+    }
+
+    private static JObject StrictLegacyObject(string json)
+    {
+        using var input = new StringReader(json);
+        using var reader = new JsonTextReader(input) { MaxDepth = 32, DateParseHandling = DateParseHandling.None };
+        var result = JObject.Load(reader, new JsonLoadSettings { DuplicatePropertyNameHandling = DuplicatePropertyNameHandling.Error });
+        if (reader.Read()) throw new InvalidDataException("Trailing legacy evidence content.");
+        return result;
+    }
+
+    private static LegacyLocalMoveUnknownCapture ParseLegacyLocalMoveCapture(string json)
+    {
+        var root = StrictLegacyObject(json);
+        var fields = new[] { "sourceProductSha", "captureAttested", "actionResponseJson", "sessionResponseJson",
+            "ticketSha256", "journeySha256", "checkpointSha256", "journalSha256" };
+        if (root.Count != fields.Length || fields.Any(k => root[k] is null)
+            || fields.Where(k => k != "captureAttested").Any(k => root[k]!.Type != JTokenType.String)
+            || root["captureAttested"]!.Type != JTokenType.Boolean)
+            throw new InvalidDataException("The exact bounded legacy carrier schema is required.");
+        var actionResponse = StrictLegacyObject((string)root["actionResponseJson"]!);
+        var sessionResponse = StrictLegacyObject((string)root["sessionResponseJson"]!);
+        if (actionResponse["success"]?.Type != JTokenType.Boolean || (bool)actionResponse["success"]! != true
+            || sessionResponse["success"]?.Type != JTokenType.Boolean || (bool)sessionResponse["success"]! != true
+            || actionResponse["result"] is not JObject action || sessionResponse["result"] is not JObject session
+            || new[] { "terminal", "succeeded", "reconciledFromOutcomeUnknown" }.Any(k => action[k]?.Type != JTokenType.Boolean)
+            || new[] { "startedAtGameTick", "completedAtGameTick", "planetId" }.Any(k => action[k]?.Type != JTokenType.Integer)
+            || new[] { "gameLoaded", "ownedBySpherewright", "writesAllowed", "currentSessionLoadedFromFlightCheckpoint" }
+                .Any(k => session[k]?.Type != JTokenType.Boolean)
+            || new[] { "gameTick", "lastOwnedSaveGameTick", "localPlanetId" }.Any(k => session[k]?.Type != JTokenType.Integer))
+            throw new InvalidDataException("The legacy public captures omit required typed observations.");
+        return new LegacyLocalMoveUnknownCapture
+        {
+            SourceProductSha = (string)root["sourceProductSha"]!, CaptureAttested = (bool)root["captureAttested"]!,
+            Action = PluginJson.Deserialize<ActionResultSnapshot>(action.ToString(Formatting.None)),
+            Session = PluginJson.Deserialize<SessionState>(session.ToString(Formatting.None)),
+            TicketSha256 = (string)root["ticketSha256"]!, JourneySha256 = (string)root["journeySha256"]!,
+            CheckpointSha256 = (string)root["checkpointSha256"]!, JournalSha256 = (string)root["journalSha256"]!,
+        };
     }
 
     public bool RemoteResumeEvidenceStillMatches(VoyagerRemoteResumeEvidence evidence) =>
@@ -242,6 +324,21 @@ internal sealed class VoyagerRemoteResumeEvidence : IDisposable
     public string Fingerprint { get; private set; }
     public bool FailedRemoteLastExitReauthorization { get; private set; }
     public string RemoteRecoveryContextFingerprint { get; private set; } = string.Empty;
+    public string LegacyLocalMoveUnknownEvidenceJson { get; private set; } = string.Empty;
+    public string LegacyLocalMoveUnknownEvidenceHash { get; private set; } = string.Empty;
+    internal static VoyagerRemoteResumeEvidence CreateLegacyLocalMoveUnknown(string journeyJson, string checkpointJson,
+        string sourceFingerprint, string primaryFingerprint, long sourceTick, long primaryTick,
+        OwnedWorldGameplayJournalCheckpoint journal, VoyagerRecoveryWindowProposal? proposal,
+        string rawEvidence, string evidenceHash, string quarantineActionId, string sourceSessionId, params IDisposable[] leases)
+    {
+        var result = new VoyagerRemoteResumeEvidence(journeyJson, checkpointJson, sourceFingerprint, primaryFingerprint,
+            sourceTick, primaryTick, journal, proposal, leases);
+        result.LegacyLocalMoveUnknownEvidenceJson = rawEvidence;
+        result.LegacyLocalMoveUnknownEvidenceHash = evidenceHash;
+        result.Fingerprint = CanonicalStateHash.Combine("voyager-remote-last-exit-legacy-local-move-unknown-v1",
+            result.Fingerprint, evidenceHash, quarantineActionId, sourceSessionId, false);
+        return result;
+    }
     internal static VoyagerRemoteResumeEvidence CreateFailedRemoteReauthorization(string journeyJson,
         string checkpointJson, string sourceFingerprint, string primaryFingerprint, long sourceTick, long primaryTick,
         OwnedWorldGameplayJournalCheckpoint journal, VoyagerRecoveryWindowProposal proposal,
