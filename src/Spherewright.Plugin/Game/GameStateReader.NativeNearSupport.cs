@@ -128,6 +128,7 @@ internal sealed partial class GameStateReader
                 Require(System.Threading.Thread.CurrentThread.ManagedThreadId == _threadId, "thread_changed");
                 snapshot.CapturedAtGameTick = GameMain.gameTick;
                 Require(ContextMatches(player, surface), "context_changed");
+                snapshot.Identity = CaptureIdentityObservation(null);
                 snapshot.RegisteredColliderCount = _registered.Count;
                 Require(_registered.Count <= MaximumRegisteredColliders, "registered_collection_limit_exceeded");
                 Require(_registered.Count > 0, "registered_collection_empty");
@@ -142,15 +143,21 @@ internal sealed partial class GameStateReader
                 if (!grounded)
                 {
                     var hit = Physics.SphereCast(new Ray(p + up * .35f, -up), .35f, out var info, 20f, 15873);
+                    var queried = info.collider;
                     snapshot.CastHit = hit;
-                    Require(hit && info.collider != null, "cast_miss_or_collider_unavailable");
+                    snapshot.Identity = CaptureIdentityObservation(queried);
+                    Require(hit && queried != null, "cast_miss_or_collider_unavailable");
                     Require(Finite(info.distance) && info.distance >= 0f && info.distance <= 20f
                         && Finite(info.point) && Finite(info.normal) && Finite(info.normal.sqrMagnitude)
                         && info.normal.sqrMagnitude > 0f, "cast_geometry_unproved");
                     snapshot.CastDistance = info.distance; snapshot.HitPoint = Vector(info.point); snapshot.HitNormal = Vector(info.normal);
                     var dot = Vector3.Dot(info.normal, up); Require(Finite(dot), "normal_dot_unproved"); snapshot.NormalDotUp = dot;
-                    if (initial) BindSupport(info.collider!);
-                    else Require(ReferenceEquals(info.collider, _support) && info.collider == _support, "cast_support_changed");
+                    if (initial)
+                    {
+                        BindSupport(queried!);
+                        snapshot.Identity = CaptureIdentityObservation(queried);
+                    }
+                    else Require(ReferenceEquals(queried, _support) && queried == _support, "cast_support_changed");
                 }
                 VerifySupport(snapshot);
                 var hits = new Collider[257];
@@ -179,6 +186,58 @@ internal sealed partial class GameStateReader
                 snapshot.ReasonCode = NearSupportReason(exception);
                 return snapshot.ReasonCode;
             }
+        }
+
+        private NativeNearGroundSupportIdentitySnapshot CaptureIdentityObservation(Collider? queried)
+        {
+            var result = new NativeNearGroundSupportIdentitySnapshot();
+            // Diagnostics have no say in admission. Keep each failed read unknown,
+            // preserve other independent observations and retain every original guard.
+            void Observe<T>(string field, Func<T> read, Action<T> write)
+            {
+                try { write(read()); }
+                catch (Exception) { result.ObservationReasonCode ??= "native_near_support_identity_" + field + "_unavailable"; }
+            }
+            Observe("dirty", () => _physics.isPlanetPhysicsColliderDirty, value => result.PlanetColliderDirty = value);
+            if (queried != null)
+                Observe("queried_hit", () => new NativePlayerGroundColliderSnapshot
+                {
+                    Type = queried is CapsuleCollider ? "capsule" : queried is SphereCollider ? "sphere"
+                        : queried is BoxCollider ? "box" : queried is MeshCollider ? "mesh" : "other",
+                    Layer = queried.gameObject.layer, IsTrigger = queried.isTrigger, Enabled = queried.enabled,
+                    ActiveInHierarchy = queried.gameObject.activeInHierarchy, SameDefaultPhysicsScene = Scene(queried.gameObject),
+                }, value => result.QueriedHit = value);
+            var retained = _support; var retainedObject = _registeredObject; var retainedChain = _chain;
+            if (retained is null || retainedObject is null || retainedChain is null) return result;
+            if (queried != null)
+            {
+                result.SameManagedReference = ReferenceEquals(queried, retained);
+                Observe("unity_equality", () => queried == retained, value => result.SameUnityObject = value);
+                Observe<bool?>("native_instance", () =>
+                {
+                    var hitId = queried.GetInstanceID(); var retainedId = retained.GetInstanceID();
+                    return hitId == 0 || retainedId == 0 ? (bool?)null : hitId == retainedId;
+                }, value => result.SameNativeInstance = value);
+            }
+            Observe("registered_record", () => _registered.TryGetValue(_supportId, out var row)
+                && row is not null && row.id == _supportId && ReferenceEquals(row, retainedObject),
+                value => result.RetainedRecordMatches = value);
+            Observe("registered_collider", () => _registered.TryGetValue(_supportId, out var row)
+                && row is not null && ReferenceEquals(row.collider, retained) && row.collider == retained,
+                value => result.RetainedColliderMatches = value);
+            Observe("pool_cell", () => Same(Cell(_supportId).Data, _supportData),
+                value => result.RetainedPoolCellMatches = value);
+            Observe("object_pool", () =>
+            {
+                var current = ObjectRoot();
+                return ReferenceEquals(current.Pool, _objectPool) && current.Root == _chainRoot;
+            }, value => result.RetainedObjectPoolMatches = value);
+            Observe("chain", () =>
+            {
+                var current = Chain(ObjectRoot().Root);
+                return current.Count == retainedChain.Count && current.Zip(retainedChain, (a, b) => a.Matches(b)).All(value => value);
+            }, value => result.RetainedChainMatches = value);
+            return result;
         }
 
         private void BindSupport(Collider hit)

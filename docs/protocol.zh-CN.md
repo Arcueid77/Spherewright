@@ -133,6 +133,8 @@ spherewright_commit_reload_flight_checkpoint
 
 可选的 `nativePhysics.resumeNearSupportPreFirstFrame`、`resumeNearSupportPostUniverse` 及 `resumeNearSupportLatest` 是脱离原生引用的只读观察，描述精确当前 Native near-collider Vein/Vegetable 池支撑。保留采集阶段、查询完整性及未知值；`safetyCertified=false` 不变。cast 命中或足部 overlap 为0均不证明 Native sphere 接地或严格物理空闲；这些诊断不授执行权限，也不改变 v1 哈希。
 
+每份近支撑快照还可含可空 `identity` 诊断；其中 `queriedHit` 单独描述实际 query 命中，与保留的支撑物区分。`sameManagedReference`、`sameUnityObject` 和 `sameNativeInstance` 是不同观察；最后一项只比较非零实例 ID 是否相等，不输出其值。几何相同不证明身份相同。保留 record/collider/pool cell/object pool/chain 的比较、`planetColliderDirty` 和 `observationReasonCode` 可在外层 `state=unavailable` 时保留。缺失观察仍为未知，明确 false 仍为 false；即使全部为 true，也不自行证明归属、接地、重建或失败原因，不授权重新绑定、重试或准入。`safetyCertified=false`、全部既有守卫及 v1 哈希保持；这些诊断不新增物理查询。
+
 可空地形诊断 `rootHasParent`、`rootLocalPosition`、`rootLocalRotation`、`rootLocalScale` 与 `rootLocalToWorldMatrix` 复制当前根变换事实；矩阵为16个 float，按 row-major 排列。缺失/未知仍为未知。保留精确单位 `lossyScale` 旧路径；新增场景分支仅接受无父节点的根、精确本地/world 零位置/identity 旋转、通过 Native `Vector3` 近似单位比较的正均匀缩放 `S<1`、精确等于 `S` 的 world `lossyScale`，以及有限且精确为 `diag(S,S,S,1)` 的矩阵。绑定期间精确重核 `S`，变化即拒绝。足部/半径/场景/对象引用、能量、13tick及返程门仍全部必需；收缩不是距离或能量证明。这些只读诊断不进入 v1 哈希。
 
 可空 `voyagerFlightReadback.firstLandingHandoff` 保留第一次同 tick 采集：`capturedAtGameTick`、`proved`、首个 `blockerCode`、`captureStage`/`captureExceptionType`、`terrain`/`groundContact`，以及可空 `coreEnergyJoules`/`loadedEnergyJoules`/`perNativeTickEnergyJoules`（P）。晚到读取不得覆盖首次采集。不可用观察仍为未知，复制的地形/接触快照保持 `safetyCertified=false`。这些诊断不进入 v1 哈希，不新增工具、不改变确认/恢复门，也不证明物理空闲或路线成功。

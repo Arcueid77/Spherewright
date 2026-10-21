@@ -38,6 +38,8 @@ public sealed class NativeNearGroundSupportSnapshot
     public bool? AllFootHitsCurrentSupportOrTerrain { get; set; }
     public bool? CurrentSupportFootHit { get; set; }
     public bool? TerrainFootHit { get; set; }
+    /// <summary>Read-only identity diagnostics captured before rejection; never permission to replace support.</summary>
+    public NativeNearGroundSupportIdentitySnapshot? Identity { get; set; }
 
     public NativeNearGroundSupportSnapshot Copy() => new()
     {
@@ -51,8 +53,40 @@ public sealed class NativeNearGroundSupportSnapshot
         NativeLiveFlag = NativeLiveFlag, FootOverlapCount = FootOverlapCount, FootOverlapComplete = FootOverlapComplete,
         AllFootHitsCurrentSupportOrTerrain = AllFootHitsCurrentSupportOrTerrain,
         CurrentSupportFootHit = CurrentSupportFootHit, TerrainFootHit = TerrainFootHit,
+        Identity = Identity?.Copy(),
     };
 
     private static Vector3Snapshot? CopyVector(Vector3Snapshot? value) =>
         value is null ? null : new() { X = value.X, Y = value.Y, Z = value.Z };
+}
+
+/// <summary>Nullable observations distinguish queried and retained colliders without exposing Native instance IDs.</summary>
+public sealed class NativeNearGroundSupportIdentitySnapshot
+{
+    public NativePlayerGroundColliderSnapshot? QueriedHit { get; set; }
+    public bool? SameManagedReference { get; set; }
+    public bool? SameUnityObject { get; set; }
+    public bool? SameNativeInstance { get; set; }
+    public bool? RetainedRecordMatches { get; set; }
+    public bool? RetainedColliderMatches { get; set; }
+    public bool? RetainedPoolCellMatches { get; set; }
+    public bool? RetainedObjectPoolMatches { get; set; }
+    public bool? RetainedChainMatches { get; set; }
+    public bool? PlanetColliderDirty { get; set; }
+    public string? ObservationReasonCode { get; set; }
+
+    public NativeNearGroundSupportIdentitySnapshot Copy() => new()
+    {
+        QueriedHit = QueriedHit is null ? null : new NativePlayerGroundColliderSnapshot
+        {
+            Type = QueriedHit.Type, Layer = QueriedHit.Layer, IsTrigger = QueriedHit.IsTrigger,
+            Enabled = QueriedHit.Enabled, ActiveInHierarchy = QueriedHit.ActiveInHierarchy,
+            SameDefaultPhysicsScene = QueriedHit.SameDefaultPhysicsScene,
+        },
+        SameManagedReference = SameManagedReference, SameUnityObject = SameUnityObject,
+        SameNativeInstance = SameNativeInstance, RetainedRecordMatches = RetainedRecordMatches,
+        RetainedColliderMatches = RetainedColliderMatches, RetainedPoolCellMatches = RetainedPoolCellMatches,
+        RetainedObjectPoolMatches = RetainedObjectPoolMatches, RetainedChainMatches = RetainedChainMatches,
+        PlanetColliderDirty = PlanetColliderDirty, ObservationReasonCode = ObservationReasonCode,
+    };
 }
