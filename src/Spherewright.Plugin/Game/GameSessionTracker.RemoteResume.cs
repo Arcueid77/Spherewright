@@ -330,7 +330,11 @@ internal sealed partial class GameSessionTracker
             adoption.CurrentDecisionEvidence.Number("first_frame_source_tick", first.SourceGameTick);
             var phaseBlocker = first.ObservePhysics(GameMain.gameTick, !GameMain.isPaused
                 && ReferenceEquals(GameMain.data, adoption.World) && _sessionId == adoption.SessionId);
-            if (phaseBlocker is not null) return FailRemoteResumeAdmission(phaseBlocker);
+            if (phaseBlocker is not null)
+            {
+                adoption.RetainFailure(adoption.CurrentDecisionEvidence.Failure(phaseBlocker, first.FailureDetail));
+                return FailRemoteResumeAdmission(phaseBlocker);
+            }
         }
         string? blocker;
         try { blocker = _remoteResumeAdmissionGuard is null ? "remote_resume_idle_guard_unavailable" : _remoteResumeAdmissionGuard(adoption!); }
@@ -357,7 +361,8 @@ internal sealed partial class GameSessionTracker
     {
         _remoteResumeInitializationPending = false;
         if (_remoteResumeAdoption is { } failureAdoption)
-            failureAdoption.RetainFailure(failureAdoption.CurrentDecisionEvidence?.Failure(code,
+            failureAdoption.RetainFailure(NativeResumeDecisionEvidence.UnobservedFailure(code,
+                "session_admission_without_native_sample", GameMain.gameTick, DateTimeOffset.UtcNow,
                 failureAdoption.FirstFrame.FailureDetail ?? code));
         if (_remoteResumeAdoption?.FirstFrame.Armed == true) _remoteResumeAdoption.FirstFrame.Fail(code);
         var reason = "The exact remote LastExit continuation could not enter its strict idle guard. [" + code + "]";

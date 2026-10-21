@@ -6,6 +6,17 @@ namespace Spherewright.Bridge.Core.Tests;
 public sealed class NativeResumeFailureEvidenceTests
 {
     [Fact]
+    public void ObserverLossCannotReuseAnEarlierSuccessfulNativeSample()
+    {
+        var previous = new NativeResumeDecisionEvidence("native_universe_post151", 101, null, true);
+        previous.Number("core_j", 100); previous.Observe("ground_hit", true);
+        var lost = NativeResumeDecisionEvidence.UnobservedFailure("observer_lost", "session_admission_without_native_sample", 102, null);
+        Assert.Equal("not_observed", lost.FactsState);
+        Assert.Empty(lost.Values); Assert.Empty(lost.Observations); Assert.Empty(lost.Predicates);
+        Assert.Equal(102, lost.CapturedAtGameTick); Assert.Equal("observer_lost", lost.FirstFailedPredicate);
+    }
+
+    [Fact]
     public void UnknownIsNotFalseAndUnevaluatedChecksAreNotPassed()
     {
         var e = new NativeResumeDecisionEvidence("native_physics_post501", 101, null, true);

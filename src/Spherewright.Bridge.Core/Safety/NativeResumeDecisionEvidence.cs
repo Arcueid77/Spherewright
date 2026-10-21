@@ -6,6 +6,12 @@ namespace Spherewright.Bridge.Core.Safety;
 // sampled for the decision; this class cannot invoke Native or read a clock.
 public sealed class NativeResumeDecisionEvidence
 {
+    // Observer loss/cancellation has no new Native sample. Never borrow a
+    // previous successful151/501 snapshot as the failure instant's facts.
+    public static NativeResumeFailureSnapshot UnobservedFailure(string code, string stage, long? tick,
+        DateTimeOffset? utc, string? predicate = null)
+        => new NativeResumeDecisionEvidence(stage, tick, utc, false).Failure(code, predicate);
+
     private readonly NativeResumeFailureSnapshot _sample;
     private string? _first;
     public NativeResumeDecisionEvidence(string stage, long? tick, DateTimeOffset? utc, bool factsObserved)
