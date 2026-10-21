@@ -14,6 +14,7 @@ param(
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
+. (Join-Path $PSScriptRoot 'SpherewrightPackageSurface.ps1')
 
 $repoRoot = [IO.Path]::GetFullPath((Split-Path -Parent $PSScriptRoot))
 $resolvedPackagePath = [IO.Path]::GetFullPath($PackagePath)
@@ -154,6 +155,10 @@ try {
             throw "Thunderstore payload file is missing: $requiredFile"
         }
     }
+
+    $productAssemblies = @('Spherewright.Plugin.dll', 'Spherewright.Contracts.dll', 'Spherewright.Bridge.Core.dll') |
+        ForEach-Object { Join-Path $smokeRoot ('plugins/' + $_) }
+    Assert-SpherewrightNoCodeViewRecord -AssemblyPaths $productAssemblies
 
     $blockedNames = @('Assembly-CSharp.dll', 'UnityEngine.dll', '0Harmony.dll', 'BepInEx.dll', 'BepInEx.Core.dll')
     $blockedPayload = @(

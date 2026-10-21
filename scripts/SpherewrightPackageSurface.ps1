@@ -1,5 +1,25 @@
 Set-StrictMode -Version Latest
 
+# Release builds explicitly disable debug records. A stale developer DLL must
+# not carry a local PDB path into either layout; inspect PE metadata without
+# loading product or game assemblies and without stripping the packaged bytes.
+function Assert-SpherewrightNoCodeViewRecord {
+    param([Parameter(Mandatory)][string[]]$AssemblyPaths)
+    foreach ($assemblyPath in $AssemblyPaths) {
+        $stream = [IO.File]::OpenRead([IO.Path]::GetFullPath($assemblyPath))
+        $reader = $null
+        try {
+            $reader = [System.Reflection.PortableExecutable.PEReader]::new($stream)
+            if (@($reader.ReadDebugDirectory() | Where-Object Type -EQ 'CodeView').Count -ne 0) {
+                throw ('Release assembly retains a CodeView record: ' + [IO.Path]::GetFileName($assemblyPath))
+            }
+        } finally {
+            if ($null -ne $reader) { $reader.Dispose() }
+            $stream.Dispose()
+        }
+    }
+}
+
 # Protocol-only checks. No Bridge request or gameplay action is sent by this policy.
 function Assert-SpherewrightPackageSurface {
     param(

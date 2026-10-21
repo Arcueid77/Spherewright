@@ -91,7 +91,9 @@ if (-not (Test-Path -LiteralPath $gameRefs -PathType Leaf)) {
 if ($LASTEXITCODE -ne 0) {
     throw 'Locked full-solution restore failed.'
 }
-& $resolvedDotNet build (Join-Path $repoRoot 'Spherewright.sln') -c Release --no-restore -p:Version=$Version -p:DebugType=None -p:DebugSymbols=false
+# Recompile after a developer's ordinary build: incremental outputs can retain
+# CodeView records even when this invocation requests DebugType=None.
+& $resolvedDotNet build (Join-Path $repoRoot 'Spherewright.sln') -c Release --no-restore --no-incremental -p:Version=$Version -p:DebugType=None -p:DebugSymbols=false
 if ($LASTEXITCODE -ne 0) {
     throw 'Release solution build failed.'
 }

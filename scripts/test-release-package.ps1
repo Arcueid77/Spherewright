@@ -87,6 +87,10 @@ try {
         }
     }
 
+    $productAssemblies = @('Spherewright.Plugin.dll', 'Spherewright.Contracts.dll', 'Spherewright.Bridge.Core.dll') |
+        ForEach-Object { Join-Path $packageRoot ('BepInEx/plugins/Spherewright/' + $_) }
+    Assert-SpherewrightNoCodeViewRecord -AssemblyPaths $productAssemblies
+
     $executable = Join-Path $packageRoot 'mcp\Spherewright.Mcp.exe'
     $packagedPlaybookPath = Join-Path $packageRoot 'AGENT-PLAYBOOK.md'
     if (-not (Test-Path -LiteralPath $packagedPlaybookPath -PathType Leaf)) {
