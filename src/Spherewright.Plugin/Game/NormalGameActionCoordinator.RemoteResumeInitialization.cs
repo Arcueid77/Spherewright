@@ -30,7 +30,8 @@ internal sealed partial class NormalGameActionCoordinator
             return "remote_resume_initialization_original_hold_unproved";
         var p = adoption.Player;
         var bound = _sessions.ExactRemoteResumeInitializationHold(adoption)
-            && _flightCheckpoints.VoyagerJourney == hold.Journey && hold.Surface.MatchesBeforeUniverse();
+            && _flightCheckpoints.RemoteResumeRetainedJourneyStillMatches(hold.Journey, adoption.Evidence)
+            && hold.Surface.MatchesBeforeUniverse();
         var collectionBound = hold.Support.TryObserveInitialization(p, hold.Surface.Surface, out var count);
         var facts = new NativeResumeInitializationFacts
         {

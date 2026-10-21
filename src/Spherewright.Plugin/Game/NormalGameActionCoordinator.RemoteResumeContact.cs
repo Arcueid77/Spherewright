@@ -47,8 +47,8 @@ internal sealed partial class NormalGameActionCoordinator
         NativeLocalWalkSceneBinding scene) => _sessions.IsCurrentSessionOwned && _sessions.SessionId == adoption.SessionId
         && ReferenceEquals(GameMain.data, adoption.World) && ReferenceEquals(GameMain.mainPlayer, adoption.Player)
         && !GameMain.isPaused && GameMain.data.guideComplete && scene.MatchesCurrent()
-        && _flightCheckpoints.VoyagerJourney == journey && journey.Phase == "remote_landed"
-        && _flightCheckpoints.RemoteResumeEvidenceStillMatches(adoption.Evidence);
+        && journey.Phase == "remote_landed"
+        && _flightCheckpoints.RemoteResumeRetainedJourneyStillMatches(journey, adoption.Evidence);
 
     private string? RecheckRemoteContactFirstPhysics(VoyagerRemoteResumeAdoption adoption)
     {

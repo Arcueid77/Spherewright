@@ -253,6 +253,11 @@ internal sealed partial class FlightCheckpointStore
         PluginJson.Serialize(_voyagerJourney) == evidence.JourneyJson
         && PluginJson.Serialize(_currentTicket) == evidence.CheckpointJson;
 
+    // VoyagerJourney returns a detached copy; bind all persisted contents instead of object identity.
+    public bool RemoteResumeRetainedJourneyStillMatches(VoyagerJourneyRecord retained,
+        VoyagerRemoteResumeEvidence evidence) => RemoteResumeEvidenceStillMatches(evidence)
+        && PluginJson.Serialize(retained) == evidence.JourneyJson;
+
     private static T? ReadBoundedResumeRecord<T>(FileStream stream)
     {
         if (stream.Length < 1 || stream.Length > 65536) throw new InvalidDataException("Protected resume proof exceeds its finite bound.");
