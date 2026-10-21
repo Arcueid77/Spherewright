@@ -380,7 +380,7 @@ Codex、MCP Host 关闭、重启、断连、上下文压缩、回合结束，均
 
 加载完成后，初始化最多等待 8 次 host pump / 2 秒墙钟时间；准确 owned 世界保持 Native 暂停，source tick、actor、物料/能量及证据租约均保持不变。集合为空或明确仍待碰撞体刷新时，等待普通 Native Update/LateUpdate 稳定后才首次绑定支撑。就绪要求集合非空且明确无待刷新；刷新状态未知即拒绝。fresh resume 时若再次待刷新也拒绝，后续观察或重新绑定不能消除此拒绝。不手工调用 Update/Init/LateUpdate、不替换保留引用，也不把 pending 当作 idle。可空 `registeredColliderCount` 只是有限范围只读计数，不证明归属或接地；未观测仍为 null。fresh 初始化证明后至多一次 NativeResume，再走既有 151 到 501 / 至多 8 个实际 601 / 2 秒 / 14P 接触尝试；不预设实际计数或恢复成功。
 
-既有首帧失败 code 保持不变。Core 内部 `FailureDetail` 随首次失败锁存固定标签的首个失效前提；既有 action `Message` 保留 `[原 code]` 并附 `First failed premise: ...`。细因来自同次真实 151/501 对保留 player 精确不变、scene/terrain、support 及阶段顺序的实际判断，不放松任何检查。缺失或尚未到达的观察仍未证明，不能推断为 false 测量或已通过。不新增 DTO、工具或 schema；既有公开 bool API 保持兼容，细因不改变 canonical hash 或授权，也不授自动重试。使用 Native 替身、链接生产谓词的回归不证明 Native 实机健康、已安装或恢复成功。
+既有首帧失败 code 保持不变。`FailureDetail` 与 action `Message` 保留首次失败前提。可选 `nativePhysics.resumeFirstFailure` 另提供脱离 Native 引用的首次判断快照：稳定 code、谓词、阶段/tick/UTC、有界原始数值、观察及已执行谓词。它在判断当时、Pause 之前采集，后续读取不会重新采样冒充失败事实。`true`、`false`、`unknown`、`not_reached` 分别表达；`factsState=not_observed` 或快照缺失均不构成证明，缺失或非有限数值保持 null。接触/充能 pending 不算失败或严格 idle。首次快照不被 Pause、取消或后续恢复观察覆盖。不新增工具、输入、canonical hash 或授权。链接生产接触/接管方法、真实 Store 租约和 Native 替身的回归只证明离线组合与时序，不运行 PhysX、完整 Session tracker、真实保存，也不证明实机恢复。
 
 Native Import 可将 double 宇宙坐标逆投影为 float 本地位置；普通 LateUpdate 以 `relativePos + Maths.QRotateLF(relativeRot, p.position)` 回算，因此不保证与存档 double 逐位相等。仅精确加载的首帧路径在 Arm 时冻结同一 Native frame 及其精确投影端点。首次真实 151 只接受保留原值或该端点；其余本地姿态/刚体/input/能量/world/scene 及 source+1 门不变。同一次 151 完整判断通过后才锁定实际观察到的选中值，首次 501 必须精确匹配该锁定值。禁止 151 后换 frame、引入容差、任意重绑状态或写 Native 位置；普通 strict 检查及 paused hold 仍为原精确检查。接地、严格 idle、原能量/返程及正常 Save 门仍必需；此源码改动不新增公开工具、DTO 或授权，也不证明实机恢复成功。
 

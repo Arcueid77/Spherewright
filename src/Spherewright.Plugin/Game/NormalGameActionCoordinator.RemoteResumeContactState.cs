@@ -46,14 +46,16 @@ internal sealed partial class NormalGameActionCoordinator
                 && _body.velocity.magnitude <= NativeResumeContactPolicy.MaximumSpeedMetersPerSecond;
             return new NativeResumeContactFacts
             {
+                CapturedAtGameTick = GameMain.gameTick,
                 ExactRecoveryBinding = exactBinding && references,
-                NonGroundNativePremisesProved = facts.MovementReserve is { Proved: true } && motion,
-                CurrentSupportReferenceProved = support.State == "observed" && support.CapturedAtGameTick == GameMain.gameTick
-                    && support.CurrentPoolReference == true && support.LiveObject == true && support.ColliderChain == true,
-                FootQueryComplete = support.FootOverlapComplete == true, FootOverlapCount = support.FootOverlapCount ?? -1,
-                AllFootHitsOwned = support.AllFootHitsCurrentSupportOrTerrain == true,
+                NonGroundNativePremisesProved = facts.MovementReserve is null ? null : facts.MovementReserve.Proved && motion,
+                CurrentSupportReferenceProved = support.State != "observed" ? null :
+                    (support.CapturedAtGameTick == GameMain.gameTick) & support.CurrentPoolReference & support.LiveObject & support.ColliderChain,
+                FootQueryComplete = support.FootOverlapComplete, FootOverlapCount = support.FootOverlapCount,
+                AllFootHitsOwned = support.AllFootHitsCurrentSupportOrTerrain,
                 NativeGroundSphereHit = support.ActualGroundSphereHit,
-                StrictPhysicalIdleProved = facts.JourneyBudget?.NativePlayerIdle == true && support.ActualGroundSphereHit == true,
+                StrictPhysicalIdleProved = facts.JourneyBudget is null || support.ActualGroundSphereHit is null
+                    ? null : facts.JourneyBudget.NativePlayerIdle && support.ActualGroundSphereHit == true,
                 CastDistanceMeters = support.CastDistance, CastNormalDotUp = support.NormalDotUp,
                 InwardDisplacementMeters = inward, TangentialDisplacementMeters = tangential, SpeedMetersPerSecond = p.speed,
                 CoreEnergyJoules = facts.CoreEnergyJoules, PerNativeTickEnergyJoules = facts.MovementReserve?.PerNativeTickEnergyJoules,

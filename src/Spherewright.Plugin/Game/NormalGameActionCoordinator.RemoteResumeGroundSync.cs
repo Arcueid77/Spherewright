@@ -33,7 +33,7 @@ internal sealed partial class NormalGameActionCoordinator
             reserve.PerNativeTickEnergyJoules ?? double.NaN, journey.ReturnCoreEnergyMinimumJoules,
             journey.SpentGameTicks, GameMain.gameTick - journey.LastLandedGameTick!.Value,
             journey.MaximumGameTicks, journey.ReturnReserveGameTicks, 0, authorization.Proposal.MaximumChargeGameTicks,
-            0d, authorization.Proposal.MaximumChargeWallSeconds, now, deadline);
+            0d, authorization.Proposal.MaximumChargeWallSeconds, now, deadline, adoption.CurrentDecisionEvidence);
     }
 
     private static string? RemoteResumeChargeEnvironmentBlocker(Player p)

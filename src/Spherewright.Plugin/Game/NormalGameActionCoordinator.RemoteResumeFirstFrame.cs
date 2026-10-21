@@ -56,6 +56,13 @@ internal sealed partial class NormalGameActionCoordinator
 
     internal string? ObserveVerifiedRemoteResumeUniverseOnMainThread(VoyagerRemoteResumeAdoption adoption)
     {
+        var evidence = BeginRemoteResumeDecision(adoption, "native_universe_post151");
+        var code = EvaluateVerifiedRemoteResumeUniverseOnMainThread(adoption);
+        return RetainRemoteResumeDecision(adoption, evidence, code);
+    }
+
+    private string? EvaluateVerifiedRemoteResumeUniverseOnMainThread(VoyagerRemoteResumeAdoption adoption)
+    {
         if (adoption.FirstFrame.Failure is not null || _sessions.ResumeAdoptionError is not null)
             return "remote_resume_failed_adoption_is_terminal";
         // Contact attempts keep a real151 check on every pending frame; the

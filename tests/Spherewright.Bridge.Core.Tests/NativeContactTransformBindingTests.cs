@@ -10,9 +10,14 @@ public sealed class NativeContactTransformBindingTests
     public void NativeRotationAndDerivedLossyRoundingDoNotResizeTheBoundActor()
     {
         var parent = new Transform(); var actor = new Transform { parent = parent };
+        var formerFrozenLossyScale = actor.lossyScale;
         var binding = Assert.IsType<NativeContactTransformBinding>(NativeContactTransformBinding.Capture(actor));
         actor.localRotation = new(0f, .6f, 0f, .8f);
         actor.lossyScale = new(1.0000002f, 1.0000001f, 1.0000001f);
+        // The former exact-derived-scale predicate fails on the identical
+        // Native-contract input. This reproduces a source defect, not proof of
+        // which member failed in the historical conjunction-only receipt.
+        Assert.False(actor.lossyScale.Equals(formerFrozenLossyScale));
         Assert.True(binding.Matches(actor));
         actor.localScale = new(1.0000001f, 1f, 1f);
         Assert.False(binding.Matches(actor));

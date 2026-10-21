@@ -10,6 +10,7 @@ public sealed class NativeResumeContactPolicyTests
     {
         ExactRecoveryBinding = true, NonGroundNativePremisesProved = true, CurrentSupportReferenceProved = true,
         FootQueryComplete = true, NativeGroundSphereHit = false, CastDistanceMeters = .224, CastNormalDotUp = .8,
+        FootOverlapCount = 0, AllFootHitsOwned = false, StrictPhysicalIdleProved = false,
         InwardDisplacementMeters = 0, TangentialDisplacementMeters = 0, SpeedMetersPerSecond = 0,
         CoreEnergyJoules = 100, PerNativeTickEnergyJoules = 2, NowUtc = Now,
         OriginalJourney = new() { ExactRemoteBinding = true, NativePlayerIdle = false, CurrentGameTick = tick,

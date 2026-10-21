@@ -24,7 +24,7 @@ internal sealed partial class NormalGameActionCoordinator
         var contact = new RemoteResumeContactState(adoption.Player, binding, adoption.Evidence.SourceGameTick);
         blocker = contact.Policy.PreflightBlocker(contact.Facts(adoption.Player, facts, support,
             ExactRemoteContactBinding(adoption, journey, scene)));
-        if (blocker is not null) return blocker;
+        if (blocker is not null) { adoption.RetainFailure(contact.Policy.LastDecisionEvidence); return blocker; }
         if (!playerState.Matches(adoption.Player) || !scene.MatchesCurrent()
             || !_sessions.ExactRemoteResumeLoadPreflight(adoption)) return "remote_resume_near_support_query_binding_changed";
         var surface = new FirstFrameSurfaceState(scene, null);
@@ -123,19 +123,11 @@ internal sealed partial class NormalGameActionCoordinator
             journey.SpentGameTicks, GameMain.gameTick - journey.LastLandedGameTick!.Value, journey.MaximumGameTicks,
             journey.ReturnReserveGameTicks, GameMain.gameTick - adoption.ChargeStartedGameTick!.Value,
             authorization.Proposal.MaximumChargeGameTicks, (DateTimeOffset.UtcNow - adoption.ChargeStartedUtc!.Value).TotalSeconds,
-            authorization.Proposal.MaximumChargeWallSeconds, DateTimeOffset.UtcNow, _sessions.EffectiveVoyagerDeadline(journey));
+            authorization.Proposal.MaximumChargeWallSeconds, DateTimeOffset.UtcNow, _sessions.EffectiveVoyagerDeadline(journey),
+            adoption.CurrentDecisionEvidence);
         if (blocker is not null) return blocker;
         var facts = contact.Facts(adoption.Player, currentFacts, support, true);
-        if (!atPhysics)
-        {
-            var failure = contact.Policy.ObserveUniverse(facts);
-            return failure is null ? null : adoption.FirstFrame.Fail(failure, contact.Policy.FailureDetail);
-        }
-        var step = contact.Policy.Observe(facts);
-        if (step == NativeResumeContactStep.Ready) adoption.NativeContactPending = false;
-        return step == NativeResumeContactStep.Ready ? null
-            : step == NativeResumeContactStep.Pending ? NativeResumeContactPolicy.GroundingPending
-            : adoption.FirstFrame.Fail(contact.Policy.Failure ?? "remote_resume_contact_attempt_retired", contact.Policy.FailureDetail);
+        return AdvanceRemoteResumeContact(adoption, contact.Policy, facts, atPhysics);
     }
 
 }

@@ -252,6 +252,7 @@ internal sealed partial class GameSessionTracker
         result.ResumeNearSupportPreFirstFrame = a.NearSupportPreFirstFrame?.Copy();
         result.ResumeNearSupportPostUniverse = a.NearSupportPostUniverse?.Copy();
         result.ResumeNearSupportLatest = a.NearSupportLatest?.Copy();
+        result.ResumeFirstFailure = a.FirstFailure?.Copy();
     }
 
     internal void RecordRemoteResumeTerrain(VoyagerRemoteResumeAdoption adoption,
@@ -323,6 +324,10 @@ internal sealed partial class GameSessionTracker
         if (adoption!.FirstFrame is { Armed: true } first
             && (!first.PhysicsObserved || GameMain.gameTick <= first.SourceGameTick + 1))
         {
+            adoption.CurrentDecisionEvidence = new NativeResumeDecisionEvidence("native_physics_post501",
+                GameMain.gameTick, DateTimeOffset.UtcNow, true);
+            adoption.CurrentDecisionEvidence.Observe("native_paused", GameMain.isPaused);
+            adoption.CurrentDecisionEvidence.Number("first_frame_source_tick", first.SourceGameTick);
             var phaseBlocker = first.ObservePhysics(GameMain.gameTick, !GameMain.isPaused
                 && ReferenceEquals(GameMain.data, adoption.World) && _sessionId == adoption.SessionId);
             if (phaseBlocker is not null) return FailRemoteResumeAdmission(phaseBlocker);
@@ -330,15 +335,7 @@ internal sealed partial class GameSessionTracker
         string? blocker;
         try { blocker = _remoteResumeAdmissionGuard is null ? "remote_resume_idle_guard_unavailable" : _remoteResumeAdmissionGuard(adoption!); }
         catch (Exception exception) { blocker = "remote_resume_idle_guard_capture_failed:" + exception.GetType().Name; }
-        if (blocker == VoyagerRecoveryWindowPolicy.ChargingPending || blocker == NativeResumeContactPolicy.GroundingPending) return false;
-        if (blocker is not null) return FailRemoteResumeAdmission(blocker);
-        _remoteResumeAdmitted = true;
-        // The journal has been confirmed and the exact first idle owner now
-        // guards601. Only now may source/primary/metadata leases be released.
-        ReleaseResumeSourceLease();
-        evidence.Dispose();
-        _pendingRemoteResumeEvidence = null;
-        return true;
+        return CompleteRemoteResumeAdmission(blocker, evidence);
     }
 
     private bool RemoteResumeAllowsPrimaryResave()
@@ -359,6 +356,9 @@ internal sealed partial class GameSessionTracker
     private bool FailRemoteResumeAdmission(string code)
     {
         _remoteResumeInitializationPending = false;
+        if (_remoteResumeAdoption is { } failureAdoption)
+            failureAdoption.RetainFailure(failureAdoption.CurrentDecisionEvidence?.Failure(code,
+                failureAdoption.FirstFrame.FailureDetail ?? code));
         if (_remoteResumeAdoption?.FirstFrame.Armed == true) _remoteResumeAdoption.FirstFrame.Fail(code);
         var reason = "The exact remote LastExit continuation could not enter its strict idle guard. [" + code + "]";
         if (_remoteResumeAdoption?.FirstFrame.FailureDetail is { } detail)
@@ -439,4 +439,10 @@ internal sealed class VoyagerRemoteResumeAdoption
     public NativeNearGroundSupportSnapshot? NearSupportPostUniverse { get; set; }
     public NativeNearGroundSupportSnapshot? NearSupportLatest { get; set; }
     public bool NativeContactPending { get; set; }
+    public NativeResumeDecisionEvidence? CurrentDecisionEvidence { get; set; }
+    public NativeResumeFailureSnapshot? FirstFailure { get; private set; }
+    public void RetainFailure(NativeResumeFailureSnapshot? evidence)
+    {
+        if (FirstFailure is null && evidence is not null) FirstFailure = evidence.Copy();
+    }
 }

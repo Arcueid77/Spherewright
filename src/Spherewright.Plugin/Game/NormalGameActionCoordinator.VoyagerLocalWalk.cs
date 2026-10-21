@@ -183,6 +183,13 @@ internal sealed partial class NormalGameActionCoordinator
 
     private string? CheckVerifiedVoyagerRemoteResumeOnMainThread(VoyagerRemoteResumeAdoption adoption, bool admit)
     {
+        var evidence = BeginRemoteResumeDecision(adoption, admit ? "native_physics_post501" : "load_or_universe_preflight");
+        var code = EvaluateVerifiedVoyagerRemoteResumeOnMainThread(adoption, admit);
+        return RetainRemoteResumeDecision(adoption, evidence, code);
+    }
+
+    private string? EvaluateVerifiedVoyagerRemoteResumeOnMainThread(VoyagerRemoteResumeAdoption adoption, bool admit)
+    {
         if (adoption.FirstFrame.Failure is not null || _sessions.ResumeAdoptionError is not null)
             return "remote_resume_failed_adoption_is_terminal";
         if (admit && (!VoyagerLocalPrePlayerTickAvailable || DateTimeOffset.UtcNow < VoyagerLocalPrePlayerObservedAtUtc
@@ -207,10 +214,14 @@ internal sealed partial class NormalGameActionCoordinator
         VoyagerRemoteIdleAdmissionFacts? captured = null;
         NativePlayerGroundContactSnapshot? ground = null;
         var loadBoundary = !admit && !sameOwner && _sessions.ExactRemoteResumeLoadPreflight(adoption);
+        adoption.CurrentDecisionEvidence!.Stage(loadBoundary ? "load_preflight_before_first_frame"
+            : admit ? "native_physics_post501" : "native_universe_post151");
         var naturalContact = !sameOwner && ReferenceEquals(_firstFrameAdoption, adoption) && _firstFrameContact is { Policy.Retired: false };
         var decision = CaptureVoyagerRemoteIdleAdmission(owner, journey, sameOwner ? _voyagerRemoteIdleScene : naturalContact ? _firstFrameSurfaceState?.Scene : null,
-            journey.SpentGameTicks, journey.LastLandedGameTick, out var scene, captureFacts: f => captured = f,
-            collectAfterGroundMiss: loadBoundary || naturalContact, captureGround: g => ground = g,
+            journey.SpentGameTicks, journey.LastLandedGameTick, out var scene, captureFacts: f =>
+            { captured = f; RecordRemoteResumeFacts(adoption.CurrentDecisionEvidence!, f); },
+            collectAfterGroundMiss: loadBoundary || naturalContact, captureGround: g =>
+            { ground = g; adoption.CurrentDecisionEvidence!.Observe("ground_sphere_hit", g.CheckSphereHit); },
             groundStage: loadBoundary ? "load_preflight_before_first_frame" : admit ? "native_physics_post501" : "native_universe_post151",
             collectNaturalContact: naturalContact);
         if (!sameOwner && adoption.FirstFrame.Armed && captured?.MovementReserve is { Proved: true } frameReserve
@@ -239,8 +250,10 @@ internal sealed partial class NormalGameActionCoordinator
             + (decision.CaptureExceptionType is null ? string.Empty : ":" + decision.CaptureExceptionType);
         if (admit)
         {
+            adoption.CurrentDecisionEvidence!.Require("strict_idle", true);
             _voyagerRemoteIdleOwner = owner;
             _voyagerRemoteIdleScene = scene;
+            adoption.CurrentDecisionEvidence.Require("healthy_takeover", true);
         }
         return null;
     }
@@ -251,7 +264,8 @@ internal sealed partial class NormalGameActionCoordinator
         var p = adoption.Player; var m = p.mecha;
         var now = DateTimeOffset.UtcNow;
         var effectiveDeadline = _sessions.EffectiveVoyagerDeadline(journey);
-        var originalBudgetBlocker = VoyagerRecoveryWindowPolicy.ChargeBudgetBlocker(facts.JourneyBudget, now, effectiveDeadline);
+        var originalBudgetBlocker = VoyagerRecoveryWindowPolicy.ChargeBudgetBlocker(facts.JourneyBudget, now, effectiveDeadline,
+            adoption.CurrentDecisionEvidence);
         if (originalBudgetBlocker is not null) return originalBudgetBlocker;
         var environment = RemoteResumeChargeEnvironmentBlocker(p);
         if (environment is not null) return environment;
@@ -266,7 +280,7 @@ internal sealed partial class NormalGameActionCoordinator
             journey.ReturnEnergyFloorJoules, perTick, journey.ReturnCoreEnergyMinimumJoules, journey.SpentGameTicks,
             GameMain.gameTick - journey.LastLandedGameTick!.Value, journey.MaximumGameTicks, journey.ReturnReserveGameTicks,
             GameMain.gameTick - startTick, authorization.Proposal.MaximumChargeGameTicks, (now - startUtc).TotalSeconds,
-            authorization.Proposal.MaximumChargeWallSeconds, now, effectiveDeadline);
+            authorization.Proposal.MaximumChargeWallSeconds, now, effectiveDeadline, adoption.CurrentDecisionEvidence);
         if (blocker is not null) return blocker;
         adoption.ChargeStartedGameTick ??= startTick; adoption.ChargeStartedUtc ??= startUtc;
         adoption.ChargeCostEnvelope ??= envelope; adoption.ChargePerTickUpper ??= perTick;

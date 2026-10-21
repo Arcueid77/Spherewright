@@ -1,0 +1,14 @@
+{
+  "nativeAssemblySha256": "EF314425DADE51F529F184F07BE136CD3C2660A6A81515603C7226FBE7AB1D8C",
+  "scope": "Sanitized preflight observation only. Later failure member and PhysX landing are unknown.",
+  "preflight": {
+    "state": "observed",
+    "captureStage": "load_preflight_before_first_frame",
+    "actualGroundSphereHit": false,
+    "castDistance": 0.22415566,
+    "normalDotUp": 0.86430174,
+    "footOverlapCount": 0,
+    "footOverlapComplete": true,
+    "allFootHitsCurrentSupportOrTerrain": true
+  }
+}

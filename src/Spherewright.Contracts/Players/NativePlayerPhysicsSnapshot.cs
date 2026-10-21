@@ -23,6 +23,7 @@ public sealed class NativePlayerPhysicsSnapshot
     public NativeNearGroundSupportSnapshot? ResumeNearSupportPreFirstFrame { get; set; }
     public NativeNearGroundSupportSnapshot? ResumeNearSupportPostUniverse { get; set; }
     public NativeNearGroundSupportSnapshot? ResumeNearSupportLatest { get; set; }
+    public NativeResumeFailureSnapshot? ResumeFirstFailure { get; set; }
     public string? SimulationMode { get; set; }
     public Vector3Snapshot? Gravity { get; set; }
     /// <summary>Native controller universal gravity, metres per second squared; not Physics.gravity.</summary>

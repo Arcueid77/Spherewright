@@ -1,3 +1,5 @@
+using Spherewright.Contracts.Players;
+
 namespace Spherewright.Bridge.Core.Safety;
 
 public enum NativeResumeContactStep { Pending, Ready, AlreadyRetired, Rejected }
@@ -6,14 +8,15 @@ public enum NativeResumeContactStep { Pending, Ready, AlreadyRetired, Rejected }
 // marker, an idle=true projection, or a prediction that the fall will succeed.
 public sealed class NativeResumeContactFacts
 {
-    public bool ExactRecoveryBinding { get; set; }
-    public bool NonGroundNativePremisesProved { get; set; }
-    public bool CurrentSupportReferenceProved { get; set; }
-    public bool FootQueryComplete { get; set; }
-    public int FootOverlapCount { get; set; }
-    public bool AllFootHitsOwned { get; set; }
+    public long? CapturedAtGameTick { get; set; }
+    public bool? ExactRecoveryBinding { get; set; }
+    public bool? NonGroundNativePremisesProved { get; set; }
+    public bool? CurrentSupportReferenceProved { get; set; }
+    public bool? FootQueryComplete { get; set; }
+    public int? FootOverlapCount { get; set; }
+    public bool? AllFootHitsOwned { get; set; }
     public bool? NativeGroundSphereHit { get; set; }
-    public bool StrictPhysicalIdleProved { get; set; }
+    public bool? StrictPhysicalIdleProved { get; set; }
     public double? CastDistanceMeters { get; set; }
     public double? CastNormalDotUp { get; set; }
     public double? InwardDisplacementMeters { get; set; }
@@ -47,6 +50,9 @@ public sealed class NativeResumeContactPolicy
     public bool Retired { get; private set; }
     public string? Failure { get; private set; }
     public string? FailureDetail { get; private set; }
+    public NativeResumeFailureSnapshot? FailureEvidence { get; private set; }
+    public NativeResumeFailureSnapshot? LastDecisionEvidence { get; private set; }
+    private NativeResumeDecisionEvidence? _decision;
 
     public NativeResumeContactPolicy(long sourceGameTick, DateTimeOffset startedUtc)
     {
@@ -58,19 +64,23 @@ public sealed class NativeResumeContactPolicy
 
     public string? PreflightBlocker(NativeResumeContactFacts f)
     {
-        var blocker = CommonBlocker(f, out _);
+        var blocker = CommonBlocker(f, "load_preflight_before_first_frame", out _);
         if (blocker is not null) return blocker;
-        return f.OriginalJourney!.CurrentGameTick == SourceGameTick && f.NativeGroundSphereHit == false
-            && !f.StrictPhysicalIdleProved && f.FootOverlapCount == 0
-            && f.SpeedMetersPerSecond <= .1d && f.InwardDisplacementMeters == 0d
-            && f.TangentialDisplacementMeters == 0d ? null : "remote_resume_contact_preflight_unproved";
+        return _decision!.Require("preflight_source_tick", f.OriginalJourney!.CurrentGameTick == SourceGameTick)
+            && _decision.Require("preflight_no_ground", f.NativeGroundSphereHit == false)
+            && _decision.Require("preflight_not_idle", f.StrictPhysicalIdleProved == false)
+            && _decision.Require("preflight_no_foot_overlap", f.FootOverlapCount == 0)
+            && _decision.Require("preflight_at_rest", f.SpeedMetersPerSecond <= .1d)
+            && _decision.Require("preflight_zero_inward", f.InwardDisplacementMeters == 0d)
+            && _decision.Require("preflight_zero_tangent", f.TangentialDisplacementMeters == 0d)
+            ? null : DecisionFailure("remote_resume_contact_preflight_unproved");
     }
 
     public string? ObserveUniverse(NativeResumeContactFacts f)
     {
         if (Failure is not null) return Failure;
         if (Retired) return "remote_resume_contact_attempt_retired";
-        var blocker = CommonBlocker(f, out var detail);
+        var blocker = CommonBlocker(f, "native_universe_post151", out var detail);
         var tick = f?.OriginalJourney?.CurrentGameTick;
         if (blocker is not null || tick != LastObservedGameTick + 1 || tick > SourceGameTick + MaximumNativeWorkTicks
             || LastUniverseGameTick != LastObservedGameTick)
@@ -83,13 +93,13 @@ public sealed class NativeResumeContactPolicy
     {
         if (Failure is not null) return NativeResumeContactStep.Rejected;
         if (Retired) return NativeResumeContactStep.AlreadyRetired;
-        var blocker = CommonBlocker(f, out var detail);
+        var blocker = CommonBlocker(f, "native_physics_post501", out var detail);
         if (blocker is not null) return Reject(blocker, detail);
         var tick = f.OriginalJourney!.CurrentGameTick;
         if (tick != LastObservedGameTick + 1 || tick != LastUniverseGameTick || tick > SourceGameTick + MaximumNativeWorkTicks)
             return Reject("remote_resume_contact_sequence_unproved");
         LastObservedGameTick = tick;
-        if (f.StrictPhysicalIdleProved && f.NativeGroundSphereHit == true)
+        if (f.StrictPhysicalIdleProved == true && f.NativeGroundSphereHit == true)
         {
             Retired = true;
             return NativeResumeContactStep.Ready;
@@ -100,55 +110,113 @@ public sealed class NativeResumeContactPolicy
 
     public NativeResumeContactStep Reject(string reason, string? detail = null)
     {
-        if (Failure is null) { Failure = reason; FailureDetail = detail; }
+        if (Failure is null)
+        {
+            Failure = reason;
+            FailureEvidence = LastDecisionEvidence is { } previous && previous.Code == reason
+                ? previous.Copy() : _decision?.Failure(reason, detail);
+            FailureDetail = FailureEvidence?.FirstFailedPredicate ?? detail;
+        }
         return NativeResumeContactStep.Rejected;
     }
 
-    private string? CommonBlocker(NativeResumeContactFacts f, out string? detail)
+    private string DecisionFailure(string code, string? predicate = null)
+    {
+        LastDecisionEvidence = _decision!.Failure(code, predicate);
+        return code;
+    }
+
+    private string? CommonBlocker(NativeResumeContactFacts f, string stage, out string? detail)
     {
         // Classify the predicate used by this decision, never re-query Native
         // after Pause or infer a cause from a later player snapshot.
-        if (f is null) { detail = "contact_facts_missing"; return "remote_resume_contact_native_support_unproved"; }
-        detail = !f.ExactRecoveryBinding ? "contact_exact_recovery_binding_unproved"
-            : !f.NonGroundNativePremisesProved ? "contact_non_ground_native_premises_unproved"
-            : !f.CurrentSupportReferenceProved ? "contact_current_support_reference_unproved"
-            : !f.FootQueryComplete ? "contact_foot_query_incomplete"
-            : !f.NativeGroundSphereHit.HasValue ? "contact_native_ground_query_unavailable"
-            : f.FootOverlapCount < 0 || f.FootOverlapCount > NativeTerrainObservationPolicy.MaximumSurfaceColliders ? "contact_foot_count_unproved"
-            : f.NativeGroundSphereHit == false && f.FootOverlapCount != 0 ? "contact_airborne_foot_overlap"
-            : f.NativeGroundSphereHit == true && (f.FootOverlapCount < 1 || !f.AllFootHitsOwned) ? "contact_grounded_foot_owner_unproved"
-            : f.StrictPhysicalIdleProved && f.NativeGroundSphereHit != true ? "contact_idle_without_native_ground"
+        LastDecisionEvidence = null;
+        _decision = CaptureEvidence(f, stage);
+        if (f is null) { detail = "contact_facts_missing"; return DecisionFailure("remote_resume_contact_native_support_unproved", detail); }
+        bool R(string name, bool? value) => _decision.Require(name, value);
+        detail = !R("contact_exact_recovery_binding_unproved", f.ExactRecoveryBinding) ? "contact_exact_recovery_binding_unproved"
+            : !R("contact_non_ground_native_premises_unproved", f.NonGroundNativePremisesProved) ? "contact_non_ground_native_premises_unproved"
+            : !R("contact_current_support_reference_unproved", f.CurrentSupportReferenceProved) ? "contact_current_support_reference_unproved"
+            : !R("contact_foot_query_incomplete", f.FootQueryComplete) ? "contact_foot_query_incomplete"
+            : !R("contact_native_ground_query_unavailable", f.NativeGroundSphereHit.HasValue ? true : null) ? "contact_native_ground_query_unavailable"
+            : !R("contact_foot_count_unproved", f.FootOverlapCount.HasValue ? f.FootOverlapCount >= 0 && f.FootOverlapCount <= NativeTerrainObservationPolicy.MaximumSurfaceColliders : null) ? "contact_foot_count_unproved"
+            : f.NativeGroundSphereHit == false && !R("contact_airborne_foot_overlap", f.FootOverlapCount == 0) ? "contact_airborne_foot_overlap"
+            : f.NativeGroundSphereHit == true && !R("contact_grounded_foot_count", f.FootOverlapCount >= 1) ? "contact_grounded_foot_count"
+            : f.NativeGroundSphereHit == true && !R("contact_grounded_foot_owner_unproved", f.AllFootHitsOwned) ? "contact_grounded_foot_owner_unproved"
+            : !R("contact_idle_observation", f.StrictPhysicalIdleProved.HasValue ? true : null) ? "contact_idle_observation"
+            : f.StrictPhysicalIdleProved == true && !R("contact_idle_without_native_ground", f.NativeGroundSphereHit == true) ? "contact_idle_without_native_ground"
             : null;
-        if (detail is not null) return "remote_resume_contact_native_support_unproved";
-        if (f.NowUtc == default || f.NowUtc < StartedUtc || (f.NowUtc - StartedUtc).TotalSeconds >= MaximumWallSeconds)
-            return "remote_resume_contact_wall_exhausted";
-        if (f.NativeGroundSphereHit == false && (!Known(f.CastDistanceMeters) || f.CastDistanceMeters > MaximumCastDistanceMeters
-            || !Finite(f.CastNormalDotUp) || f.CastNormalDotUp < MinimumNormalDotUp || f.CastNormalDotUp > 1d))
-            return "remote_resume_contact_near_support_unproved";
-        if (!Finite(f.InwardDisplacementMeters) || f.InwardDisplacementMeters < -.01d
-            || f.InwardDisplacementMeters > MaximumInwardDisplacementMeters || !Known(f.TangentialDisplacementMeters)
-            || f.TangentialDisplacementMeters > MaximumTangentialDisplacementMeters || !Known(f.SpeedMetersPerSecond)
-            || f.SpeedMetersPerSecond > MaximumSpeedMetersPerSecond
-            || f.StrictPhysicalIdleProved && !(f.SpeedMetersPerSecond <= .1d))
-            return "remote_resume_contact_motion_unproved";
+        if (detail is not null) return DecisionFailure("remote_resume_contact_native_support_unproved", detail);
+        bool All(params (string Name, bool? Value)[] checks)
+        {
+            _decision.NotReached(checks.Select(c => c.Name).ToArray());
+            foreach (var check in checks) if (!R(check.Name, check.Value)) return false;
+            return true;
+        }
+        if (!All(("clock_present", f.NowUtc != default), ("clock_after_start", f.NowUtc >= StartedUtc),
+            ("contact_wall_remaining", (f.NowUtc - StartedUtc).TotalSeconds < MaximumWallSeconds)))
+            return DecisionFailure("remote_resume_contact_wall_exhausted");
+        if (f.NativeGroundSphereHit == false && !All(
+            ("cast_distance_known", Known(f.CastDistanceMeters)), ("cast_distance_bounded", f.CastDistanceMeters <= MaximumCastDistanceMeters),
+            ("cast_normal_known", Finite(f.CastNormalDotUp)), ("cast_normal_supporting", f.CastNormalDotUp >= MinimumNormalDotUp),
+            ("cast_normal_normalized", f.CastNormalDotUp <= 1d)))
+            return DecisionFailure("remote_resume_contact_near_support_unproved");
+        if (!All(("inward_known", Finite(f.InwardDisplacementMeters)), ("inward_lower_bound", f.InwardDisplacementMeters >= -.01d),
+            ("inward_upper_bound", f.InwardDisplacementMeters <= MaximumInwardDisplacementMeters),
+            ("tangent_known", Known(f.TangentialDisplacementMeters)), ("tangent_bounded", f.TangentialDisplacementMeters <= MaximumTangentialDisplacementMeters),
+            ("speed_known", Known(f.SpeedMetersPerSecond)), ("speed_bounded", f.SpeedMetersPerSecond <= MaximumSpeedMetersPerSecond),
+            ("idle_speed_bounded", f.StrictPhysicalIdleProved != true || f.SpeedMetersPerSecond <= .1d)))
+            return DecisionFailure("remote_resume_contact_motion_unproved");
         var j = f.OriginalJourney;
-        if (j is null || !j.ExactRemoteBinding || j.NativePlayerIdle != f.StrictPhysicalIdleProved
-            || !j.LastLandedGameTick.HasValue || j.LastLandedGameTick < 0 || j.CurrentGameTick < j.LastLandedGameTick
-            || j.SpentGameTicks < 0 || j.MaximumGameTicks < 1 || j.ReturnReserveGameTicks < 3600 || j.ReturnReserveGameTicks > 108000
-            || j.WorkGameTicks != 1 || j.TailGameTicks != VoyagerLocalWalkReservePolicy.StopGameTicks
-            || j.OriginalExtraWarperReserve < 0 || j.OriginalExtraWarperReserve > 100
-            || !j.NativeWarperCount.HasValue || j.NativeWarperCount < 1 + j.OriginalExtraWarperReserve
-            || j.NowUtc == default || f.NowUtc < j.NowUtc || f.NowUtc - j.NowUtc > TimeSpan.FromSeconds(2)
-            || (decimal)j.SpentGameTicks + j.CurrentGameTick - j.LastLandedGameTick.Value + FundedTicks + j.ReturnReserveGameTicks > j.MaximumGameTicks
-            || (j.JourneyDeadlineUtc - f.NowUtc).TotalSeconds <= j.ReturnReserveGameTicks / 60d + 1d + 1d / 60d)
-            return "remote_resume_contact_original_budget_unproved";
-        if (!Known(f.CoreEnergyJoules) || !Known(f.PerNativeTickEnergyJoules) || f.PerNativeTickEnergyJoules <= 0d
-            || !Known(j.AvailableLoadedEnergyJoules) || !Known(j.LockedReturnFloorJoules))
-            return "remote_resume_contact_funding_unproved";
+        if (!R("journey_observed", j is not null)) return DecisionFailure("remote_resume_contact_original_budget_unproved");
+        if (!All(("journey_binding", j!.ExactRemoteBinding), ("journey_idle_consistent", j.NativePlayerIdle == f.StrictPhysicalIdleProved),
+            ("last_landed_known", j.LastLandedGameTick.HasValue), ("last_landed_nonnegative", j.LastLandedGameTick >= 0),
+            ("current_tick_after_landing", j.CurrentGameTick >= j.LastLandedGameTick), ("spent_nonnegative", j.SpentGameTicks >= 0),
+            ("maximum_ticks_positive", j.MaximumGameTicks >= 1), ("return_ticks_minimum", j.ReturnReserveGameTicks >= 3600),
+            ("return_ticks_maximum", j.ReturnReserveGameTicks <= 108000), ("current_work_tick", j.WorkGameTicks == 1),
+            ("original_stop_ticks", j.TailGameTicks == VoyagerLocalWalkReservePolicy.StopGameTicks),
+            ("extra_warpers_nonnegative", j.OriginalExtraWarperReserve >= 0), ("extra_warpers_bounded", j.OriginalExtraWarperReserve <= 100),
+            ("warpers_observed", j.NativeWarperCount.HasValue), ("original_warpers_retained", j.NativeWarperCount >= 1 + j.OriginalExtraWarperReserve),
+            ("journey_clock_present", j.NowUtc != default), ("journey_clock_not_future", f.NowUtc >= j.NowUtc),
+            ("journey_sample_fresh", f.NowUtc - j.NowUtc <= TimeSpan.FromSeconds(2)),
+            ("original_tick_reserve", j.LastLandedGameTick.HasValue && (decimal)j.SpentGameTicks + j.CurrentGameTick - j.LastLandedGameTick.Value + FundedTicks + j.ReturnReserveGameTicks <= j.MaximumGameTicks),
+            ("original_wall_reserve", (j.JourneyDeadlineUtc - f.NowUtc).TotalSeconds > j.ReturnReserveGameTicks / 60d + 1d + 1d / 60d)))
+            return DecisionFailure("remote_resume_contact_original_budget_unproved");
+        if (!All(("core_observed", Known(f.CoreEnergyJoules)), ("per_tick_observed", Known(f.PerNativeTickEnergyJoules)),
+            ("per_tick_positive", f.PerNativeTickEnergyJoules > 0d), ("loaded_observed", Known(j.AvailableLoadedEnergyJoules)),
+            ("return_floor_observed", Known(j.LockedReturnFloorJoules))))
+            return DecisionFailure("remote_resume_contact_funding_unproved");
         var cost = f.PerNativeTickEnergyJoules!.Value * FundedTicks;
         var loaded = j.LockedReturnFloorJoules!.Value + cost;
-        return Known(cost) && Known(loaded) && f.CoreEnergyJoules >= cost && j.AvailableLoadedEnergyJoules >= loaded
-            ? null : "remote_resume_contact_current_and_stop_unfunded";
+        return All(("current_and_stop_cost_finite", Known(cost)), ("loaded_requirement_finite", Known(loaded)),
+            ("current_and_stop_core_funded", f.CoreEnergyJoules >= cost), ("current_and_stop_loaded_funded", j.AvailableLoadedEnergyJoules >= loaded))
+            ? null : DecisionFailure("remote_resume_contact_current_and_stop_unfunded");
+    }
+
+    private static NativeResumeDecisionEvidence CaptureEvidence(NativeResumeContactFacts? f, string stage)
+    {
+        var e = new NativeResumeDecisionEvidence(stage, f?.CapturedAtGameTick ?? f?.OriginalJourney?.CurrentGameTick,
+            f is null || f.NowUtc == default ? null : f.NowUtc, f is not null);
+        e.Observe("native_ground_sphere_hit", f?.NativeGroundSphereHit);
+        e.Observe("all_foot_hits_owned", f?.AllFootHitsOwned);
+        e.Observe("strict_physical_idle", f?.StrictPhysicalIdleProved);
+        e.NotReached("contact_exact_recovery_binding_unproved", "contact_non_ground_native_premises_unproved",
+            "contact_current_support_reference_unproved", "contact_foot_query_incomplete", "contact_native_ground_query_unavailable",
+            "contact_foot_count_unproved", "contact_airborne_foot_overlap", "contact_grounded_foot_count",
+            "contact_grounded_foot_owner_unproved", "contact_idle_observation", "contact_idle_without_native_ground");
+        e.Number("foot_overlap_count", f?.FootOverlapCount); e.Number("cast_distance_m", f?.CastDistanceMeters);
+        e.Number("cast_normal_dot_up", f?.CastNormalDotUp); e.Number("inward_displacement_m", f?.InwardDisplacementMeters);
+        e.Number("tangential_displacement_m", f?.TangentialDisplacementMeters); e.Number("speed_mps", f?.SpeedMetersPerSecond);
+        e.Number("core_j", f?.CoreEnergyJoules); e.Number("per_tick_j", f?.PerNativeTickEnergyJoules);
+        e.Number("funded_ticks", FundedTicks); e.Number("maximum_contact_ticks", MaximumNativeWorkTicks);
+        var j = f?.OriginalJourney;
+        e.Number("spent_ticks", j?.SpentGameTicks); e.Number("last_landed_tick", j?.LastLandedGameTick);
+        e.Number("maximum_journey_ticks", j?.MaximumGameTicks); e.Number("return_ticks", j?.ReturnReserveGameTicks);
+        e.Number("loaded_j", j?.AvailableLoadedEnergyJoules); e.Number("return_floor_j", j?.LockedReturnFloorJoules);
+        e.Number("warpers", j?.NativeWarperCount); e.Number("original_extra_warpers", j?.OriginalExtraWarperReserve);
+        e.Observe("journey_exact_binding", j?.ExactRemoteBinding); e.Observe("journey_native_idle", j?.NativePlayerIdle);
+        e.Number("return_wall_seconds", j is not null && f is not null ? (j.JourneyDeadlineUtc - f.NowUtc).TotalSeconds : null);
+        return e;
     }
     private static bool Known(double? n) => Finite(n) && n >= 0d;
     private static bool Finite(double? n) => n.HasValue && !double.IsNaN(n.Value) && !double.IsInfinity(n.Value);

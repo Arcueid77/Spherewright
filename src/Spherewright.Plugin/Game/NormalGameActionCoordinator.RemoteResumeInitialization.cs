@@ -26,6 +26,13 @@ internal sealed partial class NormalGameActionCoordinator
 
     internal string? ContinueVerifiedRemoteInitializationOnMainThread(VoyagerRemoteResumeAdoption adoption)
     {
+        var evidence = BeginRemoteResumeDecision(adoption, "native_initialization_pause");
+        var code = EvaluateVerifiedRemoteInitializationOnMainThread(adoption);
+        return RetainRemoteResumeDecision(adoption, evidence, code);
+    }
+
+    private string? EvaluateVerifiedRemoteInitializationOnMainThread(VoyagerRemoteResumeAdoption adoption)
+    {
         if (_remoteResumeInitializationHold is not { } hold || !ReferenceEquals(hold.Adoption, adoption))
             return "remote_resume_initialization_original_hold_unproved";
         var p = adoption.Player;
@@ -48,6 +55,15 @@ internal sealed partial class NormalGameActionCoordinator
         };
         if (facts.NativeStateUnchanged && InitializationFundingBlocker(hold) is not null)
             facts.NativeStateUnchanged = false;
+        var evidence = adoption.CurrentDecisionEvidence!;
+        evidence.Observe("initialization_binding", facts.ExactSourceWorldBinding);
+        evidence.Observe("initialization_state_unchanged", facts.NativeStateUnchanged);
+        evidence.Observe("initialization_native_pause", facts.NativePaused);
+        evidence.Observe("collider_refresh_pending", facts.ColliderRefreshPending);
+        evidence.Number("registered_colliders", facts.RegisteredCount);
+        evidence.Number("host_observations_used_before_sample", hold.Policy.ObservationCount);
+        evidence.Number("host_observation_limit", NativeResumeInitializationPolicy.MaximumHostPumpObservations);
+        evidence.Number("initialization_wall_seconds", (facts.NowUtc - hold.Policy.StartedUtc).TotalSeconds);
         var step = hold.Policy.Observe(facts);
         var snapshot = new NativeNearGroundSupportSnapshot
         {
@@ -74,6 +90,8 @@ internal sealed partial class NormalGameActionCoordinator
         facts.CurrentSupportOrGroundProof = blocker is null || (ground.State == "observed"
             && ground.CapturedAtGameTick == GameMain.gameTick && ground.CheckSphereHit == true
             && blocker == "remote_resume_near_support_initial_sphere_already_grounded");
+        evidence.Observe("support_or_ground_proved", facts.CurrentSupportOrGroundProof);
+        evidence.Observe("final_collider_refresh_pending", facts.ColliderRefreshPending);
         if (!facts.CurrentSupportOrGroundProof)
         {
             hold.Policy.Cancel(blocker ?? "remote_resume_initialization_current_support_unproved");
@@ -94,7 +112,8 @@ internal sealed partial class NormalGameActionCoordinator
             CalculateAvailableFlightEnergy(p.mecha), journey.ReturnEnergyFloorJoules, hold.PerTickEnergy,
             journey.ReturnCoreEnergyMinimumJoules, journey.SpentGameTicks, GameMain.gameTick - journey.LastLandedGameTick.Value,
             journey.MaximumGameTicks, journey.ReturnReserveGameTicks, 0, authorization.Proposal.MaximumChargeGameTicks,
-            0d, authorization.Proposal.MaximumChargeWallSeconds, DateTimeOffset.UtcNow, _sessions.EffectiveVoyagerDeadline(journey));
+            0d, authorization.Proposal.MaximumChargeWallSeconds, DateTimeOffset.UtcNow, _sessions.EffectiveVoyagerDeadline(journey),
+            adoption.CurrentDecisionEvidence);
     }
 
     private sealed class RemoteResumeInitializationHold
