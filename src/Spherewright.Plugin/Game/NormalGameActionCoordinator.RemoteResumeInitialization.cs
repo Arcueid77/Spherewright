@@ -32,7 +32,8 @@ internal sealed partial class NormalGameActionCoordinator
         var bound = _sessions.ExactRemoteResumeInitializationHold(adoption)
             && _flightCheckpoints.RemoteResumeRetainedJourneyStillMatches(hold.Journey, adoption.Evidence)
             && hold.Surface.MatchesBeforeUniverse();
-        var collectionBound = hold.Support.TryObserveInitialization(p, hold.Surface.Surface, out var count);
+        var collectionBound = hold.Support.TryObserveInitialization(p, hold.Surface.Surface, out var count,
+            out var colliderRefreshPending);
         var facts = new NativeResumeInitializationFacts
         {
             CurrentGameTick = GameMain.gameTick, NowUtc = DateTimeOffset.UtcNow,
@@ -43,6 +44,7 @@ internal sealed partial class NormalGameActionCoordinator
                 && RemoteResumeChargeEnvironmentBlocker(p) is null && !GameMain.data.disableController
                 && !GameMain.data.guideRunning && BuildUiIsIdle(p),
             RegisteredCount = count,
+            ColliderRefreshPending = colliderRefreshPending,
         };
         if (facts.NativeStateUnchanged && InitializationFundingBlocker(hold) is not null)
             facts.NativeStateUnchanged = false;
@@ -51,20 +53,23 @@ internal sealed partial class NormalGameActionCoordinator
         {
             CaptureStage = "native_initialization_pause", CapturedAtGameTick = GameMain.gameTick,
             RegisteredColliderCount = count, ReasonCode = hold.Policy.FirstFailure ?? NativeResumeInitializationPolicy.PendingCode,
+            Identity = new NativeNearGroundSupportIdentitySnapshot { PlanetColliderDirty = colliderRefreshPending },
         };
         adoption.NearSupportLatest = snapshot;
         if (step == NativeResumeInitializationStep.Rejected) return hold.Policy.FirstFailure;
         if (step == NativeResumeInitializationStep.Pending) return NativeResumeInitializationPolicy.PendingCode;
 
-        // The ordinary Native Update has changed registration only. A current
-        // cast still must open the original exact pool/object/chain binding.
+        // Ordinary Native Update/LateUpdate have settled registration and its
+        // deferred refresh while paused at the original tick. Only now make
+        // the first exact pool/object/chain binding; this is never a rebind.
         var ground = GameStateReader.CaptureNativeGroundContact(p, "native_initialization_pause_pre_resume");
         var blocker = hold.Support.Capture(p, "native_initialization_pause_pre_resume", hold.Surface.Surface, true, out snapshot);
         adoption.NearSupportLatest = snapshot.Copy();
         facts.NowUtc = DateTimeOffset.UtcNow;
         facts.ExactSourceWorldBinding = bound && _sessions.ExactRemoteResumeInitializationHold(adoption)
-            && hold.Support.TryObserveInitialization(p, hold.Surface.Surface, out count);
+            && hold.Support.TryObserveInitialization(p, hold.Surface.Surface, out count, out colliderRefreshPending);
         facts.RegisteredCount = count;
+        facts.ColliderRefreshPending = colliderRefreshPending;
         facts.NativeStateUnchanged &= hold.State.MatchesDuringNativeInitializationPause(p) && hold.MaterialsMatch(p);
         facts.CurrentSupportOrGroundProof = blocker is null || (ground.State == "observed"
             && ground.CapturedAtGameTick == GameMain.gameTick && ground.CheckSphereHit == true

@@ -17,9 +17,10 @@ internal sealed partial class GameStateReader
         {
             var candidate = new NativeNearGroundSupportBinding(player, currentTerrainSurface, snapshot);
             var blocker = candidate.Capture(player, stage, currentTerrainSurface, true, out snapshot);
-            // An empty, exactly bound collection is an initialization witness,
-            // not a support owner. Callers still must handle the blocker.
-            if (blocker is null || blocker == "remote_resume_near_support_registered_collection_empty") binding = candidate;
+            // Empty or pending-refresh collections retain only their exact
+            // context witness. No support has been bound in either case.
+            if (blocker is null || blocker == "remote_resume_near_support_registered_collection_empty"
+                || blocker == "remote_resume_near_support_collider_refresh_pending") binding = candidate;
             return blocker;
         }
         catch (Exception exception)
@@ -110,11 +111,14 @@ internal sealed partial class GameStateReader
         internal string? Recheck(Player player, string stage, Collider[] currentTerrainSurface,
             out NativeNearGroundSupportSnapshot snapshot) => Capture(player, stage, currentTerrainSurface, false, out snapshot);
 
-        internal bool TryObserveInitialization(Player player, Collider[] surface, out int? count)
+        internal bool TryObserveInitialization(Player player, Collider[] surface, out int? count,
+            out bool? colliderRefreshPending)
         {
             count = null;
+            colliderRefreshPending = null;
             if (System.Threading.Thread.CurrentThread.ManagedThreadId != _threadId || !ContextMatches(player, surface)) return false;
             count = _registered.Count;
+            colliderRefreshPending = _physics.isPlanetPhysicsColliderDirty;
             return true;
         }
 
@@ -132,6 +136,10 @@ internal sealed partial class GameStateReader
                 snapshot.RegisteredColliderCount = _registered.Count;
                 Require(_registered.Count <= MaximumRegisteredColliders, "registered_collection_limit_exceeded");
                 Require(_registered.Count > 0, "registered_collection_empty");
+                // Ordinary Native LateUpdate may replace records/colliders
+                // even with a positive collection. Bind only after it settles;
+                // existing bindings and their strict rechecks are never replaced.
+                if (initial) Require(!_physics.isPlanetPhysicsColliderDirty, "collider_refresh_pending");
                 var p = player.position;
                 Require(Finite(p) && Finite(p.sqrMagnitude) && p.sqrMagnitude > 1f, "player_position_unproved");
                 var up = p.normalized;

@@ -4,7 +4,7 @@ public enum NativeResumeInitializationStep { Pending, Ready, Rejected }
 
 // Copied main-thread observations. The caller retains the exact Native references;
 // unchanged state includes pose, velocity, energy, input, orders, work and materials.
-// Ordinary registration changes are observed separately through RegisteredCount.
+// Ordinary registration and deferred collider refresh are observed separately.
 public sealed class NativeResumeInitializationFacts
 {
     public long CurrentGameTick { get; set; }
@@ -13,6 +13,7 @@ public sealed class NativeResumeInitializationFacts
     public bool NativeStateUnchanged { get; set; }
     public bool NativePaused { get; set; }
     public int? RegisteredCount { get; set; }
+    public bool? ColliderRefreshPending { get; set; }
     public bool CurrentSupportOrGroundProof { get; set; }
 }
 
@@ -50,14 +51,15 @@ public sealed class NativeResumeInitializationPolicy
         if (blocker is not null) return Reject(blocker);
         ObservationCount++;
         _lastObservationUtc = f.NowUtc;
-        _ready = f.RegisteredCount > 0;
+        _ready = f.RegisteredCount > 0 && f.ColliderRefreshPending == false;
         if (_ready) return NativeResumeInitializationStep.Ready;
         return ObservationCount < MaximumHostPumpObservations ? NativeResumeInitializationStep.Pending
             : Reject("remote_resume_initialization_observations_exhausted");
     }
 
     // Recheck fresh facts, without charging another host observation. A positive
-    // collection alone is insufficient. The Plugin must resume at most once and
+    // collection alone is insufficient; its deferred refresh must also be clear.
+    // The Plugin must resume at most once and
     // immediately run its original full preflight before any Native601 can run.
     public bool TryAuthorizeResume(NativeResumeInitializationFacts freshFacts)
     {
@@ -67,6 +69,7 @@ public sealed class NativeResumeInitializationPolicy
         var blocker = Blocker(freshFacts);
         if (blocker is not null) { Reject(blocker); return false; }
         if (!_ready || ObservationCount == 0 || freshFacts.RegisteredCount <= 0
+            || freshFacts.ColliderRefreshPending != false
             || !freshFacts.CurrentSupportOrGroundProof)
         { Reject("remote_resume_initialization_current_support_unproved"); return false; }
         ResumeAuthorized = true;
@@ -94,6 +97,8 @@ public sealed class NativeResumeInitializationPolicy
             return "remote_resume_initialization_pause_unproved";
         if (!f.RegisteredCount.HasValue || f.RegisteredCount < 0 || f.RegisteredCount > MaximumRegisteredColliders)
             return "remote_resume_initialization_registered_count_unproved";
+        if (!f.ColliderRefreshPending.HasValue)
+            return "remote_resume_initialization_collider_refresh_unproved";
         if (f.NowUtc == default || f.NowUtc < StartedUtc || f.NowUtc < _lastObservationUtc)
             return "remote_resume_initialization_clock_unproved";
         return (f.NowUtc - StartedUtc).TotalSeconds >= MaximumWallSeconds

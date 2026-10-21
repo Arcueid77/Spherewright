@@ -9,8 +9,115 @@ public sealed class NativeResumeInitializationPolicyTests
     private static NativeResumeInitializationFacts Facts(int? count = 0, int milliseconds = 0) => new()
     {
         CurrentGameTick = 100, NowUtc = Now.AddMilliseconds(milliseconds), ExactSourceWorldBinding = true,
-        NativeStateUnchanged = true, NativePaused = true, RegisteredCount = count,
+        NativeStateUnchanged = true, NativePaused = true, RegisteredCount = count, ColliderRefreshPending = false,
     };
+
+    [Fact]
+    public void PositiveCollectionWaitsForOrdinaryRefreshToClearBeforeFreshResume()
+    {
+        var p = new NativeResumeInitializationPolicy(100, Now);
+        var refreshing = Facts(1); refreshing.ColliderRefreshPending = true;
+        Assert.Equal(NativeResumeInitializationStep.Pending, p.Observe(refreshing));
+        Assert.False(p.ResumeAuthorized); Assert.Null(p.FirstFailure);
+        Assert.Equal(NativeResumeInitializationStep.Ready, p.Observe(Facts(1, 1)));
+        var fresh = Facts(1, 2); fresh.CurrentSupportOrGroundProof = true;
+        Assert.True(p.TryAuthorizeResume(fresh));
+        Assert.Equal(100, p.SourceGameTick); Assert.Equal(2, p.ObservationCount);
+    }
+
+    [Fact]
+    public void CollectionAndRefreshMustBothSettleWithoutRenewingTheHold()
+    {
+        var p = new NativeResumeInitializationPolicy(100, Now);
+        var emptyDirty = Facts(); emptyDirty.ColliderRefreshPending = true;
+        Assert.Equal(NativeResumeInitializationStep.Pending, p.Observe(emptyDirty));
+        var positiveDirty = Facts(1, 1); positiveDirty.ColliderRefreshPending = true;
+        Assert.Equal(NativeResumeInitializationStep.Pending, p.Observe(positiveDirty));
+        Assert.Equal(NativeResumeInitializationStep.Pending, p.Observe(Facts(0, 2)));
+        Assert.Equal(NativeResumeInitializationStep.Ready, p.Observe(Facts(1, 3)));
+        var fresh = Facts(1, 4); fresh.CurrentSupportOrGroundProof = true;
+        Assert.True(p.TryAuthorizeResume(fresh));
+        Assert.Equal(4, p.ObservationCount); Assert.Equal(Now, p.StartedUtc);
+    }
+
+    [Theory]
+    [InlineData(0)] [InlineData(1)]
+    public void UnknownRefreshIsStickyFailureEvenWhenOrdinaryRegistrationCanWait(int count)
+    {
+        var p = new NativeResumeInitializationPolicy(100, Now);
+        var pending = Facts(1); pending.ColliderRefreshPending = true;
+        Assert.Equal(NativeResumeInitializationStep.Pending, p.Observe(pending));
+        var unknown = Facts(count, 1); unknown.ColliderRefreshPending = null;
+        Assert.Equal(NativeResumeInitializationStep.Rejected, p.Observe(unknown));
+        Assert.Equal("remote_resume_initialization_collider_refresh_unproved", p.FirstFailure);
+        var restored = Facts(1, 2); restored.CurrentSupportOrGroundProof = true;
+        Assert.Equal(NativeResumeInitializationStep.Rejected, p.Observe(restored));
+        Assert.False(p.TryAuthorizeResume(restored)); Assert.False(p.ResumeAuthorized);
+    }
+
+    [Fact]
+    public void EighthDirtyObservationExhaustsTheSameAttemptBeforeAnyResume()
+    {
+        var p = new NativeResumeInitializationPolicy(100, Now);
+        for (var i = 0; i < 7; i++)
+        {
+            var pending = Facts(1, i); pending.ColliderRefreshPending = true;
+            Assert.Equal(NativeResumeInitializationStep.Pending, p.Observe(pending));
+        }
+        var eighth = Facts(1, 7); eighth.ColliderRefreshPending = true;
+        Assert.Equal(NativeResumeInitializationStep.Rejected, p.Observe(eighth));
+        var cleared = Facts(1, 8); cleared.CurrentSupportOrGroundProof = true;
+        Assert.False(p.TryAuthorizeResume(cleared));
+        Assert.Equal(NativeResumeInitializationStep.Rejected, p.Observe(cleared));
+        Assert.Equal(8, p.ObservationCount); Assert.False(p.ResumeAuthorized);
+        Assert.Equal("remote_resume_initialization_observations_exhausted", p.FirstFailure);
+    }
+
+    [Theory]
+    [InlineData(true, "remote_resume_initialization_current_support_unproved")]
+    [InlineData(null, "remote_resume_initialization_collider_refresh_unproved")]
+    public void FreshResumeRejectsRenewedOrUnknownRefreshWithoutReusingEarlierReadiness(bool? refresh, string code)
+    {
+        var p = new NativeResumeInitializationPolicy(100, Now);
+        Assert.Equal(NativeResumeInitializationStep.Ready, p.Observe(Facts(1)));
+        var fresh = Facts(1, 1); fresh.ColliderRefreshPending = refresh; fresh.CurrentSupportOrGroundProof = true;
+        Assert.False(p.TryAuthorizeResume(fresh)); Assert.Equal(code, p.FirstFailure);
+        var clear = Facts(1, 2); clear.CurrentSupportOrGroundProof = true;
+        Assert.False(p.TryAuthorizeResume(clear));
+        Assert.Equal(NativeResumeInitializationStep.Rejected, p.Observe(clear));
+        Assert.False(p.ResumeAuthorized); Assert.Equal(code, p.FirstFailure);
+    }
+
+    [Theory]
+    [InlineData("wall", "remote_resume_initialization_wall_exhausted")]
+    [InlineData("tick", "remote_resume_initialization_tick_changed")]
+    [InlineData("materials", "remote_resume_initialization_state_changed")]
+    public void PendingColliderRefreshNeverWaivesOriginalWallTickOrMaterialGuards(string change, string code)
+    {
+        var p = new NativeResumeInitializationPolicy(100, Now);
+        var pending = Facts(1); pending.ColliderRefreshPending = true;
+        Assert.Equal(NativeResumeInitializationStep.Pending, p.Observe(pending));
+        var changed = Facts(1, change == "wall" ? 2000 : 1); changed.ColliderRefreshPending = true;
+        if (change == "tick") changed.CurrentGameTick++;
+        if (change == "materials") changed.NativeStateUnchanged = false; // Includes materials and energy.
+        Assert.Equal(NativeResumeInitializationStep.Rejected, p.Observe(changed));
+        Assert.Equal(code, p.FirstFailure);
+        var restored = Facts(1, 2001); restored.CurrentSupportOrGroundProof = true;
+        Assert.False(p.TryAuthorizeResume(restored)); Assert.Equal(code, p.FirstFailure);
+    }
+
+    [Fact]
+    public void CancellationDuringRefreshCannotBeRevivedByAClearedCollection()
+    {
+        var p = new NativeResumeInitializationPolicy(100, Now);
+        var pending = Facts(1); pending.ColliderRefreshPending = true;
+        Assert.Equal(NativeResumeInitializationStep.Pending, p.Observe(pending));
+        p.Cancel("original_cancellation");
+        var clear = Facts(1, 1); clear.CurrentSupportOrGroundProof = true;
+        Assert.Equal(NativeResumeInitializationStep.Rejected, p.Observe(clear));
+        Assert.False(p.TryAuthorizeResume(clear)); Assert.False(p.ResumeAuthorized);
+        Assert.Equal("original_cancellation", p.FirstFailure);
+    }
 
     [Fact]
     public void EmptyBeforeOrdinaryUpdateIsPendingWithoutNativeProgressOrResume()
