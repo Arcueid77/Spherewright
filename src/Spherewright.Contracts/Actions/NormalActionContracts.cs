@@ -277,6 +277,8 @@ public sealed class PrepareSaveRequest
 
     public long ExpectedRevision { get; set; }
 
+    public bool PreserveQuarantinedProgress { get; set; }
+
     public int StateHashVersion { get; set; } = 1;
 }
 
@@ -351,6 +353,10 @@ public sealed class CommitNormalActionRequest
 
 public sealed class PreparedNormalAction
 {
+    public bool PreservesQuarantine { get; set; }
+
+    public long? PreservationGameTick { get; set; }
+
     public BeltRoutePreviewSnapshot? BeltRoutePreview { get; set; }
     public MoveStateBindingSnapshot? MoveStateBinding { get; set; }
 

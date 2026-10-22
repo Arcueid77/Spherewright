@@ -14,6 +14,8 @@ Requests contain `protocolVersion`, `messageType=request`, UUID `requestId`, opt
 
 ## Current public MCP surface
 
+Owned save preparation accepts optional `preserveQuarantinedProgress` (default false). The serialization-only opt-in requires a matching `preservesQuarantine`/`preservationGameTick` disclosure and a fresh bound post-admission paused-save proof; normal commit/idempotency and all other blockers remain. It never clears quarantine or grants Resume/Load. `BridgeError.nativeFirstFailure` and action-result `nativeFirstFailure`, when present, are detached bounded first-decision evidence, not safety certificates. Unknown values stay null/unknown; unexecuted checks are `not_reached`. See the [playbook](agent-playbook.md#preserve-progress-after-a-post-admission-idle-quarantine).
+
 ```text
 spherewright_get_status
 spherewright_get_session_state

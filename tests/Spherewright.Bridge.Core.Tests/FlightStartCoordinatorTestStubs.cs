@@ -14,7 +14,7 @@ internal static partial class GameMain
     internal static FlightStartTestPlayer mainPlayer = new();
 }
 
-internal sealed class FlightStartTestPlanet { internal int id; }
+internal sealed class FlightStartTestPlanet { internal int id; internal object? factory; }
 internal sealed class FlightStartTestPlayer { internal FlightStartTestController controller = new(); }
 internal sealed class FlightStartTestController { internal FlightStartTestBuild actionBuild = new(); }
 internal sealed class FlightStartTestBuild { internal EBlueprintMode blueprintMode; }
@@ -105,7 +105,7 @@ internal sealed partial class NormalGameActionCoordinator
         internal NormalActionPlanPayload Plan = new();
     }
 
-    internal sealed class NormalActionPlanPayload
+    internal sealed partial class NormalActionPlanPayload
     {
         internal int PlanetId;
         internal int DestinationPlanetId;

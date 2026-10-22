@@ -266,23 +266,46 @@ internal sealed partial class NormalGameActionCoordinator
             return NotReadyPlan("The exact Spherewright-owned save identity or local factory is unavailable.");
         }
 
+        PausedOwnedSaveBinding? preservation = null;
+        if (request.PreserveQuarantinedProgress)
+        {
+            if (!_sessions.TryBindPausedOwnedSave(out preservation, out var rejection))
+            {
+                var error = Stale(rejection); error.NativeFirstFailure = _sessions.PausedSaveFirstFailure;
+                return GameCallResult<PreparedNormalAction>.Failed(error);
+            }
+            if (_actions.ActiveValues.Any(a => !a.Terminal))
+                return StalePlan("paused_save_other_action_active");
+        }
+
         var expectedHash = CanonicalStateHash.Combine(
             NormalActionKinds.Save,
             _sessions.SessionId,
             request.PlanetId,
             request.ExpectedRevision,
             common.Session.SaveName);
+        if (preservation is not null) expectedHash = CanonicalStateHash.Combine(expectedHash, preservation.Fingerprint);
         var payload = NormalActionPlanPayload.Save(
             _sessions.SessionId!,
             request.PlanetId,
             expectedHash,
             common.Session.SaveName!,
-            request.ExpectedRevision);
-        return AddPreparedPlan(
+            request.ExpectedRevision, preservation);
+        var result = AddPreparedPlan(
             payload,
             common.Session,
             1,
             "GameSave.SaveCurrentGame returns true for the exact high-entropy save name owned by this session, and the saved game tick is recorded.");
+        if (result.Success && preservation is not null)
+        {
+            var prepared = result.Value!;
+            prepared.CommitBlockers = preservation.RemainingBlockers(common.Session.WriteBlockers).Select(CloneBlocker).ToList();
+            prepared.CommitAllowedNow = prepared.CommitBlockers.Count == 0;
+            prepared.PreservesQuarantine = true;
+            prepared.PreservationGameTick = preservation.GameTick;
+            prepared.CompletionCondition = "The same paused, previously admitted owned world is normally saved at the bound stable tick; quarantine, original action outcomes, tickets and Journey budgets remain unchanged. This grants no Resume or recovery authority.";
+        }
+        return result;
     }
 
     private BridgeError? RevalidateSaveOnMainThread(NormalActionPlanPayload plan)
@@ -297,12 +320,26 @@ internal sealed partial class NormalGameActionCoordinator
             return Stale("The owned save identity, planet, factory, or session revision changed after prepare.");
         }
 
-        return null;
+        return SavePreservationBlocker(plan);
+    }
+
+    private BridgeError? SavePreservationBlocker(NormalActionPlanPayload plan, ActionRecord? executing = null)
+    {
+        if (plan.SavePreservation is null) return null;
+        if (!_sessions.ValidatePausedOwnedSave(plan.SavePreservation, out var rejection))
+        {
+            var error = Stale(rejection); error.NativeFirstFailure = plan.SavePreservation.FirstFailure;
+            return error;
+        }
+        return _actions.ActiveValues.Any(a => !a.Terminal && !ReferenceEquals(a, executing))
+            ? Stale("paused_save_other_action_active") : null;
     }
 
     private void ExecuteSaveOnMainThread(ActionRecord action)
     {
-        if (!_sessions.TrySaveOwnedWorldNowOnMainThread(out var error))
+        var preservationBlocker = SavePreservationBlocker(action.Plan, action);
+        if (preservationBlocker is not null) throw new InvalidOperationException(preservationBlocker.Message);
+        if (!_sessions.TrySaveOwnedWorldNowOnMainThread(out var error, action.Plan.SavePreservation))
         {
             throw new InvalidOperationException(error ?? "DSP's normal save API did not confirm success.");
         }
@@ -313,13 +350,14 @@ internal sealed partial class NormalGameActionCoordinator
             throw new InvalidOperationException("The owned save completed without a recorded game tick.");
         }
 
-        CloseVoyagerAfterNormalSave(action, session);
+        if (action.Plan.SavePreservation is null) CloseVoyagerAfterNormalSave(action, session);
 
         action.State = NormalActionStates.Completed;
         action.Terminal = true;
         action.Succeeded = true;
         action.CompletedAtGameTick = GameMain.gameTick;
-        action.Message = $"DSP's normal save API confirmed the exact owned save at game tick {session.LastOwnedSaveGameTick.Value}.";
+        action.Message = $"DSP's normal save API confirmed the exact owned save at game tick {session.LastOwnedSaveGameTick.Value}."
+            + (action.Plan.SavePreservation is null ? "" : " Paused progress is preserved; quarantine and original action results remain unchanged. This grants no Resume or recovery authority.");
         action.AfterInventory = CaptureInventory(GameMain.mainPlayer);
         action.AfterStateHash = CanonicalStateHash.Combine(
             NormalActionKinds.Save,
@@ -338,6 +376,8 @@ internal sealed partial class NormalGameActionCoordinator
         public long SaveExpectedRevision { get; private set; }
 
         public string SaveOwnedName { get; private set; } = string.Empty;
+
+        public PausedOwnedSaveBinding? SavePreservation { get; private set; }
 
         public static NormalActionPlanPayload Refuel(
             string sessionId,
@@ -364,7 +404,7 @@ internal sealed partial class NormalGameActionCoordinator
             int planetId,
             string expectedStateHash,
             string saveOwnedName,
-            long expectedRevision) => new NormalActionPlanPayload
+            long expectedRevision, PausedOwnedSaveBinding? preservation = null) => new NormalActionPlanPayload
             {
                 ActionKind = NormalActionKinds.Save,
                 SessionId = sessionId,
@@ -372,6 +412,7 @@ internal sealed partial class NormalGameActionCoordinator
                 ExpectedStateHash = expectedStateHash,
                 SaveOwnedName = saveOwnedName,
                 SaveExpectedRevision = expectedRevision,
+                SavePreservation = preservation,
                 EstimatedTicks = 1,
             };
     }

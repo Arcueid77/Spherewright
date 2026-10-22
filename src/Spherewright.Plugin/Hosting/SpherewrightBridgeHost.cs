@@ -237,6 +237,7 @@ internal sealed class SpherewrightBridgeHost : IDisposable
         _statusProvider.UpdateGameLoadedOnMainThread(_sessionTracker.GameLoaded);
         _gameplayJournalManager.UpdateOnMainThread();
         _normalActionCoordinator.UpdateOnMainThread();
+        _sessionTracker.ObservePausedOwnedSaveOnMainThread();
         _researchResultAutoAcknowledger.UpdateOnMainThread();
 
         _dispatcher.Pump(

@@ -55,6 +55,7 @@ internal sealed partial class GameSessionTracker
         Snapshot.WriteQuarantineActionId = actionId;
         Snapshot.WritesAllowed = false;
         QuarantineReason = reason;
+        UpdatePausedSaveQuarantineShell(actionId, reason);
     }
 
     internal bool TryClearQuarantineOnMainThread(string expectedActionId, string expectedReason, out string? rejection)

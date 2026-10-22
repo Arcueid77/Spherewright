@@ -138,7 +138,7 @@ internal sealed partial class NormalGameActionCoordinator
             {
                 var reason = "The completed outbound's remote idle binding is no longer proved. Its successful flight is retained."
                     + VoyagerRemoteIdleFailureDetail(bindingFailure) + FreezeNativeLocalFailureEnergy(true);
-                _sessions.QuarantineWritesOnMainThread(originalOwner.ActionId, reason);
+                _sessions.QuarantineRemoteIdleOnMainThread(originalOwner.ActionId, reason);
                 return;
             }
             // A remote primary/Host reload has no in-memory landed-controller
@@ -152,7 +152,7 @@ internal sealed partial class NormalGameActionCoordinator
                 var reason = "The original remote journey has no current landed-controller idle binding; remote local work is not recertified after reload."
                     + VoyagerRemoteIdleFailureDetail(bindingFailure)
                     + FreezeNativeLocalFailureEnergy(true);
-                _sessions.QuarantineWritesOnMainThread(retained.ActiveActionId, reason);
+                _sessions.QuarantineRemoteIdleOnMainThread(retained.ActiveActionId, reason);
             }
             return;
         }
@@ -170,7 +170,7 @@ internal sealed partial class NormalGameActionCoordinator
         var message = "The completed outbound's exact remote idle/return reserve is no longer proved. Its successful flight is retained; the original journey requires intervention."
             + VoyagerRemoteIdleFailureDetail(admission)
             + FreezeNativeLocalFailureEnergy(bindingMatches);
-        _sessions.QuarantineWritesOnMainThread(owner.ActionId, message);
+        _sessions.QuarantineRemoteIdleOnMainThread(owner.ActionId, message);
     }
 
     internal string? AdmitVerifiedVoyagerRemoteResumeOnMainThread(VoyagerRemoteResumeAdoption adoption)

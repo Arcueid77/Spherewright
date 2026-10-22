@@ -16,6 +16,8 @@ public sealed class GetActionResultRequest
 
 public sealed class ActionResultSnapshot
 {
+    public Spherewright.Contracts.Players.NativeResumeFailureSnapshot? NativeFirstFailure { get; set; }
+
     public string ActionId { get; set; } = string.Empty;
 
     public string ActionKind { get; set; } = string.Empty;

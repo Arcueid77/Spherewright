@@ -10,6 +10,8 @@ public sealed class BridgeError
 
     public string Recovery { get; set; } = string.Empty;
 
+    public Spherewright.Contracts.Players.NativeResumeFailureSnapshot? NativeFirstFailure { get; set; }
+
     public static BridgeError Create(string code, string message, bool retryable, string recovery)
     {
         return new BridgeError

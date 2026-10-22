@@ -26,6 +26,26 @@ namespace Spherewright.Mcp.Tests;
 public sealed class SpherewrightToolsTests
 {
     [Theory]
+    [InlineData(false, false, null, false)]
+    [InlineData(true, true, 12521L, false)]
+    [InlineData(true, false, 12521L, true)]
+    [InlineData(true, true, null, true)]
+    [InlineData(true, true, -1L, true)]
+    public async Task PausedSaveRequiresExplicitOptInAndMatchingPluginDisclosure(bool requested, bool echoed,
+        long? tick, bool error)
+    {
+        var bridge = new FakeBridgeClient(SuccessResult()) { SavePlan = new()
+            { Prepared = true, ActionKind = NormalActionKinds.Save, PlanToken = "synthetic-save-plan",
+                PreservesQuarantine = echoed, PreservationGameTick = tick } };
+        var result = await SpherewrightTools.PrepareSaveAsync(bridge, "synthetic-session", 201, 9,
+            preserveQuarantinedProgress: requested);
+        Assert.Equal(requested, bridge.LastSaveRequest!.PreserveQuarantinedProgress);
+        Assert.Equal(9, bridge.LastSaveRequest.ExpectedRevision);
+        Assert.Equal(error, result.IsError);
+        if (error) Assert.DoesNotContain("synthetic-save-plan", result.StructuredContent!.Value.GetRawText());
+    }
+
+    [Theory]
     [InlineData("supported")] [InlineData("missing_echo")] [InlineData("wrong_hash")]
     [InlineData("unattested")] [InlineData("prior_claim")] [InlineData("no_disclosure")]
     [InlineData("no_identity")] [InlineData("evidence_zero")]
@@ -3353,6 +3373,9 @@ public sealed class SpherewrightToolsTests
 
         public PrepareSelectResearchRequest? LastSelectResearchRequest { get; private set; }
 
+        public PrepareSaveRequest? LastSaveRequest { get; private set; }
+        public PreparedNormalAction? SavePlan { get; set; }
+
         public PrepareFlightCheckpointReloadRequest? LastFlightCheckpointReloadRequest { get; private set; }
 
         public PrepareUserSaveImportRequest? LastImportPrepareRequest { get; private set; }
@@ -3751,7 +3774,12 @@ public sealed class SpherewrightToolsTests
         public Task<BridgeCallResult<PreparedNormalAction>> PrepareSaveAsync(
             string sessionId,
             PrepareSaveRequest request,
-            CancellationToken cancellationToken) => Prepared(sessionId, NormalActionKinds.Save);
+            CancellationToken cancellationToken)
+        {
+            LastSaveRequest = request;
+            return SavePlan is null ? Prepared(sessionId, NormalActionKinds.Save)
+                : Task.FromResult(BridgeCallResult<PreparedNormalAction>.Succeeded(SavePlan));
+        }
 
         public Task<BridgeCallResult<NormalActionCommitResult>> CommitSaveAsync(
             string sessionId,

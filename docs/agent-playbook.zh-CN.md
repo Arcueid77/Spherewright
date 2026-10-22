@@ -350,6 +350,12 @@ Move/Harvest 复用既有普通 RTS 动作并保留无水快路。有限能耗�
 正常施工保持固定 hold anchor 处的 Walk；Drift 或锚损失立即停止新派发并走精确绑定的 Pause/unknown 失败保护，不能声称无人机已尾返。工作仍自原开始最多3600 tick/60秒，fresh resume 不增加一分钟，working 原 action 查询只续30秒观察租约。已知的有限取消保留第一次尾部时钟。dispatchDisabled 不等于安全空闲：须关闭后跨过精确工厂真实 Native 施工轮次、原预发缓存清空、全部 owned 无人机实际空闲及 physicalIdleVerified，并保留原绑定/anchor/储备证据。守卫、租约或尾期失败走失败保护，不能写成空闲成功。保留未知的原 action/build/checkpoint，不启用无人机、不重放创建；已证 pending 对象仅通过 fresh prepare_blueprint_build，以精确 resumeBuildId 及进度/玩家哈希续接。过期工作仍过期，不覆盖用户暂停/输入、不自动恢复，也不从 Host 退出推断无人机已返。
 
 <a id="restart-and-interplanetary-flight"></a>
+### 接管后闲置隔离的进度保全
+
+`spherewright_prepare_save(..., preserveQuarantinedProgress=true)` 是有限的序列化请求。配套 Plugin 必须回显 `preservesQuarantine=true` 和 `preservationGameTick`。它要求同一已完成接管的 owned 世界、原接管后 idle 守卫隔离、全部加载/Journal 租约已释放、无其他动作或写入阻塞，并在可能的601尾部之后跨不同渲染帧观察到暂停进度不变。Prepare/commit 绑定精确世界、会话、revision、tick和隔离；其他世界、未知 Pause、进度变化或过期绑定均拒绝。默认 Save 仍受隔离阻塞。这不证明物理空闲、接地或返程预算。
+
+使用原计划/key提交一次，核对同一动作。原生普通 Save 必须返回 true，精确 owned 完整文件须通过 prefix及全文件核验，并等于绑定的当前 tick。失败保留同次 `nativeFirstFailure` 事实；未知文件 tick保留 null，未执行检查保留 `not_reached`。保全不清隔离、不关闭/重写 Journey、不退役或续发凭据、不修改旧动作结果，也不 Resume或Load。尤其成功恢复不能当作失败前驱；保存后续暂停进度不使它获得失败续接资格。旧实装 Plugin 不会因更新文档或 MCP 自动获得此能力；RAM尚无完整覆盖时，不退出或冷部署。离线 Native 替身不证明 Unity Data.Export 或实机验收。
+
 ## 重启与行星间飞行
 
 普通主档覆盖已成功出航后，checkpoint 的重载能力退役，但精确绑定的历史飞行证明仍可保留。远端续接仍只加载固定 LastExit，且须覆盖当前主档及票据最低 tick。原 checkpoint 文件、成功 action、Journey、Journal、Native 身份及预算均须 fresh 绑定；成功记录缺失、失败/重载标记矛盾或退役证据不完整即拒绝。Prepared 的 `successfulFlightWitnessRetiredAtGameTick` 与确认文本披露此分支，受保护字节变化使旧 digest 失效。退役 checkpoint 绝不恢复可加载能力，此证据规则不授予 Save、Load 或重试权限。离线 Store/coordinator 测试不证明 Native 保存/导出或 Unity 恢复。

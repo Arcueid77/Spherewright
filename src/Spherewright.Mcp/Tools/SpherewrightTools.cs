@@ -898,13 +898,14 @@ public static partial class SpherewrightTools
         Destructive = false,
         Idempotent = false,
         OpenWorld = false)]
-    [Description("Binds the current revision and exact high-entropy save identity of the active Spherewright-created session without writing a save.")]
+    [Description("Binds the current revision and exact owned save identity without writing a save. preserveQuarantinedProgress is an explicit serialization-only opt-in for a previously admitted remote world paused by its retained idle guard: requires stable post-tail Native Pause and no pending action/load/Journal. It preserves quarantine, original outcomes, tickets and budgets; it does not grant Resume or recovery authority.")]
     public static async Task<CallToolResult> PrepareSaveAsync(
         IBridgeClient bridgeClient,
         string sessionId,
         int planetId,
         long expectedRevision,
         int stateHashVersion = 1,
+        bool preserveQuarantinedProgress = false,
         CancellationToken cancellationToken = default)
     {
         var result = await bridgeClient.PrepareSaveAsync(
@@ -914,8 +915,14 @@ public static partial class SpherewrightTools
                 PlanetId = planetId,
                 ExpectedRevision = expectedRevision,
                 StateHashVersion = stateHashVersion,
+                PreserveQuarantinedProgress = preserveQuarantinedProgress,
             },
             cancellationToken).ConfigureAwait(false);
+        if (preserveQuarantinedProgress && result.Success && (result.Value?.PreservesQuarantine != true
+            || !result.Value.PreservationGameTick.HasValue || result.Value.PreservationGameTick < 0))
+            return ToToolResult(BridgeCallResult<PreparedNormalAction>.Failed(BridgeError.Create(
+                BridgeErrorCodes.StaleState, "The Plugin did not disclose the requested paused quarantine-preserving save.",
+                false, "Keep the world paused and use a matching verified Plugin/MCP cohort.")), "Save preservation is unproved.");
         return ToToolResult(result, "Owned-world save plan prepared; no save file was written.");
     }
 

@@ -1421,45 +1421,6 @@ internal sealed partial class NormalGameActionCoordinator
         return CommonPrepareResult.Succeeded(session);
     }
 
-    private static BridgeError? ValidateCommitCommon(
-        SessionState session,
-        NormalActionPlanPayload plan,
-        CommitNormalActionRequest request)
-    {
-        if (!session.OwnedBySpherewright
-            || !string.Equals(session.SessionId, plan.SessionId, StringComparison.Ordinal)
-            || !string.Equals(request.SessionId, plan.SessionId, StringComparison.Ordinal))
-        {
-            return BridgeError.Create(
-                BridgeErrorCodes.StaleSession,
-                "The prepared action does not belong to the current owned session.",
-                false,
-                "Inspect the current session and prepare a fresh action.");
-        }
-
-        if (request.PlanetId != plan.PlanetId || (plan.ActionKind != NormalActionKinds.CancelVoyagerFlight
-            && session.LocalPlanetId != plan.PlanetId))
-        {
-            return BridgeError.Create(
-                BridgeErrorCodes.StaleState,
-                "Commit planet, planned planet, and current local planet do not match.",
-                false,
-                "Return to the planned planet and prepare a fresh action.");
-        }
-
-        if (session.WriteBlockers.Count > 0)
-        {
-            var blocker = session.WriteBlockers[0];
-            return BridgeError.Create(
-                blocker.Code,
-                blocker.Message,
-                false,
-                "Resolve every current session write blocker, then prepare a fresh action.");
-        }
-
-        return null;
-    }
-
     private GameCallResult<PreparedNormalAction> AddPreparedPlan(
         NormalActionPlanPayload payload,
         SessionState session,
@@ -1619,6 +1580,7 @@ internal sealed partial class NormalGameActionCoordinator
             SessionId = action.SessionId,
             PlanetId = action.PlanetId,
             Message = action.Message,
+            NativeFirstFailure = action.Plan.SavePreservation?.FirstFailure,
             IdempotencyKey = action.IdempotencyKey,
             StartedAtGameTick = action.StartedAtGameTick,
             CompletedAtGameTick = action.CompletedAtGameTick,

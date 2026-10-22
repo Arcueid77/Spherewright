@@ -8,6 +8,9 @@ namespace Spherewright.Plugin.Game;
 // policies, persistence/lease Store and completion method are linked production.
 internal sealed class VoyagerRemoteResumeAdoption
 {
+    internal PausedSaveTestWorld? World;
+    internal string SessionId = "";
+    internal string ResumeActionId = "";
     public NativeFirstFrameAdmission FirstFrame { get; } = new();
     public bool NativeContactPending { get; set; } = true;
     public NativeResumeFailureSnapshot? FirstFailure { get; private set; }

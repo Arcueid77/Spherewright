@@ -17,6 +17,8 @@
 <a id="current-public-mcp-surface"></a>
 ## 当前公共 MCP 接口
 
+Owned Save 准备新增可选 `preserveQuarantinedProgress`，默认 false。序列化请求要求匹配的 `preservesQuarantine`/`preservationGameTick` 回显及 fresh 接管后暂停保存证明；普通 commit/幂等和其他阻塞均保留，不清隔离，不授予 Resume/Load。可选的 `BridgeError.nativeFirstFailure` 和动作结果 `nativeFirstFailure` 是有界、独立复制的首次判断证据，不是安全认证；未知值保留 null/unknown，未执行检查为 `not_reached`。见[手册](agent-playbook.zh-CN.md#接管后闲置隔离的进度保全)。
+
 ```text
 spherewright_get_status
 spherewright_get_session_state
