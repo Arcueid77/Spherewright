@@ -5,6 +5,7 @@ using Spherewright.Contracts.Actions;
 using Spherewright.Contracts.Errors;
 using Spherewright.Contracts.Sessions;
 using Spherewright.Plugin.RuntimeDescriptor;
+using Spherewright.Plugin.Transport;
 
 namespace Spherewright.Plugin.Game;
 
@@ -61,7 +62,11 @@ internal sealed class FlightCheckpointReloadCoordinator
                 "Wait for a clear flight failure or an idle main menu, then prepare the same exact checkpoint again."));
         }
 
-        var payload = new ReloadPlanPayload(ticket);
+        var returnOnlyFailure = ValidateReturnOnlyTask(ticket, request.ReturnOnlyTask, out var originalJourneyJson);
+        if (returnOnlyFailure is not null)
+            return GameCallResult<PreparedFlightCheckpointReloadPlan>.Failed(ReturnOnlyError(returnOnlyFailure));
+
+        var payload = new ReloadPlanPayload(ticket, request.ReturnOnlyTask, originalJourneyJson);
         PreparedPlan<ReloadPlanPayload> plan;
         try
         {
@@ -98,6 +103,8 @@ internal sealed class FlightCheckpointReloadCoordinator
             CommitAllowedNow = blockers.Count == 0,
             CommitBlockers = blockers,
             CompletionCondition = "DSP loads only the internally generated pre-flight save whose exact name and game tick match the protected reusable ticket; the embedded primary owned-save identity, origin planet, and peaceful mode must match before adoption. Sandbox state and resource multiplier are preserved and reported but do not gate adoption.",
+            ReturnOnlyTask = payload.ReturnOnlyTask is null ? null
+                : PluginJson.Deserialize<VoyagerReturnOnlyRecoveryRequest>(PluginJson.Serialize(payload.ReturnOnlyTask)),
         });
     }
 
@@ -113,7 +120,7 @@ internal sealed class FlightCheckpointReloadCoordinator
                 "Generate one UUID and reuse it only for retries of this exact checkpoint reload commit."));
         }
 
-        var fingerprint = "commit-reload-flight-checkpoint|" + request.PlanToken;
+        var fingerprint = "commit-reload-flight-checkpoint|" + request.PlanToken + "|" + request.UserConfirmedInConversation;
         if (_idempotency.TryGet(
             IdempotencyScope,
             request.IdempotencyKey,
@@ -161,10 +168,16 @@ internal sealed class FlightCheckpointReloadCoordinator
         }
 
         var payload = plan.Payload;
+        if (payload.ReturnOnlyTask is not null && !request.UserConfirmedInConversation)
+            return GameCallResult<FlightCheckpointReloadResult>.Failed(BridgeError.Create(BridgeErrorCodes.InvalidRequest,
+                "The new finite return-only task and loss of all unsaved progress require explicit owner confirmation.",
+                false, "Do not load or grant time without the owner's separate approval."));
         var rejection = "The reusable flight-checkpoint ticket changed after prepare.";
         if (!_tickets.TryGetActiveTicket(payload.Ticket.ReloadToken, out var current, out _)
             || current is null
-            || !string.Equals(new ReloadPlanPayload(current).Fingerprint, payload.Fingerprint, StringComparison.Ordinal)
+            || !string.Equals(new ReloadPlanPayload(current, payload.ReturnOnlyTask,
+                payload.ReturnOnlyTask is null ? "" : PluginJson.Serialize(_tickets.VoyagerJourney)).Fingerprint,
+                payload.Fingerprint, StringComparison.Ordinal)
             || !TryValidateReloadContext(current, out rejection))
         {
             return GameCallResult<FlightCheckpointReloadResult>.Failed(BridgeError.Create(
@@ -173,6 +186,9 @@ internal sealed class FlightCheckpointReloadCoordinator
                 true,
                 "Do not load another save; inspect the exact checkpoint state and prepare it again."));
         }
+        var returnOnlyFailure = ValidateReturnOnlyTask(current, payload.ReturnOnlyTask, out _);
+        if (returnOnlyFailure is not null)
+            return GameCallResult<FlightCheckpointReloadResult>.Failed(ReturnOnlyError(returnOnlyFailure));
 
         var action = new ReloadAction
         {
@@ -181,6 +197,8 @@ internal sealed class FlightCheckpointReloadCoordinator
             SourceSessionId = _sessions.CaptureOnMainThread().SessionId,
             SourceGameTick = _sessions.CaptureOnMainThread().GameTick,
             IdempotencyKey = request.IdempotencyKey,
+            ReturnOnlyTask = payload.ReturnOnlyTask,
+            OriginalJourneyJson = payload.OriginalJourneyJson,
         };
         OwnedSaveRecoveryLease? checkpointLease = null;
         try
@@ -275,6 +293,7 @@ internal sealed class FlightCheckpointReloadCoordinator
             Message = action.DispatchOutcomeUnknown ? action.UnknownReason
                 : "DSP accepted the exact internally named pre-flight checkpoint; Spherewright is validating its reusable provenance proof.",
         };
+        result.NativeFirstFailure = action.FirstFailure?.Copy();
         if (!action.DispatchEntered)
         {
             result.State = NormalActionStates.ActionFailed;
@@ -301,6 +320,12 @@ internal sealed class FlightCheckpointReloadCoordinator
                 result.State = NormalActionStates.OutcomeUnknown;
                 result.Message = action.UnknownReason;
                 _sessions.QuarantineWritesOnMainThread(action.ActionId, action.UnknownReason);
+                if (action.ReturnOnlyTask is not null)
+                {
+                    RetainReturnOnlyMetadataFailure(action, result, session, "checkpoint_reload_reconciled", reconciliationRejection);
+                    result.Message += " " + _sessions.PauseFailedReturnOnlyRecoveryOnMainThread(session.SessionId!,
+                        action.Ticket.OwnedSaveName, action.Ticket.CheckpointId);
+                }
                 return true;
             }
             if (!_tickets.TryReconcileVoyagerRecovery(action.Ticket, out var journeyRejection, action.SourceGameTick))
@@ -310,6 +335,27 @@ internal sealed class FlightCheckpointReloadCoordinator
                 result.State = NormalActionStates.OutcomeUnknown;
                 result.Message = action.UnknownReason;
                 _sessions.QuarantineWritesOnMainThread(action.ActionId, action.UnknownReason);
+                if (action.ReturnOnlyTask is not null)
+                {
+                    RetainReturnOnlyMetadataFailure(action, result, session, "original_journey_reconciled", journeyRejection);
+                    result.Message += " " + _sessions.PauseFailedReturnOnlyRecoveryOnMainThread(session.SessionId!,
+                        action.Ticket.OwnedSaveName, action.Ticket.CheckpointId);
+                }
+                return true;
+            }
+            if (action.ReturnOnlyTask is not null && !_tickets.TryGrantRecoveredReturnOnlyTask(action.Ticket,
+                action.ReturnOnlyTask, action.OriginalJourneyJson, action.ActionId, session.SessionId!, session.GameTick,
+                DateTimeOffset.UtcNow, out var taskRejection, out var taskFailure))
+            {
+                action.DispatchOutcomeUnknown = true;
+                action.UnknownReason ??= taskRejection;
+                action.FirstFailure ??= taskFailure;
+                result.NativeFirstFailure = action.FirstFailure?.Copy();
+                result.State = NormalActionStates.OutcomeUnknown;
+                result.Message = action.UnknownReason;
+                _sessions.QuarantineWritesOnMainThread(action.ActionId, action.UnknownReason);
+                result.Message += " " + _sessions.PauseFailedReturnOnlyRecoveryOnMainThread(session.SessionId!,
+                    action.Ticket.OwnedSaveName, action.Ticket.CheckpointId);
                 return true;
             }
             if (action.DispatchOutcomeUnknown && session.WriteQuarantineActionId == action.ActionId)
@@ -322,6 +368,8 @@ internal sealed class FlightCheckpointReloadCoordinator
             result.ReconciledFromOutcomeUnknown = action.DispatchOutcomeUnknown;
             result.ReconciledAtGameTick = action.DispatchOutcomeUnknown ? session.GameTick : null;
             result.Message = "The exact pre-flight checkpoint passed provenance checks and is ready to retry the same flight; the primary owned save was not replaced.";
+            if (action.ReturnOnlyTask is not null)
+                result.Message = "The exact interrupted return checkpoint was adopted. Original accounting remains conservatively exhausted and preserved; a separately confirmed finite task permits only return to the original home and normal Save.";
             action.CompletedSnapshot = result;
         }
         else if (!string.IsNullOrWhiteSpace(_sessions.FlightCheckpointAdoptionError))
@@ -338,6 +386,64 @@ internal sealed class FlightCheckpointReloadCoordinator
         }
 
         return true;
+    }
+
+    private static void RetainReturnOnlyMetadataFailure(ReloadAction action, ActionResultSnapshot result,
+        SessionState session, string predicate, string detail)
+    {
+        var e = new NativeResumeDecisionEvidence("return_only_recovery_persistence", session.GameTick, DateTimeOffset.UtcNow, true);
+        e.Number("new_tick_cap", action.ReturnOnlyTask!.MaximumGameTicks);
+        e.Number("source_checkpoint_tick", action.Ticket.SavedGameTick);
+        e.Require(predicate, null); // A persistence failure does not prove its final disk state.
+        e.NotReached("new_task_granted", "native_return", "home_save");
+        var cut = e.Failure(BridgeErrorCodes.ActionOutcomeUnknown);
+        cut.Observations["persistence_result"] = detail;
+        action.FirstFailure ??= cut;
+        result.NativeFirstFailure = action.FirstFailure.Copy();
+    }
+
+    private Spherewright.Contracts.Players.NativeResumeFailureSnapshot? ValidateReturnOnlyTask(
+        FlightCheckpointTicket ticket, VoyagerReturnOnlyRecoveryRequest? request, out string originalJourneyJson)
+    {
+        originalJourneyJson = "";
+        if (request is null) return null;
+        var now = DateTimeOffset.UtcNow;
+        var invalid = VoyagerReturnOnlyRecoveryPolicy.RequestFailure(request, now);
+        if (invalid is not null) return invalid;
+        var session = _sessions.CaptureOnMainThread();
+        var j = _tickets.VoyagerJourney;
+        var e = new NativeResumeDecisionEvidence("return_only_checkpoint_binding", session.GameTick, now, true);
+        e.Number("checkpoint_tick", ticket.SavedGameTick);
+        e.Number("original_spent_ticks", j?.SpentGameTicks);
+        e.Number("original_maximum_ticks", j?.MaximumGameTicks);
+        e.Number("new_tick_cap", request.MaximumGameTicks);
+        e.Number("new_wall_seconds_remaining", (request.DeadlineUtc - now).TotalSeconds);
+        var checks = new (string Name, bool? Value)[] {
+            ("idle_main_menu", !session.GameLoaded),
+            ("exact_approved_checkpoint", FlightCheckpointStore.CheckpointMatchesReturnTask(ticket, request)),
+            ("original_journey_observed", j is not null),
+            ("original_return_leg", j?.ReturnLeg),
+            ("original_interrupted_phase", j is null ? null : j.Phase == "return" || j.Phase == "recovery_required" || j.Phase == "outcome_unknown"),
+            ("no_previous_return_only_grant", j is null ? null : j.ReturnOnlyTask is null),
+            ("original_journey_checkpoint", j is null ? null : j.JourneyId == ticket.VoyagerJourneyId && j.ActiveCheckpointId == ticket.CheckpointId && j.ActiveActionId == ticket.LastAttemptActionId),
+            ("original_home_direction", j is null ? null : j.HomePlanetId == ticket.DestinationPlanetId && j.HomeStarId == ticket.DestinationStarId && j.RemotePlanetId == ticket.OriginPlanetId && j.DestinationStarId == ticket.OriginStarId),
+            ("original_owned_native", j is null ? null : j.OwnedSaveName == ticket.OwnedSaveName && j.GameVersion == ticket.GameVersion),
+            ("native_launch_was_armed", ticket.NativeLaunchArmed),
+        };
+        e.NotReached(checks.Select(c => c.Name).ToArray());
+        e.NotReached("native_load", "healthy_takeover", "native_return", "home_save");
+        foreach (var check in checks)
+            if (!e.Require(check.Name, check.Value)) return e.Failure(BridgeErrorCodes.StaleState);
+        originalJourneyJson = PluginJson.Serialize(j);
+        return null;
+    }
+
+    private static BridgeError ReturnOnlyError(Spherewright.Contracts.Players.NativeResumeFailureSnapshot failure)
+    {
+        var error = BridgeError.Create(failure.Code, "The fresh return-only recovery premise failed: " + failure.FirstFailedPredicate,
+            false, "Preserve the original checkpoint, action and ledger. Do not load or renew the old task.");
+        error.NativeFirstFailure = failure;
+        return error;
     }
 
     private bool TryValidateReloadContext(FlightCheckpointTicket ticket, out string rejection)
@@ -422,9 +528,13 @@ internal sealed class FlightCheckpointReloadCoordinator
 
     private sealed class ReloadPlanPayload
     {
-        public ReloadPlanPayload(FlightCheckpointTicket ticket)
+        public ReloadPlanPayload(FlightCheckpointTicket ticket, VoyagerReturnOnlyRecoveryRequest? returnOnlyTask = null,
+            string originalJourneyJson = "")
         {
             Ticket = ticket;
+            ReturnOnlyTask = returnOnlyTask is null ? null
+                : PluginJson.Deserialize<VoyagerReturnOnlyRecoveryRequest>(PluginJson.Serialize(returnOnlyTask));
+            OriginalJourneyJson = originalJourneyJson;
             Fingerprint = CanonicalStateHash.Combine(
                 "reload-flight-checkpoint",
                 ticket.CheckpointId,
@@ -448,12 +558,14 @@ internal sealed class FlightCheckpointReloadCoordinator
                 ticket.ReloadActionId,
                 ticket.PlayerStateHash,
                 ticket.StarSystemStateHash,
-                ticket.IssuedAtUtc);
+                ticket.IssuedAtUtc, PluginJson.Serialize(ReturnOnlyTask), OriginalJourneyJson);
         }
 
         public FlightCheckpointTicket Ticket { get; }
 
         public string Fingerprint { get; }
+        public VoyagerReturnOnlyRecoveryRequest? ReturnOnlyTask { get; }
+        public string OriginalJourneyJson { get; }
     }
 
     private sealed class ReloadAction
@@ -470,5 +582,8 @@ internal sealed class FlightCheckpointReloadCoordinator
         public string? UnknownReason { get; set; }
         public string? PreDispatchFailure { get; set; }
         public ActionResultSnapshot? CompletedSnapshot { get; set; }
+        public VoyagerReturnOnlyRecoveryRequest? ReturnOnlyTask { get; set; }
+        public string OriginalJourneyJson { get; set; } = "";
+        public Spherewright.Contracts.Players.NativeResumeFailureSnapshot? FirstFailure { get; set; }
     }
 }

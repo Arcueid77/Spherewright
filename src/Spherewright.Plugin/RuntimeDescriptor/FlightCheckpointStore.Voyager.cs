@@ -18,6 +18,10 @@ internal sealed partial class FlightCheckpointStore
 
     public bool TryPersistVoyagerJourney(VoyagerJourneyRecord record, out string rejection, bool exactRecovery = false,
         bool normalSaveProof = false, bool unstartedFlightProof = false)
+        => TryPersistVoyagerJourneyCore(record, out rejection, exactRecovery, normalSaveProof, unstartedFlightProof, false);
+
+    private bool TryPersistVoyagerJourneyCore(VoyagerJourneyRecord record, out string rejection, bool exactRecovery,
+        bool normalSaveProof, bool unstartedFlightProof, bool newReturnOnlyProof)
     {
         rejection = string.Empty;
         if (_voyagerJourneyHardReadError)
@@ -43,7 +47,7 @@ internal sealed partial class FlightCheckpointStore
             }
             else if (File.Exists(VoyagerJourneyPath))
                 throw new InvalidDataException("An unexamined journey already exists.");
-            if (!ValidVoyagerTransition(_voyagerJourney, record, exactRecovery, normalSaveProof, unstartedFlightProof))
+            if (!ValidVoyagerTransition(_voyagerJourney, record, exactRecovery, normalSaveProof, unstartedFlightProof, newReturnOnlyProof))
             {
                 rejection = "A live journey cannot be replaced, extend its deadline, undo spent time or reduce its original return reserve.";
                 return false;
@@ -225,12 +229,14 @@ internal sealed partial class FlightCheckpointStore
     }
 
     private static bool ValidVoyagerTransition(VoyagerJourneyRecord? old, VoyagerJourneyRecord next, bool exactRecovery,
-        bool normalSaveProof, bool unstartedFlightProof)
+        bool normalSaveProof, bool unstartedFlightProof, bool newReturnOnlyProof)
     {
         if (old is null) return next.Phase == "outbound" && !next.ReturnLeg && next.SpentGameTicks == 0;
         if (old.JourneyId != next.JourneyId)
             return (old.Phase == "completed" || old.Phase == "recovered_closed" || old.Phase == "prelaunch_failed")
                 && next.Phase == "outbound" && !next.ReturnLeg && next.SpentGameTicks == 0;
+        if (PluginJson.Serialize(old.ReturnOnlyTask) != PluginJson.Serialize(next.ReturnOnlyTask)
+            && !(newReturnOnlyProof && old.ReturnOnlyTask is null && next.ReturnOnlyTask is not null)) return false;
         if (old.Phase == "completed" || old.Phase == "recovered_closed" || old.Phase == "prelaunch_failed")
             return PluginJson.Serialize(old) == PluginJson.Serialize(next);
         var phaseAllowed = old.Phase == next.Phase
@@ -260,7 +266,7 @@ internal sealed partial class FlightCheckpointStore
         && r.GameVersion == _gameVersion && r.HomePlanetId > 0 && r.HomeStarId > 0 && r.DestinationStarId > 0
         && r.HomeStarId != r.DestinationStarId && r.MaximumGameTicks >= 7200 && r.MaximumGameTicks <= 108000
         && r.ReturnReserveGameTicks >= 3600 && r.ReturnReserveGameTicks < r.MaximumGameTicks
-        && r.SpentGameTicks >= 0
+        && r.SpentGameTicks >= 0 && ValidReturnOnlyTask(r)
         && r.StartedAtGameTick >= 0 && r.DeadlineUtc > r.IssuedAtUtc && r.IssuedAtUtc != default
         && r.DeadlineUtc - r.IssuedAtUtc <= TimeSpan.FromHours(2)
         && FinitePositive(r.ReturnEnergyFloorJoules) && FinitePositive(r.WithdrawalReserveJoules)
@@ -273,7 +279,7 @@ internal sealed partial class FlightCheckpointStore
     private static bool FinitePositive(double value) => !double.IsNaN(value) && !double.IsInfinity(value) && value > 0d;
 }
 
-internal sealed class VoyagerJourneyRecord
+internal sealed partial class VoyagerJourneyRecord
 {
     public int Version { get; set; } = 1;
     public string JourneyId { get; set; } = string.Empty;
@@ -305,4 +311,5 @@ internal sealed class VoyagerJourneyRecord
     public string? CompletedSaveActionId { get; set; }
     public string? CompletedSaveSessionId { get; set; }
     public string? CompletedSaveFingerprint { get; set; }
+    public VoyagerReturnOnlyTaskRecord? ReturnOnlyTask { get; set; }
 }

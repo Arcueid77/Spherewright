@@ -400,6 +400,7 @@ internal sealed class SpherewrightBridgeHost : IDisposable
             }
             _normalActionCoordinator.VoyagerLocalPrePlayerTickAvailable = true;
             _normalActionCoordinator.VoyagerLocalPrePlayerObservedAtUtc = DateTimeOffset.UtcNow;
+            _sessionTracker.GuardReturnOnlyTaskOnMainThread(DateTimeOffset.UtcNow);
             if (_sessionTracker.HasPendingRemoteResumeAdoption)
             {
                 // Only this exact Native501 return may acknowledge the new idle

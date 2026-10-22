@@ -15,7 +15,7 @@ namespace Spherewright.Bridge.Core.Tests;
 // prefixes and session/native substitutes do not prove Unity, real flight, normal
 // save/load acceptance, Windows ACLs, or a usable in-flight controller.
 [Collection("Owned resume native substitutes")]
-public sealed class VoyagerJourneyStoreIntegrationTests
+public sealed partial class VoyagerJourneyStoreIntegrationTests
 {
     [Fact]
     public void ReopenPreservesOriginalDeadlineSpentTicksAndAllReturnReservations()
@@ -806,6 +806,11 @@ public sealed class VoyagerJourneyStoreIntegrationTests
         private readonly int _previousDispatches = DSPGame.DispatchCalls;
         private readonly string? _previousLoadedName = DSPGame.LoadedName;
         private readonly Action? _previousBeforeLoad = DSPGame.BeforeLoad;
+        private readonly PausedSaveTestWorld? _previousWorld = GameMain.data;
+        private readonly long _previousTick = GameMain.gameTick;
+        private readonly FlightStartTestPlanet _previousPlanet = GameMain.localPlanet;
+        private readonly FlightStartTestPlayer _previousPlayer = GameMain.mainPlayer;
+        private readonly bool _previousPaused = GameMain.isPaused;
         internal GameSessionTracker Sessions { get; } = new();
         internal NormalGameActionCoordinator NormalActions { get; } = new();
         internal FlightCheckpointStore Store { get; }
@@ -818,7 +823,7 @@ public sealed class VoyagerJourneyStoreIntegrationTests
         internal string PrimaryPath => GameSave.SavePath(Identity);
         internal int SyntheticPrimaryProofWrites { get; private set; }
         internal Fixture(bool returnLeg = false, bool persistJourney = true, bool returnedHome = false,
-            string recoveryPhase = "recovery_required")
+            string recoveryPhase = "recovery_required", bool originalWindowExpired = false)
         {
             if (recoveryPhase != "active" && recoveryPhase != "recovery_required" && recoveryPhase != "outcome_unknown")
                 throw new ArgumentException("Use an actual active or interrupted journey phase.", nameof(recoveryPhase));
@@ -838,7 +843,7 @@ public sealed class VoyagerJourneyStoreIntegrationTests
                 WriteSave(Ticket.OwnedSaveName, returnLeg ? 40 : 90);
                 WriteSave(Ticket.CheckpointSaveName, outboundSavedTick);
                 Store.PersistCompletedCheckpoint(Ticket, outboundSavedTick);
-                var issued = DateTimeOffset.UtcNow.AddMinutes(-1);
+                var issued = originalWindowExpired ? DateTimeOffset.UtcNow.AddDays(-2) : DateTimeOffset.UtcNow.AddMinutes(-1);
                 Record = new VoyagerJourneyRecord { JourneyId = journeyId, OwnedSaveName = Identity, GameVersion = Version,
                     Phase = "outbound", HomePlanetId = 101, HomeStarId = 1, DestinationStarId = 2,
                     ActiveActionId = OriginalFlightId, ActiveCheckpointId = Ticket.CheckpointId,
@@ -959,7 +964,7 @@ public sealed class VoyagerJourneyStoreIntegrationTests
         }
         internal bool CompleteNormalSave(string fingerprint, out string rejection) => Store.TryCompleteVoyagerAfterOwnedSave(
             Record.JourneyId, NormalSaveActionId, SourceSessionId, 101, 150, fingerprint, out rejection);
-        private static void WriteSave(string name, long tick, string? embeddedIdentity = null, int nativeBuild = 29151)
+        internal static void WriteSave(string name, long tick, string? embeddedIdentity = null, int nativeBuild = 29151)
         {
             using var prefix = OwnedSavePrefixReaderTests.Fixture(identity: embeddedIdentity ?? Identity, patch: 23,
                 versionPatch: 35, versionBuild: nativeBuild, gameDescVersion: 10);
@@ -972,6 +977,8 @@ public sealed class VoyagerJourneyStoreIntegrationTests
         public void Dispose()
         {
             Sessions.Dispose();
+            GameMain.data = _previousWorld; GameMain.gameTick = _previousTick;
+            GameMain.localPlanet = _previousPlanet; GameMain.mainPlayer = _previousPlayer; GameMain.isPaused = _previousPaused;
             DSPGame.BeforeLoad = null;
             GameSave.Root = _previousRoot;
             TestWorldCoordinator.ReadinessError = _previousReadiness;

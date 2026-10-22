@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Spherewright.Contracts.Celestial;
+using Spherewright.Contracts.Sessions;
 using Xunit;
 
 namespace Spherewright.Contracts.Tests;
@@ -7,6 +8,23 @@ namespace Spherewright.Contracts.Tests;
 public sealed class VoyagerContractTests
 {
     private static readonly JsonSerializerOptions CamelCase = new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
+
+    [Fact]
+    public void ReturnOnlyRecoveryNeverInventsAGrantOrRemainingBudgetFromMissingFields()
+    {
+        var legacy = JsonSerializer.Deserialize<PrepareFlightCheckpointReloadRequest>("{}", CamelCase)!;
+        Assert.Null(legacy.ReturnOnlyTask);
+        Assert.False(new CommitFlightCheckpointReloadRequest().UserConfirmedInConversation);
+        Assert.Null(new SessionState().ReturnOnlyRecovery);
+        var missing = JsonSerializer.Deserialize<VoyagerReturnOnlyTaskState>("{}", CamelCase)!;
+        Assert.Null(missing.RemainingGameTicks);
+        Assert.Null(missing.FirstFailure);
+        var observedZero = JsonSerializer.Deserialize<VoyagerReturnOnlyTaskState>(
+            "{\"remainingGameTicks\":0,\"maximumGameTicks\":54000,\"originalMaximumGameTicks\":108000}", CamelCase)!;
+        Assert.Equal(0, observedZero.RemainingGameTicks);
+        Assert.Equal(54000, observedZero.MaximumGameTicks);
+        Assert.Equal(108000, observedZero.OriginalMaximumGameTicks);
+    }
 
     [Fact]
     public void UnknownCatalogueOmitsNoEvidenceByInventingEmptyObservedResources()

@@ -443,6 +443,12 @@ Native Import 可将 double 宇宙坐标逆投影为 float 本地位置；普通
 
 操作可能执行、等待、完成、失败、要求恢复、未知。检查 `terminal`、`succeeded`、身份、delta，而不是工具级成功。`ACTION_OUTCOME_UNKNOWN` 需要原 key 与结果对账，新 key 不能猜重放。单飞、隔离跨 Pipe 重连保留。
 
+另授的只返航任务空闲时，`prepare_cancel_voyager_flight` 也接受已披露的 `returnOnlyRecovery.taskId`，并绑定准确会话与当前星球。commit仅正常Pause并锁存首个停止事实，不授自动Resume或新预算。正在飞行时仍须使用飞行自身actionId，由原生退出/刹车控制器收尾。
+
 Move 地表预览是观察，不是寻路，180/600 tick 失败指导禁止重复目标。被动漂移保留独立可信检查、时间、位移限制。之后就绪失败不撤销成功，revision 不是接受操作计数。
+
+返航异常中断后，只有用户另行批准舍弃其后全部未存进度并新授有限只返航任务，才可在检查点prepare提供可选 `returnOnlyTask`，再以 `userConfirmedInConversation=true` commit。提案绑定 `expectedJourneyId`、`expectedFlightActionId`、`expectedCheckpointId`、可空的 `expectedCheckpointGameTick` 及 `expectedCheckpointFileFingerprint`，并要求 `acceptUnstoredProgressLoss=true`、`deadlineUtc` 和 `maximumGameTicks`。只能从空闲主菜单使用精确合格、已arm的返航检查点；新上限至多1200墙钟秒/54000游戏tick。prepare不加载、不自行开始计时。冷源最终tick未知时仍保守作废原旅程剩余量；新任务仅持久签发一次，单独保留原条款和原账快照，绑定准确reload动作及接管会话，不续发、不跨会话、不重放原飞行、不补资源。
+
+`SessionState.returnOnlyRecovery` 分别披露新任务剩余tick与原spent/maximum/deadline。范围blocker拒绝其他写入，仅鲜活核验的原母星Voyager返航、其取消和普通Save可移除该精确blocker，其余门全部保留。路线预览及起飞自恢复检查点tick扣时，并在新总量内预留1800停机tick、已进入的601尾部及30墙钟秒。真实501观察者逐逻辑tick检查总上限，覆盖单渲染帧多tick；普通会话刷新提供墙钟后备。耗尽时仅正常暂停精确owned世界，不伪造物理idle或授自动Resume；其他健康门通过时仍可正常Save保全进度。首错事实在Pause前锁存，之后不补采覆盖。确认缺失、文件/账目改变、较新主档、未决/已消费重载、归属错误、未知时钟或已授另一任务均闭合拒绝。离线能力不证明Unity恢复或真实返航。
 
 源码依据：[Contracts](../src/Spherewright.Contracts)、[MCP 工具](../src/Spherewright.Mcp/Tools)、[Core](../src/Spherewright.Bridge.Core)、[原生适配器](../src/Spherewright.Plugin/Game)。早期细节：[已验收协议](https://github.com/Arcueid77/Spherewright/blob/2a7a98d1932c404e3a7abc2c11233d9c0b8780d9/docs/protocol.md)、[Lab 固定参考](https://github.com/Arcueid77/Spherewright-Lab/tree/14478a03c64c550e644c559405c8496b647552e7)。离线契约不证明已安装或实机验收。

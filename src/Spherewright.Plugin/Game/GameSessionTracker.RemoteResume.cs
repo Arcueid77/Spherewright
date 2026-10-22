@@ -58,6 +58,10 @@ internal sealed partial class GameSessionTracker
 
     internal DateTimeOffset EffectiveVoyagerDeadline(VoyagerJourneyRecord journey)
     {
+        if (journey.ReturnOnlyTask is { } task)
+            return IsCurrentSessionOwned && task.SessionId == _sessionId && journey.OwnedSaveName == _ownedSaveName
+                && journey.GameVersion == _gameVersion ? task.DeadlineUtc.AddSeconds(-VoyagerControlDeadlinePolicy.StopCleanupSeconds)
+                    : journey.DeadlineUtc;
         var adoption = _remoteResumeAdoption;
         var authorization = adoption?.Authorization;
         if (authorization is null || !IsCurrentSessionOwned || !ReferenceEquals(GameMain.data, adoption!.World)

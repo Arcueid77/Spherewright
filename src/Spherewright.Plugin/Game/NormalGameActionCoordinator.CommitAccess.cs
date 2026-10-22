@@ -1,6 +1,7 @@
 using Spherewright.Contracts.Actions;
 using Spherewright.Contracts.Errors;
 using Spherewright.Contracts.Sessions;
+using Spherewright.Bridge.Core.Safety;
 
 namespace Spherewright.Plugin.Game;
 
@@ -34,6 +35,8 @@ internal sealed partial class NormalGameActionCoordinator
 
         var commitBlockers = plan.ActionKind == NormalActionKinds.Save && plan.SavePreservation is not null
             ? plan.SavePreservation.RemainingBlockers(session.WriteBlockers) : session.WriteBlockers;
+        commitBlockers = VoyagerReturnOnlyRecoveryPolicy.ActionBlockers(commitBlockers, plan.ActionKind,
+            plan.VoyagerReturnLeg && plan.VoyagerBudget is not null);
         if (commitBlockers.Count > 0)
         {
             var blocker = commitBlockers[0];

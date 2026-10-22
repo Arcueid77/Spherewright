@@ -1630,15 +1630,28 @@ public static partial class SpherewrightTools
         Destructive = false,
         Idempotent = false,
         OpenWorld = false)]
-    [Description("Validates only the protected checkpoint bound to the supplied high-entropy token, including its internally generated save name and exact saved game tick. It never accepts or enumerates save names and does not load during prepare.")]
+    [Description("Validates only the protected checkpoint bound to the supplied high-entropy token; never accepts save names or loads during prepare. Optional returnOnlyTask is a separately owner-approved interrupted-return recovery, maximum1200wall seconds/54000game ticks, retaining all original accounting and resource floors; commit needs explicit conversation confirmation.")]
     public static async Task<CallToolResult> PrepareFlightCheckpointReloadAsync(
         IBridgeClient bridgeClient,
         string reloadToken,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        VoyagerReturnOnlyRecoveryRequest? returnOnlyTask = null)
     {
+        if (returnOnlyTask is not null && VoyagerReturnOnlyRecoveryPolicy.RequestFailure(returnOnlyTask, DateTimeOffset.UtcNow) is { } invalid)
+        {
+            var error = BridgeError.Create(invalid.Code, "The new return-only recovery request is invalid: " + invalid.FirstFailedPredicate,
+                false, "Use the exact owner-approved checkpoint and finite task. No load was dispatched.");
+            error.NativeFirstFailure = invalid;
+            return ToToolResult(BridgeCallResult<PreparedFlightCheckpointReloadPlan>.Failed(error), error.Message);
+        }
         var result = await bridgeClient.PrepareFlightCheckpointReloadAsync(
-            new PrepareFlightCheckpointReloadRequest { ReloadToken = reloadToken },
+            new PrepareFlightCheckpointReloadRequest { ReloadToken = reloadToken, ReturnOnlyTask = returnOnlyTask },
             cancellationToken).ConfigureAwait(false);
+        if (returnOnlyTask is not null && result.Success && (result.Value is null
+            || !VoyagerReturnOnlyRecoveryPolicy.HasMatchingEcho(returnOnlyTask, result.Value)))
+            result = BridgeCallResult<PreparedFlightCheckpointReloadPlan>.Failed(BridgeError.Create(BridgeErrorCodes.BridgeNotReady,
+                "The Plugin did not echo the exact separate return-only task; no plan token is exposed.", false,
+                "Use matching qualified Plugin/MCP bytes and preserve the original checkpoint."));
         return ToToolResult(result, "Exact reusable pre-flight checkpoint reload prepared; no save was loaded.");
     }
 
@@ -1654,13 +1667,15 @@ public static partial class SpherewrightTools
         IBridgeClient bridgeClient,
         string planToken,
         string idempotencyKey,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        bool userConfirmedInConversation = false)
     {
         var result = await bridgeClient.CommitFlightCheckpointReloadAsync(
             new CommitFlightCheckpointReloadRequest
             {
                 PlanToken = planToken,
                 IdempotencyKey = idempotencyKey,
+                UserConfirmedInConversation = userConfirmedInConversation,
             },
             cancellationToken).ConfigureAwait(false);
         return ToToolResult(result, "DSP accepted the exact reusable pre-flight checkpoint; poll actionId until provenance validation completes.");

@@ -595,6 +595,15 @@ internal sealed partial class NormalGameActionCoordinator
         string? requestedSessionId, PrepareCancelVoyagerFlightRequest request)
     {
         var session = _sessions.CaptureOnMainThread();
+        if (request.StateHashVersion == 1 && session.SessionId == requestedSessionId
+            && _sessions.CanStopIdleReturnOnlyTask(request.ActionId, requestedSessionId, request.PlanetId)
+            && !_actions.ActiveValues.Any(a => !a.Terminal))
+        {
+            var stoppedTask = NormalActionPlanPayload.CancelVoyagerFlight(requestedSessionId!, request.PlanetId, request.ActionId);
+            stoppedTask.ReturnOnlyTaskCancellation = true;
+            return AddPreparedPlan(stoppedTask, session, 1,
+                "Normal Native Pause stops this exact idle return-only task; its budget is not renewed and Save still requires all other health gates.");
+        }
         if (request.StateHashVersion != 1 || !session.GameLoaded || !session.OwnedBySpherewright
             || session.SessionId != requestedSessionId || !_actions.TryGetValue(request.ActionId, out var flight)
             || flight.Terminal || flight.Plan.VoyagerBudget is null || flight.PlanetId != request.PlanetId
@@ -606,12 +615,21 @@ internal sealed partial class NormalGameActionCoordinator
     }
 
     private BridgeError? RevalidateCancelVoyagerFlightOnMainThread(NormalActionPlanPayload plan) =>
-        !_actions.TryGetValue(plan.CancelVoyagerActionId!, out var flight) || flight.Terminal
+        plan.ReturnOnlyTaskCancellation ? _sessions.CanStopIdleReturnOnlyTask(plan.CancelVoyagerActionId!, plan.SessionId, plan.PlanetId)
+            ? null : Stale("The exact idle return-only task binding changed before cancellation.")
+        : !_actions.TryGetValue(plan.CancelVoyagerActionId!, out var flight) || flight.Terminal
         || flight.Plan.VoyagerBudget is null || flight.SessionId != plan.SessionId || !VoyagerBindingMatches(flight.Plan)
             ? Stale("The original Voyager flight is no longer active in the bound owned world.") : null;
 
     private void ExecuteCancelVoyagerFlightOnMainThread(ActionRecord cancellation)
     {
+        if (cancellation.Plan.ReturnOnlyTaskCancellation)
+        {
+            if (!_sessions.StopIdleReturnOnlyTask(cancellation.Plan.CancelVoyagerActionId!, cancellation.SessionId, cancellation.PlanetId))
+                throw new InvalidOperationException("Normal Pause of the exact idle return-only task was not proved.");
+            Complete(cancellation, "The exact idle return-only task is normally paused and cannot resume automatically; original outcomes and budgets are preserved.");
+            return;
+        }
         if (!_actions.TryGetValue(cancellation.Plan.CancelVoyagerActionId!, out var flight))
             throw new InvalidOperationException("The exact original flight is missing.");
         RequestVoyagerStop(flight, "An explicitly prepared cancellation stopped the original finite voyage.");
@@ -643,8 +661,12 @@ internal sealed partial class NormalGameActionCoordinator
     private BridgeError? ValidateVoyagerReturnReserve(VoyagerJourneyRecord journey, Player player)
     {
         var elapsedRemote = journey.LastLandedGameTick.HasValue ? Math.Max(0L, GameMain.gameTick - journey.LastLandedGameTick.Value) : 0L;
+        var remaining = journey.ReturnOnlyTask is null ? journey.MaximumGameTicks - journey.SpentGameTicks - elapsedRemote
+            : journey.RemainingReturnOnlyTicks(_sessions.SessionId, GameMain.gameTick) ?? -1;
         if (DateTimeOffset.UtcNow >= _sessions.EffectiveVoyagerDeadline(journey)
-            || journey.MaximumGameTicks - journey.SpentGameTicks - elapsedRemote < journey.ReturnReserveGameTicks
+            || journey.ReturnOnlyTask is not null && _sessions.ReturnOnlyTaskStopped
+            || (journey.ReturnOnlyTask is null ? remaining < journey.ReturnReserveGameTicks
+                : VoyagerReturnOnlyRecoveryPolicy.FlightTicks(remaining, journey.ReturnReserveGameTicks) < 3600)
             || CalculateAvailableFlightEnergy(player.mecha) < journey.ReturnEnergyFloorJoules
             || player.mecha.coreEnergy < journey.ReturnCoreEnergyMinimumJoules
             || CountVoyagerWarpers(player.mecha.warpStorage) < 1 + journey.ExtraWarperReserve)
@@ -654,6 +676,11 @@ internal sealed partial class NormalGameActionCoordinator
 
     private BridgeError? ValidateVoyagerJourneyLocalCommit(NormalActionPlanPayload plan)
     {
+        var returnOnly = _flightCheckpoints.VoyagerJourney;
+        if (returnOnly?.ReturnOnlyScopeActive == true && plan.ActionKind != NormalActionKinds.Save
+            && plan.ActionKind != NormalActionKinds.CancelVoyagerFlight
+            && !(plan.VoyagerReturnLeg && plan.VoyagerBudget is not null))
+            return Stale(VoyagerReturnOnlyRecoveryPolicy.ScopeMessage);
         if (IsStructuredConstruction(plan))
             return plan.ActionKind == NormalActionKinds.CancelBlueprintBuild
                 ? ValidateStructuredConstructionCancellation(plan) : ValidateStructuredConstructionBudget(plan);
@@ -662,6 +689,7 @@ internal sealed partial class NormalGameActionCoordinator
         if (!VoyagerOwnedJourneyMatchesCurrentSession(journey, plan.SessionId))
             return Stale("The active journey belongs to another exact owned save or Native version; its local-action budget cannot be borrowed.");
         if (plan.VoyagerBudget is not null || plan.ActionKind == NormalActionKinds.CancelVoyagerFlight) return null;
+        if (journey.ReturnOnlyScopeActive && plan.ActionKind == NormalActionKinds.Save) return null;
         if (journey.Phase == "home_awaiting_save" && plan.ActionKind == NormalActionKinds.Save) return null;
         if (journey.Phase != "remote_landed" || journey.RemotePlanetId != plan.PlanetId)
             return Stale("The active Voyager action/checkpoint must be reconciled before unrelated writes.");
@@ -1095,6 +1123,7 @@ internal sealed partial class NormalGameActionCoordinator
         public string? VoyagerJourneyId { get; private set; }
         public string? VoyagerNativePrerequisiteHash { get; private set; }
         public bool VoyagerReturnLeg { get; private set; }
+        public bool ReturnOnlyTaskCancellation { get; set; }
         public string? CancelVoyagerActionId { get; private set; }
         public long? VoyagerLocalDeadlineGameTick { get; set; }
         public long VoyagerLocalStartedGameTick { get; set; }

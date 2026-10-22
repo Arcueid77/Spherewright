@@ -367,6 +367,7 @@ internal sealed partial class GameSessionTracker : IDisposable
         }
 
         _lastPlanetId = localPlanetId;
+        GuardReturnOnlyTaskOnMainThread();
         TrySaveOwnedWorldOnMainThread(currentData);
     }
 
@@ -525,6 +526,7 @@ internal sealed partial class GameSessionTracker : IDisposable
             Capabilities = CreateOwnedCapabilities(writesAllowed, _writeHealth),
         };
         ApplyFlightCheckpointState(owned);
+        ApplyReturnOnlyTaskState(owned);
         return owned;
     }
 

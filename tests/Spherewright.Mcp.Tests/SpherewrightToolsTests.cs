@@ -3055,6 +3055,28 @@ public sealed partial class SpherewrightToolsTests
 
         Assert.False(result.IsError);
         Assert.Equal("checkpoint-token", bridge.LastFlightCheckpointReloadRequest?.ReloadToken);
+        Assert.Null(bridge.LastFlightCheckpointReloadRequest?.ReturnOnlyTask);
+    }
+
+    [Theory]
+    [InlineData(false)] [InlineData(true)]
+    public async Task ReturnOnlyRecoveryRequiresTheExactPluginEchoAndForwardsExplicitCommitConfirmation(bool ignored)
+    {
+        var bridge = new FakeBridgeClient(SuccessResult()) { OmitReturnOnlyTaskEcho = ignored };
+        var task = new VoyagerReturnOnlyRecoveryRequest {
+            ExpectedJourneyId = Guid.NewGuid().ToString("D"), ExpectedFlightActionId = "synthetic-original-flight",
+            ExpectedCheckpointId = "checkpoint-id", ExpectedCheckpointGameTick = 100,
+            ExpectedCheckpointFileFingerprint = "sha256:synthetic-complete-checkpoint", AcceptUnstoredProgressLoss = true,
+            MaximumGameTicks = 54000, DeadlineUtc = DateTimeOffset.UtcNow.AddMinutes(19),
+        };
+        var result = await SpherewrightTools.PrepareFlightCheckpointReloadAsync(bridge, "checkpoint-token",
+            CancellationToken.None, task);
+        Assert.Equal(ignored, result.IsError);
+        Assert.Same(task, bridge.LastFlightCheckpointReloadRequest!.ReturnOnlyTask);
+        if (ignored) { Assert.DoesNotContain("checkpoint-plan", JsonSerializer.Serialize(result)); return; }
+        await SpherewrightTools.CommitFlightCheckpointReloadAsync(bridge, "checkpoint-plan", "synthetic-key",
+            CancellationToken.None, userConfirmedInConversation: true);
+        Assert.True(bridge.LastFlightCheckpointReloadCommitRequest!.UserConfirmedInConversation);
     }
 
     [Fact]
@@ -3489,6 +3511,8 @@ public sealed partial class SpherewrightToolsTests
         public PreparedNormalAction? SavePlan { get; set; }
 
         public PrepareFlightCheckpointReloadRequest? LastFlightCheckpointReloadRequest { get; private set; }
+        public CommitFlightCheckpointReloadRequest? LastFlightCheckpointReloadCommitRequest { get; private set; }
+        public bool OmitReturnOnlyTaskEcho { get; set; }
 
         public PrepareUserSaveImportRequest? LastImportPrepareRequest { get; private set; }
 
@@ -4133,6 +4157,8 @@ public sealed partial class SpherewrightToolsTests
                     Prepared = true,
                     PlanToken = "checkpoint-plan",
                     CheckpointId = "checkpoint-id",
+                    SavedGameTick = request.ReturnOnlyTask?.ExpectedCheckpointGameTick ?? 100,
+                    ReturnOnlyTask = OmitReturnOnlyTaskEcho ? null : request.ReturnOnlyTask,
                 }));
         }
 
@@ -4140,6 +4166,7 @@ public sealed partial class SpherewrightToolsTests
             CommitFlightCheckpointReloadRequest request,
             CancellationToken cancellationToken)
         {
+            LastFlightCheckpointReloadCommitRequest = request;
             return Task.FromResult(BridgeCallResult<FlightCheckpointReloadResult>.Succeeded(
                 new FlightCheckpointReloadResult
                 {

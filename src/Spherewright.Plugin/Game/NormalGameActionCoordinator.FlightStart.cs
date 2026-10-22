@@ -1,4 +1,5 @@
 using Spherewright.Contracts.Actions;
+using Spherewright.Bridge.Core.Safety;
 using Spherewright.Plugin.RuntimeDescriptor;
 
 namespace Spherewright.Plugin.Game;
@@ -34,6 +35,9 @@ internal sealed partial class NormalGameActionCoordinator
         action.VoyagerJourney = journey;
         var legTicks = plan.VoyagerReturnLeg ? journey.ReturnReserveGameTicks
             : Math.Min(budget.OutboundMaximumGameTicks, journey.MaximumGameTicks - journey.SpentGameTicks - journey.ReturnReserveGameTicks);
+        if (plan.VoyagerReturnLeg && journey.ReturnOnlyTask is not null)
+            legTicks = VoyagerReturnOnlyRecoveryPolicy.FlightTicks(
+                journey.RemainingReturnOnlyTicks(action.SessionId, GameMain.gameTick), legTicks);
         var rejection = string.Empty;
         if (legTicks < 3600 || !_flightCheckpoints.TryPersistVoyagerJourney(journey, out rejection))
         {

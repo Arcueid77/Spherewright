@@ -438,4 +438,8 @@ Native Import 可将 double 宇宙坐标逆投影为 float 本地位置；普通
 
 冷启动可能因精确主进度更新而使失败飞行检查点退役。不能改 ticket 或复活 token。公布的主受保护恢复是进入更新时间线的独立流程，检查后再新飞行、新检查点。失败重试在资格仍有效时可重复加载同匹配点。稳定到达后确认能力消失，并正常保存主世界使退役持久。
 
+只返航任务在起飞前或落地后须停止时，以 `prepare_cancel_voyager_flight` 提供已披露的 `returnOnlyRecovery.taskId`、准确会话/当前星球，再commit一次；核验正常Pause和锁存的首个停止事实。正在飞行则使用飞行自身actionId及既有退出/刹车流程。两种停止均不授自动Resume或另一次尝试。
+
+中断返航无最终源tick观察时，冷恢复仍作废原剩余tick。另经用户批准的 `returnOnlyTask` 才可经准确合格检查点授予一次新任务，至多1200墙钟秒/54000游戏tick，必须明确接受未存进度损失并在commit确认。先完成离线准备，再开始已批绝对执行窗口；保留原终态、账目、资源底线及完整文件。核对prepare提案回显和会话任务绑定，仅返原母星，恢复后立即普通Save，到家再次Save并核完整证明。到家正常保存前继续拒绝其他写入。Plugin在新额度内保留停机/尾部成本，无客户端时也会在耗尽后暂停。有限观察器与游戏须独立于调用宿主的清理机制，读档前核验实际游戏进程；原操作消失时不重启，也不把进程创建回执当作任务接管成功。
+
 当前场景执行从当前 [Spherewright-Lab](https://github.com/Arcueid77/Spherewright-Lab) 检出目录开始，先读取其当前 [AGENTS.md](https://github.com/Arcueid77/Spherewright-Lab/blob/main/AGENTS.md) 与[活动交接](https://github.com/Arcueid77/Spherewright-Lab/blob/main/operations/active-handoff.md)；本内嵌指南不授予权限。[Lab 固定快照](https://github.com/Arcueid77/Spherewright-Lab/tree/14478a03c64c550e644c559405c8496b647552e7)与[已验收指南](https://github.com/Arcueid77/Spherewright/blob/2a7a98d1932c404e3a7abc2c11233d9c0b8780d9/docs/agent-playbook.md)仅保留历史证据、示例。历史成功绝不授予重放权限。

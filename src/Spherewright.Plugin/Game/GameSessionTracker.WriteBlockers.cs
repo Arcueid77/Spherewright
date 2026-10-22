@@ -1,5 +1,6 @@
 using Spherewright.Contracts.Errors;
 using Spherewright.Contracts.Sessions;
+using Spherewright.Bridge.Core.Safety;
 
 namespace Spherewright.Plugin.Game;
 
@@ -8,6 +9,9 @@ internal sealed partial class GameSessionTracker
     private List<WriteBlocker> CreateWriteBlockers(string peacefulState)
     {
         var blockers = new List<WriteBlocker>();
+        if (_flightCheckpoints.VoyagerJourney?.ReturnOnlyScopeActive == true)
+            blockers.Add(new WriteBlocker { Code = VoyagerReturnOnlyRecoveryPolicy.ScopeBlocker,
+                Message = VoyagerReturnOnlyRecoveryPolicy.ScopeMessage });
         if (!string.IsNullOrEmpty(_flightCheckpoints.VoyagerJourneyLoadError))
             blockers.Add(new WriteBlocker { Code = BridgeErrorCodes.WriteSubsystemQuarantined,
                 Message = _flightCheckpoints.VoyagerJourneyLoadError! });

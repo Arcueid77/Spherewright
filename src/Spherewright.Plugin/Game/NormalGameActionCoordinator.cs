@@ -1428,6 +1428,8 @@ internal sealed partial class NormalGameActionCoordinator
         string completionCondition)
     {
         payload.EstimatedTicks = estimatedTicks;
+        var actionBlockers = VoyagerReturnOnlyRecoveryPolicy.ActionBlockers(session.WriteBlockers, payload.ActionKind,
+            payload.VoyagerReturnLeg && payload.VoyagerBudget is not null);
         PreparedPlan<NormalActionPlanPayload> plan;
         try
         {
@@ -1450,10 +1452,10 @@ internal sealed partial class NormalGameActionCoordinator
             ExpiresAtUtc = plan.ExpiresAtUtc,
             ExpectedStateHash = payload.ExpectedStateHash,
             StateHashVersion = StateHashVersion,
-            CommitAllowedNow = session.WriteBlockers.Count == 0,
+            CommitAllowedNow = actionBlockers.Count == 0,
             EstimatedDistance = payload.EstimatedDistance,
             EstimatedGameTicks = estimatedTicks,
-            CommitBlockers = session.WriteBlockers.Select(CloneBlocker).ToList(),
+            CommitBlockers = actionBlockers.Select(CloneBlocker).ToList(),
             CompletionCondition = completionCondition,
         });
     }
@@ -1580,7 +1582,8 @@ internal sealed partial class NormalGameActionCoordinator
             SessionId = action.SessionId,
             PlanetId = action.PlanetId,
             Message = action.Message,
-            NativeFirstFailure = action.Plan.SavePreservation?.FirstFailure,
+            NativeFirstFailure = action.Plan.SavePreservation?.FirstFailure ?? (action.Plan.ReturnOnlyTaskCancellation
+                ? _sessions.ReturnOnlyFailureForTask(action.Plan.CancelVoyagerActionId!) : null),
             IdempotencyKey = action.IdempotencyKey,
             StartedAtGameTick = action.StartedAtGameTick,
             CompletedAtGameTick = action.CompletedAtGameTick,

@@ -65,4 +65,20 @@ public sealed class SessionState
     public bool UserSaveImportConfigured { get; set; }
 
     public List<string> Capabilities { get; set; } = new List<string>();
+
+    public VoyagerReturnOnlyTaskState? ReturnOnlyRecovery { get; set; }
+}
+
+public sealed class VoyagerReturnOnlyTaskState
+{
+    public string TaskId { get; set; } = string.Empty;
+    public bool ScopeActive { get; set; }
+    public DateTimeOffset DeadlineUtc { get; set; }
+    public long MaximumGameTicks { get; set; }
+    public long? RemainingGameTicks { get; set; }
+    public long OriginalSpentGameTicks { get; set; }
+    public long OriginalMaximumGameTicks { get; set; }
+    public DateTimeOffset OriginalDeadlineUtc { get; set; }
+    public string PauseOutcome { get; set; } = "not_requested";
+    public Spherewright.Contracts.Players.NativeResumeFailureSnapshot? FirstFailure { get; set; }
 }

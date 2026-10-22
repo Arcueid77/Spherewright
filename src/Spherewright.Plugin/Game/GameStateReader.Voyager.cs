@@ -295,12 +295,19 @@ internal sealed partial class GameStateReader
                 && journey.RemotePlanetId == request.PlanetId && journey.HomePlanetId == request.DestinationPlanetId
                 && journey.HomeStarId == input.DestinationStarId && journey.DestinationStarId == input.OriginStarId
                 && journey.LastLandedGameTick.HasValue && GameMain.gameTick >= journey.LastLandedGameTick.Value;
+            if (journey?.ReturnOnlyTask is not null && _sessions.ReturnOnlyTaskStopped) input.ReturnJourneyVerified = false;
             if (input.ReturnJourneyVerified)
             {
                 input.ReturnJourneyId = journey!.JourneyId;
                 input.ReturnLegMaximumGameTicks = journey.ReturnReserveGameTicks;
                 input.RemainingJourneyGameTicks = journey.MaximumGameTicks - journey.SpentGameTicks
                     - (GameMain.gameTick - journey.LastLandedGameTick!.Value);
+                if (journey.ReturnOnlyTask is not null)
+                {
+                    input.RemainingJourneyGameTicks = journey.RemainingReturnOnlyTicks(session.SessionId, GameMain.gameTick) ?? -1;
+                    input.ReturnLegMaximumGameTicks = VoyagerReturnOnlyRecoveryPolicy.FlightTicks(
+                        input.RemainingJourneyGameTicks, journey.ReturnReserveGameTicks);
+                }
                 input.LockedReturnEnergyFloorJoules = journey.ReturnEnergyFloorJoules;
                 input.LockedWithdrawalReserveJoules = journey.WithdrawalReserveJoules;
                 input.LockedReturnCoreMinimumJoules = journey.ReturnCoreEnergyMinimumJoules;

@@ -43,12 +43,12 @@ public static partial class SpherewrightTools
 
     [McpServerTool(Name = "spherewright_prepare_cancel_voyager_flight", Title = "Prepare stopping the original Voyager flight",
         ReadOnly = false, Destructive = false, Idempotent = false, OpenWorld = false)]
-    [Description("Prepares a stop request bound to one original active Voyager flight action and its origin planetId, including during space flight without a local planet. This neither starts a second movement writer nor loads a checkpoint. The original flight controller must observe native warp exit and braking before any settled/recovery-complete claim.")]
+    [Description("Prepares a stop for the exact active Voyager flight and origin planetId, including in space. Alternatively the disclosed returnOnlyRecovery.taskId can stop its idle remote/home task through normal Pause. This creates no second movement writer, checkpoint load, resource grant or automatic Resume. An active flight still requires its own actionId and native exit/braking proof.")]
     public static async Task<CallToolResult> PrepareCancelVoyagerFlightAsync(
         IBridgeClient bridgeClient,
         [Description("Owned session containing the original active Voyager flight.")] string sessionId,
         [Description("The original flight action's origin planetId, not an invented current space planet.")] int planetId,
-        [Description("Exact original active Voyager actionId to stop.")] string actionId,
+        [Description("Exact original active Voyager actionId, or the disclosed taskId of the idle return-only task.")] string actionId,
         int stateHashVersion = 1,
         CancellationToken cancellationToken = default)
     {
