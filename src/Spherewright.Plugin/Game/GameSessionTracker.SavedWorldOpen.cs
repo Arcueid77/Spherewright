@@ -7,6 +7,8 @@ namespace Spherewright.Plugin.Game;
 internal sealed partial class GameSessionTracker
 {
     private SavedWorldOpenGuard? _savedWorldOpen;
+    private long? _savedOpenPreparedKnownProgressGameTick;
+    private long? _savedOpenObservedProgressFloor;
     private GameLoader[]? _savedOpenLoadersBefore;
     private GameLoader? _savedOpenLoader;
     private NativeLoadCompletionSubscription<GameLoader>? _savedOpenSubscription;
@@ -87,7 +89,7 @@ internal sealed partial class GameSessionTracker
         if (!guard.ConfirmJournal(GameMain.data, GameMain.gameTick, true, () =>
         {
             _resumeTickets.ArmFromOpenedSavedWorld(ticket.OwnedSaveName, _sessionId!, ticket.ExpectedPlanetId,
-                guard.SavedTick, guard.ActionId, checkpoint);
+                guard.SavedTick, guard.ActionId, checkpoint, ticket, _savedOpenPreparedKnownProgressGameTick);
             if (!_resumeTickets.TryGetSavedWorldOpenProvenance(_resumeTickets.CurrentResumeToken!, out var opened, out _, out _)
                 || opened?.SavedWorldOpenOnly != true || opened.MinimumGameTick != guard.SavedTick
                 || opened.SourceSessionId != _sessionId)
@@ -116,5 +118,15 @@ internal sealed partial class GameSessionTracker
         _savedOpenSubscription?.Dispose(); _savedOpenSubscription = null;
         _savedOpenLoader = null; _savedOpenLoadersBefore = null; _savedWorldOpen = null;
         SavedWorldOpenSessionId = null;
+        _savedOpenPreparedKnownProgressGameTick = null; _savedOpenObservedProgressFloor = null;
+    }
+
+    private long? UnaccountedObservedProgressFloorForTicket()
+    {
+        var floor = _savedOpenObservedProgressFloor;
+        if (!_remoteResumeAdmitted && _remoteResumeAdoption?.Evidence.RemotePrimaryRecovery == true
+            && _remoteResumeAdoption.Evidence.KnownPrimaryProgressTick is { } pending)
+            floor = Math.Max(floor ?? pending, pending);
+        return floor > GameMain.gameTick ? floor : null;
     }
 }

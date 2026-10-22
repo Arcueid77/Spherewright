@@ -115,6 +115,7 @@ public static class VoyagerCompletedRemoteContinuationPolicy
         p.Prepared && p.RecoveryMode == OwnedWorldResumeModes.ContinueCompletedRemoteLastExit
         && p.RecoveryEvidenceVersion == EvidenceVersion && p.CompletedRemoteLastExitContinuationUsed
         && !p.RemotePrimaryRecoveryAuthorizationUsed
+        && p.ConservedObservedProgressDebitGameTicks is null
         && p.PriorActionTerminalCompletionAttested && !p.PriorActionTerminalFailureAttested
         && !p.FailedRemoteLastExitReauthorizationUsed && !p.PriorFailedResumeProvenanceUsed
         && !p.PriorFailedResumeV2ProvenanceUsed && !p.PriorFailedResumeV3ProvenanceUsed

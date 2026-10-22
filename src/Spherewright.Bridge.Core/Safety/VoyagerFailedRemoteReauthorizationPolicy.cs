@@ -69,6 +69,7 @@ public static class VoyagerFailedRemoteReauthorizationPolicy
     public static bool HasMatchingEcho(PrepareOwnedWorldResumeRequest r, PreparedOwnedWorldResumePlan p) =>
         p.Prepared && p.RecoveryMode == OwnedWorldResumeModes.ReauthorizeFailedRemoteLastExit
         && !p.RemotePrimaryRecoveryAuthorizationUsed
+        && p.ConservedObservedProgressDebitGameTicks is null
         && p.RecoveryEvidenceVersion == EvidenceVersion && p.FailedRemoteLastExitReauthorizationUsed
         && p.RemoteRecoveryContextFingerprint == r.ExpectedRemoteRecoveryContextFingerprint
         && !p.PriorFailedResumeProvenanceUsed && !p.PriorFailedResumeV2ProvenanceUsed && !p.PriorFailedResumeV3ProvenanceUsed

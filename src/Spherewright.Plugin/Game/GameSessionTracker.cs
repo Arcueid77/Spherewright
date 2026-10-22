@@ -872,7 +872,8 @@ internal sealed partial class GameSessionTracker : IDisposable
                     _lastPlanetId,
                     GameMain.gameTick,
                     _writeQuarantineActionId!,
-                    CaptureGameplayJournalCheckpointOnMainThread());
+                    CaptureGameplayJournalCheckpointOnMainThread(),
+                    UnaccountedObservedProgressFloorForTicket());
             }
         }
         catch (Exception exception)
@@ -888,7 +889,8 @@ internal sealed partial class GameSessionTracker : IDisposable
         VoyagerRemoteResumeEvidence? remoteEvidence = null, string? remoteResumeActionId = null,
         OwnedWorldResumeSourceKind resumeSource = OwnedWorldResumeSourceKind.None,
         VoyagerRecoveryAuthorization? recoveryAuthorization = null,
-        bool savedWorldOpenOnly = false, string? savedWorldOpenActionId = null)
+        bool savedWorldOpenOnly = false, string? savedWorldOpenActionId = null,
+        long? savedWorldOpenKnownProgressGameTick = null)
     {
         if (ticket is null)
         {
@@ -942,6 +944,7 @@ internal sealed partial class GameSessionTracker : IDisposable
         if (savedWorldOpenOnly && (sourceLease is null || journalLease is null
             || remoteEvidence is not null || recoveryAuthorization is not null
             || !reauthorizingExpiredPrimary || !Guid.TryParse(savedWorldOpenActionId, out _)
+            || !savedWorldOpenKnownProgressGameTick.HasValue || savedWorldOpenKnownProgressGameTick < ticket.MinimumGameTick
             || resumeSource != OwnedWorldResumeSourceKind.OwnedPrimary
             || ticket.GameplayJournalCheckpoint is null || !sourceLease.Prefix.MatchesExpectedIdentity
             || !sourceLease.Prefix.Peaceful || sourceLease.Prefix.GameVersion != _gameVersion || ticket.GameVersion != _gameVersion
@@ -955,7 +958,13 @@ internal sealed partial class GameSessionTracker : IDisposable
             throw new InvalidOperationException("Verified recovery requires its mode-specific tick and a healthy Journal-bearing ticket.");
 
         ResetSavedWorldOpen(clearFailure: true);
-        if (savedWorldOpenOnly) _savedWorldOpen = new SavedWorldOpenGuard(savedWorldOpenActionId!, sourceLease!.Prefix.GameTick);
+        if (savedWorldOpenOnly)
+        {
+            _savedOpenPreparedKnownProgressGameTick = savedWorldOpenKnownProgressGameTick;
+            _savedOpenObservedProgressFloor = OwnedWorldResumeTicketStore.RetainOpenedObservedProgressFloor(
+                ticket, sourceLease!.Prefix.GameTick, savedWorldOpenKnownProgressGameTick!.Value);
+            _savedWorldOpen = new SavedWorldOpenGuard(savedWorldOpenActionId!, sourceLease.Prefix.GameTick);
+        }
         _expectedResumeTicket = ticket;
         _pendingRemoteResumeEvidence = remoteEvidence;
         _pendingRemoteResumeActionId = remoteResumeActionId;

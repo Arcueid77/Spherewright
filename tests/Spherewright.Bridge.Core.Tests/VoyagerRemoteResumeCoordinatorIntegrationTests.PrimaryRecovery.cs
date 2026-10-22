@@ -270,19 +270,21 @@ public sealed partial class VoyagerRemoteResumeCoordinatorIntegrationTests
                 Sessions.Dispose();
                 Assert.True(guard.ConfirmJournal(world, 12510, journal.SequenceEqual(File.ReadAllBytes(JournalPath)), () =>
                     Tickets.ArmFromOpenedSavedWorld(Identity, "synthetic-opened-session", 201, 12510,
-                        accepted.Value!.ActionId, old!.GameplayJournalCheckpoint!)));
+                        accepted.Value!.ActionId, old!.GameplayJournalCheckpoint!,
+                        Sessions.SavedOpenPreviousTicket, Sessions.SavedOpenPreparedKnownProgressGameTick)));
                 Token = Tickets.CurrentResumeToken!;
                 Assert.True(Tickets.TryGetSavedWorldOpenProvenance(Token, out var scoped, out _, out _));
                 Assert.True(scoped!.SavedWorldOpenOnly); Assert.False(Tickets.TryGetActiveTicket(Token, out _, out _));
                 // Simulated normal close/menu, not an executed Unity shutdown.
+                WriteSave(GameSave.LastExit, 12510);
                 Sessions.Snapshot.GameLoaded = false; Sessions.Snapshot.OwnedBySpherewright = false;
             }
             ReplaceCurrentTicket(t => { t.IssuedAtUtc = DateTimeOffset.UtcNow.AddDays(-8); t.ExpiresAtUtc = DateTimeOffset.UtcNow.AddDays(-7); });
             ReopenPrimaryCredentials();
             var r = WindowRequest(); r.RecoveryMode = OwnedWorldResumeModes.AuthorizeRemotePrimaryRecovery;
-            r.AcceptUnstoredProgressLoss = gap > 0;
-            r.MinimumRecoveryGameTick = gap > 0 ? 12510 + gap : null;
-            r.ExpectedRecoveryGameTick = gap > 0 ? 12510 : null;
+            r.AcceptUnstoredProgressLoss = gap > 0 && !openedFirst;
+            r.MinimumRecoveryGameTick = r.AcceptUnstoredProgressLoss ? 12510 + gap : null;
+            r.ExpectedRecoveryGameTick = r.AcceptUnstoredProgressLoss ? 12510 : null;
             return r;
         }
     }

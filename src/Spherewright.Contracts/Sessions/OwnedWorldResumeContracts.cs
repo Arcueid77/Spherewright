@@ -87,6 +87,7 @@ public sealed class PreparedOwnedWorldResumePlan
     public bool OpensSavedWorldOnly { get; set; }
     public bool PreviousAutomationRemainsStopped { get; set; }
     public long? DiscardedUnstoredProgressGameTicks { get; set; }
+    public long? ConservedObservedProgressDebitGameTicks { get; set; }
     public DateTimeOffset? InheritedWindowConfirmedAtUtc { get; set; }
     public string RemoteRecoveryContextFingerprint { get; set; } = string.Empty;
     public bool LegacyLocalMoveUnknownProvenanceUsed { get; set; }

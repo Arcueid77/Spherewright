@@ -75,14 +75,17 @@ internal sealed class OwnedWorldResumeTicketStore
         int planetId,
         long minimumGameTick,
         string quarantineActionId,
-        OwnedWorldGameplayJournalCheckpoint gameplayJournalCheckpoint)
+        OwnedWorldGameplayJournalCheckpoint gameplayJournalCheckpoint,
+        long? unaccountedObservedProgressGameTickFloor = null)
     {
         if (string.IsNullOrWhiteSpace(quarantineActionId))
         {
             throw new InvalidOperationException("A quarantined owned session requires its exact action identity.");
         }
 
-        Arm(ownedSaveName, sessionId, planetId, minimumGameTick, gameplayJournalCheckpoint, quarantineActionId);
+        Arm(ownedSaveName, sessionId, planetId, minimumGameTick, gameplayJournalCheckpoint, quarantineActionId,
+            savedWorldOpenOnly: unaccountedObservedProgressGameTickFloor.HasValue,
+            observedProgressGameTickFloor: unaccountedObservedProgressGameTickFloor);
         _logger.LogInfo("Spherewright armed a one-time exact quarantine-recovery ticket");
     }
 
@@ -92,12 +95,14 @@ internal sealed class OwnedWorldResumeTicketStore
         int planetId,
         long minimumGameTick,
         OwnedWorldGameplayJournalCheckpoint gameplayJournalCheckpoint,
-        string quarantineActionId, bool savedWorldOpenOnly = false)
+        string quarantineActionId, bool savedWorldOpenOnly = false,
+        long? observedProgressGameTickFloor = null)
     {
         if (string.IsNullOrWhiteSpace(ownedSaveName)
             || string.IsNullOrWhiteSpace(sessionId)
             || planetId <= 0
             || minimumGameTick < 0
+            || observedProgressGameTickFloor.HasValue && (!savedWorldOpenOnly || observedProgressGameTickFloor < minimumGameTick)
             || gameplayJournalCheckpoint is null
             || gameplayJournalCheckpoint.Version != OwnedWorldGameplayJournalCheckpoint.CurrentVersion
             || !string.Equals(
@@ -127,6 +132,7 @@ internal sealed class OwnedWorldResumeTicketStore
             GameplayJournalCheckpoint = gameplayJournalCheckpoint,
             QuarantineActionId = quarantineActionId,
             SavedWorldOpenOnly = savedWorldOpenOnly ? true : (bool?)null,
+            ObservedProgressGameTickFloor = observedProgressGameTickFloor,
             IssuedAtUtc = issuedAt,
             ExpiresAtUtc = issuedAt.AddHours(24),
         };
@@ -166,7 +172,7 @@ internal sealed class OwnedWorldResumeTicketStore
             return false;
         }
 
-        if (candidate.SavedWorldOpenOnly == true || IsConsumed(candidate.ResumeToken)
+        if (candidate.SavedWorldOpenOnly == true || candidate.ObservedProgressGameTickFloor.HasValue || IsConsumed(candidate.ResumeToken)
             || candidate.Version != TicketVersion
             || !FixedTimeEquals(candidate.ResumeToken, resumeToken)
             || !string.Equals(candidate.GameVersion, _gameVersion, StringComparison.Ordinal)
@@ -552,12 +558,40 @@ internal sealed class OwnedWorldResumeTicketStore
             savedWorldOpenOnly: true);
 
     public void ArmFromOpenedSavedWorld(string ownedSaveName, string sessionId, int planetId,
-        long savedGameTick, string openActionId, OwnedWorldGameplayJournalCheckpoint checkpoint)
+        long savedGameTick, string openActionId, OwnedWorldGameplayJournalCheckpoint checkpoint,
+        OwnedWorldResumeTicket? previousTicket = null, long? preparedKnownProgressGameTick = null)
     {
         if (!Guid.TryParse(openActionId, out _)) throw new InvalidOperationException("Exact saved-world opening action required.");
         // This new credential proves owned-file access only. Active automation
         // and all existing execution/remote-recovery modes explicitly reject it.
-        Arm(ownedSaveName, sessionId, planetId, savedGameTick, checkpoint, openActionId, savedWorldOpenOnly: true);
+        long? observedFloor = null;
+        if (previousTicket is not null || preparedKnownProgressGameTick.HasValue)
+        {
+            if (previousTicket is null || preparedKnownProgressGameTick is not { } known
+                || known < previousTicket.MinimumGameTick || previousTicket.MinimumGameTick < 0
+                || previousTicket.OwnedSaveName != ownedSaveName || previousTicket.ExpectedPlanetId != planetId
+                || previousTicket.GameVersion != _gameVersion)
+                throw new InvalidOperationException("Saved-world observed-time provenance is incomplete or changed.");
+            observedFloor = RetainOpenedObservedProgressFloor(previousTicket, savedGameTick, known);
+        }
+        Arm(ownedSaveName, sessionId, planetId, savedGameTick, checkpoint, openActionId,
+            savedWorldOpenOnly: true, observedProgressGameTickFloor: observedFloor);
+    }
+
+    internal static long? RetainOpenedObservedProgressFloor(OwnedWorldResumeTicket previousTicket,
+        long savedGameTick, long preparedKnownProgressGameTick)
+    {
+        if (savedGameTick < 0 || previousTicket.MinimumGameTick < 0
+            || preparedKnownProgressGameTick < previousTicket.MinimumGameTick
+            || previousTicket.ObservedProgressGameTickFloor.HasValue
+                && (previousTicket.SavedWorldOpenOnly != true
+                    || previousTicket.ObservedProgressGameTickFloor < previousTicket.MinimumGameTick))
+            throw new InvalidOperationException("Saved-world observed-time binding is invalid.");
+        // Missing historical observation stays unknown. It is never replaced
+        // by a later, smaller physical save tick to create automation time.
+        if (previousTicket.SavedWorldOpenOnly == true && !previousTicket.ObservedProgressGameTickFloor.HasValue) return null;
+        return Math.Max(savedGameTick, Math.Max(preparedKnownProgressGameTick,
+            previousTicket.ObservedProgressGameTickFloor ?? previousTicket.MinimumGameTick));
     }
 
     public bool TryGetFixedAutosaveProvenance(string resumeToken,
@@ -612,6 +646,8 @@ internal sealed class OwnedWorldResumeTicketStore
                 || string.IsNullOrWhiteSpace(runtime.SourceSessionId)
                 || runtime.SourceProcessId <= 0 || string.IsNullOrWhiteSpace(runtime.SourceBridgeInstanceId)
                 || runtime.ExpectedPlanetId <= 0 || runtime.MinimumGameTick < 0
+                || runtime.ObservedProgressGameTickFloor.HasValue
+                    && (runtime.SavedWorldOpenOnly != true || runtime.ObservedProgressGameTickFloor < runtime.MinimumGameTick)
                 || !(savedWorldOpenOnly
                     ? runtime.GameplayJournalCheckpoint is not null && runtime.IssuedAtUtc != default
                         && runtime.IssuedAtUtc <= DateTimeOffset.UtcNow && runtime.ExpiresAtUtc > runtime.IssuedAtUtc
@@ -1061,6 +1097,11 @@ internal sealed class OwnedWorldResumeTicket
 
     public bool? SavedWorldOpenOnly { get; set; }
     public bool ShouldSerializeSavedWorldOpenOnly() => SavedWorldOpenOnly.HasValue;
+
+    // A time-accounting observation, never a Load or automation permission.
+    // MinimumGameTick still describes the current physical save timeline.
+    public long? ObservedProgressGameTickFloor { get; set; }
+    public bool ShouldSerializeObservedProgressGameTickFloor() => ObservedProgressGameTickFloor.HasValue;
 
     public DateTimeOffset IssuedAtUtc { get; set; }
 

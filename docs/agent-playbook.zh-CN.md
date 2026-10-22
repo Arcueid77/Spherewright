@@ -24,7 +24,9 @@
 
 来源仅为同 Native 的精确完整 owned 主档，并持有原 Journal、仅作历史证明而禁止加载的成功去程检查点、当前 Journey 及同 owned 固定 LastExit。它不宣称旧动作成功或失败，不沿旧消费记录重放，不加载检查点。明确舍弃进度时沿用准确下限/主档 tick 双绑定。已观察后舍弃的时间继续计入原旅程：接管期间的预算包含该扣费，严格接管成功后仅一次持久记入保守 spent；原 maximum tick、issued/deadline 字段、返程能源/核心/翘曲器预留及旧动作终态保留。
 
-核对 `remotePrimaryRecoveryAuthorizationUsed`、证据版本1、精确主档 tick、舍弃 tick 数、新期限/范围/充能上限和确认 digest。插件须通过现有精确加载器、暂停初始化、Native151/501投影、接触、获准自然充能和严格 idle 检查，才能健康接管并普通 Save。缺失/变化的证明、未知观察、原预留耗尽或扣费落盘失败都会终止本次尝试；保留原动作及首错证据。离线 Store/coordinator/接触替身不证明 Unity 或真实 Save。本指南不授予执行窗口。
+核对 `remotePrimaryRecoveryAuthorizationUsed`、证据版本2、精确主档 tick、舍弃 tick 数、`conservedObservedProgressDebitGameTicks`、新期限/范围/充能上限和确认 digest。保守扣费包含此前舍弃且经仅读档、正常退出继续保留的已观察时间；`discardedUnstoredProgressGameTicks` 只描述本次加载。受保护的仅读档凭据保留这项观察，不授予自动操作，也不改变物理存档 minimum。旧仅读档凭据若缺少该观察，保持未知并拒绝自动恢复，普通文件访问仍可用。健康普通 Save 签发凭据时清除已持久扣费的观察，防止重复扣费。
+
+插件须通过现有精确加载器、暂停初始化、Native151/501投影、接触、获准自然充能和严格 idle 检查，才能健康接管并普通 Save。缺失/变化的证明、未知观察、原预留耗尽或扣费落盘失败都会终止本次尝试；保留原动作及首错证据。离线 Store/coordinator/接触替身不证明 Unity 或真实 Save。本指南不授予执行窗口。
 
 Load 前应对照启动日志 `Spherewright loaded module:` 中 Plugin、Core、Contracts 和 Native 的模块身份与候选/Native 元数据。日志仅从实际已加载 CLR 模块读取 MVID 和 informational version，不读取磁盘路径或游戏状态；磁盘安装一致不能代替加载身份，这些日志也不证明 Native 健康。
 

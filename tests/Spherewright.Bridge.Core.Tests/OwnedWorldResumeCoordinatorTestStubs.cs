@@ -84,6 +84,8 @@ internal sealed partial class GameSessionTracker : IDisposable
     internal bool SavedOpenObserverPrepared { get; private set; }
     internal string? SavedWorldOpenSessionId => Snapshot.SessionId;
     internal bool SavedOpenObserverBound { get; private set; }
+    internal OwnedWorldResumeTicket? SavedOpenPreviousTicket { get; private set; }
+    internal long? SavedOpenPreparedKnownProgressGameTick { get; private set; }
     internal void PrepareSavedWorldOpenNativeObserver() => SavedOpenObserverPrepared = true;
     internal void BindSavedWorldOpenNativeObserver() => SavedOpenObserverBound = true;
     internal void RecordSavedWorldOpenDispatchFailure(string error) => ResumeAdoptionError = "saved_world_open_dispatch_outcome_unknown:" + error;
@@ -120,7 +122,8 @@ internal sealed partial class GameSessionTracker : IDisposable
         OwnedSaveRecoveryLease? primaryLease = null, VoyagerRemoteResumeEvidence? remoteEvidence = null,
         string? remoteResumeActionId = null, OwnedWorldResumeSourceKind resumeSource = OwnedWorldResumeSourceKind.None,
         VoyagerRecoveryAuthorization? recoveryAuthorization = null,
-        bool savedWorldOpenOnly = false, string? savedWorldOpenActionId = null)
+        bool savedWorldOpenOnly = false, string? savedWorldOpenActionId = null,
+        long? savedWorldOpenKnownProgressGameTick = null)
     {
         SourceLease = sourceLease;
         ResetContactForExpectedWorld();
@@ -133,6 +136,8 @@ internal sealed partial class GameSessionTracker : IDisposable
         ResumeSource = resumeSource;
         RecoveryAuthorization = recoveryAuthorization;
         SavedOpenGuard = savedWorldOpenOnly ? new SavedWorldOpenGuard(savedWorldOpenActionId!, sourceLease!.Prefix.GameTick) : null;
+        SavedOpenPreviousTicket = savedWorldOpenOnly ? ticket : null;
+        SavedOpenPreparedKnownProgressGameTick = savedWorldOpenKnownProgressGameTick;
     }
     internal void CancelExpectedResumedSession() => Dispose();
     public void Dispose()

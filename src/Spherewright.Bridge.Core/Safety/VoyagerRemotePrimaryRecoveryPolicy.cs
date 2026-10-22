@@ -7,7 +7,7 @@ namespace Spherewright.Bridge.Core.Safety;
 /// <summary>A new explicit finite authority for the current primary, never an old action replay.</summary>
 public static class VoyagerRemotePrimaryRecoveryPolicy
 {
-    public const int EvidenceVersion = 1;
+    public const int EvidenceVersion = 2;
 
     public static long? ConservedSpent(long currentSpent, long originalSpent, long sourceTick, long knownProgress)
     {
@@ -68,10 +68,11 @@ public static class VoyagerRemotePrimaryRecoveryPolicy
     }
 
     public static string? Blocker(PrepareOwnedWorldResumeRequest r, VoyagerRemoteResumeFacts f,
-        long knownProgress, NativeResumeDecisionEvidence e)
+        long knownProgress, NativeResumeDecisionEvidence e, long? observedBudgetFloor = null)
     {
         e.Number("primary_tick", f.PrimaryGameTick); e.Number("source_tick", f.SourceGameTick);
         e.Number("known_progress_tick", knownProgress); e.Number("credential_minimum_tick", f.TicketMinimumGameTick);
+        e.Number("conserved_observed_progress_floor", observedBudgetFloor);
         e.Number("accounted_tick", f.LastAccountedGameTick); e.Number("landing_tick", f.LastLandedGameTick);
         e.Number("spent_ticks", f.SpentGameTicks); e.Number("maximum_ticks", f.MaximumGameTicks);
         e.Number("return_reserve_ticks", f.ReturnReserveGameTicks);
@@ -104,7 +105,8 @@ public static class VoyagerRemotePrimaryRecoveryPolicy
             return "remote_resume_newer_progress_rollback_forbidden";
         if (!e.Require("primary_new_window_observed", f.RecoveryProposal is not null)) return "remote_primary_new_authority_required";
         // Discarding world progress does not refund the original Journey's time.
-        return VoyagerRemoteResumePolicy.FiniteJourneyBudgetBlocker(f, e, Math.Max(0, knownProgress - f.SourceGameTick));
+        return VoyagerRemoteResumePolicy.FiniteJourneyBudgetBlocker(f, e,
+            Math.Max(0, Math.Max(knownProgress, observedBudgetFloor ?? knownProgress) - f.SourceGameTick));
     }
 
     public static bool HasMatchingEcho(PrepareOwnedWorldResumeRequest r, PreparedOwnedWorldResumePlan p) =>
@@ -121,6 +123,8 @@ public static class VoyagerRemotePrimaryRecoveryPolicy
         && p.MaximumChargeGameTicks == r.MaximumChargeGameTicks && p.MaximumChargeWallSeconds == r.MaximumChargeWallSeconds
         && p.NativeChargeFeasibilityRequiresFreshCapture && !p.NewChargingProhibited
         && p.DiscardedUnstoredProgressGameTicks.HasValue && p.DiscardedUnstoredProgressGameTicks >= 0
+        && p.ConservedObservedProgressDebitGameTicks.HasValue
+        && p.ConservedObservedProgressDebitGameTicks >= p.DiscardedUnstoredProgressGameTicks
         && (r.AcceptUnstoredProgressLoss
             ? p.CandidateGameTick == r.ExpectedRecoveryGameTick
                 && p.DiscardedUnstoredProgressGameTicks == r.MinimumRecoveryGameTick - r.ExpectedRecoveryGameTick

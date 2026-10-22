@@ -52,6 +52,7 @@ public static class OwnedSavedWorldOpenPolicy
         && !p.PriorActionTerminalFailureAttested && !p.PriorActionTerminalCompletionAttested
         && !p.FailedRemoteLastExitReauthorizationUsed && !p.CompletedRemoteLastExitContinuationUsed
         && !p.RemotePrimaryRecoveryAuthorizationUsed
+        && p.ConservedObservedProgressDebitGameTicks is null
         && !p.LegacyLocalMoveUnknownProvenanceUsed
         && !string.IsNullOrEmpty(p.ConfirmationDigest);
 }

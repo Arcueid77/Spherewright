@@ -156,6 +156,8 @@ internal sealed class OwnedWorldResumeCoordinator
             PreviousAutomationRemainsStopped = payload.SavedWorldOpenOnly,
             DiscardedUnstoredProgressGameTicks = payload.SavedWorldOpenOnly || payload.RemotePrimaryRecovery
                 ? Math.Max(0, payload.SavedOpenKnownProgressTick - payload.MinimumGameTick) : (long?)null,
+            ConservedObservedProgressDebitGameTicks = payload.RemotePrimaryRecovery && payload.RemoteEvidence?.KnownPrimaryProgressTick is { } floor
+                ? Math.Max(0, floor - payload.MinimumGameTick) : (long?)null,
             InheritedWindowConfirmedAtUtc = payload.RemoteEvidence?.InheritedWindowConfirmedAtUtc,
             RemoteRecoveryContextFingerprint = payload.RemoteEvidence?.RemoteRecoveryContextFingerprint ?? string.Empty,
             LegacyLocalMoveUnknownProvenanceUsed = payload.LegacyLocalMoveUnknown,
@@ -168,7 +170,7 @@ internal sealed class OwnedWorldResumeCoordinator
             ConfirmationPrompt = (payload.RemoteEvidence?.SuccessfulFlightWitnessRetiredAtGameTick is { } coveredTick
                 ? $"The original successful-flight checkpoint was retired by primary coverage at tick {coveredTick}. It is a bound historical witness only and will never be loaded. " : string.Empty)
                 + (payload.RemotePrimaryRecovery
-                ? $"Review the exact complete owned primary at tick {payload.MinimumGameTick}. This is a NEW finite automation authorization, not ordinary file opening or continuation of an old action. Known progress floor: {payload.SavedOpenKnownProgressTick}; explicitly discarded progress: {Math.Max(0, payload.SavedOpenKnownProgressTick - payload.MinimumGameTick)} ticks. Historical completed/failed/unknown outcomes and every old consumption record remain unchanged. Native initialization, projection, contact, any permitted natural charging and strict healthy takeover must all succeed. "
+                ? $"Review the exact complete owned primary at tick {payload.MinimumGameTick}. This is a NEW finite automation authorization, not ordinary file opening or continuation of an old action. Known progress floor: {payload.SavedOpenKnownProgressTick}; explicitly discarded progress: {Math.Max(0, payload.SavedOpenKnownProgressTick - payload.MinimumGameTick)} ticks. Total conserved observed-time debit: {Math.Max(0, payload.RemoteEvidence!.KnownPrimaryProgressTick!.Value - payload.MinimumGameTick)} ticks, including any previous approved loss. Historical completed/failed/unknown outcomes and every old consumption record remain unchanged. Native initialization, projection, contact, any permitted natural charging and strict healthy takeover must all succeed. "
                 : payload.LegacyLocalMoveUnknown
                 ? VoyagerLegacyLocalMoveUnknownPolicy.Disclosure + " "
                 : payload.CompletedRemoteContinuation
@@ -368,7 +370,8 @@ internal sealed class OwnedWorldResumeCoordinator
             _sessions.ExpectNextSessionToBeResumed(currentTicket, sourceLease, payload.Reauthorizing, journalLease,
                 payload.FixedAutosaveRecovery, primaryLease, currentPayload!.RemoteEvidence,
                 payload.RemoteContinuation ? action.ActionId : null, payload.ResumeSource, recoveryAuthorization,
-                payload.SavedWorldOpenOnly, payload.SavedWorldOpenOnly ? action.ActionId : null);
+                payload.SavedWorldOpenOnly, payload.SavedWorldOpenOnly ? action.ActionId : null,
+                payload.SavedWorldOpenOnly ? payload.SavedOpenKnownProgressTick : (long?)null);
             sourceLease = null; // Tracker owns the lease through adoption/Journal confirmation.
             journalLease = null;
             primaryLease = null;

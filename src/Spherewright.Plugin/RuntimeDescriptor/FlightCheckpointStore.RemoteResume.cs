@@ -163,14 +163,19 @@ internal sealed partial class FlightCheckpointStore
             if (remotePrimaryRequest is not null)
             {
                 var decision = new NativeResumeDecisionEvidence("remote_primary_recovery_prepare", null, facts.NowUtc, true);
-                decision.NotReached("primary_matching_file_leases", "primary_progress_source_identity", "primary_mode_unmixed");
+                decision.Number("prior_observed_progress_floor", ticket.ObservedProgressGameTickFloor);
+                decision.NotReached("primary_matching_file_leases", "primary_progress_source_identity", "primary_mode_unmixed",
+                    "primary_prior_observed_time_known");
                 var sourceBound = decision.Require("primary_matching_file_leases", source.Fingerprint == primary.Fingerprint)
                     && decision.Require("primary_progress_source_identity", progressLastExit is null || progressLastExit.Prefix.MatchesExpectedIdentity)
                     && decision.Require("primary_mode_unmixed", !failedRemoteReauthorization && !completedRemoteContinuation
-                        && priorConsumedProof is null && string.IsNullOrEmpty(legacyLocalMoveEvidenceJson));
+                        && priorConsumedProof is null && string.IsNullOrEmpty(legacyLocalMoveEvidenceJson))
+                    && decision.Require("primary_prior_observed_time_known", ticket.SavedWorldOpenOnly != true
+                        || ticket.ObservedProgressGameTickFloor.HasValue ? true : (bool?)null);
                 var knownProgress = Math.Max(ticket.MinimumGameTick, progressLastExit?.Prefix.GameTick ?? 0);
+                var budgetFloor = Math.Max(knownProgress, ticket.ObservedProgressGameTickFloor ?? knownProgress);
                 rejection = sourceBound
-                    ? VoyagerRemotePrimaryRecoveryPolicy.Blocker(remotePrimaryRequest, facts, knownProgress, decision) ?? string.Empty
+                    ? VoyagerRemotePrimaryRecoveryPolicy.Blocker(remotePrimaryRequest, facts, knownProgress, decision, budgetFloor) ?? string.Empty
                     : "remote_primary_source_or_mode_unproved";
                 if (rejection.Length != 0)
                 {
@@ -181,7 +186,7 @@ internal sealed partial class FlightCheckpointStore
                 if (progressLastExit is not null) leases.Add(progressLastExit);
                 evidence = VoyagerRemoteResumeEvidence.CreateRemotePrimaryRecovery(journeyJson, checkpointJson,
                     source.Fingerprint, primary.Fingerprint, source.Prefix.GameTick, primary.Prefix.GameTick,
-                    ticket.GameplayJournalCheckpoint!, recoveryProposal!, knownProgress,
+                    ticket.GameplayJournalCheckpoint!, recoveryProposal!, budgetFloor,
                     progressLastExit?.Fingerprint ?? string.Empty, validatedJournalHash, leases.ToArray());
                 ticketLease = null; journeyLease = null; checkpointLease = null;
                 return true;
