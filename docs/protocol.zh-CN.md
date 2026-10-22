@@ -86,6 +86,17 @@ spherewright_commit_reload_flight_checkpoint
 
 无需活动 Bridge 即可读取文本资源 `spherewright://agent/playbooks/opening-movement-v1`，游戏操作前必须阅读。逻辑内嵌名保持 `Spherewright.Mcp.agent-playbook.md`。发现工具不授予执行权限；历史沙盒基础产线方法不注册。
 
+<a id="read-only-runtime-performance"></a>
+## 只读运行性能
+
+`spherewright_get_status.status.runtimePerformance` 为可选字段；缺失/null 表示已安装 Plugin 未提供该测量。版本 `1`、来源 `unity_update_stopwatch_v1`、范围 `plugin-process` 使用单调 Stopwatch，与模拟 tick 及世界所有权独立，不带存档、凭据或世界身份。读取不访问 Unity，也不增加 dispatcher 工作项。
+
+Plugin 记录每次完成的主线程 bridge pump。首个完成更新只建立时钟；之后每个样本将 Unity Update 起点到起点的间隔与本次完整 bridge pump 耗时配对，环形缓冲最多保留最近600对。`sampleCount`、`sampleCapacity`、`completedUpdates` 及 `windowDurationMs` 报告实际覆盖（间隔总和），不声称固定十秒窗口。少于30对为 `warming_up`，否则为 `ready`；空窗口的耗时统计为 null。`meanMs`、`p95Ms`（最近秩 `ceil(0.95*n)`）及 `maxMs` 单位均为毫秒，长停顿保留。这些是 Unity 更新/pump 计时，不是 GPU 呈现帧率，也不把全部帧耗时归因于 Spherewright。
+
+`sampleAgeMs` 是距最近完成 pump 的单调接收年龄，尚未完成时为 null；RPC 新返回本身不能证明采样还在推进。`pendingMainThreadRequests` 为本次采集时瞬时排队数（不含执行中任务），不是窗口最大值。队列容量、最近完成 pump 的处理请求数、配置的每帧请求上限与 dispatcher 预算分别报告。预算只在工作项之间限制调度，不抢占正在执行的工作，也不是整个 bridge pump 的耗时上限。进程级采样跨菜单/世界切换连续，随 Plugin host 重启；客户端仍须将传输/连接故障标旧，缺失字段不能当零。
+
+本节描述源码行为。产品 CI、当前原生引用的完整 Plugin 构建、准确同批冷部署和实机性能验收是独立证据，不由确定性计时测试推定实机通过。
+
 <a id="request-rules"></a>
 ## 请求规则
 

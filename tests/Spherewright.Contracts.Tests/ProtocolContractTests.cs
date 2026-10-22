@@ -323,6 +323,26 @@ public sealed class ProtocolContractTests
     }
 
     [Fact]
+    public void BridgeStatus_PerformanceIsOptionalAndVersioned()
+    {
+        var legacy = JsonSerializer.Deserialize<BridgeStatus>("{\"bridgeConnected\":true}", JsonOptions);
+        Assert.Null(legacy!.RuntimePerformance);
+        var status = new BridgeStatus { RuntimePerformance = new RuntimePerformanceSnapshot
+        {
+            SampleCount = 0, SampleCapacity = 600, PendingMainThreadRequests = 2,
+            MainThreadQueueCapacity = 128, MaxRequestsPerFrame = 8, MainThreadBudgetMs = 2,
+        } };
+        using var json = JsonDocument.Parse(JsonSerializer.Serialize(status, JsonOptions));
+        var metrics = json.RootElement.GetProperty("runtimePerformance");
+        Assert.Equal(1, metrics.GetProperty("version").GetInt32());
+        Assert.Equal("unity_update_stopwatch_v1", metrics.GetProperty("source").GetString());
+        Assert.Equal("plugin-process", metrics.GetProperty("scope").GetString());
+        Assert.Equal(JsonValueKind.Null, metrics.GetProperty("updateInterval").ValueKind);
+        Assert.Equal(JsonValueKind.Null, metrics.GetProperty("sampleAgeMs").ValueKind);
+        Assert.Equal(2, metrics.GetProperty("pendingMainThreadRequests").GetInt32());
+    }
+
+    [Fact]
     public void ErrorCodes_HaveStableWireValues()
     {
         Assert.Equal("BRIDGE_NOT_READY", BridgeErrorCodes.BridgeNotReady);

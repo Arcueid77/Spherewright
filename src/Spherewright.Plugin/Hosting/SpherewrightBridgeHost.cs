@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using BepInEx.Logging;
 using Spherewright.Bridge.Core.Abstractions;
+using Spherewright.Bridge.Core.Diagnostics;
 using Spherewright.Contracts.Protocol;
 using Spherewright.Plugin.Bootstrap;
 using Spherewright.Plugin.Game;
@@ -21,6 +22,7 @@ internal sealed class SpherewrightBridgeHost : IDisposable
     private readonly ResearchResultAutoAcknowledger _researchResultAutoAcknowledger;
     private readonly BridgeStatusSnapshotProvider _statusProvider;
     private readonly BoundedMainThreadDispatcher _dispatcher;
+    private readonly RuntimePerformanceMonitor _performanceMonitor;
     private readonly RuntimeDescriptorPublisher _descriptorPublisher;
     private readonly NamedPipeBridgeServer _pipeServer;
     private readonly BridgeRuntimeDescriptor _descriptor;
@@ -39,6 +41,7 @@ internal sealed class SpherewrightBridgeHost : IDisposable
         ResearchResultAutoAcknowledger researchResultAutoAcknowledger,
         BridgeStatusSnapshotProvider statusProvider,
         BoundedMainThreadDispatcher dispatcher,
+        RuntimePerformanceMonitor performanceMonitor,
         RuntimeDescriptorPublisher descriptorPublisher,
         NamedPipeBridgeServer pipeServer,
         BridgeRuntimeDescriptor descriptor)
@@ -53,6 +56,7 @@ internal sealed class SpherewrightBridgeHost : IDisposable
         _researchResultAutoAcknowledger = researchResultAutoAcknowledger;
         _statusProvider = statusProvider;
         _dispatcher = dispatcher;
+        _performanceMonitor = performanceMonitor;
         _descriptorPublisher = descriptorPublisher;
         _pipeServer = pipeServer;
         _descriptor = descriptor;
@@ -66,12 +70,16 @@ internal sealed class SpherewrightBridgeHost : IDisposable
         var identity = BridgeIdentity.Create(configuration.PipeNamePrefix);
         var versionProvider = new GameVersionSnapshotProvider();
         var gameVersion = versionProvider.CaptureOnMainThread();
+        var dispatcher = new BoundedMainThreadDispatcher(configuration.MaxMainThreadQueue);
+        var performanceMonitor = new RuntimePerformanceMonitor(configuration.MaxMainThreadQueue,
+            configuration.MaxRequestsPerFrame, configuration.FrameBudgetMs);
         var statusProvider = new BridgeStatusSnapshotProvider(
             identity.BridgeInstanceId,
             pluginVersion,
             gameVersion,
-            configuration.AllowWrites);
-        var dispatcher = new BoundedMainThreadDispatcher(configuration.MaxMainThreadQueue);
+            configuration.AllowWrites,
+            performanceMonitor,
+            dispatcher);
         var resumeTickets = new OwnedWorldResumeTicketStore(
             configuration.RuntimeDescriptorDirectory,
             identity.BridgeInstanceId,
@@ -180,6 +188,7 @@ internal sealed class SpherewrightBridgeHost : IDisposable
             researchResultAutoAcknowledger,
             statusProvider,
             dispatcher,
+            performanceMonitor,
             descriptorPublisher,
             pipeServer,
             descriptor);
@@ -213,13 +222,14 @@ internal sealed class SpherewrightBridgeHost : IDisposable
             return;
         }
 
+        var updateStarted = Stopwatch.GetTimestamp();
         _sessionTracker.UpdateOnMainThread();
         _statusProvider.UpdateGameLoadedOnMainThread(_sessionTracker.GameLoaded);
         _gameplayJournalManager.UpdateOnMainThread();
         _normalActionCoordinator.UpdateOnMainThread();
         _researchResultAutoAcknowledger.UpdateOnMainThread();
 
-        _dispatcher.Pump(
+        var processedRequests = _dispatcher.Pump(
             _configuration.MaxRequestsPerFrame,
             TimeSpan.FromMilliseconds(_configuration.FrameBudgetMs));
 
@@ -235,6 +245,8 @@ internal sealed class SpherewrightBridgeHost : IDisposable
             _pumpLogged = true;
             _logger.LogInfo("Spherewright main-thread pump active");
         }
+
+        _performanceMonitor.RecordCompletedUpdate(updateStarted, Stopwatch.GetTimestamp(), processedRequests);
     }
 
     public void Dispose()

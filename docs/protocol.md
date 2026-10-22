@@ -83,6 +83,16 @@ spherewright_commit_reload_flight_checkpoint
 
 The text resource `spherewright://agent/playbooks/opening-movement-v1` is available without a live Bridge and must be read before gameplay. Its logical embedded name remains `Spherewright.Mcp.agent-playbook.md`. Discovery grants no execution authority. Historical sandbox basic-line methods are not registered.
 
+## Read-only runtime performance
+
+`spherewright_get_status.status.runtimePerformance` is optional; absent/null means the installed Plugin does not provide these measurements. Version `1`, source `unity_update_stopwatch_v1`, scope `plugin-process` use a monotonic Stopwatch, independently of simulation ticks and world ownership. They contain no save, credential or world identity. The read performs no Unity work and adds no dispatcher job.
+
+The Plugin records each completed main-thread bridge pump. The first completed update establishes the clock; subsequent samples pair the start-to-start Unity Update interval with that update's full bridge-pump duration. A ring retains at most the latest 600 pairs. `sampleCount`, `sampleCapacity`, `completedUpdates` and `windowDurationMs` report actual coverage (the interval sum), not a fixed ten-second claim. Fewer than 30 pairs is `warming_up`; otherwise `ready`. An empty window has null duration statistics. `meanMs`, `p95Ms` (nearest rank, `ceil(0.95*n)`) and `maxMs` are milliseconds. Long stalls remain in the window. These are Unity update/pump timings, not GPU presentation FPS or an attribution of all frame cost to Spherewright.
+
+`sampleAgeMs` is the monotonic age since the last completed pump, null before any completion; a fresh RPC alone does not prove the sampler is still advancing. `pendingMainThreadRequests` is an instantaneous queued count taken for this capture (excluding executing work), not a window maximum. Queue capacity, last completed pump's processed-request count, configured per-frame request limit and dispatcher budget are separate. The budget limits admission between jobs; it does not preempt a running job or bound the full bridge pump. Process-level samples continue across menus/world switches and restart with the Plugin host. Clients must also mark transport/connection failures stale and must not interpret missing fields as zero.
+
+This describes source behavior. Product CI, a complete current-native Plugin build, exact-cohort cold deployment and live performance validation are distinct evidence; no live acceptance is inferred from deterministic timing tests.
+
 ## Request rules
 
 Owned save/player/factory reads require active `sessionId`; planet-bound requests also require `planetId`. Normal actions remain local-planet-only. Entity inspection additionally permits an explicitly selected, already-created, identity-verified simulation-resident factory on the current owned star; it never creates/loads one. Player reads still use current `localPlanetId`.

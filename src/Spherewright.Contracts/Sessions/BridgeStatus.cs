@@ -17,5 +17,7 @@ public sealed class BridgeStatus
     public bool WritesConfigured { get; set; }
 
     public string WriteHealth { get; set; } = WriteHealthStates.Healthy;
+
+    public RuntimePerformanceSnapshot? RuntimePerformance { get; set; }
 }
 
