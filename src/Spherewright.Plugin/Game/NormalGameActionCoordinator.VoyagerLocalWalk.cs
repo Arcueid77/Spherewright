@@ -10,37 +10,6 @@ internal sealed partial class NormalGameActionCoordinator
 {
     public bool VoyagerLocalPrePlayerTickAvailable { get; set; }
     public DateTimeOffset VoyagerLocalPrePlayerObservedAtUtc { get; set; }
-    private VoyagerRemoteIdleOwner? _voyagerRemoteIdleOwner;
-    private NativeLocalWalkSceneBinding? _voyagerRemoteIdleScene;
-    // A separate patience bound, not a 13/60s prediction of physics motion.
-    private const double VoyagerLocalStopWallSeconds = VoyagerRemoteIdleAdmissionPolicy.StopWallSeconds;
-
-    private bool VoyagerRemoteIdleBindingMatches()
-    {
-        return VoyagerRemoteIdleBindingMatches(_voyagerRemoteIdleOwner, _flightCheckpoints.VoyagerJourney);
-    }
-
-    private bool VoyagerRemoteIdleBindingMatches(VoyagerRemoteIdleOwner? owner, VoyagerJourneyRecord? journey,
-        int? prospectiveRemotePlanetId = null)
-    {
-        var b = owner?.Binding;
-        return owner is not null && b is not null && journey is not null
-            && (prospectiveRemotePlanetId.HasValue || journey.Phase == "remote_landed")
-            && journey.JourneyId == owner.JourneyId && VoyagerRemoteIdleRuntimeMatches(owner)
-            && VoyagerLocalActionBudgetPolicy.MatchesOwnedJourneyIdentity(journey.OwnedSaveName, journey.GameVersion,
-                _sessions.IsCurrentSessionOwned, _sessions.OwnedSaveName, b.World.gameName, _sessions.CurrentNativeGameVersion)
-            && ReferenceEquals(GameMain.data, b.World) && ReferenceEquals(GameMain.mainPlayer, b.Player)
-            && ReferenceEquals(b.Player.controller, b.Controller) && ReferenceEquals(b.Player.mecha, b.Mecha)
-            && GameMain.localPlanet is { } planet && planet.id == (prospectiveRemotePlanetId ?? journey.RemotePlanetId)
-            && ReferenceEquals(b.Player.planetData, planet) && ReferenceEquals(b.Player.factory, planet.factory);
-    }
-
-    private bool VoyagerRemoteIdleRuntimeMatches(VoyagerRemoteIdleOwner owner) =>
-        _sessions.IsCurrentSessionOwned && _sessions.SessionId == owner.SessionId
-        && ReferenceEquals(GameMain.data, owner.Binding.World) && ReferenceEquals(GameMain.mainPlayer, owner.Binding.Player)
-        && ReferenceEquals(owner.Binding.Player.controller, owner.Binding.Controller)
-        && ReferenceEquals(owner.Binding.Player.mecha, owner.Binding.Mecha);
-
     private VoyagerRemoteIdleAdmissionDecision CaptureVoyagerRemoteIdleAdmission(VoyagerRemoteIdleOwner owner,
         VoyagerJourneyRecord journey, NativeLocalWalkSceneBinding? scene, long spentGameTicks,
         long? lastLandedGameTick, out NativeLocalWalkSceneBinding? observedScene, int? prospectiveRemotePlanetId = null,
@@ -101,11 +70,20 @@ internal sealed partial class NormalGameActionCoordinator
                     NativeWarperCount = CountVoyagerWarpers(player.mecha.warpStorage), OriginalExtraWarperReserve = journey.ExtraWarperReserve,
                 },
             };
+            if (journey.ReturnOnlyTask is { } task)
+                facts.ReturnOnlyBudget = new VoyagerReturnOnlyIdleBudgetFacts
+                {
+                    ExactTaskBinding = journey.ReturnOnlyScopeActive && task.TaskId == owner.ActionId
+                        && task.SessionId == owner.SessionId && _sessions.SessionId == owner.SessionId
+                        && _sessions.IsCurrentSessionOwned,
+                    StartedAtGameTick = task.StartedAtGameTick,
+                    MaximumGameTicks = task.MaximumGameTicks,
+                    DeadlineUtc = task.DeadlineUtc,
+                };
             captureFacts?.Invoke(facts);
             if (groundMiss) return Blocked("remote_idle_ground_contact_unproved");
             if (!physicallyAtRest) return Blocked("remote_idle_actual_speed_not_at_rest");
-            var decision = VoyagerRemoteIdleAdmissionPolicy.Evaluate(facts);
-            return decision.Proved ? decision : Blocked(decision.BlockerCode ?? "remote_idle_journey_unproved");
+            return VoyagerRemoteIdleAdmissionPolicy.Evaluate(facts, stage);
         }
         catch (Exception exception)
         {
@@ -113,64 +91,6 @@ internal sealed partial class NormalGameActionCoordinator
             // contain private paths. Keep the actual capture cause, not false.
             return VoyagerRemoteIdleAdmissionPolicy.Blocked("remote_idle_capture_failed", stage, exception.GetType().Name);
         }
-    }
-
-    private static string VoyagerRemoteIdleFailureDetail(VoyagerRemoteIdleAdmissionDecision decision) =>
-        " [" + decision.BlockerCode
-        + (decision.CaptureStage is null ? string.Empty : "; capture=" + decision.CaptureStage)
-        + (decision.CaptureExceptionType is null ? string.Empty : "; exception=" + decision.CaptureExceptionType) + "]";
-
-    private void GuardVoyagerRemoteIdleOnMainThread(bool stoppingHost = false)
-    {
-        // The successful outbound remains successful. Its existing journey
-        // continues owning idle energy until a budgeted controller takes over.
-        // A terminal local order alone cannot guarantee the next tick stays dry.
-        if (GameMain.isPaused) return;
-        var bindingMatches = false;
-        var bindingFailure = VoyagerRemoteIdleAdmissionPolicy.Blocked("remote_idle_binding_unproved");
-        try { bindingMatches = VoyagerRemoteIdleBindingMatches(); }
-        catch (Exception exception)
-        { bindingFailure = VoyagerRemoteIdleAdmissionPolicy.Blocked("remote_idle_capture_failed", "binding", exception.GetType().Name); }
-        if (!bindingMatches)
-        {
-            if (_voyagerRemoteIdleOwner is { } originalOwner && _flightCheckpoints.VoyagerJourney is { Phase: "remote_landed" } retainedOwner
-                && retainedOwner.JourneyId == originalOwner.JourneyId && VoyagerRemoteIdleRuntimeMatches(originalOwner))
-            {
-                var reason = "The completed outbound's remote idle binding is no longer proved. Its successful flight is retained."
-                    + VoyagerRemoteIdleFailureDetail(bindingFailure) + FreezeNativeLocalFailureEnergy(true);
-                _sessions.QuarantineRemoteIdleOnMainThread(originalOwner.ActionId, reason);
-                return;
-            }
-            // A remote primary/Host reload has no in-memory landed-controller
-            // handoff. Do not silently recertify it or borrow an old action.
-            var retained = _flightCheckpoints.VoyagerJourney;
-            if (retained?.Phase == "remote_landed" && _sessions.SessionId is { } sessionId
-                && VoyagerOwnedJourneyMatchesCurrentSession(retained, sessionId)
-                && GameMain.mainPlayer?.planetId == retained.RemotePlanetId
-                && !string.IsNullOrEmpty(retained.ActiveActionId))
-            {
-                var reason = "The original remote journey has no current landed-controller idle binding; remote local work is not recertified after reload."
-                    + VoyagerRemoteIdleFailureDetail(bindingFailure)
-                    + FreezeNativeLocalFailureEnergy(true);
-                _sessions.QuarantineRemoteIdleOnMainThread(retained.ActiveActionId, reason);
-            }
-            return;
-        }
-        var owner = _voyagerRemoteIdleOwner!;
-        var journey = _flightCheckpoints.VoyagerJourney!;
-        if (!stoppingHost && _actions.ActiveValues.Any(a => !a.Terminal
-            && (IsVoyagerLocalOrder(a) && a.Plan.VoyagerLocalJourneyId == journey.JourneyId
-                || IsStructuredConstruction(a.Plan) && a.Plan.BlueprintState?.StructuredConstruction?.JourneyId == journey.JourneyId)))
-            return; // Only controllers with the full current-tick reserve.
-        // Host teardown must attempt Pause before any cost capture can throw.
-        var admission = stoppingHost ? VoyagerRemoteIdleAdmissionPolicy.Blocked("remote_idle_host_stopping")
-            : CaptureVoyagerRemoteIdleAdmission(owner, journey, _voyagerRemoteIdleScene,
-                journey.SpentGameTicks, journey.LastLandedGameTick, out _);
-        if (admission.Proved) return;
-        var message = "The completed outbound's exact remote idle/return reserve is no longer proved. Its successful flight is retained; the original journey requires intervention."
-            + VoyagerRemoteIdleFailureDetail(admission)
-            + FreezeNativeLocalFailureEnergy(bindingMatches);
-        _sessions.QuarantineRemoteIdleOnMainThread(owner.ActionId, message);
     }
 
     internal string? AdmitVerifiedVoyagerRemoteResumeOnMainThread(VoyagerRemoteResumeAdoption adoption)
@@ -297,22 +217,6 @@ internal sealed partial class NormalGameActionCoordinator
         // two-tick funding above never spends future unproved generation.
         adoption.ChargeGenerationLowerBoundWatts = GameStateReader.CaptureNativeCoreGenerationLowerBoundWatts(m);
         return null;
-    }
-
-    private sealed class VoyagerRemoteIdleOwner
-    {
-        public VoyagerRemoteIdleOwner(VoyagerNativeBinding binding, string sessionId, string journeyId,
-            string actionId, string sourceFlightActionId, VoyagerRemoteResumeAdoption? resumeAdoption = null)
-        {
-            Binding = binding; SessionId = sessionId; JourneyId = journeyId; ActionId = actionId;
-            SourceFlightActionId = sourceFlightActionId; ResumeAdoption = resumeAdoption;
-        }
-        public VoyagerNativeBinding Binding { get; }
-        public string SessionId { get; }
-        public string JourneyId { get; }
-        public string ActionId { get; }
-        public string SourceFlightActionId { get; }
-        public VoyagerRemoteResumeAdoption? ResumeAdoption { get; }
     }
 
     private static bool IsVoyagerLocalOrder(ActionRecord a) => a.Plan.VoyagerLocalDeadlineGameTick.HasValue
@@ -655,7 +559,7 @@ internal sealed partial class NormalGameActionCoordinator
             FinishVoyagerLocalOrderUnknown(action, "The unchanged contact-loss stop bound ended before strict physical settlement; its failure601 remains funded.");
     }
 
-    public void UpdateVoyagerLocalPrePlayerTickOnMainThread()
+    private void UpdateVoyagerLocalPrePlayerTickCoreOnMainThread()
     {
         GuardVoyagerLandingChargeOnMainThread();
         GuardVoyagerRemoteIdleOnMainThread();

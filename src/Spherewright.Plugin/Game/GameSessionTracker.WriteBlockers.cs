@@ -16,8 +16,17 @@ internal sealed partial class GameSessionTracker
             blockers.Add(new WriteBlocker { Code = BridgeErrorCodes.WriteSubsystemQuarantined,
                 Message = _flightCheckpoints.VoyagerJourneyLoadError! });
         if (_flightCheckpoints.HasUnreconciledReload)
-            blockers.Add(new WriteBlocker { Code = BridgeErrorCodes.ServerBusy,
-                Message = "The original checkpoint reload is unresolved; poll its exact action before any new write." });
+            blockers.Add(new WriteBlocker
+            {
+                Code = BridgeErrorCodes.ServerBusy,
+                Message = "The original checkpoint reload is unresolved; poll its exact action before any new write."
+            });
+        if (CheckpointReturnHandoffPending)
+            blockers.Add(new WriteBlocker
+            {
+                Code = BridgeErrorCodes.BridgeNotReady,
+                Message = CheckpointReturnPendingMessage
+            });
         if (string.Equals(_writeHealth, WriteHealthStates.Quarantined, StringComparison.Ordinal))
         {
             blockers.Add(new WriteBlocker

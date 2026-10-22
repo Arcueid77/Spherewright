@@ -451,4 +451,9 @@ Move 地表预览是观察，不是寻路，180/600 tick 失败指导禁止重�
 
 `SessionState.returnOnlyRecovery` 分别披露新任务剩余tick与原spent/maximum/deadline。范围blocker拒绝其他写入，仅鲜活核验的原母星Voyager返航、其取消和普通Save可移除该精确blocker，其余门全部保留。路线预览及起飞自恢复检查点tick扣时，并在新总量内预留1800停机tick、已进入的601尾部及30墙钟秒。真实501观察者逐逻辑tick检查总上限，覆盖单渲染帧多tick；普通会话刷新提供墙钟后备。耗尽时仅正常暂停精确owned世界，不伪造物理idle或授自动Resume；其他健康门通过时仍可正常Save保全进度。首错事实在Pause前锁存，之后不补采覆盖。确认缺失、文件/账目改变、较新主档、未决/已消费重载、归属错误、未知时钟或已授另一任务均闭合拒绝。离线能力不证明Unity恢复或真实返航。
 
+只返航重载在 `returnOnlyRecovery.nativeHandoffState=pending` 时保持非终态。准确检查点接管先阻止普通写入与重存；既有 Native501 保护必须证明当前运行引用、严格物理 idle、能源及本次独立返航预算，才能成功完成。原已耗尽 spent、UTC 与返程储备保持不变。接管失败时正常暂停同一 owned 世界并报告首个同次复制证据；已接管检查点不因此获得再次加载权限。
+
+这一准确、完整接管的检查点角色，可在接管检查已结束或失败后，以 `prepare_save(preserveQuarantinedProgress=true)` 绑定稳定暂停状态的保全保存。它核验原检查点、任务、会话、世界、工厂及其余阻塞，并完整读回原生文件、身份、版本、和平模式及准确 tick。保存保留隔离、范围、旧结果与预算，不签发恢复凭据。既有已成功 LastExit 接管的保全角色维持原要求。
+
+
 源码依据：[Contracts](../src/Spherewright.Contracts)、[MCP 工具](../src/Spherewright.Mcp/Tools)、[Core](../src/Spherewright.Bridge.Core)、[原生适配器](../src/Spherewright.Plugin/Game)。早期细节：[已验收协议](https://github.com/Arcueid77/Spherewright/blob/2a7a98d1932c404e3a7abc2c11233d9c0b8780d9/docs/protocol.md)、[Lab 固定参考](https://github.com/Arcueid77/Spherewright-Lab/tree/14478a03c64c550e644c559405c8496b647552e7)。离线契约不证明已安装或实机验收。

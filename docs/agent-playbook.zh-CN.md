@@ -440,6 +440,9 @@ Native Import 可将 double 宇宙坐标逆投影为 float 本地位置；普通
 
 只返航任务在起飞前或落地后须停止时，以 `prepare_cancel_voyager_flight` 提供已披露的 `returnOnlyRecovery.taskId`、准确会话/当前星球，再commit一次；核验正常Pause和锁存的首个停止事实。正在飞行则使用飞行自身actionId及既有退出/刹车流程。两种停止均不授自动Resume或另一次尝试。
 
+经单独确认的只返航检查点 Load 后，等待原动作 terminal/succeeded 且 `returnOnlyRecovery.nativeHandoffState=proved`。身份接管仍可能处于 pending；Native501 idle/能源保护完成前，普通写入与重存继续阻塞。它使用本次独立返航上限，不返还旧账额度。接管失败时保留原结果及首个同次失败证据，维持暂停，仅执行 fresh 预检实际允许的准确暂停保全保存。该保存不授健康、恢复凭据或重放。后续冷安装前先保全当前进度。开发阶段先构建测试、按需一体实装，再进行功能验证；功能验收完成后才生成最终手动/Thunderstore 双包。
+
+
 中断返航无最终源tick观察时，冷恢复仍作废原剩余tick。另经用户批准的 `returnOnlyTask` 才可经准确合格检查点授予一次新任务，至多1200墙钟秒/54000游戏tick，必须明确接受未存进度损失并在commit确认。先完成离线准备，再开始已批绝对执行窗口；保留原终态、账目、资源底线及完整文件。核对prepare提案回显和会话任务绑定，仅返原母星，恢复后立即普通Save，到家再次Save并核完整证明。到家正常保存前继续拒绝其他写入。Plugin在新额度内保留停机/尾部成本，无客户端时也会在耗尽后暂停。有限观察器与游戏须独立于调用宿主的清理机制，读档前核验实际游戏进程；原操作消失时不重启，也不把进程创建回执当作任务接管成功。
 
 当前场景执行从当前 [Spherewright-Lab](https://github.com/Arcueid77/Spherewright-Lab) 检出目录开始，先读取其当前 [AGENTS.md](https://github.com/Arcueid77/Spherewright-Lab/blob/main/AGENTS.md) 与[活动交接](https://github.com/Arcueid77/Spherewright-Lab/blob/main/operations/active-handoff.md)；本内嵌指南不授予权限。[Lab 固定快照](https://github.com/Arcueid77/Spherewright-Lab/tree/14478a03c64c550e644c559405c8496b647552e7)与[已验收指南](https://github.com/Arcueid77/Spherewright/blob/2a7a98d1932c404e3a7abc2c11233d9c0b8780d9/docs/agent-playbook.md)仅保留历史证据、示例。历史成功绝不授予重放权限。

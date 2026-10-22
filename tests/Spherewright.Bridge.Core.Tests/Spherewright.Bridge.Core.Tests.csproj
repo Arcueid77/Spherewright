@@ -23,6 +23,9 @@
     <Compile Include="..\..\src\Spherewright.Plugin\Game\NativeLoadCompletionSubscription.cs" Link="PluginGame\NativeLoadCompletionSubscription.cs" />
     <Compile Include="..\..\src\Spherewright.Plugin\Game\FlightCheckpointReloadCoordinator.cs" Link="PluginGame\FlightCheckpointReloadCoordinator.cs" />
     <Compile Include="..\..\src\Spherewright.Plugin\Game\NormalGameActionCoordinator.FlightStart.cs" Link="PluginGame\NormalGameActionCoordinator.FlightStart.cs" />
+    <Compile Include="..\..\src\Spherewright.Plugin\Game\NormalGameActionCoordinator.VoyagerRemoteIdleGuard.cs" Link="PluginGame\NormalGameActionCoordinator.VoyagerRemoteIdleGuard.cs" />
+    <Compile Include="..\..\src\Spherewright.Plugin\Game\NormalGameActionCoordinator.CheckpointReturnHandoff.cs" Link="PluginGame\NormalGameActionCoordinator.CheckpointReturnHandoff.cs" />
+    <Compile Include="..\..\src\Spherewright.Plugin\Game\GameSessionTracker.CheckpointReturnHandoff.cs" Link="PluginGame\GameSessionTracker.CheckpointReturnHandoff.cs" />
     <Compile Include="..\..\src\Spherewright.Plugin\Game\NormalGameActionCoordinator.LoadedGroundSyncState.cs" Link="PluginGame\NormalGameActionCoordinator.LoadedGroundSyncState.cs" />
     <Compile Include="..\..\src\Spherewright.Plugin\Game\NativeContactTransformBinding.cs" Link="PluginGame\NativeContactTransformBinding.cs" />
     <Compile Include="..\..\src\Spherewright.Plugin\Game\NormalGameActionCoordinator.RemoteResumeContactState.cs" Link="PluginGame\NormalGameActionCoordinator.RemoteResumeContactState.cs" />

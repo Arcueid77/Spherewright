@@ -80,5 +80,6 @@ public sealed class VoyagerReturnOnlyTaskState
     public long OriginalMaximumGameTicks { get; set; }
     public DateTimeOffset OriginalDeadlineUtc { get; set; }
     public string PauseOutcome { get; set; } = "not_requested";
+    public string NativeHandoffState { get; set; } = "not_observed";
     public Spherewright.Contracts.Players.NativeResumeFailureSnapshot? FirstFailure { get; set; }
 }

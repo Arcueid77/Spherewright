@@ -38,6 +38,16 @@ internal sealed class FlightCheckpointReloadCoordinator
         _idempotency = new IdempotencyCache<FlightCheckpointReloadResult>(
             idempotencyCapacity,
             TimeSpan.FromMinutes(idempotencyRetentionMinutes));
+        _normalActions.SetCheckpointReturnRecoveryPump(PumpReturnOnlyRecoveryOnMainThread);
+    }
+
+    // The Native observer and ordinary Host Update advance the ORIGINAL load;
+    // neither issues another StartGame nor depends on a client polling cadence.
+    private void PumpReturnOnlyRecoveryOnMainThread()
+    {
+        foreach (var action in _actions.Values.Where(a => a.ReturnOnlyTask is not null
+            && a.CompletedSnapshot is null && a.DispatchEntered).ToArray())
+            TryGetActionResultOnMainThread(action.ActionId, out _);
     }
 
     public GameCallResult<PreparedFlightCheckpointReloadPlan> PrepareOnMainThread(
@@ -274,7 +284,7 @@ internal sealed class FlightCheckpointReloadCoordinator
 
         if (action.CompletedSnapshot is not null)
         {
-            result = action.CompletedSnapshot;
+            result = action.ReturnOnlyTask is null ? action.CompletedSnapshot : CopyResult(action.CompletedSnapshot);
             return true;
         }
 
@@ -328,7 +338,8 @@ internal sealed class FlightCheckpointReloadCoordinator
                 }
                 return true;
             }
-            if (!_tickets.TryReconcileVoyagerRecovery(action.Ticket, out var journeyRejection, action.SourceGameTick))
+            if (!action.ReturnOnlyAccountingReconciled
+                && !_tickets.TryReconcileVoyagerRecovery(action.Ticket, out var journeyRejection, action.SourceGameTick))
             {
                 action.DispatchOutcomeUnknown = true;
                 action.UnknownReason ??= journeyRejection;
@@ -343,7 +354,7 @@ internal sealed class FlightCheckpointReloadCoordinator
                 }
                 return true;
             }
-            if (action.ReturnOnlyTask is not null && !_tickets.TryGrantRecoveredReturnOnlyTask(action.Ticket,
+            if (action.ReturnOnlyTask is not null && !action.ReturnOnlyAccountingReconciled && !_tickets.TryGrantRecoveredReturnOnlyTask(action.Ticket,
                 action.ReturnOnlyTask, action.OriginalJourneyJson, action.ActionId, session.SessionId!, session.GameTick,
                 DateTimeOffset.UtcNow, out var taskRejection, out var taskFailure))
             {
@@ -358,6 +369,45 @@ internal sealed class FlightCheckpointReloadCoordinator
                     action.Ticket.OwnedSaveName, action.Ticket.CheckpointId);
                 return true;
             }
+            if (action.ReturnOnlyTask is not null)
+            {
+                action.ReturnOnlyAccountingReconciled = true;
+                action.ReturnOnlyHealthStartedUtc ??= DateTimeOffset.UtcNow;
+                if (!_sessions.RegisterCheckpointReturnAdoption(action.Ticket, action.ActionId, out var witnessRejection))
+                {
+                    action.FirstFailure ??= NativeResumeDecisionEvidence.UnobservedFailure("return_only_checkpoint_witness_unproved",
+                        "checkpoint_idle_witness", session.GameTick, DateTimeOffset.UtcNow, witnessRejection);
+                }
+                if (action.FirstFailure is null
+                    && !_normalActions.ObserveRecoveredReturnOnlyHealthOnMainThread(action.Ticket, action.ActionId, out var healthFailure))
+                {
+                    if (healthFailure is null)
+                    {
+                        if (DateTimeOffset.UtcNow - action.ReturnOnlyHealthStartedUtc.Value
+                            <= TimeSpan.FromSeconds(NativeResumeContactPolicy.MaximumWallSeconds))
+                        {
+                            result.State = NormalActionStates.WaitingForGame;
+                            result.Message = "Exact checkpoint identity and accounting are adopted; waiting for the original Native501 idle/energy handoff. Health is not proved yet.";
+                            return true;
+                        }
+                        healthFailure = NativeResumeDecisionEvidence.UnobservedFailure("return_only_checkpoint_native501_not_observed",
+                            "checkpoint_idle_observer_wait", session.GameTick, DateTimeOffset.UtcNow, "native501_observed");
+                    }
+                    action.FirstFailure = healthFailure.Copy();
+                }
+                if (action.FirstFailure is not null)
+                {
+                    result.NativeFirstFailure = action.FirstFailure.Copy();
+                    result.State = NormalActionStates.ActionFailed; result.Terminal = true; result.Succeeded = false;
+                    result.Message = "The exact checkpoint was loaded, but its Native health handoff failed: " + action.FirstFailure.Code;
+                    _sessions.FinishCheckpointReturnHandoff(action.ActionId, action.FirstFailure);
+                    _sessions.QuarantineWritesOnMainThread(action.ActionId, result.Message);
+                    result.Message += " " + _sessions.PauseFailedReturnOnlyRecoveryOnMainThread(session.SessionId!,
+                        action.Ticket.OwnedSaveName, action.Ticket.CheckpointId);
+                    action.CompletedSnapshot = CopyResult(result);
+                    return true;
+                }
+            }
             if (action.DispatchOutcomeUnknown && session.WriteQuarantineActionId == action.ActionId)
                 _sessions.TryClearQuarantineOnMainThread(action.ActionId, action.UnknownReason!, out _);
             result.State = NormalActionStates.Completed;
@@ -369,8 +419,8 @@ internal sealed class FlightCheckpointReloadCoordinator
             result.ReconciledAtGameTick = action.DispatchOutcomeUnknown ? session.GameTick : null;
             result.Message = "The exact pre-flight checkpoint passed provenance checks and is ready to retry the same flight; the primary owned save was not replaced.";
             if (action.ReturnOnlyTask is not null)
-                result.Message = "The exact interrupted return checkpoint was adopted. Original accounting remains conservatively exhausted and preserved; a separately confirmed finite task permits only return to the original home and normal Save.";
-            action.CompletedSnapshot = result;
+                result.Message = "The exact interrupted return checkpoint passed identity, conserved accounting and its Native501 idle/energy handoff. A separately confirmed finite task permits only the original-home return and normal Save.";
+            action.CompletedSnapshot = action.ReturnOnlyTask is null ? result : CopyResult(result);
         }
         else if (!string.IsNullOrWhiteSpace(_sessions.FlightCheckpointAdoptionError))
         {
@@ -516,6 +566,10 @@ internal sealed class FlightCheckpointReloadCoordinator
         }
     }
 
+    private static ActionResultSnapshot CopyResult(ActionResultSnapshot result) =>
+        PluginJson.Deserialize<ActionResultSnapshot>(PluginJson.Serialize(result))
+            ?? throw new InvalidOperationException("A completed return recovery snapshot could not be copied.");
+
     private static FlightCheckpointReloadResult CloneAsReplay(FlightCheckpointReloadResult result) =>
         new FlightCheckpointReloadResult
         {
@@ -585,5 +639,7 @@ internal sealed class FlightCheckpointReloadCoordinator
         public VoyagerReturnOnlyRecoveryRequest? ReturnOnlyTask { get; set; }
         public string OriginalJourneyJson { get; set; } = "";
         public Spherewright.Contracts.Players.NativeResumeFailureSnapshot? FirstFailure { get; set; }
+        public bool ReturnOnlyAccountingReconciled { get; set; }
+        public DateTimeOffset? ReturnOnlyHealthStartedUtc { get; set; }
     }
 }

@@ -73,25 +73,6 @@ internal sealed partial class NormalGameActionCoordinator
         && !double.IsNaN(p.y) && !double.IsInfinity(p.y) && Math.Abs(p.y) <= 1e15d
         && !double.IsNaN(p.z) && !double.IsInfinity(p.z) && Math.Abs(p.z) <= 1e15d;
 
-    private static string FreezeNativeLocalFailureEnergy(bool exactOwnedBinding)
-    {
-        // Pause is an ordinary DSP control, never a velocity write or a
-        // physical-stop certificate. At task501 this LogicFrame may still
-        // finish: admission reserves that whole Player/construction tick.
-        // Subsequent FixedUpdate calls return before another LogicFrame.
-        // Never pause a replacement world or automatically Resume it.
-        if (!exactOwnedBinding || !GameMain.isRunning) return string.Empty;
-        try
-        {
-            GameMain.Pause();
-            return GameMain.isPaused
-                ? " Native Pause is verified; this LogicFrame may finish, then further Native energy is frozen. Physical idle remains unproved; do not automatically Resume or replay."
-                : " Native Pause could not be verified; preserve the original failure for intervention.";
-        }
-        catch (Exception)
-        { return " Native Pause failed; preserve the original failure for intervention."; }
-    }
-
     private sealed class NativeLocalWalkSceneBinding
     {
         public NativeLocalWalkSceneBinding(PlanetData planet, PlanetPhysics physics, PlanetSimulator simulator)

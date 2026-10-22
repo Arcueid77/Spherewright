@@ -299,7 +299,8 @@ internal sealed partial class NormalGameActionCoordinator
         if (result.Success && preservation is not null)
         {
             var prepared = result.Value!;
-            prepared.CommitBlockers = preservation.RemainingBlockers(common.Session.WriteBlockers).Select(CloneBlocker).ToList();
+            prepared.CommitBlockers = VoyagerReturnOnlyRecoveryPolicy.ActionBlockers(
+                preservation.RemainingBlockers(common.Session.WriteBlockers), NormalActionKinds.Save, false).Select(CloneBlocker).ToList();
             prepared.CommitAllowedNow = prepared.CommitBlockers.Count == 0;
             prepared.PreservesQuarantine = true;
             prepared.PreservationGameTick = preservation.GameTick;

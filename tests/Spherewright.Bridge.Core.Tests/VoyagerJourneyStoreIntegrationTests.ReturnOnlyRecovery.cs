@@ -68,47 +68,54 @@ public sealed partial class VoyagerJourneyStoreIntegrationTests
         Assert.Equal(FlightCheckpointLifecycleStates.Retired,
             PluginJson.Deserialize<FlightCheckpointTicket>(File.ReadAllText(f.TicketPath))!.LifecycleState);
 
-        f.Sessions.Snapshot.Revision = 1;
-        f.Sessions.FlightStartCheckpointId = f.Ticket.CheckpointId;
-        f.Sessions.FlightStartLoadedFromCheckpoint = true;
-        GameMain.gameTick = f.Ticket.SavedGameTick + 1000;
-        GameMain.mainPlayer = new();
-        GameMain.localPlanet = new() { id = f.Ticket.OriginPlanetId };
-        var flight = new NormalGameActionCoordinator.ActionRecord {
-            SessionId = task.SessionId, PlanetId = f.Ticket.OriginPlanetId,
-            Plan = new() { VoyagerReturnLeg = true, VoyagerJourneyId = source.JourneyId,
-                DestinationPlanetId = source.HomePlanetId,
-                VoyagerBudget = new() { OriginStarId = source.DestinationStarId, DestinationStarId = source.HomeStarId },
-            },
-        };
-        var controller = new NormalGameActionCoordinator(f.Store, f.Sessions);
-        controller.StartVoyagerForTest(flight);
-        Assert.False(flight.Terminal, flight.Message);
-        Assert.Equal(1, controller.NativeFlightEntries);
-        Assert.True(flight.VoyagerDeadlineGameTick + VoyagerReturnOnlyRecoveryPolicy.StopAndTailGameTicks
-            <= f.Ticket.SavedGameTick + proposal.MaximumGameTicks);
-        Assert.Equal(source.MaximumGameTicks + 1000, f.Store.VoyagerJourney!.SpentGameTicks);
-        Assert.Equal(PluginJson.Serialize(task), PluginJson.Serialize(f.Store.VoyagerJourney.ReturnOnlyTask));
-        Assert.Equal("return", f.Store.VoyagerJourney.Phase);
-        Assert.NotEqual(f.Ticket.CheckpointId, f.Store.CurrentTicket!.CheckpointId);
-        GameMain.gameTick += 1100;
-        var returned = f.Store.VoyagerJourney!;
-        Assert.True(f.Store.TryMarkFlightSucceeded(returned.ActiveCheckpointId, flight.ActionId, GameMain.gameTick, out var rejection), rejection);
-        returned.Phase = "home_awaiting_save"; returned.LastLandedGameTick = GameMain.gameTick;
-        returned.SpentGameTicks += 1100;
-        Assert.True(f.Store.TryPersistVoyagerJourney(returned, out rejection), rejection);
-        GameMain.localPlanet.id = source.HomePlanetId;
-        f.Sessions.Snapshot.LocalPlanetId = source.HomePlanetId;
-        Assert.True(f.Sessions.TrySaveOwnedWorldNowOnMainThread(out saveError), saveError);
-        var savedFingerprint = f.PrimaryFingerprint();
-        Assert.True(f.Store.TryCompleteVoyagerAfterOwnedSave(source.JourneyId, Fixture.NormalSaveActionId, task.SessionId,
-            source.HomePlanetId, GameMain.gameTick, savedFingerprint, out rejection), rejection);
-        var closed = f.ReopenStore().VoyagerJourney!;
-        Assert.Equal("completed", closed.Phase);
-        Assert.False(closed.ReturnOnlyScopeActive);
-        Assert.Equal(task.OriginalJourneyJson, closed.ReturnOnlyTask!.OriginalJourneyJson);
-        Assert.Equal(PluginJson.Serialize(source), File.ReadAllText(sourceArchive));
-        Assert.Equal(1, DSPGame.DispatchCalls);
+            f.Sessions.Snapshot.Revision = 1;
+            f.Sessions.FlightStartCheckpointId = f.Ticket.CheckpointId;
+            f.Sessions.FlightStartLoadedFromCheckpoint = true;
+            GameMain.gameTick = f.Ticket.SavedGameTick + 1000;
+            GameMain.mainPlayer = new();
+            GameMain.localPlanet = new() { id = f.Ticket.OriginPlanetId };
+            var flight = new NormalGameActionCoordinator.ActionRecord
+            {
+                SessionId = task.SessionId,
+                PlanetId = f.Ticket.OriginPlanetId,
+                Plan = new()
+                {
+                    VoyagerReturnLeg = true,
+                    VoyagerJourneyId = source.JourneyId,
+                    DestinationPlanetId = source.HomePlanetId,
+                    VoyagerBudget = new() { OriginStarId = source.DestinationStarId, DestinationStarId = source.HomeStarId },
+                },
+            };
+            var controller = f.NormalActions;
+            controller.StartVoyagerForTest(flight);
+            Assert.False(flight.Terminal, flight.Message);
+            Assert.Equal(1, controller.NativeFlightEntries);
+            controller.RunNativeIdleGuardForTest();
+            Assert.False(GameMain.isPaused); // the real started return owns the next tick
+            Assert.True(flight.VoyagerDeadlineGameTick + VoyagerReturnOnlyRecoveryPolicy.StopAndTailGameTicks
+                <= f.Ticket.SavedGameTick + proposal.MaximumGameTicks);
+            Assert.Equal(source.MaximumGameTicks + 1000, f.Store.VoyagerJourney!.SpentGameTicks);
+            Assert.Equal(PluginJson.Serialize(task), PluginJson.Serialize(f.Store.VoyagerJourney.ReturnOnlyTask));
+            Assert.Equal("return", f.Store.VoyagerJourney.Phase);
+            Assert.NotEqual(f.Ticket.CheckpointId, f.Store.CurrentTicket!.CheckpointId);
+            GameMain.gameTick += 1100;
+            var returned = f.Store.VoyagerJourney!;
+            Assert.True(f.Store.TryMarkFlightSucceeded(returned.ActiveCheckpointId, flight.ActionId, GameMain.gameTick, out var rejection), rejection);
+            returned.Phase = "home_awaiting_save"; returned.LastLandedGameTick = GameMain.gameTick;
+            returned.SpentGameTicks += 1100;
+            Assert.True(f.Store.TryPersistVoyagerJourney(returned, out rejection), rejection);
+            GameMain.localPlanet.id = source.HomePlanetId;
+            f.Sessions.Snapshot.LocalPlanetId = source.HomePlanetId;
+            Assert.True(f.Sessions.TrySaveOwnedWorldNowOnMainThread(out saveError), saveError);
+            var savedFingerprint = f.PrimaryFingerprint();
+            Assert.True(f.Store.TryCompleteVoyagerAfterOwnedSave(source.JourneyId, Fixture.NormalSaveActionId, task.SessionId,
+                source.HomePlanetId, GameMain.gameTick, savedFingerprint, out rejection), rejection);
+            var closed = f.ReopenStore().VoyagerJourney!;
+            Assert.Equal("completed", closed.Phase);
+            Assert.False(closed.ReturnOnlyScopeActive);
+            Assert.Equal(task.OriginalJourneyJson, closed.ReturnOnlyTask!.OriginalJourneyJson);
+            Assert.Equal(PluginJson.Serialize(source), File.ReadAllText(sourceArchive));
+            Assert.Equal(1, DSPGame.DispatchCalls);
         }
         finally { GameSave.FlightStartSave = previousSave; }
     }

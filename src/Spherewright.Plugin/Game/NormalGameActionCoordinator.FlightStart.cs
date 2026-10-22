@@ -47,6 +47,7 @@ internal sealed partial class NormalGameActionCoordinator
         action.VoyagerDeadlineGameTick = GameMain.gameTick + legTicks;
         action.VoyagerPhase = "launch";
         LaunchInterplanetaryFlightFromBoundCheckpointOnMainThread(action);
+        ReleaseCheckpointIdleToStartedReturn(action);
         CaptureVoyagerReadback(action);
     }
 

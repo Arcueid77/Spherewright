@@ -815,14 +815,6 @@ internal sealed partial class NormalGameActionCoordinator
             _sessions.OwnedSaveName, session.SaveName, session.GameVersion);
     }
 
-    private bool VoyagerOwnedJourneyMatchesCurrentSession(VoyagerJourneyRecord journey, string expectedSessionId)
-    {
-        var session = _sessions.CaptureOnMainThread();
-        return _sessions.IsCurrentSessionOwned && _sessions.SessionId == expectedSessionId && session.SessionId == expectedSessionId
-            && VoyagerLocalActionBudgetPolicy.MatchesOwnedJourneyIdentity(journey.OwnedSaveName, journey.GameVersion,
-                session.OwnedBySpherewright, _sessions.OwnedSaveName, session.SaveName, session.GameVersion);
-    }
-
     private bool TryAccountVoyagerLeg(ActionRecord action, string phase, out string rejection)
     {
         var journey = action.VoyagerJourney ?? _flightCheckpoints.VoyagerJourney;

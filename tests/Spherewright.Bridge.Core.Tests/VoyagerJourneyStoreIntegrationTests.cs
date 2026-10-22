@@ -812,7 +812,7 @@ public sealed partial class VoyagerJourneyStoreIntegrationTests
         private readonly FlightStartTestPlayer _previousPlayer = GameMain.mainPlayer;
         private readonly bool _previousPaused = GameMain.isPaused;
         internal GameSessionTracker Sessions { get; } = new();
-        internal NormalGameActionCoordinator NormalActions { get; } = new();
+        internal NormalGameActionCoordinator NormalActions { get; }
         internal FlightCheckpointStore Store { get; }
         internal FlightCheckpointTicket Ticket { get; }
         internal VoyagerJourneyRecord Record { get; }
@@ -836,6 +836,7 @@ public sealed partial class VoyagerJourneyStoreIntegrationTests
             try
             {
                 Store = ReopenStore();
+                NormalActions = new NormalGameActionCoordinator(Store, Sessions);
                 var journeyId = Guid.NewGuid().ToString("N");
                 Ticket = Store.CreateDraft(Identity, SourceSessionId, 1, 101, 0,
                     "synthetic-player", "synthetic-catalogue", 1, 2, journeyId);
@@ -930,6 +931,12 @@ public sealed partial class VoyagerJourneyStoreIntegrationTests
         {
             Assert.True(Coordinator.TryGetActionResultOnMainThread(id, out var result));
             Assert.NotNull(result);
+            if (!result!.Terminal && Store.VoyagerJourney?.ReturnOnlyTask is not null)
+            {
+                GameMain.gameTick++;
+                NormalActions.RunNativeIdleGuardForTest();
+                Assert.True(Coordinator.TryGetActionResultOnMainThread(id, out result));
+            }
             return result!;
         }
         internal void AdoptExactCheckpoint()
@@ -943,6 +950,8 @@ public sealed partial class VoyagerJourneyStoreIntegrationTests
             Sessions.Snapshot.CurrentSessionLoadedFromFlightCheckpoint = true;
             Sessions.Snapshot.FlightCheckpointId = Ticket.CheckpointId;
             Sessions.FinishExpectedFlightCheckpointAdoptionForTest();
+            Sessions.BindCheckpointNativeWorldFromSnapshotForTest(Store);
+            NormalActions.ObserveBoundNative501ContractForTest();
         }
         internal void MarkCheckpointRecovered()
         {

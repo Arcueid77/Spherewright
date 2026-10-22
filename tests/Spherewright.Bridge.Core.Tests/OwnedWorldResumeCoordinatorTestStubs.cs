@@ -115,7 +115,8 @@ internal sealed partial class GameSessionTracker : IDisposable
                 legacyLocalMoveEvidenceJson, legacyLocalMoveEvidenceHash, legacyCredentialRawFingerprint,
                 completedRemoteContinuation, priorActionKnownTerminalCompleted, remotePrimaryRequest, progressLastExit);
     }
-    internal SessionState CaptureOnMainThread() => Snapshot;
+    internal SessionState CaptureOnMainThread()
+    { RefreshCheckpointNativeShellForTest(); return Snapshot; }
     internal void ExpectNextSessionToBeResumed(OwnedWorldResumeTicket ticket,
         OwnedSaveRecoveryLease? sourceLease = null, bool reauthorizingExpiredPrimary = false,
         IDisposable? journalLease = null, bool reauthorizingFixedAutosave0 = false,

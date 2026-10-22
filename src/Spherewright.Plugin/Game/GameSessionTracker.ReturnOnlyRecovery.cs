@@ -99,13 +99,23 @@ internal sealed partial class GameSessionTracker
     {
         var j = _flightCheckpoints.VoyagerJourney;
         if (j?.ReturnOnlyTask is not { } t) return;
-        session.ReturnOnlyRecovery = new() {
-            TaskId = t.TaskId, ScopeActive = j.ReturnOnlyScopeActive,
-            DeadlineUtc = t.DeadlineUtc, MaximumGameTicks = t.MaximumGameTicks,
+        var adoption = _checkpointReturnAdoption is { } a && a.ActionId == t.TaskId && a.SessionId == session.SessionId
+            && ReferenceEquals(a.World, GameMain.data) && ReferenceEquals(a.World, _ownedData)
+            && a.OwnedSaveName == session.SaveName && a.NativeVersion == session.GameVersion ? a : null;
+        session.ReturnOnlyRecovery = new()
+        {
+            TaskId = t.TaskId,
+            ScopeActive = j.ReturnOnlyScopeActive,
+            DeadlineUtc = t.DeadlineUtc,
+            MaximumGameTicks = t.MaximumGameTicks,
             RemainingGameTicks = j.RemainingReturnOnlyTicks(session.SessionId, session.GameTick),
-            OriginalSpentGameTicks = j.SpentGameTicks, OriginalMaximumGameTicks = j.MaximumGameTicks,
-            OriginalDeadlineUtc = j.DeadlineUtc, FirstFailure = ReturnOnlyFailureForTask(t.TaskId),
+            OriginalSpentGameTicks = j.SpentGameTicks,
+            OriginalMaximumGameTicks = j.MaximumGameTicks,
+            OriginalDeadlineUtc = j.DeadlineUtc,
+            FirstFailure = adoption?.FirstFailure?.Copy() ?? ReturnOnlyFailureForTask(t.TaskId),
             PauseOutcome = _returnOnlyObservedTaskId == t.TaskId ? _returnOnlyPauseOutcome : "not_requested",
+            NativeHandoffState = adoption is null ? "not_observed"
+                : adoption.FirstFailure is not null ? "failed" : adoption.NativeAdmitted ? "proved" : "pending",
         };
     }
 }

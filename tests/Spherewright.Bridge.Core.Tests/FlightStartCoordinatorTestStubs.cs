@@ -14,9 +14,9 @@ internal static partial class GameMain
     internal static FlightStartTestPlayer mainPlayer = new();
 }
 
-internal sealed class FlightStartTestPlanet { internal int id; internal object? factory; }
-internal sealed class FlightStartTestPlayer { internal FlightStartTestController controller = new(); }
-internal sealed class FlightStartTestController { internal FlightStartTestBuild actionBuild = new(); }
+internal sealed partial class FlightStartTestPlanet { internal int id; internal object? factory; }
+internal sealed partial class FlightStartTestPlayer { internal FlightStartTestController controller = new(); }
+internal sealed partial class FlightStartTestController { internal FlightStartTestBuild actionBuild = new(); }
 internal sealed class FlightStartTestBuild { internal EBlueprintMode blueprintMode; }
 internal enum EBlueprintMode { None, Build }
 
@@ -89,6 +89,7 @@ internal sealed partial class NormalGameActionCoordinator
         internal int PlanetId;
         internal string State = NormalActionStates.Executing;
         internal string Message = string.Empty;
+        internal string ActionKind = string.Empty;
         internal bool Terminal;
         internal string? FlightCheckpointId;
         internal string? FlightCheckpointReloadToken;
