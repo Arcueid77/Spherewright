@@ -7,6 +7,7 @@ Spherewright 是 Plugin / MCP / Contracts / Bridge.Core 强版本耦合 monorepo
 - 通用能力、通用测试、打包安装脚本、协议、安全、用户指南及简明逐版本验收留在本仓。四个源码项目保持一起。
 - 场景、writer 范围、状态交接、时间线、事故与完整证据归 [Spherewright-Lab](https://github.com/Arcueid77/Spherewright-Lab)。历史证明使用[固定 v0.4 快照](https://github.com/Arcueid77/Spherewright-Lab/tree/14478a03c64c550e644c559405c8496b647552e7)。不向产品仓复制存档特定实体 ID、tick、R 编号或运行流水。
 - Lab 消费固定只读产品子模块。通用变更在独立 clone/worktree 实现，经过相关测试、可审核提交及准确 SHA 的成功 CI 后，Lab 才更新 gitlink/锁。产品构建、测试和打包不能依赖 Lab。
+- 所有者指令（2026-10-22）：开发阶段运行相关构建和测试，实机验证需要时才安装一体同源 Plugin/MCP 构建。不逐次修改生成两种发行压缩包。功能验收闭合后再生成最终手动/Thunderstore 双包；此前安装工件只作开发验证输入，不称交付候选、不计交付进度。复用未变且已合格的工件；纯文档 HEAD 前进不自动改变选定实机源码，也不触发重新打包或重装。
 - `docs/agent-playbook.md` 是 EmbeddedResource 和包输入，资源名/URI 保持稳定。变更需要核验嵌入资源与包内内容，不会更新冻结候选或已安装 MCP。维护完整中文伴页和包内语言导航。
 - 保留原生安全：Unity 对象只在主线程访问，线程外使用深复制 DTO，fresh prepare，精确计划/session/身份绑定，single-flight commit，原 action/幂等键核销及 unknown 隔离。禁止物品或科技注入、瞬间施工、传送、任意存档编辑或直接写游戏缓冲。
 - 所有者指令（2026-10-21）：DSP 更新后自动研究、实现并验证兼容性，不再逐版本询问适配许可。核实际原生引用、保存/导入格式及相关迁移分支，同批构建测试，保留可恢复工件后冷部署。这是持续维护授权，不是运行时版本通配：未知格式、降级及不完整来源仍拒绝。Journal 只记录真实接管，保留 owned 身份、历史、expiry、tombstone 和 fresh prepare/确认要求；独立的 Save/Load 确认及发布授权仍以当前任务为准。
