@@ -80,6 +80,8 @@ public sealed class PreparedOwnedWorldResumePlan
     public bool NativeOriginalOutcomeProved => false;
 
     public long? CandidateGameTick { get; set; }
+    /// <summary>Covered historical flight witness only; never a checkpoint-load capability.</summary>
+    public long? SuccessfulFlightWitnessRetiredAtGameTick { get; set; }
 
     public bool ExactEmbeddedIdentityVerified { get; set; }
 

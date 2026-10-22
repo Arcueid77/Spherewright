@@ -352,6 +352,8 @@ Dismantle is limited to advertised completed miners, ordinary `2011/2012` sorter
 
 ## Protected resume and import
 
+For remote LastExit continuation, optional Prepared `successfulFlightWitnessRetiredAtGameTick` discloses a successful outbound checkpoint retired by covering primary progress. This is historical provenance only: the exact original successful action/checkpoint/Journey/Journal remain bound, inconsistent failure/reload/retirement facts reject, and the full fixed LastExit must still cover the current primary and ticket minimum. The retirement record is included in the fresh evidence commitment and confirmation digest. No checkpoint load capability, authority or budget is renewed.
+
 Import prepare binds restricted current session/revision without content. Only a subsequent explicit reply permits confirmation/boundary attestations and normal-save copy/adoption. The original is not request-addressable.
 
 Resume uses the current protected token. At the menu `gameLoaded=false` is expected: fresh prepare checks native preload/menu/no-loader, exact source and Journal without loading. Availability alone proves neither valid expiry nor final readiness.

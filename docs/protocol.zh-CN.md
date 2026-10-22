@@ -369,6 +369,8 @@ Sorter-filter 绑定根配置及手持货物，支持无货 Returning 或普通 
 <a id="protected-resume-and-import"></a>
 ## 受保护恢复与导入
 
+远端 LastExit 续接的 Prepared 可选字段 `successfulFlightWitnessRetiredAtGameTick` 披露被主档进度覆盖后退役的成功出航 checkpoint。此字段只作历史来源证明：原成功 action/checkpoint/Journey/Journal 仍精确绑定，矛盾的失败/重载/退役事实即拒绝，完整固定 LastExit 仍须覆盖当前主档及票据最低 tick。退役记录包含在 fresh 证据承诺及确认 digest 中；不恢复 checkpoint 加载能力、不续授权或预算。
+
 导入 prepare 绑定受限当前会话、revision 而不披露内容。只有之后明确回复才允许确认、边界声明与正常保存副本、接管；原始存档不能通过请求寻址。
 
 恢复使用当前受保护 token。菜单 `gameLoaded=false` 正常，新 prepare 检查原生预加载、菜单、无 loader、精确源及 Journal，不加载。可用性本身不证明有效期或最终就绪。

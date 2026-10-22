@@ -352,6 +352,8 @@ Move/Harvest 复用既有普通 RTS 动作并保留无水快路。有限能耗�
 <a id="restart-and-interplanetary-flight"></a>
 ## 重启与行星间飞行
 
+普通主档覆盖已成功出航后，checkpoint 的重载能力退役，但精确绑定的历史飞行证明仍可保留。远端续接仍只加载固定 LastExit，且须覆盖当前主档及票据最低 tick。原 checkpoint 文件、成功 action、Journey、Journal、Native 身份及预算均须 fresh 绑定；成功记录缺失、失败/重载标记矛盾或退役证据不完整即拒绝。Prepared 的 `successfulFlightWitnessRetiredAtGameTick` 与确认文本披露此分支，受保护字节变化使旧 digest 失效。退役 checkpoint 绝不恢复可加载能力，此证据规则不授予 Save、Load 或重试权限。离线 Store/coordinator 测试不证明 Native 保存/导出或 Unity 恢复。
+
 Codex、MCP Host 关闭、重启、断连、上下文压缩、回合结束，均不得触发 DSP 保存、退出、重启、加载。重连时新读受管身份、会话、revision、持久 Journal、外部接受计数和原操作账本。健康且已对账则继续当前世界、不受保护重载；当前是十写声明就保留该计数。未解决则冻结新写、对账同 action，绝不重放。换写入者要求原写入者停止、无尚未终态的操作或未对账结果、明确单写者交接。
 
 只在用户明确关闭游戏，或必要且已授权冷部署时关闭 DSP，保留正常保存、终态、关闭、受保护恢复。Host 重启不授予加载权限，也不证明存档新鲜。

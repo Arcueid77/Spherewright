@@ -132,9 +132,7 @@ internal sealed partial class FlightCheckpointStore
                 OriginalJournalCheckpointPresent = ticket.GameplayJournalCheckpoint is { Version: OwnedWorldGameplayJournalCheckpoint.CurrentVersion } journal
                     && !string.IsNullOrEmpty(journal.JournalId) && journal.MinimumDurableThroughSequence >= 0,
                 RemoteLandedOutbound = journey.Phase == "remote_landed" && !journey.ReturnLeg,
-                CheckpointFlightSucceededWithoutReload = checkpoint.LifecycleState == FlightCheckpointLifecycleStates.FlightSucceeded
-                    && checkpoint.SuccessfulFlightAtGameTick.HasValue && !checkpoint.ReloadPending
-                    && string.IsNullOrEmpty(checkpoint.ReloadActionId) && !checkpoint.RetiredAtGameTick.HasValue,
+                CheckpointFlightSucceededWithoutReload = SuccessfulRemoteFlightWitness(checkpoint, primary.Prefix.GameTick),
                 SourceGameTick = source.Prefix.GameTick, PrimaryGameTick = primary.Prefix.GameTick,
                 TicketMinimumGameTick = ticket.MinimumGameTick, LastAccountedGameTick = journey.LastAccountedGameTick,
                 LastLandedGameTick = journey.LastLandedGameTick, SpentGameTicks = journey.SpentGameTicks,
@@ -196,6 +194,24 @@ internal sealed partial class FlightCheckpointStore
             || exception is Newtonsoft.Json.JsonException || exception is ArgumentException)
         { rejection = "remote_resume_original_evidence_unavailable:" + exception.GetType().Name; return false; }
         finally { ticketLease?.Dispose(); journeyLease?.Dispose(); checkpointLease?.Dispose(); }
+    }
+
+    // A newer normal primary save retires the old checkpoint's LOAD capability.
+    // It does not erase the original sealed successful outbound. Only that
+    // bound history may witness a LastExit >= current primary continuation;
+    // TryGetActiveTicket and checkpoint loading continue rejecting retirement.
+    private static bool SuccessfulRemoteFlightWitness(FlightCheckpointTicket checkpoint, long primaryTick)
+    {
+        if (!checkpoint.SuccessfulFlightAtGameTick.HasValue
+            || checkpoint.SuccessfulFlightAtGameTick < checkpoint.SavedGameTick
+            || checkpoint.RecoveryRequiredAtGameTick.HasValue
+            || checkpoint.ReloadPending || !string.IsNullOrEmpty(checkpoint.ReloadActionId)) return false;
+        if (checkpoint.LifecycleState == FlightCheckpointLifecycleStates.FlightSucceeded)
+            return !checkpoint.RetiredAtGameTick.HasValue && !checkpoint.RetiredAtUtc.HasValue;
+        return checkpoint.LifecycleState == FlightCheckpointLifecycleStates.Retired
+            && checkpoint.RetiredAtGameTick.HasValue && checkpoint.RetiredAtUtc.HasValue
+            && checkpoint.RetiredAtGameTick >= checkpoint.SuccessfulFlightAtGameTick
+            && primaryTick >= checkpoint.RetiredAtGameTick.Value;
     }
 
     internal static string HashResumeRecord(FileStream stream)
@@ -321,6 +337,9 @@ internal sealed class VoyagerRemoteResumeEvidence : IDisposable
     public bool PriorV3ProvenanceUsed { get; }
     public string JourneyJson { get; }
     public string CheckpointJson { get; }
+    public long? SuccessfulFlightWitnessRetiredAtGameTick =>
+        PluginJson.Deserialize<FlightCheckpointTicket>(CheckpointJson) is
+            { LifecycleState: FlightCheckpointLifecycleStates.Retired, RetiredAtGameTick: { } tick } ? tick : null;
     public string SourceFingerprint { get; }
     public string PrimaryFingerprint { get; }
     public long SourceGameTick { get; }

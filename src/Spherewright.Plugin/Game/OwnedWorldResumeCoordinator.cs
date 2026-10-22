@@ -122,6 +122,7 @@ internal sealed class OwnedWorldResumeCoordinator
                 : payload.Reauthorizing ? OwnedWorldReauthorizationPolicy.EvidenceVersion
                 : payload.VerifiedRecovery ? OwnedWorldRecoveryPolicy.EvidenceVersion : 0,
             CandidateGameTick = payload.VerifiedRecovery || payload.RequiresConfirmation ? payload.MinimumGameTick : (long?)null,
+            SuccessfulFlightWitnessRetiredAtGameTick = payload.RemoteEvidence?.SuccessfulFlightWitnessRetiredAtGameTick,
             OriginalJourneyDeadlineUtc = payload.RemoteEvidence?.Journey.DeadlineUtc,
             EffectiveRecoveryDeadlineUtc = payload.RemoteEvidence?.RecoveryProposal?.DeadlineUtc,
             RecoveryScope = payload.Request.RecoveryScope,
@@ -142,7 +143,9 @@ internal sealed class OwnedWorldResumeCoordinator
             UserConfirmationRequired = payload.RequiresConfirmation,
             SourceGameVersion = ticket.GameVersion,
             TargetGameVersion = _tickets.CurrentGameVersion,
-            ConfirmationPrompt = (payload.LegacyLocalMoveUnknown
+            ConfirmationPrompt = (payload.RemoteEvidence?.SuccessfulFlightWitnessRetiredAtGameTick is { } coveredTick
+                ? $"The original successful-flight checkpoint was retired by primary coverage at tick {coveredTick}. It is a bound historical witness only and will never be loaded; the fixed LastExit must cover the current primary. " : string.Empty)
+                + (payload.LegacyLocalMoveUnknown
                 ? VoyagerLegacyLocalMoveUnknownPolicy.Disclosure + " "
                 : payload.FailedRemoteReauthorization
                 ? $"Review this fixed LastExit at tick {payload.MinimumGameTick} and the exact owner-supplied current context fingerprint. This is new explicit authority for the current zero-progress remote context, not an opening or extension of an old authorization. The caller attests only that the immediately prior action was observed known terminally failed; its two consumed records are not a Native outcome certificate. No ancestor is followed. "
