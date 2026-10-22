@@ -48,8 +48,17 @@ public sealed class SpherewrightToolsTests
             case "failed_claim": p.PriorActionTerminalFailureAttested = true; break;
         }
         var bridge = new FakeBridgeClient(SuccessResult()) { ResumePlan = p };
-        var result = await SpherewrightTools.PrepareOwnedWorldResumeAsync(bridge, "synthetic-owned-file-access",
-            recoveryMode: OwnedWorldResumeModes.OpenSavedPrimary);
+        var services = new ServiceCollection(); services.AddSingleton<IBridgeClient>(bridge);
+        services.AddMcpServer().WithToolsFromAssembly(typeof(SpherewrightTools).Assembly);
+        using var provider = services.BuildServiceProvider();
+        var tool = Assert.Single(provider.GetServices<McpServerTool>(), t => t.ProtocolTool.Name == "spherewright_prepare_resume_owned_game");
+        await using var server = McpServer.Create(new StreamServerTransport(Stream.Null, Stream.Null), new McpServerOptions(), null, provider);
+        var parameters = new CallToolRequestParams { Name = tool.ProtocolTool.Name, Arguments = new Dictionary<string, JsonElement>
+            { ["resumeToken"] = JsonSerializer.SerializeToElement("synthetic-owned-file-access") } };
+        var context = new RequestContext<CallToolRequestParams>(server,
+            new JsonRpcRequest { Id = new RequestId(1), Method = "tools/call" }, parameters) { Services = provider };
+        var result = await tool.InvokeAsync(context);
+        Assert.Equal(OwnedWorldResumeModes.OpenSavedPrimary, bridge.LastResumePrepareRequest!.RecoveryMode);
         Assert.Equal(fault != "valid", result.IsError);
         if (fault != "valid") Assert.DoesNotContain("synthetic-saved-open-plan", result.StructuredContent!.Value.GetRawText());
     }
@@ -180,6 +189,7 @@ public sealed class SpherewrightToolsTests
         {
             ["resumeToken"] = JsonSerializer.SerializeToElement("synthetic-current"),
             ["legacyLocalMoveUnknownEvidenceJson"] = JsonSerializer.SerializeToElement(raw),
+            ["recoveryMode"] = JsonSerializer.SerializeToElement(OwnedWorldResumeModes.Default),
             ["expectedLegacyLocalMoveUnknownEvidenceHash"] = JsonSerializer.SerializeToElement(hash),
         } };
         var call = new RequestContext<CallToolRequestParams>(server,
@@ -312,6 +322,7 @@ public sealed class SpherewrightToolsTests
         var args = new CallToolRequestParams { Name = tool.ProtocolTool.Name, Arguments = new Dictionary<string, JsonElement>
         {
             ["resumeToken"] = JsonSerializer.SerializeToElement("synthetic-current"),
+            ["recoveryMode"] = JsonSerializer.SerializeToElement(OwnedWorldResumeModes.Default),
             ["priorConsumedResumeToken"] = JsonSerializer.SerializeToElement("synthetic-prior"),
             ["priorSourceFingerprint"] = JsonSerializer.SerializeToElement(CanonicalStateHash.Combine("synthetic-newest")),
             ["priorLegacySourceFingerprint"] = JsonSerializer.SerializeToElement(CanonicalStateHash.Combine("synthetic-oldest")),
@@ -337,7 +348,7 @@ public sealed class SpherewrightToolsTests
             priorSourceFingerprint: CanonicalStateHash.Combine("synthetic-newest"),
             priorActionKnownTerminalFailed: fault == "unknown_outcome" ? null : true,
             priorLegacySourceFingerprint: fault == "missing_oldest" ? "" : CanonicalStateHash.Combine("synthetic-oldest"),
-            priorIntermediateSourceFingerprint: fault == "wrong_format" ? "not-a-fingerprint" : CanonicalStateHash.Combine("synthetic-middle"));
+            priorIntermediateSourceFingerprint: fault == "wrong_format" ? "not-a-fingerprint" : CanonicalStateHash.Combine("synthetic-middle"), recoveryMode: OwnedWorldResumeModes.Default);
         Assert.True(result.IsError); Assert.Null(bridge.LastResumePrepareRequest);
     }
 
@@ -361,6 +372,7 @@ public sealed class SpherewrightToolsTests
         var args = new CallToolRequestParams { Name = tool.ProtocolTool.Name, Arguments = new Dictionary<string, JsonElement>
         {
             ["resumeToken"] = JsonSerializer.SerializeToElement("synthetic-current"),
+            ["recoveryMode"] = JsonSerializer.SerializeToElement(OwnedWorldResumeModes.Default),
             ["priorConsumedResumeToken"] = JsonSerializer.SerializeToElement("synthetic-prior"),
             ["priorSourceFingerprint"] = JsonSerializer.SerializeToElement(CanonicalStateHash.Combine("synthetic-source")),
             ["priorActionKnownTerminalFailed"] = JsonSerializer.SerializeToElement(true),
@@ -384,7 +396,7 @@ public sealed class SpherewrightToolsTests
             priorConsumedResumeToken: fault == "partial" ? "" : "synthetic-prior",
             priorSourceFingerprint: CanonicalStateHash.Combine("synthetic-source"),
             priorActionKnownTerminalFailed: fault == "unattested" ? null : true,
-            priorLegacySourceFingerprint: fault == "format" ? "not-a-fingerprint" : CanonicalStateHash.Combine("synthetic-legacy"));
+            priorLegacySourceFingerprint: fault == "format" ? "not-a-fingerprint" : CanonicalStateHash.Combine("synthetic-legacy"), recoveryMode: OwnedWorldResumeModes.Default);
         Assert.True(result.IsError); Assert.Null(bridge.LastResumePrepareRequest);
     }
     [Fact]
@@ -408,6 +420,7 @@ public sealed class SpherewrightToolsTests
         var parameters = new CallToolRequestParams { Name = tool.ProtocolTool.Name, Arguments = new Dictionary<string, JsonElement>
         {
             ["resumeToken"] = JsonSerializer.SerializeToElement("synthetic-current-ticket"),
+            ["recoveryMode"] = JsonSerializer.SerializeToElement(OwnedWorldResumeModes.Default),
             ["priorConsumedResumeToken"] = JsonSerializer.SerializeToElement("synthetic-consumed-ticket"),
             ["priorSourceFingerprint"] = JsonSerializer.SerializeToElement(source),
             ["priorActionKnownTerminalFailed"] = JsonSerializer.SerializeToElement(true),
@@ -458,7 +471,7 @@ public sealed class SpherewrightToolsTests
         var bridge = new FakeBridgeClient(SuccessResult()) { ResumePlan = plan };
         var result = await SpherewrightTools.PrepareOwnedWorldResumeAsync(bridge, "synthetic-current-ticket",
             priorConsumedResumeToken: "synthetic-consumed-ticket", priorSourceFingerprint: CanonicalStateHash.Combine("synthetic-prior-source"),
-            priorActionKnownTerminalFailed: true);
+            priorActionKnownTerminalFailed: true, recoveryMode: OwnedWorldResumeModes.Default);
         Assert.True(result.IsError); Assert.DoesNotContain("planToken", result.StructuredContent!.Value.GetRawText());
     }
 
@@ -484,6 +497,7 @@ public sealed class SpherewrightToolsTests
         var parameters = new CallToolRequestParams { Name = tool.ProtocolTool.Name, Arguments = new Dictionary<string, JsonElement>
         {
             ["resumeToken"] = JsonSerializer.SerializeToElement("synthetic-ticket"),
+            ["recoveryMode"] = JsonSerializer.SerializeToElement(OwnedWorldResumeModes.Default),
             ["recoveryDeadlineUtc"] = JsonSerializer.SerializeToElement(deadline),
             ["recoveryScope"] = JsonSerializer.SerializeToElement(VoyagerRecoveryWindowProposal.TaskScope),
             ["maximumChargeGameTicks"] = JsonSerializer.SerializeToElement(9000),
@@ -536,7 +550,7 @@ public sealed class SpherewrightToolsTests
         }
         var bridge = new FakeBridgeClient(SuccessResult()) { ResumePlan = plan };
         var result = await SpherewrightTools.PrepareOwnedWorldResumeAsync(bridge, "synthetic-ticket", recoveryDeadlineUtc: deadline,
-            recoveryScope: VoyagerRecoveryWindowProposal.TaskScope, maximumChargeGameTicks: 9000, maximumChargeWallSeconds: 240);
+            recoveryScope: VoyagerRecoveryWindowProposal.TaskScope, maximumChargeGameTicks: 9000, maximumChargeWallSeconds: 240, recoveryMode: OwnedWorldResumeModes.Default);
         Assert.True(result.IsError); Assert.DoesNotContain("planToken", result.StructuredContent!.Value.GetRawText());
     }
 
@@ -880,7 +894,7 @@ public sealed class SpherewrightToolsTests
         var state = await SpherewrightTools.GetSessionStateAsync(bridge, CancellationToken.None);
         Assert.False(state.StructuredContent!.Value.GetProperty("result").GetProperty("gameLoaded").GetBoolean());
         Assert.True(state.StructuredContent!.Value.GetProperty("result").GetProperty("restartResumeAvailable").GetBoolean());
-        var prepare = await SpherewrightTools.PrepareOwnedWorldResumeAsync(bridge, "ticket", CancellationToken.None);
+        var prepare = await SpherewrightTools.PrepareOwnedWorldResumeAsync(bridge, "ticket", CancellationToken.None, recoveryMode: OwnedWorldResumeModes.Default);
         Assert.False(prepare.IsError);
         Assert.Equal("ticket", bridge.LastResumePrepareRequest!.ResumeToken);
     }
@@ -902,7 +916,8 @@ public sealed class SpherewrightToolsTests
         var commit = typeof(SpherewrightTools).GetMethod(nameof(SpherewrightTools.CommitOwnedWorldResumeAsync))!;
         var commitDescription = ((System.ComponentModel.DescriptionAttribute)Attribute.GetCustomAttribute(commit,
             typeof(System.ComponentModel.DescriptionAttribute))!).Description;
-        Assert.Contains("Default healthy planned restarts load only the exact ticket-bound primary", commitDescription);
+        Assert.Contains("default MCP preparation selects saved-world-only opening", commitDescription);
+        Assert.Contains("explicit legacy default healthy planned restart mode loads only the exact ticket-bound primary", commitDescription);
         Assert.Contains("Real quarantine", commitDescription);
         Assert.Contains("Verified-newer LastExit", commitDescription);
         Assert.Contains("Fixed AutoSave0 uses evidence version3 with expired provenance or version4 with an active healthy credential", commitDescription);
@@ -912,6 +927,7 @@ public sealed class SpherewrightToolsTests
         Assert.Contains("Require evidence version **4**", guide);
         var prepare = typeof(SpherewrightTools).GetMethod(nameof(SpherewrightTools.PrepareOwnedWorldResumeAsync))!;
         var recoveryMode = prepare.GetParameters().Single(parameter => parameter.Name == "recoveryMode");
+        Assert.Equal(OwnedWorldResumeModes.OpenSavedPrimary, recoveryMode.DefaultValue);
         var recoveryModeDescription = ((System.ComponentModel.DescriptionAttribute)Attribute.GetCustomAttribute(
             recoveryMode, typeof(System.ComponentModel.DescriptionAttribute))!).Description;
         Assert.Contains("reauthorize_fixed_autosave0", recoveryModeDescription);

@@ -17,6 +17,8 @@
 <a id="current-public-mcp-surface"></a>
 ## 当前公共 MCP 接口
 
+公共 MCP 的 `prepare_resume_owned_game` 参数现默认 `open_saved_primary`。显式使用旧 `default` 模式的既有 wire 请求保留原行为；普通 MCP 读档请求不会被推断为继续旧任务。
+
 普通读档使用 `prepare_resume_owned_game(recoveryMode=open_saved_primary)`：即使旧自动操作许可已过期，也核验精确完整的同 Native 主档、受保护归属双副本及原 Journal；原生加载完成后停在准确存档 tick，不续跑旧任务，不自动保存/充能/飞行。Prepare 回显 `opensSavedWorldOnly`、`previousAutomationRemainsStopped`、`newChargingProhibited`、`discardedUnstoredProgressGameTicks`。可选 `acceptUnstoredProgressLoss` 默认 false，须同时绑定准确已知 `minimumRecoveryGameTick` 和获准主档 `expectedRecoveryGameTick`。保留 fresh prepare/digest/确认、持久单次消费、完整文件租约及禁止回退来源；新签发的仅读档凭据可供以后再次打开存档，不能充当自动操作许可。见[手册](agent-playbook.zh-CN.md#打开存档并保持旧自动任务停止)。
 
 `prepare_resume_owned_game` 新增显式 `continue_completed_remote_last_exit` 和可选 `priorActionKnownTerminalCompleted`，要求独立当前上下文域及立即前驱消费双副本，继承不变的授权窗口/起点，禁止新充能，拒绝新期限/上限参数。成功终态是调用方声明，不是Native认证，不得替换失败/未知结果；须核独立prepare回显并确认准确digest。见[手册](agent-playbook.zh-CN.md#在原窗口内续接已成功的远端接管)。

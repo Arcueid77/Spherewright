@@ -7,6 +7,8 @@
 
 ## 打开存档并保持旧自动任务停止
 
+公共 MCP 准备方法省略 `recoveryMode` 时默认走此路径。继续旧任务必须显式选择执行/恢复模式；为兼容保留、名称为 `default` 的旧 wire 模式，在 MCP 中须明确选用。
+
 普通重开游戏使用 `prepare_resume_owned_game` 的 `recoveryMode=open_saved_primary`。此路径核验精确完整主档及原持久 Journal，不受旧操作票据有效期、隔离或 Journey 期限影响。仅支持同 Native 版本，原生加载完成后停在存档 tick；不自动 Resume、充能、飞行、保存、重放动作或增加执行时间。旧动作结果、Journey 已花费用和期限保持不变。新自动操作须另有适用授权并重新核验 Native 条件，玩家仍可使用游戏自身操作。
 
 核对 `opensSavedWorldOnly`、`previousAutomationRemainsStopped`、`newChargingProhibited`、证据版本1、精确候选 tick 和确认 digest。已有明确授权若覆盖本次准确披露的读档，无需反复询问；prepare 本身不接受确认。正常存档不因闲置而过期：打开后签发的新凭据仅支持以后再次读档，隔几周也可以；所有旧自动执行和恢复路径均拒绝将它当作执行许可。

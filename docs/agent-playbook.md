@@ -6,6 +6,8 @@ Read this playbook before the first gameplay action in a session. It is also the
 
 ## Open a saved world without continuing old automation
 
+This is the public MCP preparation method's default when `recoveryMode` is omitted. Continuing an old task requires an explicit execution/recovery mode; the legacy wire mode named `default` remains available only when chosen explicitly through MCP.
+
 For ordinary opening after an absence, use `prepare_resume_owned_game` with `recoveryMode=open_saved_primary`. The complete exact owned primary and original durable Journal are checked independently of the old credential's expiry, quarantine or Journey deadline. This same-Native mode opens the world paused at its saved tick; it does not Resume, charge, fly, resave, replay an action or grant execution time. Old task outcomes, Journey accounting and deadlines stay intact. New automation needs separate applicable authority and fresh Native admission. Human gameplay controls remain available.
 
 Require the `opensSavedWorldOnly`, `previousAutomationRemainsStopped` and `newChargingProhibited` echoes, evidence version1, exact candidate tick and confirmation digest. Applicable existing conversation authority for this exact disclosed read is sufficient; do not repeatedly ask the owner. Prepare itself takes no confirmation. A normal saved world does not expire: the new credential issued after this opening grants future saved-world access only, including weeks later, and every automatic execution/recovery path rejects it.
