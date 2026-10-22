@@ -172,7 +172,13 @@ public sealed partial class VoyagerJourneyStoreIntegrationTests
             Assert.Equal(WriteHealthStates.Quarantined, f.Sessions.CaptureOnMainThread().WriteHealth);
             Assert.False(f.Sessions.Snapshot.RestartResumeAvailable);
             Assert.Null(f.Sessions.Snapshot.RestartResumeToken);
-            Assert.Equal(ledger, File.ReadAllBytes(f.JourneyPath)); Assert.Equal(checkpoint, File.ReadAllBytes(f.TicketPath));
+            var after=f.Store.VoyagerJourney!;
+            var original=Spherewright.Plugin.Transport.PluginJson.Deserialize<Spherewright.Plugin.RuntimeDescriptor.VoyagerJourneyRecord>(System.Text.Encoding.UTF8.GetString(ledger))!;
+            Assert.NotNull(after.ReturnOnlyTask!.PreservationReceipt);
+            Assert.Equal(before,after.ReturnOnlyTask.PreservationReceipt!.GameTick);
+            after.ReturnOnlyTask.PreservationReceipt=null;
+            Assert.Equal(Spherewright.Plugin.Transport.PluginJson.Serialize(original),Spherewright.Plugin.Transport.PluginJson.Serialize(after));
+            Assert.Equal(checkpoint, File.ReadAllBytes(f.TicketPath));
             Assert.False(f.ReadAction(accepted.ActionId).Succeeded); Assert.Equal(1, DSPGame.DispatchCalls);
         }
         finally { GameSave.FlightStartSave = originalSave; }

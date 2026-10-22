@@ -9,7 +9,7 @@ internal sealed partial class GameSessionTracker
     {
         error = null;
         if (preservation is not null && !ValidatePausedOwnedSave(preservation, out error)) return false;
-        if (!RemoteResumeAllowsPrimaryResave())
+        if (preservation is null && !RemoteResumeAllowsPrimaryResave())
         { error = "remote_resume_strict_idle_admission_pending_or_unproved"; return false; }
         if (!IsCurrentSessionOwned
             || _pendingJournalResumeTicket is not null
@@ -27,7 +27,7 @@ internal sealed partial class GameSessionTracker
             : new NativeResumeDecisionEvidence("paused_owned_native_save", null, null, true);
         saveEvidence?.NotReached("native_save_returned_true", "native_save_complete_prefix", "native_save_owned_identity",
             "native_save_version", "native_save_peaceful", "native_save_current_tick", "native_save_complete_file_hash",
-            "native_save_bound_progress_and_quarantine");
+            "native_save_bound_progress_and_quarantine","return_only_preservation_receipt");
         saveEvidence?.Number("bound_game_tick", preservation?.GameTick);
         saveEvidence?.Number("native_file_tick", null);
         saveEvidence?.Number("native_ticks_requested", 0);
@@ -85,6 +85,15 @@ internal sealed partial class GameSessionTracker
                     || !ValidatePausedOwnedSave(preservation, out _))
                     throw new InvalidDataException("The paused owned save did not prove complete current progress and unchanged quarantine.");
                 saveEvidence?.Require("native_save_bound_progress_and_quarantine", true);
+                failedPredicate="return_only_preservation_receipt";
+                if(_flightCheckpoints.VoyagerJourney?.ReturnOnlyScopeActive==true
+                    &&!_flightCheckpoints.TryRecordReturnOnlyPreservation(_sessionId!,_writeQuarantineActionId!,
+                        complete.Prefix.GameTick,complete.Fingerprint,preservation.Fingerprint,out var receiptRejection))
+                {
+                    saveEvidence?.Require(failedPredicate,null);
+                    throw new InvalidDataException(receiptRejection);
+                }
+                if(_flightCheckpoints.VoyagerJourney?.ReturnOnlyScopeActive==true)saveEvidence?.Require(failedPredicate,true);
             }
 
             _ownedSaveState = OwnedSaveStates.Saved;

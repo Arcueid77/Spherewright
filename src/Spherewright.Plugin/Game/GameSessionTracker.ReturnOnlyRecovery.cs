@@ -10,6 +10,7 @@ internal sealed partial class GameSessionTracker
     private NativeResumeFailureSnapshot? _returnOnlyFirstFailure;
     private string _returnOnlyPauseOutcome = "not_requested";
     private string? _returnOnlyObservedTaskId;
+    private string? _returnOnlyObservedSessionId;
 
     internal bool ReturnOnlyTaskStopped => _returnOnlyFirstFailure is not null
         && _returnOnlyObservedTaskId == _flightCheckpoints.VoyagerJourney?.ReturnOnlyTask?.TaskId;
@@ -18,7 +19,10 @@ internal sealed partial class GameSessionTracker
 
     private void BindReturnOnlyGuard(string taskId)
     {
-        if (_returnOnlyObservedTaskId == taskId) return;
+        if (_returnOnlyObservedTaskId == taskId && _returnOnlyObservedSessionId == _sessionId) return;
+        // A separately confirmed cold continuation binds a new session. Its
+        // prior attempt's first failure remains in the immutable run history.
+        _returnOnlyObservedSessionId = _sessionId;
         _returnOnlyObservedTaskId = taskId; _returnOnlyFirstFailure = null; _returnOnlyPauseOutcome = "not_requested";
     }
 
@@ -26,7 +30,7 @@ internal sealed partial class GameSessionTracker
     {
         var j = _flightCheckpoints.VoyagerJourney;
         return j?.ReturnOnlyScopeActive == true && j.ReturnOnlyTask!.TaskId == taskId
-            && j.ReturnOnlyTask.SessionId == sessionId && sessionId == _sessionId && IsCurrentSessionOwned
+            && j.ReturnOnlyTask.CurrentSessionId == sessionId && sessionId == _sessionId && IsCurrentSessionOwned
             && j.OwnedSaveName == _ownedSaveName && j.GameVersion == _gameVersion
             && GameMain.localPlanet?.id == planetId && (j.Phase == "remote_landed" || j.Phase == "home_awaiting_save");
     }
@@ -64,15 +68,15 @@ internal sealed partial class GameSessionTracker
         e.Number("new_tick_cap", t.MaximumGameTicks);
         e.Number("source_tick", t.StartedAtGameTick);
         e.Number("new_remaining_ticks", remaining);
-        e.Number("new_remaining_wall_seconds", (t.DeadlineUtc - now).TotalSeconds);
+        e.Number("new_remaining_wall_seconds", (t.CurrentDeadlineUtc - now).TotalSeconds);
         e.Number("original_spent_ticks", j.SpentGameTicks);
         e.Number("original_maximum_ticks", j.MaximumGameTicks);
         e.Number("reserved_entered_601_tail_ticks", 1);
         e.Observe("native_paused_before_decision", GameMain.isPaused);
         e.NotReached("exact_owned_task_session", "tick_budget_observed", "tick_budget_remaining", "wall_budget_remaining");
-        var exact = IsCurrentSessionOwned && _sessionId == t.SessionId && _ownedSaveName == j.OwnedSaveName && _gameVersion == j.GameVersion;
+        var exact = IsCurrentSessionOwned && _sessionId == t.CurrentSessionId && _ownedSaveName == j.OwnedSaveName && _gameVersion == j.GameVersion;
         var passed = e.Require("exact_owned_task_session", exact) && e.Require("tick_budget_observed", remaining.HasValue)
-            && e.Require("tick_budget_remaining", remaining > 1) && e.Require("wall_budget_remaining", now < t.DeadlineUtc);
+            && e.Require("tick_budget_remaining", remaining > 1) && e.Require("wall_budget_remaining", now < t.CurrentDeadlineUtc);
         if (passed && _returnOnlyFirstFailure is null) return;
         _returnOnlyFirstFailure ??= e.Failure(BridgeErrorCodes.StaleState);
         if (!exact) { _returnOnlyPauseOutcome = "not_requested_other_binding"; return; }
@@ -99,14 +103,14 @@ internal sealed partial class GameSessionTracker
     {
         var j = _flightCheckpoints.VoyagerJourney;
         if (j?.ReturnOnlyTask is not { } t) return;
-        var adoption = _checkpointReturnAdoption is { } a && a.ActionId == t.TaskId && a.SessionId == session.SessionId
+        var adoption = _checkpointReturnAdoption is { } a && a.ActionId == t.CurrentActionId && a.SessionId == session.SessionId
             && ReferenceEquals(a.World, GameMain.data) && ReferenceEquals(a.World, _ownedData)
             && a.OwnedSaveName == session.SaveName && a.NativeVersion == session.GameVersion ? a : null;
         session.ReturnOnlyRecovery = new()
         {
             TaskId = t.TaskId,
             ScopeActive = j.ReturnOnlyScopeActive,
-            DeadlineUtc = t.DeadlineUtc,
+            DeadlineUtc = t.CurrentDeadlineUtc,
             MaximumGameTicks = t.MaximumGameTicks,
             RemainingGameTicks = j.RemainingReturnOnlyTicks(session.SessionId, session.GameTick),
             OriginalSpentGameTicks = j.SpentGameTicks,

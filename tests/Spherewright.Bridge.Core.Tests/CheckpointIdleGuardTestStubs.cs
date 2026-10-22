@@ -146,10 +146,10 @@ internal sealed partial class NormalGameActionCoordinator
             },
             ReturnOnlyBudget = task is null ? null : new()
             {
-                ExactTaskBinding = task.TaskId == owner.ActionId && task.SessionId == owner.SessionId,
+                ExactTaskBinding = task.CurrentActionId == owner.ActionId && task.CurrentSessionId == owner.SessionId,
                 StartedAtGameTick = task.StartedAtGameTick,
                 MaximumGameTicks = task.MaximumGameTicks,
-                DeadlineUtc = task.DeadlineUtc
+                DeadlineUtc = task.CurrentDeadlineUtc
             }
         };
         captureFacts?.Invoke(f);

@@ -108,6 +108,7 @@ internal sealed partial class NormalGameActionCoordinator
         if (adoption.Authorization is not { } authorization || journey.LastLandedGameTick is null
             || CountVoyagerWarpers(p.mecha.warpStorage) < 1 + journey.ExtraWarperReserve)
             return "remote_resume_initialization_original_reserve_unproved";
+        if(adoption.Evidence.ReturnOnlyContinuation)return ReturnOnlyNativeFundingBlocker(adoption,journey,hold.PerTickEnergy);
         return VoyagerRecoveryWindowPolicy.ChargeBlocker(p.mecha.coreEnergy, p.mecha.coreEnergyCap,
             CalculateAvailableFlightEnergy(p.mecha), journey.ReturnEnergyFloorJoules, hold.PerTickEnergy,
             journey.ReturnCoreEnergyMinimumJoules, _sessions.EffectiveVoyagerSpentGameTicks(journey) ?? -1,

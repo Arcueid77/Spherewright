@@ -117,7 +117,9 @@ internal sealed partial class NormalGameActionCoordinator
         if (blocker is not null) return blocker;
         // Preserve the already-started Native charge cap and original floor;
         // this is a numeric check, never an idle=true projection.
-        blocker = VoyagerRecoveryWindowPolicy.ChargeBlocker(adoption.Player.mecha.coreEnergy, adoption.Player.mecha.coreEnergyCap,
+        blocker = adoption.Evidence.ReturnOnlyContinuation
+            ?ReturnOnlyNativeFundingBlocker(adoption,journey,currentFacts.MovementReserve!.PerNativeTickEnergyJoules??double.NaN)
+            :VoyagerRecoveryWindowPolicy.ChargeBlocker(adoption.Player.mecha.coreEnergy, adoption.Player.mecha.coreEnergyCap,
             CalculateAvailableFlightEnergy(adoption.Player.mecha), journey.ReturnEnergyFloorJoules,
             currentFacts.MovementReserve!.PerNativeTickEnergyJoules ?? double.NaN, journey.ReturnCoreEnergyMinimumJoules,
             _sessions.EffectiveVoyagerSpentGameTicks(journey) ?? -1, GameMain.gameTick - journey.LastLandedGameTick!.Value, journey.MaximumGameTicks,

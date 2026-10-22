@@ -367,6 +367,8 @@ internal sealed partial class GameSessionTracker : IDisposable
         }
 
         _lastPlanetId = localPlanetId;
+        if(!BindLoadedReturnOnlyContinuation())
+        {FailRemoteResumeAdmission("return_only_loaded_session_binding_unproved");return;}
         GuardReturnOnlyTaskOnMainThread();
         TrySaveOwnedWorldOnMainThread(currentData);
     }
@@ -974,6 +976,7 @@ internal sealed partial class GameSessionTracker : IDisposable
         _remoteResumeJournalConfirmed = false;
         _remoteResumeAdmitted = false;
         _remoteResumeAdoption = null;
+        if(remoteEvidence?.ReturnOnlyContinuation==true)_returnOnlySessionBindingFailure=null;
         _resumeSourceLease = sourceLease;
         _resumePrimaryLease = primaryLease;
         _reauthorizationJournalLease = journalLease;

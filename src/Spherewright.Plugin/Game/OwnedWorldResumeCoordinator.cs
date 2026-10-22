@@ -8,7 +8,7 @@ using Spherewright.Plugin.RuntimeDescriptor;
 
 namespace Spherewright.Plugin.Game;
 
-internal sealed class OwnedWorldResumeCoordinator
+internal sealed partial class OwnedWorldResumeCoordinator
 {
     private const string IdempotencyScope = "resume-owned-world";
     private readonly bool _writesConfigured;
@@ -48,6 +48,8 @@ internal sealed class OwnedWorldResumeCoordinator
                 "Use a supported explicit recovery mode. Reauthorization requires a fresh disclosure before confirmation; arbitrary save selection is unavailable.");
             if (request.RecoveryMode == OwnedWorldResumeModes.AuthorizeRemotePrimaryRecovery)
                 invalid.NativeFirstFailure = VoyagerRemotePrimaryRecoveryPolicy.RequestFailure(request, DateTimeOffset.UtcNow);
+            if (request.RecoveryMode == OwnedWorldResumeModes.ResumeReturnOnlyTask)
+                invalid.NativeFirstFailure = VoyagerReturnOnlyContinuationPolicy.RequestFailure(request);
             return GameCallResult<PreparedOwnedWorldResumePlan>.Failed(invalid);
         }
         var readinessError = TestWorldCoordinator.ValidateMainMenuReady();
@@ -77,6 +79,8 @@ internal sealed class OwnedWorldResumeCoordinator
                 error.NativeFirstFailure = _sessions.CompletedContinuationFailure;
             if (request.RecoveryMode == OwnedWorldResumeModes.AuthorizeRemotePrimaryRecovery)
                 error.NativeFirstFailure = _sessions.RemotePrimaryRecoveryFailure;
+            if (request.RecoveryMode == OwnedWorldResumeModes.ResumeReturnOnlyTask)
+                error.NativeFirstFailure = _returnOnlyContinuationFailure?.Copy();
             return GameCallResult<PreparedOwnedWorldResumePlan>.Failed(error);
         }
 
@@ -138,10 +142,12 @@ internal sealed class OwnedWorldResumeCoordinator
             SuccessfulFlightWitnessRetiredAtGameTick = payload.RemoteEvidence?.SuccessfulFlightWitnessRetiredAtGameTick,
             OriginalJourneyDeadlineUtc = payload.RemoteEvidence?.Journey.DeadlineUtc,
             EffectiveRecoveryDeadlineUtc = payload.RemoteEvidence?.RecoveryProposal?.DeadlineUtc,
-            RecoveryScope = payload.RemoteEvidence?.RecoveryProposal?.Scope ?? payload.Request.RecoveryScope,
+            RecoveryScope = payload.ReturnOnlyContinuation ? VoyagerReturnOnlyContinuationPolicy.Scope
+                : payload.RemoteEvidence?.RecoveryProposal?.Scope ?? payload.Request.RecoveryScope,
             MaximumChargeGameTicks = payload.RemoteEvidence?.RecoveryProposal?.MaximumChargeGameTicks ?? payload.Request.MaximumChargeGameTicks,
             MaximumChargeWallSeconds = payload.RemoteEvidence?.RecoveryProposal?.MaximumChargeWallSeconds ?? payload.Request.MaximumChargeWallSeconds,
-            NativeChargeFeasibilityRequiresFreshCapture = !payload.CompletedRemoteContinuation && payload.RemoteEvidence?.RecoveryProposal is not null,
+            NativeChargeFeasibilityRequiresFreshCapture = !payload.CompletedRemoteContinuation && !payload.ReturnOnlyContinuation
+                && payload.RemoteEvidence?.RecoveryProposal is not null,
             PriorFailedResumeProvenanceUsed = payload.RemoteEvidence?.PriorConsumedResumeTokenHash is not null,
             PriorFailedResumeV2ProvenanceUsed = payload.RemoteEvidence?.PriorV2ProvenanceUsed == true,
             PriorFailedResumeV3ProvenanceUsed = payload.RemoteEvidence?.PriorV3ProvenanceUsed == true,
@@ -151,7 +157,16 @@ internal sealed class OwnedWorldResumeCoordinator
             CompletedRemoteLastExitContinuationUsed = payload.CompletedRemoteContinuation,
             RemotePrimaryRecoveryAuthorizationUsed = payload.RemotePrimaryRecovery,
             PriorActionTerminalCompletionAttested = payload.CompletedRemoteContinuation && payload.Request.PriorActionKnownTerminalCompleted == true,
-            NewChargingProhibited = payload.SavedWorldOpenOnly || payload.CompletedRemoteContinuation,
+            NewChargingProhibited = payload.SavedWorldOpenOnly || payload.CompletedRemoteContinuation || payload.ReturnOnlyContinuation,
+            ReturnOnlyContinuation = payload.RemoteEvidence?.ReturnOnlySource is { } returnSource
+                ? new ReturnOnlyContinuationPreview {
+                    OriginalTaskId=returnSource.Journey.ReturnOnlyTask!.TaskId,
+                    SourceGameTick=returnSource.Source.Prefix.GameTick,
+                    OriginalMaximumGameTicks=returnSource.Journey.ReturnOnlyTask.MaximumGameTicks,
+                    RemainingGameTicks=returnSource.RemainingGameTicks,
+                    OriginalDeadlineUtc=returnSource.Journey.ReturnOnlyTask.DeadlineUtc,
+                    EffectiveDeadlineUtc=returnSource.DeadlineUtc,NewWallAuthorityRequired=returnSource.RequiresNewWallAuthority,
+                } : null,
             OpensSavedWorldOnly = payload.SavedWorldOpenOnly,
             PreviousAutomationRemainsStopped = payload.SavedWorldOpenOnly,
             DiscardedUnstoredProgressGameTicks = payload.SavedWorldOpenOnly || payload.RemotePrimaryRecovery
@@ -179,7 +194,9 @@ internal sealed class OwnedWorldResumeCoordinator
                 ? $"Review this fixed LastExit at tick {payload.MinimumGameTick} and the exact owner-supplied current context fingerprint. This is new explicit authority for the current zero-progress remote context, not an opening or extension of an old authorization. The caller attests only that the immediately prior action was observed known terminally failed; its two consumed records are not a Native outcome certificate. No ancestor is followed. "
                 : payload.RemoteEvidence?.PriorConsumedResumeTokenHash is not null
                 ? "The caller attests that the exact prior resume action was observed terminally failed without an unknown outcome. The fixed consumed records prove authorization/provenance, not a durable Native action outcome. This is one compatibility hop only; the old proposal is proof-only and grants no execution or renewed budget. " : string.Empty)
-                + (payload.CompletedRemoteContinuation && payload.RemoteEvidence?.RecoveryProposal is { } inheritedWindow
+                + (payload.ReturnOnlyContinuation && payload.RemoteEvidence?.ReturnOnlySource is { } returnSourceDisclosure
+                ? $"Resume only the existing return-only task from the exact current LastExit at tick {payload.MinimumGameTick}. Remaining original tick allowance: {returnSourceDisclosure.RemainingGameTicks}; no ticks, energy, items or charging are granted. Original task deadline: {returnSourceDisclosure.Journey.ReturnOnlyTask!.DeadlineUtc:O}; effective wall deadline: {returnSourceDisclosure.DeadlineUtc:O}. A proposed new wall window requires new explicit owner authority and this digest confirmation. Historical completed/failed/unknown results and consumed records remain unchanged. The checkpoint is proof-only and will not load. Native initialization/contact and fresh strict idle must succeed before normal Save and the original-home return; failure pauses and ends this attempt."
+                : payload.CompletedRemoteContinuation && payload.RemoteEvidence?.RecoveryProposal is { } inheritedWindow
                 ? $"Review the same absolute deadline {inheritedWindow.DeadlineUtc:O} and original window origin {payload.RemoteEvidence.InheritedWindowConfirmedAtUtc:O}. Strict funded first-frame/contact admission remains mandatory, without new charging. If either original window or return reserve is exhausted, do not load; this disclosure is not new budget authority."
                 : payload.RemoteEvidence?.RecoveryProposal is { } recoveryWindow
                 ? $"Confirm one finite attempt to continue the original bounded task until {recoveryWindow.DeadlineUtc:O}. The original deadline {payload.RemoteEvidence.Journey.DeadlineUtc:O} and all tick/energy/warper limits remain unchanged. Natural charging is capped at {recoveryWindow.MaximumChargeGameTicks} game ticks / {recoveryWindow.MaximumChargeWallSeconds} wall seconds within the five-minute adoption lease; Native P/g and feasibility remain unknown until fresh capture. No promised admission or flight, automatic renewal, checkpoint load or Resume of isolated RAM."
@@ -193,7 +210,9 @@ internal sealed class OwnedWorldResumeCoordinator
             ConfirmationDigest = payload.RequiresConfirmation ? payload.Fingerprint : string.Empty,
             CommitAllowedNow = blockers.Count == 0,
             CommitBlockers = blockers,
-            CompletionCondition = payload.SavedWorldOpenOnly
+            CompletionCondition = payload.ReturnOnlyContinuation
+                ? "The exact current saved boundary and original return-only task are adopted; the original Native initialization/contact/idle chain proves control before a normal Save. Only the original-home return, cancellation and normal Save are permitted; old outcomes, tick grants and original deadlines remain unchanged."
+                : payload.SavedWorldOpenOnly
                 ? "Exact owned primary and durable Journal verified; Native load completed and paused at the saved tick. Reads are available; automated writes remain blocked. Opening does not change any original task result, Journey, spent amount or deadline, and does not resave the world."
                 : payload.RemotePrimaryRecovery
                 ? "Only the exact complete current primary may load after new finite authorization and this disclosure's digest confirmation. Original Journey/Journal/successful-outbound evidence and any matching LastExit are held; old outcomes remain unchanged. Discarded observed progress remains charged against the original finite ticks. Existing Native initialization, first-frame, contact, charge, strict idle and 2P/13P gates remain; healthy takeover, conservative debit persistence, normal primary Save and a matching fresh credential are all required for success. No old action or checkpoint is replayed."
@@ -314,13 +333,14 @@ internal sealed class OwnedWorldResumeCoordinator
                 "Do not load a save; return to an idle main menu and prepare from the exact current ticket.");
             if (payload.CompletedRemoteContinuation) error.NativeFirstFailure = _sessions.CompletedContinuationFailure;
             if (payload.RemotePrimaryRecovery) error.NativeFirstFailure = _sessions.RemotePrimaryRecoveryFailure;
+            if (payload.ReturnOnlyContinuation) error.NativeFirstFailure = _returnOnlyContinuationFailure?.Copy();
             return GameCallResult<OwnedWorldResumeResult>.Failed(error);
         }
 
         var action = new OwnedWorldResumeAction
         {
             Reauthorizing = payload.Reauthorizing,
-            FreshRequiresRenewedTicket = payload.Reauthorizing || payload.RemotePrimaryRecovery || payload.FailedRemoteReauthorization || payload.CompletedRemoteContinuation,
+            FreshRequiresRenewedTicket = payload.Reauthorizing || payload.RemotePrimaryRecovery || payload.ReturnOnlyContinuation || payload.FailedRemoteReauthorization || payload.CompletedRemoteContinuation,
             FailedRemoteReauthorization = payload.FailedRemoteReauthorization,
             SavedWorldOpenOnly = payload.SavedWorldOpenOnly,
             ActionId = Guid.NewGuid().ToString("D"),
@@ -334,6 +354,16 @@ internal sealed class OwnedWorldResumeCoordinator
         VoyagerRecoveryAuthorization? recoveryAuthorization = null;
         try
         {
+            if(payload.ReturnOnlyContinuation)
+            {
+                var native=currentPayload!.RemoteEvidence!;
+                if(native.ReturnOnlySource is not { } returnSource
+                    ||!_sessions.RegisterReturnOnlyContinuation(returnSource,action.ActionId,
+                        request.UserConfirmedInConversation,payload.Fingerprint,DateTimeOffset.UtcNow,out var registerRejection))
+                    return GameCallResult<OwnedWorldResumeResult>.Failed(BridgeError.Create(BridgeErrorCodes.StaleState,
+                        "return_only_continuation_registration_unproved",false,"No Native load was started; preserve the exact original task."));
+                native.BindRegisteredReturnOnlyJourney(_sessions.ReturnOnlyContinuationJourneyJson());
+            }
             if (payload.RemoteContinuation)
             {
                 journalLease = currentPayload!.RemoteJournalLease;
@@ -342,7 +372,7 @@ internal sealed class OwnedWorldResumeCoordinator
                         payload.Fingerprint, DateTimeOffset.UtcNow, proposal,
                         currentPayload.RemoteEvidence.CompletedContinuationTokenHash ?? currentPayload.RemoteEvidence.PriorConsumedResumeTokenHash,
                         currentPayload.RemoteEvidence.InheritedWindowConfirmedAtUtc);
-                var consumed = currentPayload.RemoteEvidence is not null && (payload.RemotePrimaryRecovery
+                var consumed = currentPayload.RemoteEvidence is not null && (payload.RemotePrimaryRecovery || payload.ReturnOnlyContinuation
                     ? recoveryAuthorization is not null && _tickets.TryConsumeReauthorization(currentTicket.ResumeToken,
                         payload.Provenance, action.ActionId, payload.Fingerprint, savedWorldOpenOnly: true,
                         recoveryAuthorization: recoveryAuthorization)
@@ -352,9 +382,12 @@ internal sealed class OwnedWorldResumeCoordinator
                 {
                     currentPayload.RemoteEvidence?.Dispose();
                     journalLease?.Dispose(); sourceLease?.Dispose(); primaryLease?.Dispose();
-                    return GameCallResult<OwnedWorldResumeResult>.Failed(BridgeError.Create(BridgeErrorCodes.StaleState,
+                    var consumptionError=BridgeError.Create(BridgeErrorCodes.StaleState,
                         "remote_resume_durable_credential_consumption_failed", false,
-                        "No load was dispatched; preserve the original candidate and credential evidence."));
+                        "No load was dispatched; preserve the original candidate and credential evidence.");
+                    if(payload.ReturnOnlyContinuation)
+                        consumptionError.NativeFirstFailure=_sessions.RecordReturnOnlyPreloadConsumptionFailure(action.ActionId);
+                    return GameCallResult<OwnedWorldResumeResult>.Failed(consumptionError);
                 }
             }
             if (payload.Reauthorizing)
@@ -469,6 +502,7 @@ internal sealed class OwnedWorldResumeCoordinator
             result.State = NormalActionStates.OutcomeUnknown;
             result.Message = action.NativeLoadObservationError;
             if (action.SavedWorldOpenOnly) result.NativeFirstFailure = _sessions.SavedWorldOpenFirstFailure;
+            else if (action.RemoteContinuation) result.NativeFirstFailure = _sessions.RemoteResumeFailureForAction(action.ActionId);
             return true;
         }
         if (action.SavedWorldOpenOnly)
@@ -490,6 +524,7 @@ internal sealed class OwnedWorldResumeCoordinator
         }
         if (action.RemoteContinuation && !string.IsNullOrWhiteSpace(_sessions.ResumeAdoptionError))
         {
+            result.NativeFirstFailure = _sessions.RemoteResumeFailureForAction(action.ActionId);
             result.State = NormalActionStates.ActionFailed;
             result.Terminal = true;
             result.Message = _sessions.ResumeAdoptionError;
@@ -571,7 +606,8 @@ internal sealed class OwnedWorldResumeCoordinator
     {
         provenance = string.Empty;
         if (request.RecoveryMode == OwnedWorldResumeModes.OpenSavedPrimary
-            || request.RecoveryMode == OwnedWorldResumeModes.AuthorizeRemotePrimaryRecovery)
+            || request.RecoveryMode == OwnedWorldResumeModes.AuthorizeRemotePrimaryRecovery
+            || request.RecoveryMode == OwnedWorldResumeModes.ResumeReturnOnlyTask)
             return _tickets.TryGetSavedWorldOpenProvenance(token, out ticket, out provenance, out rejection);
         if (request.RecoveryMode == OwnedWorldResumeModes.ReauthorizeVersionChangedPrimary)
             return _tickets.TryGetVersionChangedPrimaryProvenance(token, out ticket, out provenance, out rejection);
@@ -591,6 +627,8 @@ internal sealed class OwnedWorldResumeCoordinator
         lease = null;
         primaryLease = null;
         rejection = string.Empty;
+        if (request.RecoveryMode == OwnedWorldResumeModes.ResumeReturnOnlyTask)
+            return TryResolveReturnOnlyPayload(ticket,request,provenance,out payload,out lease,out primaryLease,out rejection);
         if (request.RecoveryMode == OwnedWorldResumeModes.AuthorizeRemotePrimaryRecovery)
             return TryResolveRemotePrimaryPayload(ticket, request, provenance, out payload, out lease, out primaryLease, out rejection);
         if (request.RecoveryMode == OwnedWorldResumeModes.OpenSavedPrimary)
@@ -1019,7 +1057,7 @@ internal sealed class OwnedWorldResumeCoordinator
                 lease?.Fingerprint ?? string.Empty,
                 primaryFingerprint, remoteEvidence?.Fingerprint ?? string.Empty, remoteJournalFingerprint, remoteCredentialFingerprint,
                 Request.RecoveryDeadlineUtc, Request.RecoveryScope, Request.MaximumChargeGameTicks, Request.MaximumChargeWallSeconds);
-            Fingerprint = SavedWorldOpenOnly
+            Fingerprint = ReturnOnlyContinuation ? remoteEvidence!.ReturnOnlySource!.Fingerprint : SavedWorldOpenOnly
                 ? CanonicalStateHash.Combine("open-saved-primary-v1", fingerprint, SavedOpenKnownProgressTick, Request.AcceptUnstoredProgressLoss,
                     Request.MinimumRecoveryGameTick, Request.ExpectedRecoveryGameTick)
                 : RemotePrimaryRecovery
@@ -1063,6 +1101,7 @@ internal sealed class OwnedWorldResumeCoordinator
         public bool CompletedRemoteContinuation => Request.RecoveryMode == OwnedWorldResumeModes.ContinueCompletedRemoteLastExit;
         public bool SavedWorldOpenOnly => Request.RecoveryMode == OwnedWorldResumeModes.OpenSavedPrimary;
         public bool RemotePrimaryRecovery => Request.RecoveryMode == OwnedWorldResumeModes.AuthorizeRemotePrimaryRecovery;
+        public bool ReturnOnlyContinuation => Request.RecoveryMode == OwnedWorldResumeModes.ResumeReturnOnlyTask;
         public bool RemoteContinuation => RemoteEvidence is not null;
         public bool LegacyLocalMoveUnknown => !string.IsNullOrEmpty(RemoteEvidence?.LegacyLocalMoveUnknownEvidenceHash);
         public bool RequiresConfirmation => Reauthorizing || RemoteContinuation;

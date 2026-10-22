@@ -36,12 +36,13 @@ public static class VoyagerReturnOnlyIdleBudget
         return null;
     }
 
-    public static NativeResumeFailureSnapshot? ReserveFailure(VoyagerReturnOnlyIdleBudgetFacts t, VoyagerLocalActionBudgetFacts f)
+    public static NativeResumeFailureSnapshot? ReserveFailure(VoyagerReturnOnlyIdleBudgetFacts t, VoyagerLocalActionBudgetFacts f,
+        bool requireStrictIdle = true)
     {
         var e = Evidence(t, f);
         e.NotReached("native_binding", "native_idle", "original_warper_reserve", "loaded_energy_observed",
             "return_floor_observed", "work_cost_observed", "tail_cost_observed", "original_loaded_floor");
-        if (!e.Require("native_binding", f.ExactRemoteBinding) || !e.Require("native_idle", f.NativePlayerIdle)
+        if (!e.Require("native_binding", f.ExactRemoteBinding) || requireStrictIdle && !e.Require("native_idle", f.NativePlayerIdle)
             || !e.Require("original_warper_reserve", f.NativeWarperCount.HasValue
                 ? f.OriginalExtraWarperReserve >= 0 && f.NativeWarperCount >= 1 + f.OriginalExtraWarperReserve : null))
             return e.Failure("return_only_idle_native_reserve_unproved");
@@ -56,6 +57,30 @@ public static class VoyagerReturnOnlyIdleBudget
         e.Number("required_loaded_j", required); e.Number("loaded_j", f.AvailableLoadedEnergyJoules);
         return e.Require("original_loaded_floor", Known(required) && f.AvailableLoadedEnergyJoules > required)
             ? null : e.Failure("return_only_idle_original_floor_insufficient");
+    }
+
+    public static NativeResumeFailureSnapshot? BootstrapFailure(VoyagerReturnOnlyIdleBudgetFacts t,
+        VoyagerLocalActionBudgetFacts f, double? core, double? perTick, int fundedTicks)
+    {
+        var failure = TimeFailure(t, f) ?? ReserveFailure(t, f, requireStrictIdle: false);
+        if (failure is not null) { failure.Stage = "return_only_native_bootstrap"; return failure; }
+        var e = Evidence(t, f); e.Stage("return_only_native_bootstrap");
+        e.NotReached("strict_idle", "core_observed", "tick_cost_observed", "contact_stop_funded");
+        e.Number("core_j", core); e.Number("per_tick_j", perTick); e.Number("funded_ticks", fundedTicks);
+        bool? Known(double? x) => x.HasValue ? !double.IsNaN(x.Value) && !double.IsInfinity(x.Value) && x >= 0 : null;
+        if (!e.Require("core_observed", Known(core)) || !e.Require("tick_cost_observed", Known(perTick)))
+            return e.Failure("return_only_bootstrap_energy_unknown");
+        var required = perTick!.Value * fundedTicks; e.Number("core_required_j", required);
+        var loadedRequired = f.LockedReturnFloorJoules!.Value + required; e.Number("loaded_required_j", loadedRequired);
+        return e.Require("contact_stop_funded", fundedTicks == NativeResumeContactPolicy.FundedTicks
+            // CanFund's existing stop contract accepts at most13 ticks. The
+            // already entered601 is an independent extra tick, not a relaxed
+            // stop bound or a larger allowance granted to other callers.
+            && perTick > 0 && Known(required) == true && Known(loadedRequired) == true
+            && VoyagerLocalWalkReservePolicy.CanFund(core, f.AvailableLoadedEnergyJoules,
+                f.LockedReturnFloorJoules, perTick, VoyagerLocalWalkReservePolicy.StopGameTicks)
+            && core >= required && f.AvailableLoadedEnergyJoules >= loadedRequired)
+            ? null : e.Failure("return_only_bootstrap_stop_reserve_unproved");
     }
 
     private static NativeResumeDecisionEvidence Evidence(VoyagerReturnOnlyIdleBudgetFacts t, VoyagerLocalActionBudgetFacts f)

@@ -59,8 +59,8 @@ internal sealed partial class GameSessionTracker
     internal DateTimeOffset EffectiveVoyagerDeadline(VoyagerJourneyRecord journey)
     {
         if (journey.ReturnOnlyTask is { } task)
-            return IsCurrentSessionOwned && task.SessionId == _sessionId && journey.OwnedSaveName == _ownedSaveName
-                && journey.GameVersion == _gameVersion ? task.DeadlineUtc.AddSeconds(-VoyagerControlDeadlinePolicy.StopCleanupSeconds)
+            return IsCurrentSessionOwned && task.CurrentSessionId == _sessionId && journey.OwnedSaveName == _ownedSaveName
+                && journey.GameVersion == _gameVersion ? task.CurrentDeadlineUtc.AddSeconds(-VoyagerControlDeadlinePolicy.StopCleanupSeconds)
                     : journey.DeadlineUtc;
         var adoption = _remoteResumeAdoption;
         var authorization = adoption?.Authorization;
@@ -388,6 +388,7 @@ internal sealed partial class GameSessionTracker
 
     private bool FailRemoteResumeAdmission(string code)
     {
+        RetainFailedReturnOnlyContinuation(code);
         _remoteResumeInitializationPending = false;
         if (_remoteResumeAdoption is { } failureAdoption)
             failureAdoption.RetainFailure(NativeResumeDecisionEvidence.UnobservedFailure(code,
@@ -413,6 +414,7 @@ internal sealed partial class GameSessionTracker
                 QuarantineWritesOnMainThread(_pendingRemoteResumeActionId ?? _remoteResumeAdoption?.ResumeActionId ?? string.Empty, reason);
         }
         _resumeAdoptionError ??= reason;
+        ReleaseFailedReturnOnlyEvidenceForPreservation();
         return false;
     }
 

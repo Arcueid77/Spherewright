@@ -134,6 +134,7 @@ internal sealed partial class GameSessionTracker : IDisposable
         FixedAutosave = reauthorizingFixedAutosave0;
         RemoteEvidence = remoteEvidence;
         RemoteResumeActionId = remoteResumeActionId;
+        _pendingRemoteResumeActionId=remoteResumeActionId;
         ResumeSource = resumeSource;
         RecoveryAuthorization = recoveryAuthorization;
         SavedOpenGuard = savedWorldOpenOnly ? new SavedWorldOpenGuard(savedWorldOpenActionId!, sourceLease!.Prefix.GameTick) : null;

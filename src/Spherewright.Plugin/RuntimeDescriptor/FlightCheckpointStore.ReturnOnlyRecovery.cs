@@ -140,13 +140,13 @@ internal sealed partial class FlightCheckpointStore
             || t.DeadlineUtc - t.IssuedAtUtc > TimeSpan.FromSeconds(VoyagerReturnOnlyRecoveryPolicy.MaximumWallSeconds)
             || string.IsNullOrEmpty(t.CheckpointId) || string.IsNullOrEmpty(t.CheckpointFingerprint)
             || string.IsNullOrEmpty(t.OriginalFlightActionId) || !r.ReturnLeg
-            || t.OriginalJourneyJson.Length > 16384 || string.IsNullOrWhiteSpace(t.OriginalJourneyJson)) return false;
+            || string.IsNullOrWhiteSpace(t.OriginalJourneyJson) || t.OriginalJourneyJson.Length > 16384) return false;
         try
         {
             var original = PluginJson.Deserialize<VoyagerJourneyRecord>(t.OriginalJourneyJson);
             return original is not null && original.ReturnOnlyTask is null && original.ReturnLeg
                 && original.ActiveCheckpointId == t.CheckpointId && original.ActiveActionId == t.OriginalFlightActionId
-                && SameOriginalReturnTerms(original, r);
+                && SameOriginalReturnTerms(original, r) && ValidReturnOnlyContinuations(t);
         }
         catch (Newtonsoft.Json.JsonException) { return false; }
     }
@@ -158,7 +158,7 @@ internal sealed partial class VoyagerJourneyRecord
         => VoyagerReturnOnlyRecoveryPolicy.RemainingTicks(request.ExpectedCheckpointGameTick ?? -1, request.MaximumGameTicks, current);
 
     internal long? RemainingReturnOnlyTicks(string? session, long? current)
-        => ReturnOnlyTask is { } t && t.SessionId == session
+        => ReturnOnlyTask is { } t && t.CurrentSessionId == session
             ? VoyagerReturnOnlyRecoveryPolicy.RemainingTicks(t.StartedAtGameTick, t.MaximumGameTicks, current) : null;
 
     internal bool ReturnOnlyScopeActive => ReturnOnlyTask is not null && Phase != "completed"
@@ -177,4 +177,12 @@ internal sealed class VoyagerReturnOnlyTaskRecord
     public long MaximumGameTicks { get; set; }
     public DateTimeOffset IssuedAtUtc { get; set; }
     public DateTimeOffset DeadlineUtc { get; set; }
+    public List<VoyagerReturnOnlyContinuationRun> Continuations { get; set; } = new();
+    public VoyagerReturnOnlyPreservationReceipt? PreservationReceipt {get;set;}
+    public bool ShouldSerializePreservationReceipt()=>PreservationReceipt is not null;
+    public bool ShouldSerializeContinuations() => Continuations?.Count > 0;
+    internal VoyagerReturnOnlyContinuationRun? CurrentContinuation => Continuations?.LastOrDefault();
+    internal string CurrentSessionId => CurrentContinuation is { } r ? r.SessionId : SessionId;
+    internal string CurrentActionId => CurrentContinuation?.ActionId ?? TaskId;
+    internal DateTimeOffset CurrentDeadlineUtc => CurrentContinuation?.DeadlineUtc ?? DeadlineUtc;
 }

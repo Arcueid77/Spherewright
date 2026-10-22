@@ -21,7 +21,7 @@ internal sealed partial class FlightCheckpointStore
         => TryPersistVoyagerJourneyCore(record, out rejection, exactRecovery, normalSaveProof, unstartedFlightProof, false);
 
     private bool TryPersistVoyagerJourneyCore(VoyagerJourneyRecord record, out string rejection, bool exactRecovery,
-        bool normalSaveProof, bool unstartedFlightProof, bool newReturnOnlyProof)
+        bool normalSaveProof, bool unstartedFlightProof, bool newReturnOnlyProof, bool returnContinuationProof = false)
     {
         rejection = string.Empty;
         if (_voyagerJourneyHardReadError)
@@ -47,7 +47,7 @@ internal sealed partial class FlightCheckpointStore
             }
             else if (File.Exists(VoyagerJourneyPath))
                 throw new InvalidDataException("An unexamined journey already exists.");
-            if (!ValidVoyagerTransition(_voyagerJourney, record, exactRecovery, normalSaveProof, unstartedFlightProof, newReturnOnlyProof))
+            if (!ValidVoyagerTransition(_voyagerJourney, record, exactRecovery, normalSaveProof, unstartedFlightProof, newReturnOnlyProof, returnContinuationProof))
             {
                 rejection = "A live journey cannot be replaced, extend its deadline, undo spent time or reduce its original return reserve.";
                 return false;
@@ -229,14 +229,15 @@ internal sealed partial class FlightCheckpointStore
     }
 
     private static bool ValidVoyagerTransition(VoyagerJourneyRecord? old, VoyagerJourneyRecord next, bool exactRecovery,
-        bool normalSaveProof, bool unstartedFlightProof, bool newReturnOnlyProof)
+        bool normalSaveProof, bool unstartedFlightProof, bool newReturnOnlyProof, bool returnContinuationProof)
     {
         if (old is null) return next.Phase == "outbound" && !next.ReturnLeg && next.SpentGameTicks == 0;
         if (old.JourneyId != next.JourneyId)
             return (old.Phase == "completed" || old.Phase == "recovered_closed" || old.Phase == "prelaunch_failed")
                 && next.Phase == "outbound" && !next.ReturnLeg && next.SpentGameTicks == 0;
         if (PluginJson.Serialize(old.ReturnOnlyTask) != PluginJson.Serialize(next.ReturnOnlyTask)
-            && !(newReturnOnlyProof && old.ReturnOnlyTask is null && next.ReturnOnlyTask is not null)) return false;
+            && !(newReturnOnlyProof && old.ReturnOnlyTask is null && next.ReturnOnlyTask is not null)
+            && !(returnContinuationProof && ValidReturnOnlyContinuationTransition(old.ReturnOnlyTask,next.ReturnOnlyTask))) return false;
         if (old.Phase == "completed" || old.Phase == "recovered_closed" || old.Phase == "prelaunch_failed")
             return PluginJson.Serialize(old) == PluginJson.Serialize(next);
         var phaseAllowed = old.Phase == next.Phase

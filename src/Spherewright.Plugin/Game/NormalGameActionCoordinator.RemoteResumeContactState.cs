@@ -59,7 +59,7 @@ internal sealed partial class NormalGameActionCoordinator
                 CastDistanceMeters = support.CastDistance, CastNormalDotUp = support.NormalDotUp,
                 InwardDisplacementMeters = inward, TangentialDisplacementMeters = tangential, SpeedMetersPerSecond = p.speed,
                 CoreEnergyJoules = facts.CoreEnergyJoules, PerNativeTickEnergyJoules = facts.MovementReserve?.PerNativeTickEnergyJoules,
-                OriginalJourney = facts.JourneyBudget, NowUtc = DateTimeOffset.UtcNow,
+                OriginalJourney = facts.JourneyBudget,ReturnOnlyBudget=facts.ReturnOnlyBudget, NowUtc = DateTimeOffset.UtcNow,
             };
         }
         private static bool Finite(float f) => !float.IsNaN(f) && !float.IsInfinity(f);

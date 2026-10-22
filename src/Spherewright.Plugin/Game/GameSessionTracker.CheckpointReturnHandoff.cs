@@ -70,6 +70,15 @@ internal sealed partial class GameSessionTracker
     private bool CheckpointReturnPauseWitnessMatches()
     {
         var a = _checkpointReturnAdoption; var t = _flightCheckpoints.CurrentTicket;
+        if(a?.ReturnContinuation==true)
+        {
+            var j=_flightCheckpoints.VoyagerJourney;var run=j?.ReturnOnlyTask?.CurrentContinuation;
+            return a.Finished&&a.ActionId==_writeQuarantineActionId&&a.SessionId==_sessionId
+                &&ReferenceEquals(a.World,GameMain.data)&&ReferenceEquals(a.World,_ownedData)
+                &&a.OwnedSaveName==_ownedSaveName&&a.NativeVersion==_gameVersion
+                &&run?.ActionId==a.ActionId&&run.SessionId==_sessionId
+                &&run.SourceFingerprint==a.SourceFingerprint&&run.SourceGameTick==a.SavedSourceGameTick;
+        }
         return a is { Finished: true } && a.ActionId == _writeQuarantineActionId && a.SessionId == _sessionId
             && ReferenceEquals(a.World, GameMain.data) && ReferenceEquals(a.World, _ownedData)
             && a.OwnedSaveName == _ownedSaveName && a.NativeVersion == _gameVersion
@@ -84,6 +93,9 @@ internal sealed partial class GameSessionTracker
         internal object World = null!;
         internal string SessionId = "", ActionId = "", OwnedSaveName = "", NativeVersion = "", CheckpointId = "", CheckpointFingerprint = "";
         internal bool Finished, NativeAdmitted;
+        internal bool ReturnContinuation;
+        internal long SavedSourceGameTick;
+        internal string SourceFingerprint="";
         internal NativeResumeFailureSnapshot? FirstFailure;
     }
 }

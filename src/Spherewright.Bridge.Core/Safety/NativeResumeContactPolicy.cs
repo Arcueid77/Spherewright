@@ -26,6 +26,7 @@ public sealed class NativeResumeContactFacts
     public double? PerNativeTickEnergyJoules { get; set; }
     public DateTimeOffset NowUtc { get; set; }
     public VoyagerLocalActionBudgetFacts? OriginalJourney { get; set; }
+    public VoyagerReturnOnlyIdleBudgetFacts? ReturnOnlyBudget { get; set; }
 }
 
 // One attempt, at most eight601s including the failure frame after Pause.
@@ -126,6 +127,16 @@ public sealed class NativeResumeContactPolicy
         return code;
     }
 
+    private string DecisionFailure(NativeResumeFailureSnapshot failure)
+    {
+        var current=_decision!.Failure(failure.Code);
+        foreach(var p in current.Values)if(!failure.Values.ContainsKey(p.Key))failure.Values[p.Key]=p.Value;
+        foreach(var p in current.Observations)if(!failure.Observations.ContainsKey(p.Key))failure.Observations[p.Key]=p.Value;
+        foreach(var p in current.Predicates)if(!failure.Predicates.ContainsKey(p.Key))failure.Predicates[p.Key]=p.Value;
+        failure.Stage=current.Stage;failure.CapturedAtGameTick=current.CapturedAtGameTick;failure.CapturedAtUtc=current.CapturedAtUtc;
+        LastDecisionEvidence=failure.Copy();return failure.Code;
+    }
+
     private string? CommonBlocker(NativeResumeContactFacts f, string stage, out string? detail)
     {
         // Classify the predicate used by this decision, never re-query Native
@@ -178,9 +189,17 @@ public sealed class NativeResumeContactPolicy
             ("extra_warpers_nonnegative", j.OriginalExtraWarperReserve >= 0), ("extra_warpers_bounded", j.OriginalExtraWarperReserve <= 100),
             ("warpers_observed", j.NativeWarperCount.HasValue), ("original_warpers_retained", j.NativeWarperCount >= 1 + j.OriginalExtraWarperReserve),
             ("journey_clock_present", j.NowUtc != default), ("journey_clock_not_future", f.NowUtc >= j.NowUtc),
-            ("journey_sample_fresh", f.NowUtc - j.NowUtc <= TimeSpan.FromSeconds(2)),
-            ("original_tick_reserve", j.LastLandedGameTick.HasValue && (decimal)j.SpentGameTicks + j.CurrentGameTick - j.LastLandedGameTick.Value + FundedTicks + j.ReturnReserveGameTicks <= j.MaximumGameTicks),
-            ("original_wall_reserve", (j.JourneyDeadlineUtc - f.NowUtc).TotalSeconds > j.ReturnReserveGameTicks / 60d + 1d + 1d / 60d)))
+            ("journey_sample_fresh", f.NowUtc - j.NowUtc <= TimeSpan.FromSeconds(2))))
+            return DecisionFailure("remote_resume_contact_original_budget_unproved");
+        if(f.ReturnOnlyBudget is { } returnBudget)
+        {
+            var failed=VoyagerReturnOnlyIdleBudget.TimeFailure(returnBudget,j)
+                ??VoyagerReturnOnlyIdleBudget.ReserveFailure(returnBudget,j,requireStrictIdle:false);
+            if(failed is not null)return DecisionFailure(failed);
+        }
+        else if(!All(("original_tick_reserve",j.LastLandedGameTick.HasValue
+                &&(decimal)j.SpentGameTicks+j.CurrentGameTick-j.LastLandedGameTick.Value+FundedTicks+j.ReturnReserveGameTicks<=j.MaximumGameTicks),
+            ("original_wall_reserve",(j.JourneyDeadlineUtc-f.NowUtc).TotalSeconds>j.ReturnReserveGameTicks/60d+1d+1d/60d)))
             return DecisionFailure("remote_resume_contact_original_budget_unproved");
         if (!All(("core_observed", Known(f.CoreEnergyJoules)), ("per_tick_observed", Known(f.PerNativeTickEnergyJoules)),
             ("per_tick_positive", f.PerNativeTickEnergyJoules > 0d), ("loaded_observed", Known(j.AvailableLoadedEnergyJoules)),

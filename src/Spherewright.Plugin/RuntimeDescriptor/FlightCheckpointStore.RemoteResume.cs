@@ -343,7 +343,8 @@ internal sealed partial class FlightCheckpointStore
     }
 
     public bool RemoteResumeEvidenceStillMatches(VoyagerRemoteResumeEvidence evidence) =>
-        PluginJson.Serialize(_voyagerJourney) == evidence.JourneyJson
+        (evidence.ReturnOnlyContinuation ? ReturnOnlyNativeEvidenceMatches(evidence)
+            : PluginJson.Serialize(_voyagerJourney) == evidence.JourneyJson)
         && PluginJson.Serialize(_currentTicket) == evidence.CheckpointJson;
 
     internal string? PersistRemotePrimaryProgressDebit(VoyagerRemoteResumeEvidence evidence)
@@ -368,7 +369,8 @@ internal sealed partial class FlightCheckpointStore
     // VoyagerJourney returns a detached copy; bind all persisted contents instead of object identity.
     public bool RemoteResumeRetainedJourneyStillMatches(VoyagerJourneyRecord retained,
         VoyagerRemoteResumeEvidence evidence) => RemoteResumeEvidenceStillMatches(evidence)
-        && PluginJson.Serialize(retained) == evidence.JourneyJson;
+        && PluginJson.Serialize(retained) == (evidence.ReturnOnlyContinuation
+            ?PluginJson.Serialize(_voyagerJourney):evidence.JourneyJson);
 
     private static T? ReadBoundedResumeRecord<T>(FileStream stream)
     {
@@ -431,7 +433,7 @@ internal sealed class VoyagerRemoteResumeEvidence : IDisposable
     public string? PriorConsumedResumeTokenHash { get; }
     public bool PriorV2ProvenanceUsed { get; }
     public bool PriorV3ProvenanceUsed { get; }
-    public string JourneyJson { get; }
+    public string JourneyJson { get; private set; }
     public string CheckpointJson { get; }
     public long? SuccessfulFlightWitnessRetiredAtGameTick =>
         PluginJson.Deserialize<FlightCheckpointTicket>(CheckpointJson) is
@@ -445,6 +447,27 @@ internal sealed class VoyagerRemoteResumeEvidence : IDisposable
     public bool FailedRemoteLastExitReauthorization { get; private set; }
     public bool CompletedRemoteContinuation { get; private set; }
     public bool RemotePrimaryRecovery { get; private set; }
+    internal VoyagerReturnOnlyContinuationSource? ReturnOnlySource {get;private set;}
+    public bool ReturnOnlyContinuation => ReturnOnlySource is not null;
+    public bool NewChargingProhibited => CompletedRemoteContinuation || ReturnOnlyContinuation;
+    internal static VoyagerRemoteResumeEvidence CreateReturnOnlyContinuation(VoyagerReturnOnlyContinuationSource source)
+    {
+        // Zero charge caps are intentional: this mode reuses the strict idle
+        // chain and the remaining task ticks, never a separate charging grant.
+        var proposal=new VoyagerRecoveryWindowProposal(source.DeadlineUtc,VoyagerRecoveryWindowProposal.TaskScope,0,0);
+        var result=new VoyagerRemoteResumeEvidence(source.JourneyJson,source.CheckpointJson,source.Source.Fingerprint,
+            source.Primary.Fingerprint,source.Source.Prefix.GameTick,source.Primary.Prefix.GameTick,
+            source.Ticket.GameplayJournalCheckpoint!,proposal,source);
+        result.ReturnOnlySource=source;
+        result.Fingerprint=CanonicalStateHash.Combine("return-only-native-handoff-v1",source.Fingerprint,result.Fingerprint);
+        return result;
+    }
+    internal void BindRegisteredReturnOnlyJourney(string journeyJson)
+    {
+        if(ReturnOnlySource is null||IsDisposed)throw new InvalidOperationException("return_only_native_evidence_unavailable");
+        JourneyJson=journeyJson;
+        Fingerprint=CanonicalStateHash.Combine("return-only-native-registered-v1",ReturnOnlySource.Fingerprint,journeyJson);
+    }
     public long? KnownPrimaryProgressTick { get; private set; }
     public string? CompletedContinuationTokenHash { get; private set; }
     public DateTimeOffset? InheritedWindowConfirmedAtUtc { get; private set; }

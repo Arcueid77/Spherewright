@@ -10,6 +10,8 @@ public static class OwnedWorldRecoveryPolicy
 
     public static string? ValidateRequest(PrepareOwnedWorldResumeRequest request)
     {
+        if (request.RecoveryMode == OwnedWorldResumeModes.ResumeReturnOnlyTask)
+            return VoyagerReturnOnlyContinuationPolicy.ValidateRequest(request);
         if (request.RecoveryMode == OwnedWorldResumeModes.OpenSavedPrimary)
             return OwnedSavedWorldOpenPolicy.ValidateRequest(request);
         if (request.RecoveryMode == OwnedWorldResumeModes.AuthorizeRemotePrimaryRecovery)

@@ -27,6 +27,8 @@ internal sealed partial class NormalGameActionCoordinator
             return "remote_resume_charge_original_warper_reserve_insufficient";
         var environment = RemoteResumeChargeEnvironmentBlocker(p);
         if (environment is not null) return environment;
+        if(adoption.Evidence.ReturnOnlyContinuation)
+            return ReturnOnlyNativeFundingBlocker(adoption,journey,reserve.PerNativeTickEnergyJoules??double.NaN);
         // No charge-start/envelope mutation, no idle=true surrogate, no grant reset.
         return VoyagerRecoveryWindowPolicy.ChargeBlocker(p.mecha.coreEnergy, p.mecha.coreEnergyCap,
             CalculateAvailableFlightEnergy(p.mecha), journey.ReturnEnergyFloorJoules,

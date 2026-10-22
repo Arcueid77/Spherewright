@@ -29,6 +29,7 @@ internal sealed partial class GameSessionTracker
 {
     private bool _remoteResumeAdmitted;
     private VoyagerRemoteResumeEvidence? _pendingRemoteResumeEvidence;
+    private string? _pendingRemoteResumeActionId;
     internal bool CompleteContactForTest(string? blocker)
     {
         _pendingRemoteResumeEvidence ??= RemoteEvidence;
@@ -36,7 +37,18 @@ internal sealed partial class GameSessionTracker
     }
     internal bool ContactAdmittedForTest => _remoteResumeAdmitted;
     internal void ResetContactForExpectedWorld() { _remoteResumeAdmitted = false; _pendingRemoteResumeEvidence = null; }
-    private bool FailRemoteResumeAdmission(string code) { ResumeAdoptionError ??= code; return false; }
+    private bool FailRemoteResumeAdmission(string code)
+    {
+        // Native Pause/ownership checks are shell substitutes. The new role's
+        // failure persistence, witness completion and lease release are real.
+        if(_pendingRemoteResumeEvidence?.ReturnOnlyContinuation==true)
+        {
+            RetainFailedReturnOnlyContinuation(code);
+            GameMain.Pause();QuarantineWritesOnMainThread(_pendingRemoteResumeActionId!,code);
+            ReleaseFailedReturnOnlyEvidenceForPreservation();
+        }
+        ResumeAdoptionError ??= code;return false;
+    }
     private void ReleaseResumeSourceLease()
     {
         SourceLease?.Dispose(); SourceLease = null;

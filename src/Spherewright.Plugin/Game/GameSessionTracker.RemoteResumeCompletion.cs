@@ -17,6 +17,8 @@ internal sealed partial class GameSessionTracker
         // caller. A pending or failed transition must keep every lease held.
         ReleaseResumeSourceLease();
         evidence.Dispose();
+        if(CompleteReturnOnlyContinuationAdmission(evidence) is { } taskPersistenceFailure)
+            return FailRemoteResumeAdmission(taskPersistenceFailure);
         if (PersistRemoteResumeProgressDebit(evidence) is { } persistenceFailure)
         {
             RetainRemotePrimaryDebitFailure(persistenceFailure, evidence);

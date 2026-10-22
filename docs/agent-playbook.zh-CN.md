@@ -30,6 +30,14 @@
 
 Load 前应对照启动日志 `Spherewright loaded module:` 中 Plugin、Core、Contracts 和 Native 的模块身份与候选/Native 元数据。日志仅从实际已加载 CLR 模块读取 MVID 和 informational version，不读取磁盘路径或游戏状态；磁盘安装一致不能代替加载身份，这些日志也不证明 Native 健康。
 
+## 从当前存档续接既有只返航任务
+
+`prepare_resume_owned_game(recoveryMode=resume_return_only_task)` 仅适用于已经授予的只返航任务。提供当前受保护 `resumeToken`、固定 LastExit 的准确 `expectedRecoveryGameTick` 和 `recoveryScope=recover_and_return_only`。完整来源必须等于凭据记录的当前进度边界；另一分支的更大 tick 仍拒绝。后续保全回执只有同时匹配当前主档完整指纹及同一任务/会话/动作时，才可证明准确的新边界。原检查点仅作历史证明，绝不加载。
+
+省略 `recoveryDeadlineUtc` 则保留原有效窗口，窗口耗尽在 Load 前拒绝。提出最多1200秒的新绝对 UTC 窗口，必须另有适用的用户明确授权，并在 commit 确认披露的 digest。`returnOnlyContinuation` 披露原任务 ID、原 tick 上限、剩余 tick、原/有效期限及是否需要新增墙钟授权；必须核对 `newTicksGranted=false` 和 `newChargingProhibited=true`。不接受充能上限、回滚或旧动作终态声明；原 Journey UTC、已花时间、物品、能源和返程储备不变。
+
+Commit 单次消费当前凭据，在同一原任务下记录有界续接。须完成 Native 暂停初始化、真实接触及严格 idle，再经普通 Save 和健康新凭据完成恢复。只允许回原母星、停止和正常保存。失败锁存同次首错并暂停，不换 key 重试、不自动续窗。精确稳定暂停保全 Save 可以保留进度及仅作证明的回执，不清隔离、不改失败结果、不签发 Load/Resume 凭据；已消费或未核销的授权仍拒绝。离线 Native 替身不证明实机健康或实际返航。
+
 ## 会话入口与所有权
 
 1. 读取状态、本资源及新的会话、玩家快照。核对 `ownedBySpherewright`、精确会话、星球、revision、和平证据、`writeHealth`、持久 Journal、已接受和进行中的操作及已安装组件组合。明确指出失败字段，未知不能替换为零。

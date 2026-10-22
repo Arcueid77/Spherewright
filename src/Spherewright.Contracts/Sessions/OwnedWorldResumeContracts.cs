@@ -12,6 +12,7 @@ public static class OwnedWorldResumeModes
     public const string ContinueCompletedRemoteLastExit = "continue_completed_remote_last_exit";
     public const string OpenSavedPrimary = "open_saved_primary";
     public const string AuthorizeRemotePrimaryRecovery = "authorize_remote_primary_recovery";
+    public const string ResumeReturnOnlyTask = "resume_return_only_task";
 }
 
 public sealed class PrepareOwnedWorldResumeRequest
@@ -84,6 +85,7 @@ public sealed class PreparedOwnedWorldResumePlan
     public bool RemotePrimaryRecoveryAuthorizationUsed { get; set; }
     public bool PriorActionTerminalCompletionAttested { get; set; }
     public bool NewChargingProhibited { get; set; }
+    public ReturnOnlyContinuationPreview? ReturnOnlyContinuation { get; set; }
     public bool OpensSavedWorldOnly { get; set; }
     public bool PreviousAutomationRemainsStopped { get; set; }
     public long? DiscardedUnstoredProgressGameTicks { get; set; }
@@ -116,6 +118,18 @@ public sealed class PreparedOwnedWorldResumePlan
     public List<WriteBlocker> CommitBlockers { get; set; } = new List<WriteBlocker>();
 
     public string CompletionCondition { get; set; } = string.Empty;
+}
+
+public sealed class ReturnOnlyContinuationPreview
+{
+    public string OriginalTaskId { get; set; } = string.Empty;
+    public long SourceGameTick { get; set; }
+    public long OriginalMaximumGameTicks { get; set; }
+    public long RemainingGameTicks { get; set; }
+    public DateTimeOffset OriginalDeadlineUtc { get; set; }
+    public DateTimeOffset EffectiveDeadlineUtc { get; set; }
+    public bool NewWallAuthorityRequired { get; set; }
+    public bool NewTicksGranted => false;
 }
 
 public sealed class OwnedWorldResumeResult

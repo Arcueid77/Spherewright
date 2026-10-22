@@ -20,6 +20,8 @@
     <Compile Include="..\..\src\Spherewright.Plugin\Game\GameCallResult.cs" Link="PluginGame\GameCallResult.cs" />
     <Compile Include="..\..\src\Spherewright.Plugin\Game\BlueprintBuildStore.cs" Link="PluginGame\BlueprintBuildStore.cs" />
     <Compile Include="..\..\src\Spherewright.Plugin\Game\OwnedWorldResumeCoordinator.cs" Link="PluginGame\OwnedWorldResumeCoordinator.cs" />
+    <Compile Include="..\..\src\Spherewright.Plugin\Game\OwnedWorldResumeCoordinator.ReturnOnly.cs" Link="PluginGame\OwnedWorldResumeCoordinator.ReturnOnly.cs" />
+    <Compile Include="..\..\src\Spherewright.Plugin\Game\GameSessionTracker.ReturnOnlyContinuation.cs" Link="PluginGame\GameSessionTracker.ReturnOnlyContinuation.cs" />
     <Compile Include="..\..\src\Spherewright.Plugin\Game\NativeLoadCompletionSubscription.cs" Link="PluginGame\NativeLoadCompletionSubscription.cs" />
     <Compile Include="..\..\src\Spherewright.Plugin\Game\FlightCheckpointReloadCoordinator.cs" Link="PluginGame\FlightCheckpointReloadCoordinator.cs" />
     <Compile Include="..\..\src\Spherewright.Plugin\Game\NormalGameActionCoordinator.FlightStart.cs" Link="PluginGame\NormalGameActionCoordinator.FlightStart.cs" />
@@ -40,6 +42,7 @@
     <Compile Include="..\..\src\Spherewright.Plugin\RuntimeDescriptor\FlightCheckpointStore.cs" Link="PluginRuntimeDescriptor\FlightCheckpointStore.cs" />
     <Compile Include="..\..\src\Spherewright.Plugin\RuntimeDescriptor\FlightCheckpointStore.Voyager.cs" Link="PluginRuntimeDescriptor\FlightCheckpointStore.Voyager.cs" />
     <Compile Include="..\..\src\Spherewright.Plugin\RuntimeDescriptor\FlightCheckpointStore.ReturnOnlyRecovery.cs" Link="PluginRuntimeDescriptor\FlightCheckpointStore.ReturnOnlyRecovery.cs" />
+    <Compile Include="..\..\src\Spherewright.Plugin\RuntimeDescriptor\FlightCheckpointStore.ReturnOnlyContinuation.cs" Link="PluginRuntimeDescriptor\FlightCheckpointStore.ReturnOnlyContinuation.cs" />
     <Compile Include="..\..\src\Spherewright.Plugin\Game\GameSessionTracker.ReturnOnlyRecovery.cs" Link="PluginGame\GameSessionTracker.ReturnOnlyRecovery.cs" />
     <Compile Include="..\..\src\Spherewright.Plugin\RuntimeDescriptor\FlightCheckpointStore.RemoteResume.cs" Link="PluginRuntimeDescriptor\FlightCheckpointStore.RemoteResume.cs" />
   </ItemGroup>

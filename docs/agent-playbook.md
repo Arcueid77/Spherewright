@@ -28,6 +28,14 @@ The Plugin must pass the existing exact loader, paused initialization, Native151
 
 Before loading, compare the startup `Spherewright loaded module:` records for Plugin, Core, Contracts and Native against the candidate/Native module identities. They report loaded CLR MVID and informational version without reading disk paths or game state. A matching disk install alone does not prove the loaded cohort; these records alone do not prove Native health.
 
+## Continue an existing return-only task from its current save
+
+Use `prepare_resume_owned_game(recoveryMode=resume_return_only_task)` only for an already granted return-only task. Supply the current protected `resumeToken`, the exact fixed LastExit `expectedRecoveryGameTick`, and `recoveryScope=recover_and_return_only`. The complete source must equal the credential's current progress boundary; a larger tick from another branch is rejected. A later preservation receipt may establish an exact newer boundary only when it also matches the current primary's complete fingerprint and the same task/session/action. The original checkpoint is historical proof and is never loaded.
+
+Omit `recoveryDeadlineUtc` to retain the effective original window; an exhausted window rejects before Load. A proposed new absolute UTC window, at most1200 seconds, requires separately applicable explicit owner authority and the disclosed digest confirmation at commit. `returnOnlyContinuation` discloses the original task ID, original tick cap, remaining ticks, original/effective deadlines and whether new wall authority is required; `newTicksGranted=false` and `newChargingProhibited=true` are mandatory. No charge caps, rollback or prior-action outcome assertions are accepted. Existing original Journey UTC, spent amount, items, energy and return reserves remain unchanged.
+
+Commit consumes the current credential once and records a bounded continuation under the same original task. Native paused initialization, real contact and strict idle must finish before ordinary Save and a renewed healthy credential can complete recovery. Only the original-home return, stop and normal Save are permitted. Failure latches the first same-sample evidence and pauses; no rekeyed retry or automatic window renewal follows. Exact stable-pause preservation Save can retain progress and a proof-only receipt, without clearing quarantine, changing the failed result or issuing a Load/Resume credential. A consumed or unresolved authorization is still rejected. Offline Native substitutes are not runtime health or a completed return.
+
 ## Session entry and ownership
 
 1. Read status, this resource and a fresh session/player snapshot. Verify `ownedBySpherewright`, exact session/planet/revision, peaceful evidence, `writeHealth`, durable Journal, accepted/in-flight actions and installed cohort. Explicitly name any failed field; preserve unknowns rather than replacing them with zero.

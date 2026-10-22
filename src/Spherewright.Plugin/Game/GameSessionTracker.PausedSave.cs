@@ -61,13 +61,17 @@ internal sealed partial class GameSessionTracker
         // This role proves exact checkpoint identity/adoption, NOT healthy idle.
         // Saving the fully loaded, stably paused world grants no Load/Resume.
         var checkpointRole = _checkpointReturnAdoption is { } checkpoint && checkpoint.ActionId == _writeQuarantineActionId;
+        var returnSourceRole=checkpointRole&&_checkpointReturnAdoption!.ReturnContinuation;
+        var savedBoundary=_lastOwnedSaveGameTick??(returnSourceRole?_checkpointReturnAdoption!.SavedSourceGameTick:(long?)null);
+        var savedSourceState=_ownedSaveState==OwnedSaveStates.Saved
+            ||returnSourceRole&&_ownedSaveState==OwnedSaveStates.WaitingToSave;
         if (checkpointRole)
         {
             if (!Require("checkpoint_adoption_finished", _checkpointReturnAdoption!.Finished,
                     "paused_save_checkpoint_adoption_unproved")
                 || !Require("checkpoint_preservation_witness", CheckpointReturnPauseWitnessMatches(),
                     "paused_save_checkpoint_adoption_unproved")
-                || !Require("checkpoint_saved_source", _ownedSaveState == OwnedSaveStates.Saved,
+                || !Require("checkpoint_saved_source", savedSourceState,
                     "paused_save_checkpoint_adoption_unproved")) return observation;
         }
         else
@@ -92,10 +96,10 @@ internal sealed partial class GameSessionTracker
             || !Require("native_running", GameMain.isRunning, "paused_save_current_factory_or_saved_progress_unproved")
             || !Require("factory_present", world?.localLoadedPlanetFactory is not null, "paused_save_current_factory_or_saved_progress_unproved")
             || !Require("factory_identity", ReferenceEquals(world!.localLoadedPlanetFactory, GameMain.localPlanet?.factory), "paused_save_current_factory_or_saved_progress_unproved")
-            || !Require(checkpointRole ? "checkpoint_saved_source" : "previous_normal_save", _ownedSaveState == OwnedSaveStates.Saved,
+            || !Require(checkpointRole ? "checkpoint_saved_source" : "previous_normal_save", savedSourceState,
                 "paused_save_current_factory_or_saved_progress_unproved")
-            || !Require("saved_watermark_present", _lastOwnedSaveGameTick.HasValue, "paused_save_current_factory_or_saved_progress_unproved")
-            || !Require("saved_progress_not_newer", _lastOwnedSaveGameTick <= observation.GameTick,
+            || !Require("saved_watermark_present", savedBoundary.HasValue, "paused_save_current_factory_or_saved_progress_unproved")
+            || !Require("saved_progress_not_newer", savedBoundary <= observation.GameTick,
                 "paused_save_current_factory_or_saved_progress_unproved")) return observation;
         // Pure current flags only: no file/ticket enumeration or extra Native query.
         var peaceful = world!.gameDesc is null ? PeacefulModeStates.Unknown

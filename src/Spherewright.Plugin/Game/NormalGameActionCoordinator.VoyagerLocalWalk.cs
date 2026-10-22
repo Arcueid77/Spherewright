@@ -73,12 +73,12 @@ internal sealed partial class NormalGameActionCoordinator
             if (journey.ReturnOnlyTask is { } task)
                 facts.ReturnOnlyBudget = new VoyagerReturnOnlyIdleBudgetFacts
                 {
-                    ExactTaskBinding = journey.ReturnOnlyScopeActive && task.TaskId == owner.ActionId
-                        && task.SessionId == owner.SessionId && _sessions.SessionId == owner.SessionId
+                    ExactTaskBinding = journey.ReturnOnlyScopeActive && task.CurrentActionId == owner.ActionId
+                        && task.CurrentSessionId == owner.SessionId && _sessions.SessionId == owner.SessionId
                         && _sessions.IsCurrentSessionOwned,
                     StartedAtGameTick = task.StartedAtGameTick,
                     MaximumGameTicks = task.MaximumGameTicks,
-                    DeadlineUtc = task.DeadlineUtc,
+                    DeadlineUtc = task.CurrentDeadlineUtc,
                 };
             captureFacts?.Invoke(facts);
             if (groundMiss) return Blocked("remote_idle_ground_contact_unproved");
@@ -128,7 +128,7 @@ internal sealed partial class NormalGameActionCoordinator
                 || DateTimeOffset.UtcNow < inheritedOrigin
                 || (DateTimeOffset.UtcNow - inheritedOrigin).TotalSeconds >= adoption.Authorization.Proposal.MaximumChargeWallSeconds))
             return "completed_remote_original_window_exhausted";
-        if (!sameOwner && adoption.Authorization is { } chargeAuthorization && adoption.ChargeStartedUtc is { } chargeStarted
+        if (!sameOwner && !adoption.Evidence.ReturnOnlyContinuation && adoption.Authorization is { } chargeAuthorization && adoption.ChargeStartedUtc is { } chargeStarted
             && ((DateTimeOffset.UtcNow - chargeStarted).TotalSeconds > chargeAuthorization.Proposal.MaximumChargeWallSeconds
                 || GameMain.gameTick - adoption.ChargeStartedGameTick!.Value > chargeAuthorization.Proposal.MaximumChargeGameTicks))
             return "remote_resume_charge_finite_budget_exhausted";
@@ -190,6 +190,7 @@ internal sealed partial class NormalGameActionCoordinator
         VoyagerRemoteIdleAdmissionFacts facts, VoyagerRecoveryAuthorization authorization)
     {
         if (adoption.Evidence.CompletedRemoteContinuation) return "completed_remote_new_charging_prohibited";
+        if (adoption.Evidence.ReturnOnlyContinuation) return "return_only_new_charging_prohibited";
         var p = adoption.Player; var m = p.mecha;
         var now = DateTimeOffset.UtcNow;
         var effectiveDeadline = _sessions.EffectiveVoyagerDeadline(journey);

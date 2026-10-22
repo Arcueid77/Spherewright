@@ -17,6 +17,8 @@
 <a id="current-public-mcp-surface"></a>
 ## 当前公共 MCP 接口
 
+显式 `prepare_resume_owned_game(recoveryMode=resume_return_only_task)` 将既有只返航任务绑定到准确当前固定 LastExit、受保护进度边界、主档、Journal 及仅作历史证明的原检查点。提供 `expectedRecoveryGameTick` 和 `recoveryScope=recover_and_return_only`；可选 `recoveryDeadlineUtc` 提出另获用户授权的最多1200秒窗口，省略则保留原有效窗口。不授 tick/资源、不充能、不回滚、不接受旧终态声明。Prepare 的 `returnOnlyContinuation` 回显原/剩余 tick 及原/有效期限，`newTicksGranted=false`、`newChargingProhibited=true`。Commit 仍须 fresh digest 确认、单次消费、完整 Native 控制接管、普通 Save 和健康新凭据。稳定暂停保全回执只证明准确存档进度，不授 Load 或 Resume。见[手册](agent-playbook.zh-CN.md#从当前存档续接既有只返航任务)。
+
 显式 `prepare_resume_owned_game(recoveryMode=authorize_remote_primary_recovery)` 接受用户新授予的精确远端主档有限恢复窗口，不依赖旧自动操作凭据继续有效。证据版本2回显 `remotePrimaryRecoveryAuthorizationUsed` 及准确新期限/范围/充能上限、候选、本次舍弃 tick 数和 `conservedObservedProgressDebitGameTicks`。受保护的仅读档凭据将此前观察时间保留到正常退出后，不改变物理存档 minimum，也不授执行许可；历史观察未知则拒绝自动恢复，健康普通 Save 后不重复扣费。仍须独立 digest 确认、原 Journey/Journal/成功去程证明、持久消费及完整 Native 健康接管。舍弃进度不返还旅程时间，不改变普通 `open_saved_primary` 或宣称旧动作结果。见[手册](agent-playbook.zh-CN.md#远端主档的新有限恢复授权)。
 
 公共 MCP 的 `prepare_resume_owned_game` 参数现默认 `open_saved_primary`。显式使用旧 `default` 模式的既有 wire 请求保留原行为；普通 MCP 读档请求不会被推断为继续旧任务。
