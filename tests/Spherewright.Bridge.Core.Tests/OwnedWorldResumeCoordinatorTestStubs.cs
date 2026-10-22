@@ -57,6 +57,8 @@ internal sealed partial class GameSessionTracker : IDisposable
     internal bool Reauthorizing { get; private set; }
     internal bool FixedAutosave { get; private set; }
     internal bool RequiresRemoteResumeEvidence { get; set; }
+    internal Spherewright.Contracts.Players.NativeResumeFailureSnapshot? CompletedContinuationFailure => RemoteResumeCheckpoints?.CompletedContinuationFailure;
+    internal void BeginCompletedContinuationDecision() => RemoteResumeCheckpoints?.BeginCompletedContinuationDecision();
     internal FlightCheckpointStore? RemoteResumeCheckpoints { get; set; }
     internal VoyagerRemoteResumeEvidence? RemoteEvidence { get; private set; }
     internal string? RemoteResumeActionId { get; private set; }
@@ -75,17 +77,19 @@ internal sealed partial class GameSessionTracker : IDisposable
         ResumeAdoptionError = "remote_resume_postdispatch_loader_observation_failed:" + exceptionType;
     internal bool TryOpenRemoteResumeEvidence(OwnedWorldResumeTicket ticket, OwnedSaveRecoveryLease source,
         OwnedSaveRecoveryLease primary, out VoyagerRemoteResumeEvidence? evidence, out string rejection,
-        VoyagerRecoveryWindowProposal? proposal = null, PriorFailedResumeProof? priorFailedProof = null,
+        VoyagerRecoveryWindowProposal? proposal = null, ConsumedRemoteResumeProof? priorConsumedProof = null,
         string priorSourceFingerprint = "", bool priorActionKnownTerminalFailed = false, string priorLegacySourceFingerprint = "", string priorIntermediateSourceFingerprint = "",
         bool failedRemoteReauthorization = false, string expectedRemoteContext = "", string validatedJournalHash = "",
-        string legacyLocalMoveEvidenceJson = "", string legacyLocalMoveEvidenceHash = "", string legacyCredentialRawFingerprint = "")
+        string legacyLocalMoveEvidenceJson = "", string legacyLocalMoveEvidenceHash = "", string legacyCredentialRawFingerprint = "",
+        bool completedRemoteContinuation = false, bool priorActionKnownTerminalCompleted = false)
     {
         evidence = null; rejection = "test_remote_store_unavailable";
         return RemoteResumeCheckpoints is not null
             && RemoteResumeCheckpoints.TryOpenRemoteResumeEvidence(ticket, source, primary, out evidence, out rejection, proposal,
-                priorFailedProof, priorSourceFingerprint, priorActionKnownTerminalFailed, priorLegacySourceFingerprint, priorIntermediateSourceFingerprint,
+                priorConsumedProof, priorSourceFingerprint, priorActionKnownTerminalFailed, priorLegacySourceFingerprint, priorIntermediateSourceFingerprint,
                 failedRemoteReauthorization, expectedRemoteContext, validatedJournalHash,
-                legacyLocalMoveEvidenceJson, legacyLocalMoveEvidenceHash, legacyCredentialRawFingerprint);
+                legacyLocalMoveEvidenceJson, legacyLocalMoveEvidenceHash, legacyCredentialRawFingerprint,
+                completedRemoteContinuation, priorActionKnownTerminalCompleted);
     }
     internal SessionState CaptureOnMainThread() => Snapshot;
     internal void ExpectNextSessionToBeResumed(OwnedWorldResumeTicket ticket,
@@ -96,6 +100,7 @@ internal sealed partial class GameSessionTracker : IDisposable
         VoyagerRecoveryAuthorization? recoveryAuthorization = null)
     {
         SourceLease = sourceLease;
+        ResetContactForExpectedWorld();
         JournalLease = journalLease;
         PrimaryLease = primaryLease;
         Reauthorizing = reauthorizingExpiredPrimary;

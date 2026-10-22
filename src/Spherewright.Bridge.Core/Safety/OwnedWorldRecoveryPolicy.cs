@@ -10,6 +10,10 @@ public static class OwnedWorldRecoveryPolicy
 
     public static string? ValidateRequest(PrepareOwnedWorldResumeRequest request)
     {
+        if (request.RecoveryMode == OwnedWorldResumeModes.ContinueCompletedRemoteLastExit)
+            return VoyagerCompletedRemoteContinuationPolicy.ValidateRequest(request);
+        if (request.PriorActionKnownTerminalCompleted.HasValue)
+            return "A completion attestation requires the explicit completed-remote continuation mode; it is never a failed-action attestation or default fallback.";
         if (VoyagerLegacyLocalMoveUnknownPolicy.ValidateRequest(request) is { } legacyInvalid)
             return legacyInvalid;
         if (request.RecoveryMode == OwnedWorldResumeModes.ReauthorizeFailedRemoteLastExit)

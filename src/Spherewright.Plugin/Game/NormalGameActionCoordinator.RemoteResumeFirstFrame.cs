@@ -48,7 +48,7 @@ internal sealed partial class NormalGameActionCoordinator
         // Start the existing finite charge accounting at the original source,
         // before allowing its one normal frame. No energy is debited or granted.
         adoption.ChargeStartedGameTick = adoption.Evidence.SourceGameTick;
-        adoption.ChargeStartedUtc = DateTimeOffset.UtcNow;
+        adoption.ChargeStartedUtc = adoption.Authorization?.InheritedWindowConfirmedAtUtc ?? DateTimeOffset.UtcNow;
         adoption.ChargeCostEnvelope = RemoteResumeChargeCostEnvelope(adoption.Player);
         adoption.ChargePerTickUpper = facts.MovementReserve!.PerNativeTickEnergyJoules;
         return null;

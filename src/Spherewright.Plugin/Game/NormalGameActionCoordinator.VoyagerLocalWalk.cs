@@ -203,6 +203,11 @@ internal sealed partial class NormalGameActionCoordinator
         if (journey is null || journey.Phase != "remote_landed") return "remote_resume_original_remote_journey_unproved";
         var existing = _voyagerRemoteIdleOwner;
         var sameOwner = existing is not null && ReferenceEquals(existing.ResumeAdoption, adoption);
+        if (!sameOwner && adoption.Evidence.CompletedRemoteContinuation
+            && (adoption.Authorization?.InheritedWindowConfirmedAtUtc is not { } inheritedOrigin
+                || DateTimeOffset.UtcNow < inheritedOrigin
+                || (DateTimeOffset.UtcNow - inheritedOrigin).TotalSeconds >= adoption.Authorization.Proposal.MaximumChargeWallSeconds))
+            return "completed_remote_original_window_exhausted";
         if (!sameOwner && adoption.Authorization is { } chargeAuthorization && adoption.ChargeStartedUtc is { } chargeStarted
             && ((DateTimeOffset.UtcNow - chargeStarted).TotalSeconds > chargeAuthorization.Proposal.MaximumChargeWallSeconds
                 || GameMain.gameTick - adoption.ChargeStartedGameTick!.Value > chargeAuthorization.Proposal.MaximumChargeGameTicks))
@@ -228,6 +233,9 @@ internal sealed partial class NormalGameActionCoordinator
             && (adoption.ChargePerTickUpper != frameReserve.PerNativeTickEnergyJoules
                 || adoption.ChargeCostEnvelope != RemoteResumeChargeCostEnvelope(adoption.Player)))
             return "remote_resume_charge_cost_envelope_changed";
+        if (!sameOwner && adoption.Evidence.CompletedRemoteContinuation && captured is not null
+            && VoyagerCompletedRemoteContinuationPolicy.StrictFundingBlocker(captured, adoption.CurrentDecisionEvidence) is { } fundingBlocker)
+            return fundingBlocker;
         if (loadBoundary && decision.BlockerCode == "remote_idle_ground_contact_unproved" && captured is not null)
             return ArmVerifiedRemoteFirstFrame(adoption, owner, journey, scene, captured, ground);
         if (!admit && adoption.FirstFrame.UniverseObserved && adoption.TerrainPostUniverse is { } terrainAfter)
@@ -261,6 +269,7 @@ internal sealed partial class NormalGameActionCoordinator
     private string? ValidateRemoteResumeCharge(VoyagerRemoteResumeAdoption adoption, VoyagerJourneyRecord journey,
         VoyagerRemoteIdleAdmissionFacts facts, VoyagerRecoveryAuthorization authorization)
     {
+        if (adoption.Evidence.CompletedRemoteContinuation) return "completed_remote_new_charging_prohibited";
         var p = adoption.Player; var m = p.mecha;
         var now = DateTimeOffset.UtcNow;
         var effectiveDeadline = _sessions.EffectiveVoyagerDeadline(journey);

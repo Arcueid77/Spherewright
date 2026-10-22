@@ -356,6 +356,14 @@ Move/Harvest 复用既有普通 RTS 动作并保留无水快路。有限能耗�
 
 使用原计划/key提交一次，核对同一动作。原生普通 Save 必须返回 true，精确 owned 完整文件须通过 prefix及全文件核验，并等于绑定的当前 tick。失败保留同次 `nativeFirstFailure` 事实；未知文件 tick保留 null，未执行检查保留 `not_reached`。保全不清隔离、不关闭/重写 Journey、不退役或续发凭据、不修改旧动作结果，也不 Resume或Load。尤其成功恢复不能当作失败前驱；保存后续暂停进度不使它获得失败续接资格。旧实装 Plugin 不会因更新文档或 MCP 自动获得此能力；RAM尚无完整覆盖时，不退出或冷部署。离线 Native 替身不证明 Unity Data.Export 或实机验收。
 
+### 在原窗口内续接已成功的远端接管
+
+`continue_completed_remote_last_exit` 要求 `priorConsumedResumeToken`、`priorActionKnownTerminalCompleted=true` 及独立捕获的 `expectedRemoteRecoveryContextFingerprint`，使用 `voyager-completed-remote-context-v1` 域。同失败重授权一样绑定八项当前上下文字段，但域独立。保留原 Native 成功回执；消费记录和调用方声明都不是旧 Native 结果认证。不得把失败、未决、未观察或 outcome_unknown 声明为成功，不混用失败/legacy证明。这是显式固定LastExit模式，不是default回退。
+
+Prepare从当前Native来源读取tick，继承立即前驱消费授权完全相同的绝对期限、scope、上限及最早窗口起点，不接收新期限/上限或prepare时确认。核对 `completedRemoteLastExitContinuationUsed`、`priorActionTerminalCompletionAttested`、`newChargingProhibited`、`inheritedWindowConfirmedAtUtc`；失败前驱标记均false，`nativeOriginalOutcomeProved=false`。Commit仍需准确披露/digest和适用授权；standing consent不能覆盖已耗尽窗口。原墙钟/tick/返程余量不足或过期时，在Load前拒绝。新续接如实记录本次确认时间，另存原窗口起点，后续冷操作不能续期。
+
+不新增充能阶段。任何条件首帧前，fresh Native费用采样必须已能支付严格13的核心/loaded储备；原有14接触储备、151/501及Journey/UTC/翘曲器检查不变，首帧/接触计时沿用原窗口起点。已接地但低核心不能通过本模式进入充能。成功仍要求严格idle、普通完整主档Save和同会话续发凭据。所有已知远端终态复制锁存，后续Pause/隔离不改写已成功动作。测试的标志、渲染、加载和Data.Export替身不证明Unity实机续接；旧实装不因文档更新获得本模式。
+
 ## 重启与行星间飞行
 
 普通主档覆盖已成功出航后，checkpoint 的重载能力退役，但精确绑定的历史飞行证明仍可保留。远端续接仍只加载固定 LastExit，且须覆盖当前主档及票据最低 tick。原 checkpoint 文件、成功 action、Journey、Journal、Native 身份及预算均须 fresh 绑定；成功记录缺失、失败/重载标记矛盾或退役证据不完整即拒绝。Prepared 的 `successfulFlightWitnessRetiredAtGameTick` 与确认文本披露此分支，受保护字节变化使旧 digest 失效。退役 checkpoint 绝不恢复可加载能力，此证据规则不授予 Save、Load 或重试权限。离线 Store/coordinator 测试不证明 Native 保存/导出或 Unity 恢复。

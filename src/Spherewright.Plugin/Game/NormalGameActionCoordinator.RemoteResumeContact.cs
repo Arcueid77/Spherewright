@@ -38,7 +38,7 @@ internal sealed partial class NormalGameActionCoordinator
         // Reuse the original charge accounting, including these contact ticks.
         // No actor, Rigidbody, energy, cached contact or save is written.
         adoption.ChargeStartedGameTick = adoption.Evidence.SourceGameTick;
-        adoption.ChargeStartedUtc = contact.Policy.StartedUtc;
+        adoption.ChargeStartedUtc = adoption.Authorization?.InheritedWindowConfirmedAtUtc ?? contact.Policy.StartedUtc;
         adoption.ChargeCostEnvelope = RemoteResumeChargeCostEnvelope(adoption.Player);
         adoption.ChargePerTickUpper = facts.MovementReserve!.PerNativeTickEnergyJoules;
         return null;

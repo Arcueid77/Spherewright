@@ -35,6 +35,7 @@ internal sealed partial class GameSessionTracker
         return CompleteRemoteResumeAdmission(blocker, _pendingRemoteResumeEvidence!);
     }
     internal bool ContactAdmittedForTest => _remoteResumeAdmitted;
+    internal void ResetContactForExpectedWorld() { _remoteResumeAdmitted = false; _pendingRemoteResumeEvidence = null; }
     private bool FailRemoteResumeAdmission(string code) { ResumeAdoptionError ??= code; return false; }
     private void ReleaseResumeSourceLease()
     {

@@ -399,7 +399,11 @@ internal sealed class OwnedWorldResumeTicketStore
     }
 
     public bool TryOpenImmediateFailedRemoteProof(string priorToken, OwnedWorldResumeTicket currentTicket,
-        out PriorFailedResumeProof? proof, out string rejection)
+        out ConsumedRemoteResumeProof? proof, out string rejection)
+        => TryOpenImmediateRemoteConsumption(priorToken, currentTicket, out proof, out rejection);
+
+    public bool TryOpenImmediateRemoteConsumption(string priorToken, OwnedWorldResumeTicket currentTicket,
+        out ConsumedRemoteResumeProof? proof, out string rejection)
     {
         proof = null; rejection = string.Empty;
         if (string.IsNullOrWhiteSpace(priorToken) || priorToken.Length > 256
@@ -417,7 +421,7 @@ internal sealed class OwnedWorldResumeTicketStore
     }
 
     public bool TryOpenPriorFailedResumeProof(string priorToken, string quarantineActionId,
-        out PriorFailedResumeProof? proof, out string rejection, bool requireV2Predecessor = false,
+        out ConsumedRemoteResumeProof? proof, out string rejection, bool requireV2Predecessor = false,
         bool requireV3Predecessor = false)
     {
         proof = null; rejection = string.Empty;
@@ -429,7 +433,7 @@ internal sealed class OwnedWorldResumeTicketStore
         if (!TryOpenFixedConsumptionProof(tokenHash, quarantineActionId, !requireV2Predecessor,
             out var immediate, out rejection)) return false;
         if (!requireV2Predecessor) { proof = immediate; return true; }
-        PriorFailedResumeProof? ancestor = null; PriorFailedResumeProof? oldest = null;
+        ConsumedRemoteResumeProof? ancestor = null; ConsumedRemoteResumeProof? oldest = null;
         try
         {
             var ancestorHash = immediate!.Authorization.PriorConsumedResumeTokenHash;
@@ -464,7 +468,7 @@ internal sealed class OwnedWorldResumeTicketStore
     }
 
     private bool TryOpenFixedConsumptionProof(string tokenHash, string? quarantineActionId, bool? requireLegacy,
-        out PriorFailedResumeProof? proof, out string rejection)
+        out ConsumedRemoteResumeProof? proof, out string rejection)
     {
         proof = null; rejection = string.Empty;
         FileStream? runtime = null; FileStream? handoff = null;
@@ -499,6 +503,9 @@ internal sealed class OwnedWorldResumeTicketStore
                 || !OwnedWorldRecoveryPolicy.IsCanonicalFingerprint(authorization.EvidenceFingerprint)
                 || !OwnedWorldRecoveryPolicy.IsCanonicalFingerprint(authorization.ConfirmationDigest)
                 || authorization.ConfirmedAtUtc == default || authorization.ConfirmedAtUtc > first.ConsumedAtUtc
+                || authorization.InheritedWindowConfirmedAtUtc.HasValue
+                    && (authorization.InheritedWindowConfirmedAtUtc == default(DateTimeOffset)
+                        || authorization.InheritedWindowConfirmedAtUtc > authorization.ConfirmedAtUtc)
                 || authorization.Proposal is not { } proposal
                 || proposal.DeadlineUtc <= authorization.ConfirmedAtUtc
                 || proposal.Scope != VoyagerRecoveryWindowProposal.TaskScope
@@ -507,7 +514,7 @@ internal sealed class OwnedWorldResumeTicketStore
                 || proposal.MaximumChargeWallSeconds <= 0d || proposal.MaximumChargeWallSeconds > 300d)
                 throw new InvalidDataException("The fixed prior consumption proof is incomplete, changed or already a compatibility hop.");
             // This is consumption/authorization evidence, never a durable action outcome.
-            proof = new PriorFailedResumeProof(tokenHash, authorization,
+            proof = new ConsumedRemoteResumeProof(tokenHash, authorization,
                 CanonicalStateHash.Combine("prior-remote-consumption-v1", tokenHash, HashToken(firstJson), HashToken(secondJson)),
                 runtime, handoff) { ConsumedAtUtc = first.ConsumedAtUtc };
             runtime = null; handoff = null;
@@ -1085,25 +1092,25 @@ internal sealed class RemoteResumeCredentialLease : IDisposable
     }
 }
 
-internal sealed class PriorFailedResumeProof : IDisposable
+internal sealed class ConsumedRemoteResumeProof : IDisposable
 {
     private readonly IDisposable[] _leases;
-    public PriorFailedResumeProof(string tokenHash, VoyagerRecoveryAuthorization authorization, string fingerprint,
+    public ConsumedRemoteResumeProof(string tokenHash, VoyagerRecoveryAuthorization authorization, string fingerprint,
         params IDisposable[] leases)
     { TokenHash = tokenHash; Authorization = authorization; Fingerprint = fingerprint; _leases = leases; }
     public string TokenHash { get; }
     public VoyagerRecoveryAuthorization Authorization { get; }
     public string Fingerprint { get; }
     public DateTimeOffset ConsumedAtUtc { get; internal set; }
-    public PriorFailedResumeProof? LegacyAncestor { get; private set; }
-    internal void AttachLegacyAncestor(PriorFailedResumeProof ancestor)
+    public ConsumedRemoteResumeProof? LegacyAncestor { get; private set; }
+    internal void AttachLegacyAncestor(ConsumedRemoteResumeProof ancestor)
     {
         if (LegacyAncestor is not null || ancestor.LegacyAncestor is not null
             || ancestor.Authorization.PriorConsumedResumeTokenHash is not null)
             throw new InvalidOperationException("Only one fixed legacy ancestor may be attached.");
         LegacyAncestor = ancestor;
     }
-    internal void AttachFixedV3Ancestor(PriorFailedResumeProof ancestor)
+    internal void AttachFixedV3Ancestor(ConsumedRemoteResumeProof ancestor)
     {
         if (LegacyAncestor is not null || ancestor.Authorization.PriorConsumedResumeTokenHash is null
             || ancestor.LegacyAncestor is not { } oldest || oldest.LegacyAncestor is not null

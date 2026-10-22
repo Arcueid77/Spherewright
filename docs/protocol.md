@@ -14,6 +14,8 @@ Requests contain `protocolVersion`, `messageType=request`, UUID `requestId`, opt
 
 ## Current public MCP surface
 
+`prepare_resume_owned_game` also supports explicit `continue_completed_remote_last_exit` with optional `priorActionKnownTerminalCompleted`. It requires its independent current-context domain and immediate consumed pair, inherits the unchanged authorization window/origin, prohibits new charging and rejects new deadline/cap arguments. The completed outcome is caller-attested, not Native-authenticated; failed/unknown outcomes cannot be substituted. Its distinct prepared echo and confirmation digest are mandatory. See the [playbook](agent-playbook.md#continue-a-completed-remote-admission-under-its-original-window).
+
 Owned save preparation accepts optional `preserveQuarantinedProgress` (default false). The serialization-only opt-in requires a matching `preservesQuarantine`/`preservationGameTick` disclosure and a fresh bound post-admission paused-save proof; normal commit/idempotency and all other blockers remain. It never clears quarantine or grants Resume/Load. `BridgeError.nativeFirstFailure` and action-result `nativeFirstFailure`, when present, are detached bounded first-decision evidence, not safety certificates. Unknown values stay null/unknown; unexecuted checks are `not_reached`. See the [playbook](agent-playbook.md#preserve-progress-after-a-post-admission-idle-quarantine).
 
 ```text

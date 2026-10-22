@@ -54,7 +54,7 @@ namespace Spherewright.Plugin.Game
         private Func<VoyagerRemoteResumeAdoption, string?>? _remoteResumeAdmissionGuard = null;
         internal bool HasPendingRemoteResumeAdoption => _pendingRemoteResumeEvidence is not null && !_remoteResumeAdmitted;
         private OwnedWorldGameplayJournalCheckpoint CaptureGameplayJournalCheckpointOnMainThread() =>
-            throw new InvalidOperationException("Healthy-ticket refresh is outside this paused-save native substitute.");
+            Spherewright.Plugin.Transport.PluginJson.Deserialize<OwnedWorldGameplayJournalCheckpoint>(RemoteEvidence!.JournalJson)!;
 
         internal void BindPausedSaveShell(string session, string identity, string version, string resumeAction,
             FlightCheckpointStore checkpoints, OwnedWorldResumeTicketStore tickets, bool completed)

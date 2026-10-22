@@ -43,25 +43,34 @@ public static class VoyagerRemoteResumePolicy
 
     // Both entry points establish their own provenance before sharing these
     // unchanged phase, rollback and original finite-budget checks.
-    internal static string? RemainingJourneyBlocker(VoyagerRemoteResumeFacts f)
+    internal static string? RemainingJourneyBlocker(VoyagerRemoteResumeFacts f, NativeResumeDecisionEvidence? evidence = null)
     {
-        if (!f.RemoteLandedOutbound || !f.CheckpointFlightSucceededWithoutReload)
+        bool All(params (string Name, bool Value)[] checks)
+        {
+            evidence?.NotReached(checks.Select(c => c.Name).ToArray());
+            foreach (var c in checks) if (evidence is null ? !c.Value : !evidence.Require(c.Name, c.Value)) return false;
+            return true;
+        }
+        if (!All(("remaining_remote_landed", f.RemoteLandedOutbound), ("remaining_successful_outbound", f.CheckpointFlightSucceededWithoutReload)))
             return "remote_resume_successful_outbound_required";
-        if (f.PrimaryGameTick < 0 || f.TicketMinimumGameTick < 0 || f.LastAccountedGameTick < 0
-            || !f.LastLandedGameTick.HasValue || f.LastLandedGameTick < 0
-            || f.SourceGameTick < f.PrimaryGameTick || f.SourceGameTick < f.TicketMinimumGameTick
-            || f.SourceGameTick < f.LastAccountedGameTick || f.SourceGameTick < f.LastLandedGameTick)
+        if (!All(("remaining_primary_nonnegative", f.PrimaryGameTick >= 0), ("remaining_minimum_nonnegative", f.TicketMinimumGameTick >= 0),
+            ("remaining_accounted_nonnegative", f.LastAccountedGameTick >= 0), ("remaining_landing_observed", f.LastLandedGameTick.HasValue),
+            ("remaining_landing_nonnegative", f.LastLandedGameTick >= 0), ("remaining_source_covers_primary", f.SourceGameTick >= f.PrimaryGameTick),
+            ("remaining_source_covers_minimum", f.SourceGameTick >= f.TicketMinimumGameTick),
+            ("remaining_source_covers_accounted", f.SourceGameTick >= f.LastAccountedGameTick),
+            ("remaining_source_covers_landing", f.SourceGameTick >= f.LastLandedGameTick)))
             return "remote_resume_newer_progress_rollback_forbidden";
         if (f.RecoveryProposal is { } proposal && VoyagerRecoveryWindowPolicy.ProposalBlocker(proposal, f.NowUtc,
                 f.OriginalIssuedAtUtc, f.OriginalDeadlineUtc, f.ReturnReserveGameTicks) is { } proposalBlocker)
-            return proposalBlocker;
+        { evidence?.Require("remaining_existing_proposal_valid", false); return proposalBlocker; }
         var effectiveDeadline = f.RecoveryProposal?.DeadlineUtc ?? f.OriginalDeadlineUtc;
-        if (f.SpentGameTicks < 0 || f.MaximumGameTicks < 1 || f.ReturnReserveGameTicks < 3600
-            || (decimal)f.SpentGameTicks + f.SourceGameTick - f.LastLandedGameTick.Value
-                + f.ReturnReserveGameTicks + 1 + VoyagerLocalWalkReservePolicy.StopGameTicks > f.MaximumGameTicks
-            || f.NowUtc == default || f.OriginalDeadlineUtc == default
-            || (effectiveDeadline - f.NowUtc).TotalSeconds <= f.ReturnReserveGameTicks / 60d
-                + VoyagerRemoteIdleAdmissionPolicy.StopWallSeconds + 1d / 60d)
+        if (!All(("remaining_spent_nonnegative", f.SpentGameTicks >= 0), ("remaining_maximum_positive", f.MaximumGameTicks >= 1),
+            ("remaining_return_minimum", f.ReturnReserveGameTicks >= 3600),
+            ("remaining_original_tick_reserve", (decimal)f.SpentGameTicks + f.SourceGameTick - f.LastLandedGameTick!.Value
+                + f.ReturnReserveGameTicks + 1 + VoyagerLocalWalkReservePolicy.StopGameTicks <= f.MaximumGameTicks),
+            ("remaining_clock_observed", f.NowUtc != default), ("remaining_deadline_observed", f.OriginalDeadlineUtc != default),
+            ("remaining_original_wall_reserve", (effectiveDeadline - f.NowUtc).TotalSeconds > f.ReturnReserveGameTicks / 60d
+                + VoyagerRemoteIdleAdmissionPolicy.StopWallSeconds + 1d / 60d)))
             return "remote_resume_original_return_time_insufficient";
         return null;
     }

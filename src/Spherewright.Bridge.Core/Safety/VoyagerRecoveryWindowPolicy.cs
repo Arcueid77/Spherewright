@@ -14,17 +14,22 @@ public sealed class VoyagerRecoveryWindowProposal
 public sealed class VoyagerRecoveryAuthorization
 {
     public VoyagerRecoveryAuthorization(string resumeActionId, string evidenceFingerprint, string confirmationDigest,
-        DateTimeOffset confirmedAtUtc, VoyagerRecoveryWindowProposal proposal, string? priorConsumedResumeTokenHash = null)
+        DateTimeOffset confirmedAtUtc, VoyagerRecoveryWindowProposal proposal, string? priorConsumedResumeTokenHash = null,
+        DateTimeOffset? inheritedWindowConfirmedAtUtc = null)
     { ResumeActionId = resumeActionId; EvidenceFingerprint = evidenceFingerprint; ConfirmationDigest = confirmationDigest;
-      ConfirmedAtUtc = confirmedAtUtc; Proposal = proposal; PriorConsumedResumeTokenHash = priorConsumedResumeTokenHash; }
+      ConfirmedAtUtc = confirmedAtUtc; Proposal = proposal; PriorConsumedResumeTokenHash = priorConsumedResumeTokenHash;
+      InheritedWindowConfirmedAtUtc = inheritedWindowConfirmedAtUtc; }
     public string ResumeActionId { get; }
     public string EvidenceFingerprint { get; }
     public string ConfirmationDigest { get; }
     public DateTimeOffset ConfirmedAtUtc { get; }
     public VoyagerRecoveryWindowProposal Proposal { get; }
     public string? PriorConsumedResumeTokenHash { get; }
+    public DateTimeOffset? InheritedWindowConfirmedAtUtc { get; }
+    public DateTimeOffset WindowOriginUtc() => InheritedWindowConfirmedAtUtc ?? ConfirmedAtUtc;
     // Json.NET convention: legacy authorizations retain their exact serialized shape.
     public bool ShouldSerializePriorConsumedResumeTokenHash() => PriorConsumedResumeTokenHash is not null;
+    public bool ShouldSerializeInheritedWindowConfirmedAtUtc() => InheritedWindowConfirmedAtUtc.HasValue;
 }
 
 public static class VoyagerRecoveryWindowPolicy

@@ -34,18 +34,22 @@ internal sealed partial class GameSessionTracker
         || _flightCheckpoints.VoyagerJourneyLoadError is not null;
     internal bool HasPendingRemoteResumeAdoption => _pendingRemoteResumeEvidence is not null && !_remoteResumeAdmitted;
     internal string CurrentNativeGameVersion => _gameVersion;
+    internal Spherewright.Contracts.Players.NativeResumeFailureSnapshot? CompletedContinuationFailure => _flightCheckpoints.CompletedContinuationFailure;
+    internal void BeginCompletedContinuationDecision() => _flightCheckpoints.BeginCompletedContinuationDecision();
 
     internal bool TryOpenRemoteResumeEvidence(OwnedWorldResumeTicket ticket, OwnedSaveRecoveryLease source,
         OwnedSaveRecoveryLease primary, out VoyagerRemoteResumeEvidence? evidence, out string rejection,
-        VoyagerRecoveryWindowProposal? proposal = null, PriorFailedResumeProof? priorFailedProof = null,
+        VoyagerRecoveryWindowProposal? proposal = null, ConsumedRemoteResumeProof? priorConsumedProof = null,
         string priorSourceFingerprint = "", bool priorActionKnownTerminalFailed = false, string priorLegacySourceFingerprint = "",
         string priorIntermediateSourceFingerprint = "", bool failedRemoteReauthorization = false,
         string expectedRemoteContext = "", string validatedJournalHash = "", string legacyLocalMoveEvidenceJson = "",
-        string legacyLocalMoveEvidenceHash = "", string legacyCredentialRawFingerprint = "") =>
+        string legacyLocalMoveEvidenceHash = "", string legacyCredentialRawFingerprint = "",
+        bool completedRemoteContinuation = false, bool priorActionKnownTerminalCompleted = false) =>
         _flightCheckpoints.TryOpenRemoteResumeEvidence(ticket, source, primary, out evidence, out rejection, proposal,
-            priorFailedProof, priorSourceFingerprint, priorActionKnownTerminalFailed, priorLegacySourceFingerprint,
+            priorConsumedProof, priorSourceFingerprint, priorActionKnownTerminalFailed, priorLegacySourceFingerprint,
             priorIntermediateSourceFingerprint, failedRemoteReauthorization, expectedRemoteContext, validatedJournalHash,
-            legacyLocalMoveEvidenceJson, legacyLocalMoveEvidenceHash, legacyCredentialRawFingerprint);
+            legacyLocalMoveEvidenceJson, legacyLocalMoveEvidenceHash, legacyCredentialRawFingerprint,
+            completedRemoteContinuation, priorActionKnownTerminalCompleted);
 
     internal DateTimeOffset EffectiveVoyagerDeadline(VoyagerJourneyRecord journey)
     {

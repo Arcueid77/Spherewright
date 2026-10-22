@@ -26,6 +26,51 @@ namespace Spherewright.Mcp.Tests;
 public sealed class SpherewrightToolsTests
 {
     [Theory]
+    [InlineData("valid")] [InlineData("missing_echo")] [InlineData("failure_claim")]
+    [InlineData("new_charging")] [InlineData("origin_missing")] [InlineData("context")] [InlineData("legacy_claim")]
+    public async Task CompletedContinuationRequiresItsIndependentCompletionAndInheritedWindowEcho(string fault)
+    {
+        var context = CanonicalStateHash.Combine("synthetic-completed-current-context");
+        var p = WindowPlan(DateTimeOffset.UtcNow.AddMinutes(30)); p.RecoveryMode = OwnedWorldResumeModes.ContinueCompletedRemoteLastExit;
+        p.CompletedRemoteLastExitContinuationUsed = true; p.PriorActionTerminalCompletionAttested = true;
+        p.NewChargingProhibited = true; p.InheritedWindowConfirmedAtUtc = DateTimeOffset.UtcNow.AddSeconds(-1);
+        p.NativeChargeFeasibilityRequiresFreshCapture = false;
+        p.RemoteRecoveryContextFingerprint = context; p.CandidateGameTick = p.MinimumGameTick = 101;
+        p.ConfirmationDigest = CanonicalStateHash.Combine("synthetic-completed-plan");
+        switch (fault)
+        {
+            case "missing_echo": p.CompletedRemoteLastExitContinuationUsed = false; break;
+            case "failure_claim": p.PriorActionTerminalFailureAttested = true; break;
+            case "new_charging": p.NewChargingProhibited = false; break;
+            case "origin_missing": p.InheritedWindowConfirmedAtUtc = null; break;
+            case "context": p.RemoteRecoveryContextFingerprint = CanonicalStateHash.Combine("wrong"); break;
+            case "legacy_claim": p.PriorFailedResumeProvenanceUsed = true; break;
+        }
+        var bridge = new FakeBridgeClient(SuccessResult()) { ResumePlan = p };
+        var result = await SpherewrightTools.PrepareOwnedWorldResumeAsync(bridge, "synthetic-current",
+            recoveryMode: OwnedWorldResumeModes.ContinueCompletedRemoteLastExit, priorConsumedResumeToken: "synthetic-consumed",
+            priorActionKnownTerminalCompleted: true, expectedRemoteRecoveryContextFingerprint: context);
+        Assert.Equal(fault != "valid", result.IsError);
+        Assert.True(bridge.LastResumePrepareRequest!.PriorActionKnownTerminalCompleted);
+        Assert.Null(bridge.LastResumePrepareRequest.PriorActionKnownTerminalFailed);
+        if (fault != "valid") Assert.DoesNotContain("planToken", result.StructuredContent!.Value.GetRawText());
+    }
+
+    [Theory]
+    [InlineData("default")] [InlineData("new_deadline")] [InlineData("failed_claim")] [InlineData("unknown")]
+    public async Task CompletedContinuationNeverInfersSuccessOrRequestsNewBudget(string fault)
+    {
+        var bridge = new FakeBridgeClient(SuccessResult());
+        var result = await SpherewrightTools.PrepareOwnedWorldResumeAsync(bridge, "synthetic-current",
+            recoveryMode: fault == "default" ? OwnedWorldResumeModes.Default : OwnedWorldResumeModes.ContinueCompletedRemoteLastExit,
+            recoveryDeadlineUtc: fault == "new_deadline" ? DateTimeOffset.UtcNow.AddMinutes(30) : null,
+            priorConsumedResumeToken: "synthetic-consumed", priorActionKnownTerminalCompleted: fault == "unknown" ? null : true,
+            priorActionKnownTerminalFailed: fault == "failed_claim" ? true : null,
+            expectedRemoteRecoveryContextFingerprint: CanonicalStateHash.Combine("synthetic-context"));
+        Assert.True(result.IsError); Assert.Null(bridge.LastResumePrepareRequest);
+    }
+
+    [Theory]
     [InlineData(false, false, null, false)]
     [InlineData(true, true, 12521L, false)]
     [InlineData(true, false, 12521L, true)]

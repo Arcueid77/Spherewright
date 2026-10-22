@@ -17,6 +17,8 @@
 <a id="current-public-mcp-surface"></a>
 ## 当前公共 MCP 接口
 
+`prepare_resume_owned_game` 新增显式 `continue_completed_remote_last_exit` 和可选 `priorActionKnownTerminalCompleted`，要求独立当前上下文域及立即前驱消费双副本，继承不变的授权窗口/起点，禁止新充能，拒绝新期限/上限参数。成功终态是调用方声明，不是Native认证，不得替换失败/未知结果；须核独立prepare回显并确认准确digest。见[手册](agent-playbook.zh-CN.md#在原窗口内续接已成功的远端接管)。
+
 Owned Save 准备新增可选 `preserveQuarantinedProgress`，默认 false。序列化请求要求匹配的 `preservesQuarantine`/`preservationGameTick` 回显及 fresh 接管后暂停保存证明；普通 commit/幂等和其他阻塞均保留，不清隔离，不授予 Resume/Load。可选的 `BridgeError.nativeFirstFailure` 和动作结果 `nativeFirstFailure` 是有界、独立复制的首次判断证据，不是安全认证；未知值保留 null/unknown，未执行检查为 `not_reached`。见[手册](agent-playbook.zh-CN.md#接管后闲置隔离的进度保全)。
 
 ```text

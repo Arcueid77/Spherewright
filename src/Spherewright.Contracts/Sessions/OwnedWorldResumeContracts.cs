@@ -9,6 +9,7 @@ public static class OwnedWorldResumeModes
     public const string ReauthorizeFixedAutosave0 = "reauthorize_fixed_autosave0";
     public const string ReauthorizeVersionChangedPrimary = "reauthorize_version_changed_primary";
     public const string ReauthorizeFailedRemoteLastExit = "reauthorize_failed_remote_last_exit";
+    public const string ContinueCompletedRemoteLastExit = "continue_completed_remote_last_exit";
 }
 
 public sealed class PrepareOwnedWorldResumeRequest
@@ -31,6 +32,7 @@ public sealed class PrepareOwnedWorldResumeRequest
     public string PriorLegacySourceFingerprint { get; set; } = string.Empty;
     public string PriorIntermediateSourceFingerprint { get; set; } = string.Empty;
     public bool? PriorActionKnownTerminalFailed { get; set; }
+    public bool? PriorActionKnownTerminalCompleted { get; set; }
     public string ExpectedRemoteRecoveryContextFingerprint { get; set; } = string.Empty;
     public string LegacyLocalMoveUnknownEvidenceJson { get; set; } = string.Empty;
     public string ExpectedLegacyLocalMoveUnknownEvidenceHash { get; set; } = string.Empty;
@@ -73,6 +75,10 @@ public sealed class PreparedOwnedWorldResumePlan
     public bool PriorFailedResumeV3ProvenanceUsed { get; set; }
     public bool PriorActionTerminalFailureAttested { get; set; }
     public bool FailedRemoteLastExitReauthorizationUsed { get; set; }
+    public bool CompletedRemoteLastExitContinuationUsed { get; set; }
+    public bool PriorActionTerminalCompletionAttested { get; set; }
+    public bool NewChargingProhibited { get; set; }
+    public DateTimeOffset? InheritedWindowConfirmedAtUtc { get; set; }
     public string RemoteRecoveryContextFingerprint { get; set; } = string.Empty;
     public bool LegacyLocalMoveUnknownProvenanceUsed { get; set; }
     public string LegacyLocalMoveUnknownEvidenceHash { get; set; } = string.Empty;
