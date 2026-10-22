@@ -5,6 +5,14 @@
 
 每个会话首次游戏操作前必须阅读本指南。它也是内嵌 MCP 资源 `spherewright://agent/playbooks/opening-movement-v1`，不需要活动 Bridge 即可读取。
 
+## 打开存档并保持旧自动任务停止
+
+普通重开游戏使用 `prepare_resume_owned_game` 的 `recoveryMode=open_saved_primary`。此路径核验精确完整主档及原持久 Journal，不受旧操作票据有效期、隔离或 Journey 期限影响。仅支持同 Native 版本，原生加载完成后停在存档 tick；不自动 Resume、充能、飞行、保存、重放动作或增加执行时间。旧动作结果、Journey 已花费用和期限保持不变。新自动操作须另有适用授权并重新核验 Native 条件，玩家仍可使用游戏自身操作。
+
+核对 `opensSavedWorldOnly`、`previousAutomationRemainsStopped`、`newChargingProhibited`、证据版本1、精确候选 tick 和确认 digest。已有明确授权若覆盖本次准确披露的读档，无需反复询问；prepare 本身不接受确认。正常存档不因闲置而过期：打开后签发的新凭据仅支持以后再次读档，隔几周也可以；所有旧自动执行和恢复路径均拒绝将它当作执行许可。
+
+默认主档须覆盖票据及同 owned 固定 LastExit 的已知进度。仅在用户明确接受舍弃准确未保存区间时，额外传 `acceptUnstoredProgressLoss=true`，`minimumRecoveryGameTick` 为准确已知进度下限，`expectedRecoveryGameTick` 为精确完整主档 tick；核对 `discardedUnstoredProgressGameTicks`。来源或下限变化须重新准备匹配计划，不回退检查点/自动档，不编辑票据。身份、Journal、同 Native、持久消费或原生完成证据缺失仍拒绝。只轮询本次唯一动作；completed 表示存档已打开且旧自动任务停止，不代表旧任务恢复或发生保存。离线加载器/Pause 替身不证明 Unity 实机执行。
+
 本指南描述 DSP `0.10.35.29151` 的 0.5.0 开发接口，保留 0.4 协议接口；逐源码的离线及实机证据见[原生兼容验证](https://github.com/Arcueid77/Spherewright/blob/main/docs/validation/native-29151-preflight.zh-CN.md)。历史 29145 生产验收仍固定于 `2a7a98d1932c404e3a7abc2c11233d9c0b8780d9`。准确构建身份应读取已安装组件版本与包清单，正式版本见[发行](https://github.com/Arcueid77/Spherewright/releases)。修改本指南不会更新已安装 MCP 或冻结包。能力、当前授权、原生可执行性和最终验收是不同事实。本指南不授予游戏、加载、恢复、安装、部署或发布权限。
 
 <a id="session-entry-and-ownership"></a>

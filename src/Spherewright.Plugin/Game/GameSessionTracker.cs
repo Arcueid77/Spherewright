@@ -310,6 +310,8 @@ internal sealed partial class GameSessionTracker : IDisposable
 
         if (_expectedResumeTicket is not null && !IsCurrentSessionOwned)
         {
+            if (_savedWorldOpen is not null && (!_savedWorldOpen.LoadObserved || _savedWorldOpen.FirstFailure is not null
+                || _resumeAdoptionError is not null)) return;
             if (HasPendingRemoteResumeAdoption && !_remoteResumeLoadCompleteObserved)
                 return; // Only the exact Native loader event crosses this boundary.
             if (!TryValidateResumeCandidate(currentData, _expectedResumeTicket,
@@ -335,6 +337,7 @@ internal sealed partial class GameSessionTracker : IDisposable
             _ownedSaveName = ticket.OwnedSaveName;
             _expectedResumeTicket = null;
             _ownedSaveState = OwnedSaveStates.WaitingToSave;
+            StopPreviousAutomationForSavedWorldOpen();
             _ownedSaveError = null;
             _ownedSessionStartTick = GameMain.gameTick;
             _lastOwnedSaveGameTick = null;
@@ -378,6 +381,11 @@ internal sealed partial class GameSessionTracker : IDisposable
             throw new InvalidOperationException("No matching resumed gameplay-journal checkpoint is pending.");
         }
 
+        if (_savedWorldOpen is not null)
+        {
+            ConfirmSavedWorldOpenJournal(ticket, checkpoint);
+            return;
+        }
         _resumeTickets.Consume(ticket.ResumeToken);
         ConfirmedPlannedResumeMinimumGameTick = string.IsNullOrWhiteSpace(ticket.QuarantineActionId)
             ? _resumeSourceLease?.Prefix.GameTick ?? ticket.MinimumGameTick : (long?)null;
@@ -395,6 +403,8 @@ internal sealed partial class GameSessionTracker : IDisposable
 
     public void RejectResumeGameplayJournalContinuityOnMainThread(string rejection)
     {
+        if (_savedWorldOpen is not null)
+            _savedWorldOpen.ConfirmJournal(GameMain.data, GameMain.gameTick, false, () => { });
         if (_pendingJournalResumeTicket is null)
         {
             return;
@@ -877,7 +887,8 @@ internal sealed partial class GameSessionTracker : IDisposable
         bool reauthorizingFixedAutosave0 = false, OwnedSaveRecoveryLease? primaryLease = null,
         VoyagerRemoteResumeEvidence? remoteEvidence = null, string? remoteResumeActionId = null,
         OwnedWorldResumeSourceKind resumeSource = OwnedWorldResumeSourceKind.None,
-        VoyagerRecoveryAuthorization? recoveryAuthorization = null)
+        VoyagerRecoveryAuthorization? recoveryAuthorization = null,
+        bool savedWorldOpenOnly = false, string? savedWorldOpenActionId = null)
     {
         if (ticket is null)
         {
@@ -896,7 +907,7 @@ internal sealed partial class GameSessionTracker : IDisposable
 
         if (reauthorizingFixedAutosave0 && (!reauthorizingExpiredPrimary || primaryLease is null))
             throw new InvalidOperationException("Fixed AutoSave0 recovery requires verified protected provenance, explicit authority and the primary lease.");
-        if (!reauthorizingFixedAutosave0 && primaryLease is not null && remoteEvidence is null)
+        if (!savedWorldOpenOnly && !reauthorizingFixedAutosave0 && primaryLease is not null && remoteEvidence is null)
             throw new InvalidOperationException("A primary overwrite-target lease belongs only to fixed AutoSave0 recovery.");
         if (reauthorizingExpiredPrimary && (sourceLease is null || journalLease is null))
             throw new InvalidOperationException("Protected reauthorization requires verified source and original-Journal leases.");
@@ -926,13 +937,23 @@ internal sealed partial class GameSessionTracker : IDisposable
             || recoveryAuthorization.Proposal.MaximumChargeWallSeconds != proposal.MaximumChargeWallSeconds)
             || remoteEvidence?.RecoveryProposal is not null && recoveryAuthorization is null)
             throw new InvalidOperationException("remote_resume_recovery_authorization_handoff_unproved");
-        if (remoteEvidence is null && sourceLease is not null && (ticket.GameplayJournalCheckpoint is null
+        if (savedWorldOpenOnly && (sourceLease is null || journalLease is null
+            || remoteEvidence is not null || recoveryAuthorization is not null
+            || !reauthorizingExpiredPrimary || !Guid.TryParse(savedWorldOpenActionId, out _)
+            || resumeSource != OwnedWorldResumeSourceKind.OwnedPrimary
+            || ticket.GameplayJournalCheckpoint is null || !sourceLease.Prefix.MatchesExpectedIdentity
+            || !sourceLease.Prefix.Peaceful || sourceLease.Prefix.GameVersion != _gameVersion || ticket.GameVersion != _gameVersion
+            || primaryLease is not null && !primaryLease.Prefix.MatchesExpectedIdentity))
+            throw new InvalidOperationException("saved_world_open_lease_handoff_unproved");
+        if (!savedWorldOpenOnly && remoteEvidence is null && sourceLease is not null && (ticket.GameplayJournalCheckpoint is null
             || !string.IsNullOrWhiteSpace(ticket.QuarantineActionId)
             || !sourceLease.Prefix.MatchesExpectedIdentity
             || !OwnedWorldReauthorizationPolicy.AllowsLeaseTick(sourceLease.Prefix.GameTick,
                 ticket.MinimumGameTick, reauthorizingExpiredPrimary, reauthorizingFixedAutosave0)))
             throw new InvalidOperationException("Verified recovery requires its mode-specific tick and a healthy Journal-bearing ticket.");
 
+        ResetSavedWorldOpen(clearFailure: true);
+        if (savedWorldOpenOnly) _savedWorldOpen = new SavedWorldOpenGuard(savedWorldOpenActionId!, sourceLease!.Prefix.GameTick);
         _expectedResumeTicket = ticket;
         _pendingRemoteResumeEvidence = remoteEvidence;
         _pendingRemoteResumeActionId = remoteResumeActionId;
@@ -951,6 +972,7 @@ internal sealed partial class GameSessionTracker : IDisposable
 
     public void CancelExpectedResumedSession()
     {
+        ResetSavedWorldOpen();
         CancelRemoteResumeAdmission();
         _expectedResumeTicket = null;
         ReleaseResumeSourceLease();
@@ -979,6 +1001,7 @@ internal sealed partial class GameSessionTracker : IDisposable
 
     public void Dispose()
     {
+        ResetSavedWorldOpen();
         CancelRemoteResumeAdmission();
         ReleaseResumeSourceLease();
         ReleaseFlightCheckpointSourceLease();
@@ -1090,6 +1113,11 @@ internal sealed partial class GameSessionTracker : IDisposable
         out string? rejection)
     {
         rejection = null;
+        if (_savedWorldOpen is not null)
+        {
+            rejection = "Saved-world opening grants no automatic-task authority; fresh scoped execution admission is required.";
+            return false;
+        }
         if (!IsCurrentSessionOwned
             || !string.Equals(_writeHealth, WriteHealthStates.Quarantined, StringComparison.Ordinal))
         {

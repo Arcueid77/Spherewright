@@ -10,6 +10,7 @@ public static class OwnedWorldResumeModes
     public const string ReauthorizeVersionChangedPrimary = "reauthorize_version_changed_primary";
     public const string ReauthorizeFailedRemoteLastExit = "reauthorize_failed_remote_last_exit";
     public const string ContinueCompletedRemoteLastExit = "continue_completed_remote_last_exit";
+    public const string OpenSavedPrimary = "open_saved_primary";
 }
 
 public sealed class PrepareOwnedWorldResumeRequest
@@ -19,6 +20,9 @@ public sealed class PrepareOwnedWorldResumeRequest
     public string RecoveryMode { get; set; } = OwnedWorldResumeModes.Default;
 
     public bool UserConfirmedInConversation { get; set; }
+
+    /// <summary>Only an exact disclosed saved-primary rollback; never an automatic fallback.</summary>
+    public bool AcceptUnstoredProgressLoss { get; set; }
 
     public long? MinimumRecoveryGameTick { get; set; }
 
@@ -78,6 +82,9 @@ public sealed class PreparedOwnedWorldResumePlan
     public bool CompletedRemoteLastExitContinuationUsed { get; set; }
     public bool PriorActionTerminalCompletionAttested { get; set; }
     public bool NewChargingProhibited { get; set; }
+    public bool OpensSavedWorldOnly { get; set; }
+    public bool PreviousAutomationRemainsStopped { get; set; }
+    public long? DiscardedUnstoredProgressGameTicks { get; set; }
     public DateTimeOffset? InheritedWindowConfirmedAtUtc { get; set; }
     public string RemoteRecoveryContextFingerprint { get; set; } = string.Empty;
     public bool LegacyLocalMoveUnknownProvenanceUsed { get; set; }

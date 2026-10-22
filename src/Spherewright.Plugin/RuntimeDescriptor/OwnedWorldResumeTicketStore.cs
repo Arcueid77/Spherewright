@@ -92,7 +92,7 @@ internal sealed class OwnedWorldResumeTicketStore
         int planetId,
         long minimumGameTick,
         OwnedWorldGameplayJournalCheckpoint gameplayJournalCheckpoint,
-        string quarantineActionId)
+        string quarantineActionId, bool savedWorldOpenOnly = false)
     {
         if (string.IsNullOrWhiteSpace(ownedSaveName)
             || string.IsNullOrWhiteSpace(sessionId)
@@ -126,6 +126,7 @@ internal sealed class OwnedWorldResumeTicketStore
             MinimumGameTick = minimumGameTick,
             GameplayJournalCheckpoint = gameplayJournalCheckpoint,
             QuarantineActionId = quarantineActionId,
+            SavedWorldOpenOnly = savedWorldOpenOnly ? true : (bool?)null,
             IssuedAtUtc = issuedAt,
             ExpiresAtUtc = issuedAt.AddHours(24),
         };
@@ -165,7 +166,7 @@ internal sealed class OwnedWorldResumeTicketStore
             return false;
         }
 
-        if (IsConsumed(candidate.ResumeToken)
+        if (candidate.SavedWorldOpenOnly == true || IsConsumed(candidate.ResumeToken)
             || candidate.Version != TicketVersion
             || !FixedTimeEquals(candidate.ResumeToken, resumeToken)
             || !string.Equals(candidate.GameVersion, _gameVersion, StringComparison.Ordinal)
@@ -545,6 +546,20 @@ internal sealed class OwnedWorldResumeTicketStore
         out OwnedWorldResumeTicket? ticket, out string fingerprint, out string rejection)
         => TryGetProtectedProvenance(resumeToken, false, out ticket, out fingerprint, out rejection);
 
+    public bool TryGetSavedWorldOpenProvenance(string resumeToken,
+        out OwnedWorldResumeTicket? ticket, out string fingerprint, out string rejection)
+        => TryGetProtectedProvenance(resumeToken, false, out ticket, out fingerprint, out rejection,
+            savedWorldOpenOnly: true);
+
+    public void ArmFromOpenedSavedWorld(string ownedSaveName, string sessionId, int planetId,
+        long savedGameTick, string openActionId, OwnedWorldGameplayJournalCheckpoint checkpoint)
+    {
+        if (!Guid.TryParse(openActionId, out _)) throw new InvalidOperationException("Exact saved-world opening action required.");
+        // This new credential proves owned-file access only. Active automation
+        // and all existing execution/remote-recovery modes explicitly reject it.
+        Arm(ownedSaveName, sessionId, planetId, savedGameTick, checkpoint, openActionId, savedWorldOpenOnly: true);
+    }
+
     public bool TryGetFixedAutosaveProvenance(string resumeToken,
         out OwnedWorldResumeTicket? ticket, out string fingerprint, out string rejection)
         => TryGetProtectedProvenance(resumeToken, true, out ticket, out fingerprint, out rejection);
@@ -556,7 +571,7 @@ internal sealed class OwnedWorldResumeTicketStore
 
     private bool TryGetProtectedProvenance(string resumeToken, bool requireActiveCredential,
         out OwnedWorldResumeTicket? ticket, out string fingerprint, out string rejection,
-        bool versionChangedPrimary = false)
+        bool versionChangedPrimary = false, bool savedWorldOpenOnly = false)
     {
         ticket = null;
         fingerprint = string.Empty;
@@ -584,7 +599,8 @@ internal sealed class OwnedWorldResumeTicketStore
                 || (_currentTicket is not null && !string.Equals(PluginJson.Serialize(_currentTicket),
                     PluginJson.Serialize(runtime), StringComparison.Ordinal))
                 || runtime.Version != TicketVersion || !FixedTimeEquals(runtime.ResumeToken, resumeToken)
-                || !(versionChangedPrimary
+                || (!savedWorldOpenOnly && runtime.SavedWorldOpenOnly == true)
+                || !(savedWorldOpenOnly ? string.Equals(runtime.GameVersion, _gameVersion, StringComparison.Ordinal) : versionChangedPrimary
                     ? OwnedWorldPrimaryMigrationPolicy.IsSupportedPair(runtime.GameVersion, _gameVersion)
                     : requireActiveCredential
                     ? string.Equals(runtime.GameVersion, _gameVersion, StringComparison.Ordinal)
@@ -596,7 +612,10 @@ internal sealed class OwnedWorldResumeTicketStore
                 || string.IsNullOrWhiteSpace(runtime.SourceSessionId)
                 || runtime.SourceProcessId <= 0 || string.IsNullOrWhiteSpace(runtime.SourceBridgeInstanceId)
                 || runtime.ExpectedPlanetId <= 0 || runtime.MinimumGameTick < 0
-                || !(requireActiveCredential ? OwnedWorldReauthorizationPolicy.AllowsActiveProvenance(
+                || !(savedWorldOpenOnly
+                    ? runtime.GameplayJournalCheckpoint is not null && runtime.IssuedAtUtc != default
+                        && runtime.IssuedAtUtc <= DateTimeOffset.UtcNow && runtime.ExpiresAtUtc > runtime.IssuedAtUtc
+                    : requireActiveCredential ? OwnedWorldReauthorizationPolicy.AllowsActiveProvenance(
                     string.IsNullOrWhiteSpace(runtime.QuarantineActionId), runtime.GameplayJournalCheckpoint is not null,
                     IsConsumed(resumeToken), runtime.IssuedAtUtc, runtime.ExpiresAtUtc, DateTimeOffset.UtcNow)
                     : OwnedWorldReauthorizationPolicy.AllowsExpiredProvenance(
@@ -604,7 +623,8 @@ internal sealed class OwnedWorldResumeTicketStore
                     IsConsumed(resumeToken), runtime.IssuedAtUtc, runtime.ExpiresAtUtc, DateTimeOffset.UtcNow))) return false;
             if (!TryValidateGameplayJournalContinuity(runtime, true, out var journalHash, out rejection)) return false;
             ticket = runtime;
-            fingerprint = CanonicalStateHash.Combine(versionChangedPrimary ? "active-version-primary-provenance-v1"
+            fingerprint = CanonicalStateHash.Combine(savedWorldOpenOnly ? "saved-world-file-access-v1"
+                : versionChangedPrimary ? "active-version-primary-provenance-v1"
                 : requireActiveCredential ? "active-fixed-autosave0-provenance-v1"
                 : "expired-primary-provenance-v2", PluginJson.Serialize(runtime), journalHash, _gameVersion);
             rejection = string.Empty;
@@ -620,10 +640,10 @@ internal sealed class OwnedWorldResumeTicketStore
 
     public bool TryConsumeReauthorization(string resumeToken, string expectedFingerprint,
         string actionId, string confirmationDigest, bool requireActiveCredential = false,
-        bool versionChangedPrimary = false)
+        bool versionChangedPrimary = false, bool savedWorldOpenOnly = false)
     {
         if (!Guid.TryParse(actionId, out _) || string.IsNullOrWhiteSpace(confirmationDigest)
-            || !TryGetProtectedProvenance(resumeToken, requireActiveCredential, out var ticket, out var currentFingerprint, out _, versionChangedPrimary)
+            || !TryGetProtectedProvenance(resumeToken, requireActiveCredential, out var ticket, out var currentFingerprint, out _, versionChangedPrimary, savedWorldOpenOnly)
             || !FixedTimeEquals(currentFingerprint, expectedFingerprint)) return false;
         var tokenHash = HashToken(resumeToken);
         var handoffDirectory = Path.GetDirectoryName(_handoffTicketPath)!;
@@ -649,14 +669,14 @@ internal sealed class OwnedWorldResumeTicketStore
     }
 
     public FileStream OpenReauthorizationJournalLease(OwnedWorldResumeTicket ticket, string provenance,
-        bool requireActiveCredential = false, bool versionChangedPrimary = false)
+        bool requireActiveCredential = false, bool versionChangedPrimary = false, bool savedWorldOpenOnly = false)
     {
         var identity = GameplayJournalIdentity.HashOwnedSaveIdentity(ticket.OwnedSaveName);
         var stream = new FileStream(Path.Combine(_runtimeDirectory, "journals", $"gameplay-{identity}.json"),
             FileMode.Open, FileAccess.Read, FileShare.Read);
         try
         {
-            if (!TryGetProtectedProvenance(ticket.ResumeToken, requireActiveCredential, out _, out var fresh, out _, versionChangedPrimary)
+            if (!TryGetProtectedProvenance(ticket.ResumeToken, requireActiveCredential, out _, out var fresh, out _, versionChangedPrimary, savedWorldOpenOnly)
                 || !FixedTimeEquals(provenance, fresh))
                 throw new IOException("The exact journal changed before its protected load lease.");
             return stream;
@@ -1030,6 +1050,9 @@ internal sealed class OwnedWorldResumeTicket
     public OwnedWorldGameplayJournalCheckpoint? GameplayJournalCheckpoint { get; set; }
 
     public string QuarantineActionId { get; set; } = string.Empty;
+
+    public bool? SavedWorldOpenOnly { get; set; }
+    public bool ShouldSerializeSavedWorldOpenOnly() => SavedWorldOpenOnly.HasValue;
 
     public DateTimeOffset IssuedAtUtc { get; set; }
 

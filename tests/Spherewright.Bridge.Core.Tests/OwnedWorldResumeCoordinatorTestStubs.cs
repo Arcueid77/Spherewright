@@ -67,6 +67,15 @@ internal sealed partial class GameSessionTracker : IDisposable
     internal Action? BeforeRemoteLoaderBind { get; set; }
     internal bool RemoteLoaderObserverPrepared { get; private set; }
     internal bool RemoteLoaderObserverBound { get; private set; }
+    internal SavedWorldOpenGuard? SavedOpenGuard { get; private set; }
+    internal Spherewright.Contracts.Players.NativeResumeFailureSnapshot? SavedWorldOpenFirstFailure => SavedOpenGuard?.FirstFailure;
+    internal bool SavedOpenObserverPrepared { get; private set; }
+    internal string? SavedWorldOpenSessionId => Snapshot.SessionId;
+    internal bool SavedOpenObserverBound { get; private set; }
+    internal void PrepareSavedWorldOpenNativeObserver() => SavedOpenObserverPrepared = true;
+    internal void BindSavedWorldOpenNativeObserver() => SavedOpenObserverBound = true;
+    internal void RecordSavedWorldOpenDispatchFailure(string error) => ResumeAdoptionError = "saved_world_open_dispatch_outcome_unknown:" + error;
+    internal bool SavedWorldOpenCompleted(string actionId) => SavedOpenGuard is { Completed: true } guard && guard.ActionId == actionId;
     internal void PrepareRemoteResumeNativeLoadObserver() => RemoteLoaderObserverPrepared = true;
     internal void BindRemoteResumeNativeLoaderAfterDispatch()
     {
@@ -97,7 +106,8 @@ internal sealed partial class GameSessionTracker : IDisposable
         IDisposable? journalLease = null, bool reauthorizingFixedAutosave0 = false,
         OwnedSaveRecoveryLease? primaryLease = null, VoyagerRemoteResumeEvidence? remoteEvidence = null,
         string? remoteResumeActionId = null, OwnedWorldResumeSourceKind resumeSource = OwnedWorldResumeSourceKind.None,
-        VoyagerRecoveryAuthorization? recoveryAuthorization = null)
+        VoyagerRecoveryAuthorization? recoveryAuthorization = null,
+        bool savedWorldOpenOnly = false, string? savedWorldOpenActionId = null)
     {
         SourceLease = sourceLease;
         ResetContactForExpectedWorld();
@@ -109,6 +119,7 @@ internal sealed partial class GameSessionTracker : IDisposable
         RemoteResumeActionId = remoteResumeActionId;
         ResumeSource = resumeSource;
         RecoveryAuthorization = recoveryAuthorization;
+        SavedOpenGuard = savedWorldOpenOnly ? new SavedWorldOpenGuard(savedWorldOpenActionId!, sourceLease!.Prefix.GameTick) : null;
     }
     internal void CancelExpectedResumedSession() => Dispose();
     public void Dispose()

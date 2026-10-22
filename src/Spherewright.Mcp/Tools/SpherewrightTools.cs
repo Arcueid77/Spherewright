@@ -1476,12 +1476,14 @@ public static partial class SpherewrightTools
         [Description("Required only for recoveryMode=reauthorize_failed_remote_last_exit: independently captured exact current remote-context sha256 fingerprint, not a path or JSON. Requires the immediate consumed token and known-terminal-failed caller attestation, with no legacy source witnesses. Active quarantined fixed LastExit only, exact zero-progress landed+1 edge, complete Journal/current primary/original checkpoint binding and charge caps no greater than prior authorization. Fresh disclosure and applicable explicit authority are required; this is new current-context authorization, never an opened old commitment or durable Native terminal certificate.")] string expectedRemoteRecoveryContextFingerprint = "",
         [Description("Optional default-only legacy local-Move outcome_unknown carrier, at most64KiB immutable UTF-8 JSON; no path. Kind/failure/source revision are caller-attested protected public captures, not authenticated Native outcome proof. Exact documented eight-field schema, current quarantined ticket/full LastExit/primary/successful checkpoint/Journal binding and fresh strict adoption remain required. Cannot combine with prior-failure witnesses or another recovery mode.")] string legacyLocalMoveUnknownEvidenceJson = "",
         [Description("Lowercase64hex SHA256 of the exact UTF-8 legacyLocalMoveUnknownEvidenceJson, required together. A matching hash binds bytes, not their truth. MCP withholds a plan unless the Plugin echoes this exact hash and explicit caller-attestation disclosure; commit retains the original unknown result.")] string expectedLegacyLocalMoveUnknownEvidenceHash = "",
-        [Description("Only for continue_completed_remote_last_exit: explicit caller attestation backed by the retained original Native receipt that the immediately prior resume terminally completed. It is never inferred from consumption or substituted for failed/unknown. This mode inherits the identical existing absolute window and original origin; it accepts no new deadline/caps and prohibits new charging.")] bool? priorActionKnownTerminalCompleted = null)
+        [Description("Only for continue_completed_remote_last_exit: explicit caller attestation backed by the retained original Native receipt that the immediately prior resume terminally completed. It is never inferred from consumption or substituted for failed/unknown. This mode inherits the identical existing absolute window and original origin; it accepts no new deadline/caps and prohibits new charging.")] bool? priorActionKnownTerminalCompleted = null,
+        [Description("Only with recoveryMode=open_saved_primary: the owner explicitly accepts losing the exact unstored progress between minimumRecoveryGameTick (the current known floor) and expectedRecoveryGameTick (the exact complete primary). No arbitrary older save, automatic fallback or task resumption. This mode can open days later despite an expired automation credential or Journey; the exact world loads paused, old automation remains stopped and no automatic Save/charging occurs. Without this flag the primary must cover all known progress.")] bool acceptUnstoredProgressLoss = false)
     {
         var request = new PrepareOwnedWorldResumeRequest
         {
             ResumeToken = resumeToken, RecoveryMode = recoveryMode,
             UserConfirmedInConversation = userConfirmedInConversation,
+            AcceptUnstoredProgressLoss = acceptUnstoredProgressLoss,
             MinimumRecoveryGameTick = minimumRecoveryGameTick, ExpectedRecoveryGameTick = expectedRecoveryGameTick,
             RecoveryDeadlineUtc = recoveryDeadlineUtc, RecoveryScope = recoveryScope,
             MaximumChargeGameTicks = maximumChargeGameTicks, MaximumChargeWallSeconds = maximumChargeWallSeconds,
@@ -1501,6 +1503,13 @@ public static partial class SpherewrightTools
         var result = await bridgeClient.PrepareOwnedWorldResumeAsync(
             request,
             cancellationToken).ConfigureAwait(false);
+        if (recoveryMode == OwnedWorldResumeModes.OpenSavedPrimary && result.Success
+            && (result.Value is null || !OwnedSavedWorldOpenPolicy.HasMatchingEcho(result.Value)
+                || result.Value.DiscardedUnstoredProgressGameTicks != (acceptUnstoredProgressLoss
+                    ? minimumRecoveryGameTick - expectedRecoveryGameTick : 0)))
+            result = BridgeCallResult<PreparedOwnedWorldResumePlan>.Failed(BridgeError.Create(BridgeErrorCodes.BridgeNotReady,
+                "The Plugin did not echo saved-world-only opening, stopped automation and exact progress loss; no token is exposed.",
+                false, "Use matching Plugin/MCP bytes; opening world data must not renew old task authority."));
         if (VoyagerLegacyLocalMoveUnknownPolicy.HasEvidence(request) && result.Success
             && (result.Value is null || !VoyagerLegacyLocalMoveUnknownPolicy.HasMatchingEcho(request, result.Value)))
             result = BridgeCallResult<PreparedOwnedWorldResumePlan>.Failed(BridgeError.Create(BridgeErrorCodes.BridgeNotReady,

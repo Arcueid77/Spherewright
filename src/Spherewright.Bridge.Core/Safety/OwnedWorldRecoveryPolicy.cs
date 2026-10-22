@@ -10,6 +10,10 @@ public static class OwnedWorldRecoveryPolicy
 
     public static string? ValidateRequest(PrepareOwnedWorldResumeRequest request)
     {
+        if (request.RecoveryMode == OwnedWorldResumeModes.OpenSavedPrimary)
+            return OwnedSavedWorldOpenPolicy.ValidateRequest(request);
+        if (request.AcceptUnstoredProgressLoss)
+            return "Progress-loss acceptance belongs only to the explicit saved-primary opening mode.";
         if (request.RecoveryMode == OwnedWorldResumeModes.ContinueCompletedRemoteLastExit)
             return VoyagerCompletedRemoteContinuationPolicy.ValidateRequest(request);
         if (request.PriorActionKnownTerminalCompleted.HasValue)

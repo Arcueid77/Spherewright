@@ -26,6 +26,55 @@ namespace Spherewright.Mcp.Tests;
 public sealed class SpherewrightToolsTests
 {
     [Theory]
+    [InlineData("valid")] [InlineData("no_saved_open")] [InlineData("tasks_resumed")]
+    [InlineData("charging")] [InlineData("new_clock")] [InlineData("loss")] [InlineData("failed_claim")]
+    public async Task SavedWorldOpeningRequiresAnIndependentNoAutomationEcho(string fault)
+    {
+        var p = new PreparedOwnedWorldResumePlan
+        {
+            Prepared = true, RecoveryMode = OwnedWorldResumeModes.OpenSavedPrimary,
+            RecoveryEvidenceVersion = 1, PlanToken = "synthetic-saved-open-plan", ConfirmationDigest = "synthetic-saved-open-digest",
+            OpensSavedWorldOnly = true, PreviousAutomationRemainsStopped = true, NewChargingProhibited = true,
+            UserConfirmationRequired = true, ExactEmbeddedIdentityVerified = true,
+            CandidateGameTick = 77, MinimumGameTick = 77, DiscardedUnstoredProgressGameTicks = 0,
+        };
+        switch (fault)
+        {
+            case "no_saved_open": p.OpensSavedWorldOnly = false; break;
+            case "tasks_resumed": p.PreviousAutomationRemainsStopped = false; break;
+            case "charging": p.NewChargingProhibited = false; break;
+            case "new_clock": p.EffectiveRecoveryDeadlineUtc = DateTimeOffset.UtcNow.AddHours(1); break;
+            case "loss": p.DiscardedUnstoredProgressGameTicks = 1; break;
+            case "failed_claim": p.PriorActionTerminalFailureAttested = true; break;
+        }
+        var bridge = new FakeBridgeClient(SuccessResult()) { ResumePlan = p };
+        var result = await SpherewrightTools.PrepareOwnedWorldResumeAsync(bridge, "synthetic-owned-file-access",
+            recoveryMode: OwnedWorldResumeModes.OpenSavedPrimary);
+        Assert.Equal(fault != "valid", result.IsError);
+        if (fault != "valid") Assert.DoesNotContain("synthetic-saved-open-plan", result.StructuredContent!.Value.GetRawText());
+    }
+
+    [Fact]
+    public async Task SavedWorldLossApprovalBindsTheExactFloorAndSavedTick()
+    {
+        var bridge = new FakeBridgeClient(SuccessResult()) { ResumePlan = new()
+        {
+            Prepared = true, RecoveryMode = OwnedWorldResumeModes.OpenSavedPrimary, RecoveryEvidenceVersion = 1,
+            PlanToken = "synthetic-saved-open-plan", ConfirmationDigest = "synthetic-saved-open-digest",
+            OpensSavedWorldOnly = true, PreviousAutomationRemainsStopped = true, NewChargingProhibited = true,
+            UserConfirmationRequired = true, ExactEmbeddedIdentityVerified = true,
+            CandidateGameTick = 77, MinimumGameTick = 77, DiscardedUnstoredProgressGameTicks = 11,
+        } };
+        var result = await SpherewrightTools.PrepareOwnedWorldResumeAsync(bridge, "synthetic-current-file-access",
+            recoveryMode: OwnedWorldResumeModes.OpenSavedPrimary, minimumRecoveryGameTick: 88,
+            expectedRecoveryGameTick: 77, acceptUnstoredProgressLoss: true);
+        Assert.False(result.IsError);
+        Assert.True(bridge.LastResumePrepareRequest!.AcceptUnstoredProgressLoss);
+        Assert.Equal(88, bridge.LastResumePrepareRequest.MinimumRecoveryGameTick);
+        Assert.Equal(77, bridge.LastResumePrepareRequest.ExpectedRecoveryGameTick);
+    }
+
+    [Theory]
     [InlineData("valid")] [InlineData("missing_echo")] [InlineData("failure_claim")]
     [InlineData("new_charging")] [InlineData("origin_missing")] [InlineData("context")] [InlineData("legacy_claim")]
     public async Task CompletedContinuationRequiresItsIndependentCompletionAndInheritedWindowEcho(string fault)

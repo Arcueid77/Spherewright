@@ -14,7 +14,7 @@ namespace Spherewright.Bridge.Core.Tests;
 public sealed class OwnedResumeNativeSubstitutesCollection { }
 
 [Collection("Owned resume native substitutes")]
-public sealed class OwnedWorldAutosaveCoordinatorIntegrationTests
+public sealed partial class OwnedWorldAutosaveCoordinatorIntegrationTests
 {
     private const string Identity = "synthetic-autosave-owned-identity";
     private const string Version = "0.10.35.29088";
