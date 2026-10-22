@@ -13,7 +13,20 @@ namespace Spherewright.Plugin.RuntimeDescriptor;
 internal sealed partial class FlightCheckpointStore
 {
     private Spherewright.Contracts.Players.NativeResumeFailureSnapshot? _completedContinuationFailure;
+    private Spherewright.Contracts.Players.NativeResumeFailureSnapshot? _remotePrimaryRecoveryFailure;
     internal Spherewright.Contracts.Players.NativeResumeFailureSnapshot? CompletedContinuationFailure => _completedContinuationFailure?.Copy();
+    internal Spherewright.Contracts.Players.NativeResumeFailureSnapshot? RemotePrimaryRecoveryFailure => _remotePrimaryRecoveryFailure?.Copy();
+    internal void BeginRemotePrimaryDecision() => _remotePrimaryRecoveryFailure = null;
+    internal void RecordRemotePrimarySourceFailure(string code, string predicate, string? exceptionType = null)
+    {
+        if (_remotePrimaryRecoveryFailure is not null) return;
+        var e = new NativeResumeDecisionEvidence("remote_primary_source", null, DateTimeOffset.UtcNow, false);
+        e.NotReached("native_load", "native_initialization", "native_contact", "healthy_takeover");
+        e.Require(predicate, false);
+        _remotePrimaryRecoveryFailure = e.Failure(Spherewright.Contracts.Errors.BridgeErrorCodes.StaleState, predicate);
+        _remotePrimaryRecoveryFailure.Observations["source_error"] = code;
+        if (exceptionType is not null) _remotePrimaryRecoveryFailure.Observations["exception_type"] = exceptionType;
+    }
     internal void BeginCompletedContinuationDecision() => _completedContinuationFailure = null;
     public bool TryOpenRemoteResumeEvidence(OwnedWorldResumeTicket ticket, OwnedSaveRecoveryLease source,
         OwnedSaveRecoveryLease primary, out VoyagerRemoteResumeEvidence? evidence, out string rejection,
@@ -22,15 +35,17 @@ internal sealed partial class FlightCheckpointStore
         string priorIntermediateSourceFingerprint = "", bool failedRemoteReauthorization = false,
         string expectedRemoteContext = "", string validatedJournalHash = "",
         string legacyLocalMoveEvidenceJson = "", string legacyLocalMoveEvidenceHash = "", string legacyCredentialRawFingerprint = "",
-        bool completedRemoteContinuation = false, bool priorActionKnownTerminalCompleted = false)
+        bool completedRemoteContinuation = false, bool priorActionKnownTerminalCompleted = false,
+        PrepareOwnedWorldResumeRequest? remotePrimaryRequest = null, OwnedSaveRecoveryLease? progressLastExit = null)
     {
         evidence = null;
         _completedContinuationFailure = null;
+        _remotePrimaryRecoveryFailure = null;
         rejection = string.Empty;
         FileStream? ticketLease = null; FileStream? journeyLease = null; OwnedSaveRecoveryLease? checkpointLease = null;
         try
         {
-            if ((failedRemoteReauthorization || completedRemoteContinuation || !string.IsNullOrEmpty(legacyLocalMoveEvidenceJson))
+            if ((remotePrimaryRequest is not null || failedRemoteReauthorization || completedRemoteContinuation || !string.IsNullOrEmpty(legacyLocalMoveEvidenceJson))
                 && ((File.GetAttributes(_ticketPath) & FileAttributes.ReparsePoint) != 0
                 || (File.GetAttributes(VoyagerJourneyPath) & FileAttributes.ReparsePoint) != 0))
                 throw new InvalidDataException("The current original context must use regular protected records.");
@@ -118,7 +133,7 @@ internal sealed partial class FlightCheckpointStore
             }
             var facts = new VoyagerRemoteResumeFacts
             {
-                DefaultLastExit = true,
+                DefaultLastExit = remotePrimaryRequest is null,
                 ExactOwnedIdentityAndVersion = source.Prefix.MatchesExpectedIdentity && primary.Prefix.MatchesExpectedIdentity
                     && checkpoint.OwnedSaveName == ticket.OwnedSaveName && journey.OwnedSaveName == ticket.OwnedSaveName
                     && source.Prefix.GameVersion == ticket.GameVersion && primary.Prefix.GameVersion == ticket.GameVersion
@@ -145,6 +160,32 @@ internal sealed partial class FlightCheckpointStore
                 NowUtc = DateTimeOffset.UtcNow, OriginalDeadlineUtc = journey.DeadlineUtc,
                 OriginalIssuedAtUtc = journey.IssuedAtUtc, RecoveryProposal = recoveryProposal,
             };
+            if (remotePrimaryRequest is not null)
+            {
+                var decision = new NativeResumeDecisionEvidence("remote_primary_recovery_prepare", null, facts.NowUtc, true);
+                decision.NotReached("primary_matching_file_leases", "primary_progress_source_identity", "primary_mode_unmixed");
+                var sourceBound = decision.Require("primary_matching_file_leases", source.Fingerprint == primary.Fingerprint)
+                    && decision.Require("primary_progress_source_identity", progressLastExit is null || progressLastExit.Prefix.MatchesExpectedIdentity)
+                    && decision.Require("primary_mode_unmixed", !failedRemoteReauthorization && !completedRemoteContinuation
+                        && priorConsumedProof is null && string.IsNullOrEmpty(legacyLocalMoveEvidenceJson));
+                var knownProgress = Math.Max(ticket.MinimumGameTick, progressLastExit?.Prefix.GameTick ?? 0);
+                rejection = sourceBound
+                    ? VoyagerRemotePrimaryRecoveryPolicy.Blocker(remotePrimaryRequest, facts, knownProgress, decision) ?? string.Empty
+                    : "remote_primary_source_or_mode_unproved";
+                if (rejection.Length != 0)
+                {
+                    _remotePrimaryRecoveryFailure = decision.Failure(Spherewright.Contracts.Errors.BridgeErrorCodes.StaleState, rejection);
+                    return false;
+                }
+                var leases = new List<IDisposable> { ticketLease, journeyLease, checkpointLease };
+                if (progressLastExit is not null) leases.Add(progressLastExit);
+                evidence = VoyagerRemoteResumeEvidence.CreateRemotePrimaryRecovery(journeyJson, checkpointJson,
+                    source.Fingerprint, primary.Fingerprint, source.Prefix.GameTick, primary.Prefix.GameTick,
+                    ticket.GameplayJournalCheckpoint!, recoveryProposal!, knownProgress,
+                    progressLastExit?.Fingerprint ?? string.Empty, validatedJournalHash, leases.ToArray());
+                ticketLease = null; journeyLease = null; checkpointLease = null;
+                return true;
+            }
             var currentContext = completedRemoteContinuation
                 ? VoyagerCompletedRemoteContinuationPolicy.ContextFingerprint(journeyJson, checkpointJson,
                     checkpointLease.Fingerprint, primary.Fingerprint, source.Prefix.GameTick, primary.Prefix.GameTick,
@@ -300,6 +341,25 @@ internal sealed partial class FlightCheckpointStore
         PluginJson.Serialize(_voyagerJourney) == evidence.JourneyJson
         && PluginJson.Serialize(_currentTicket) == evidence.CheckpointJson;
 
+    internal string? PersistRemotePrimaryProgressDebit(VoyagerRemoteResumeEvidence evidence)
+    {
+        if (!evidence.RemotePrimaryRecovery) return null;
+        if (evidence.KnownPrimaryProgressTick is not { } floor || floor < 0 || evidence.SourceGameTick < 0)
+            return "remote_primary_progress_debit_binding_unproved";
+        if (floor <= evidence.SourceGameTick) return null;
+        // Only the successful strict-admission transition may release the
+        // read leases then conservatively charge the discarded observed time.
+        // Native ticks, old action results and immutable Journey grants stay intact.
+        if (!evidence.IsDisposed || !RemoteResumeEvidenceStillMatches(evidence) || _voyagerJourney is null)
+            return "remote_primary_progress_debit_binding_unproved";
+        var next = VoyagerJourney!;
+        var spent = VoyagerRemotePrimaryRecoveryPolicy.ConservedSpent(next.SpentGameTicks,
+            evidence.Journey.SpentGameTicks, evidence.SourceGameTick, floor);
+        if (!spent.HasValue) return "remote_primary_progress_debit_overflow";
+        next.SpentGameTicks = spent.Value; next.SpentGameTicksIsConservative = true;
+        return TryPersistVoyagerJourney(next, out _) ? null : "remote_primary_progress_debit_persistence_unproved";
+    }
+
     // VoyagerJourney returns a detached copy; bind all persisted contents instead of object identity.
     public bool RemoteResumeRetainedJourneyStillMatches(VoyagerJourneyRecord retained,
         VoyagerRemoteResumeEvidence evidence) => RemoteResumeEvidenceStillMatches(evidence)
@@ -379,11 +439,25 @@ internal sealed class VoyagerRemoteResumeEvidence : IDisposable
     public string Fingerprint { get; private set; }
     public bool FailedRemoteLastExitReauthorization { get; private set; }
     public bool CompletedRemoteContinuation { get; private set; }
+    public bool RemotePrimaryRecovery { get; private set; }
+    public long? KnownPrimaryProgressTick { get; private set; }
     public string? CompletedContinuationTokenHash { get; private set; }
     public DateTimeOffset? InheritedWindowConfirmedAtUtc { get; private set; }
     public string RemoteRecoveryContextFingerprint { get; private set; } = string.Empty;
     public string LegacyLocalMoveUnknownEvidenceJson { get; private set; } = string.Empty;
     public string LegacyLocalMoveUnknownEvidenceHash { get; private set; } = string.Empty;
+    internal static VoyagerRemoteResumeEvidence CreateRemotePrimaryRecovery(string journeyJson, string checkpointJson,
+        string sourceFingerprint, string primaryFingerprint, long sourceTick, long primaryTick,
+        OwnedWorldGameplayJournalCheckpoint journal, VoyagerRecoveryWindowProposal proposal, long knownProgress,
+        string progressLastExitFingerprint, string validatedJournalHash, params IDisposable[] leases)
+    {
+        var result = new VoyagerRemoteResumeEvidence(journeyJson, checkpointJson, sourceFingerprint, primaryFingerprint,
+            sourceTick, primaryTick, journal, proposal, leases);
+        result.RemotePrimaryRecovery = true; result.KnownPrimaryProgressTick = knownProgress;
+        result.Fingerprint = CanonicalStateHash.Combine("voyager-remote-primary-new-authority-v1", result.Fingerprint,
+            knownProgress, progressLastExitFingerprint, validatedJournalHash);
+        return result;
+    }
     internal static VoyagerRemoteResumeEvidence CreateLegacyLocalMoveUnknown(string journeyJson, string checkpointJson,
         string sourceFingerprint, string primaryFingerprint, long sourceTick, long primaryTick,
         OwnedWorldGameplayJournalCheckpoint journal, VoyagerRecoveryWindowProposal? proposal,

@@ -387,7 +387,7 @@ internal sealed partial class GameSessionTracker : IDisposable
             return;
         }
         _resumeTickets.Consume(ticket.ResumeToken);
-        ConfirmedPlannedResumeMinimumGameTick = string.IsNullOrWhiteSpace(ticket.QuarantineActionId)
+        ConfirmedPlannedResumeMinimumGameTick = _pendingRemoteResumeEvidence is null && string.IsNullOrWhiteSpace(ticket.QuarantineActionId)
             ? _resumeSourceLease?.Prefix.GameTick ?? ticket.MinimumGameTick : (long?)null;
         _pendingJournalResumeTicket = null;
         if (_pendingRemoteResumeEvidence is not null)
@@ -921,9 +921,11 @@ internal sealed partial class GameSessionTracker : IDisposable
             : ticket.GameVersion != _gameVersion)
             throw new InvalidOperationException("The source game version is not permitted for this resume mode.");
         if (remoteEvidence is not null && (remoteEvidence.IsDisposed || reauthorizingExpiredPrimary || reauthorizingFixedAutosave0
-            || resumeSource != OwnedWorldResumeSourceKind.LastExit || !Guid.TryParse(remoteResumeActionId, out _)
+            || resumeSource != (remoteEvidence.RemotePrimaryRecovery ? OwnedWorldResumeSourceKind.OwnedPrimary : OwnedWorldResumeSourceKind.LastExit)
+            || !Guid.TryParse(remoteResumeActionId, out _)
             || sourceLease is null || primaryLease is null || journalLease is null || ticket.GameplayJournalCheckpoint is null
-            || string.IsNullOrEmpty(ticket.QuarantineActionId) || sourceLease.Fingerprint != remoteEvidence.SourceFingerprint
+            || (!remoteEvidence.RemotePrimaryRecovery && string.IsNullOrEmpty(ticket.QuarantineActionId))
+            || sourceLease.Fingerprint != remoteEvidence.SourceFingerprint
             || primaryLease.Fingerprint != remoteEvidence.PrimaryFingerprint))
             throw new InvalidOperationException("remote_resume_full_lease_handoff_unproved");
         if (recoveryAuthorization is not null && (remoteEvidence?.RecoveryProposal is not { } proposal

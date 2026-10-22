@@ -35,6 +35,10 @@ internal sealed partial class GameSessionTracker
     internal bool HasPendingRemoteResumeAdoption => _pendingRemoteResumeEvidence is not null && !_remoteResumeAdmitted;
     internal string CurrentNativeGameVersion => _gameVersion;
     internal Spherewright.Contracts.Players.NativeResumeFailureSnapshot? CompletedContinuationFailure => _flightCheckpoints.CompletedContinuationFailure;
+    internal Spherewright.Contracts.Players.NativeResumeFailureSnapshot? RemotePrimaryRecoveryFailure => _flightCheckpoints.RemotePrimaryRecoveryFailure;
+    internal void BeginRemotePrimaryDecision() => _flightCheckpoints.BeginRemotePrimaryDecision();
+    internal void RecordRemotePrimarySourceFailure(string code, string predicate, string? exceptionType = null) =>
+        _flightCheckpoints.RecordRemotePrimarySourceFailure(code, predicate, exceptionType);
     internal void BeginCompletedContinuationDecision() => _flightCheckpoints.BeginCompletedContinuationDecision();
 
     internal bool TryOpenRemoteResumeEvidence(OwnedWorldResumeTicket ticket, OwnedSaveRecoveryLease source,
@@ -44,12 +48,13 @@ internal sealed partial class GameSessionTracker
         string priorIntermediateSourceFingerprint = "", bool failedRemoteReauthorization = false,
         string expectedRemoteContext = "", string validatedJournalHash = "", string legacyLocalMoveEvidenceJson = "",
         string legacyLocalMoveEvidenceHash = "", string legacyCredentialRawFingerprint = "",
-        bool completedRemoteContinuation = false, bool priorActionKnownTerminalCompleted = false) =>
+        bool completedRemoteContinuation = false, bool priorActionKnownTerminalCompleted = false,
+        PrepareOwnedWorldResumeRequest? remotePrimaryRequest = null, OwnedSaveRecoveryLease? progressLastExit = null) =>
         _flightCheckpoints.TryOpenRemoteResumeEvidence(ticket, source, primary, out evidence, out rejection, proposal,
             priorConsumedProof, priorSourceFingerprint, priorActionKnownTerminalFailed, priorLegacySourceFingerprint,
             priorIntermediateSourceFingerprint, failedRemoteReauthorization, expectedRemoteContext, validatedJournalHash,
             legacyLocalMoveEvidenceJson, legacyLocalMoveEvidenceHash, legacyCredentialRawFingerprint,
-            completedRemoteContinuation, priorActionKnownTerminalCompleted);
+            completedRemoteContinuation, priorActionKnownTerminalCompleted, remotePrimaryRequest, progressLastExit);
 
     internal DateTimeOffset EffectiveVoyagerDeadline(VoyagerJourneyRecord journey)
     {
@@ -73,6 +78,37 @@ internal sealed partial class GameSessionTracker
             && journey.ReturnCoreEnergyMinimumJoules == original.ReturnCoreEnergyMinimumJoules
             && journey.ExtraWarperReserve == original.ExtraWarperReserve
             ? authorization.Proposal.DeadlineUtc : journey.DeadlineUtc;
+    }
+
+    internal long? EffectiveVoyagerSpentGameTicks(VoyagerJourneyRecord journey, long? projectedSpent = null)
+    {
+        var spent = projectedSpent ?? journey.SpentGameTicks;
+        var adoption = _remoteResumeAdoption;
+        if (adoption?.Evidence.RemotePrimaryRecovery != true) return spent;
+        if (!IsCurrentSessionOwned || !ReferenceEquals(GameMain.data, adoption.World) || _sessionId != adoption.SessionId
+            || adoption.Authorization is not { } authority || authority.ResumeActionId != adoption.ResumeActionId
+            || authority.EvidenceFingerprint != adoption.Evidence.Fingerprint
+            || adoption.Evidence.KnownPrimaryProgressTick is not { } floor) return null;
+        var original = adoption.Evidence.Journey;
+        if (journey.JourneyId != original.JourneyId || journey.OwnedSaveName != original.OwnedSaveName
+            || journey.GameVersion != original.GameVersion || journey.StartedAtGameTick != original.StartedAtGameTick
+            || journey.MaximumGameTicks != original.MaximumGameTicks || journey.ReturnReserveGameTicks != original.ReturnReserveGameTicks
+            || journey.IssuedAtUtc != original.IssuedAtUtc || journey.DeadlineUtc != original.DeadlineUtc) return null;
+        return VoyagerRemotePrimaryRecoveryPolicy.ConservedSpent(spent, original.SpentGameTicks, adoption.Evidence.SourceGameTick, floor);
+    }
+
+    private string? PersistRemoteResumeProgressDebit(VoyagerRemoteResumeEvidence evidence) =>
+        _flightCheckpoints.PersistRemotePrimaryProgressDebit(evidence);
+
+    private void RetainRemotePrimaryDebitFailure(string code, VoyagerRemoteResumeEvidence evidence)
+    {
+        var failure = NativeResumeDecisionEvidence.UnobservedFailure(code, "remote_primary_progress_debit",
+            GameMain.gameTick, DateTimeOffset.UtcNow, "progress_loss_debit_persisted");
+        failure.Values["original_spent_ticks"] = evidence.Journey.SpentGameTicks;
+        failure.Values["discarded_progress_debit_ticks"] = evidence.KnownPrimaryProgressTick is { } floor
+            ? Math.Max(0, floor - evidence.SourceGameTick) : null;
+        failure.Observations["persistence_outcome"] = "unknown";
+        _remoteResumeAdoption?.RetainFailure(failure);
     }
 
     internal void SetRemoteResumeAdmissionGuard(Func<VoyagerRemoteResumeAdoption, string?> guard,

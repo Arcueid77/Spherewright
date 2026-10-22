@@ -60,13 +60,29 @@ public static class VoyagerRemoteResumePolicy
             ("remaining_source_covers_accounted", f.SourceGameTick >= f.LastAccountedGameTick),
             ("remaining_source_covers_landing", f.SourceGameTick >= f.LastLandedGameTick)))
             return "remote_resume_newer_progress_rollback_forbidden";
+        return FiniteJourneyBudgetBlocker(f, evidence);
+    }
+
+    // Provenance and source-progress rules belong to each explicit entry mode.
+    // These original Journey/energy/return limits are shared without renewal.
+    internal static string? FiniteJourneyBudgetBlocker(VoyagerRemoteResumeFacts f, NativeResumeDecisionEvidence? evidence = null,
+        long progressLossDebit = 0)
+    {
+        bool All(params (string Name, bool Value)[] checks)
+        {
+            evidence?.NotReached(checks.Select(c => c.Name).ToArray());
+            foreach (var c in checks) if (evidence is null ? !c.Value : !evidence.Require(c.Name, c.Value)) return false;
+            return true;
+        }
         if (f.RecoveryProposal is { } proposal && VoyagerRecoveryWindowPolicy.ProposalBlocker(proposal, f.NowUtc,
                 f.OriginalIssuedAtUtc, f.OriginalDeadlineUtc, f.ReturnReserveGameTicks) is { } proposalBlocker)
         { evidence?.Require("remaining_existing_proposal_valid", false); return proposalBlocker; }
         var effectiveDeadline = f.RecoveryProposal?.DeadlineUtc ?? f.OriginalDeadlineUtc;
-        if (!All(("remaining_spent_nonnegative", f.SpentGameTicks >= 0), ("remaining_maximum_positive", f.MaximumGameTicks >= 1),
+        evidence?.Number("progress_loss_debit_ticks", progressLossDebit);
+        if (!All(("remaining_spent_nonnegative", f.SpentGameTicks >= 0), ("remaining_progress_debit_nonnegative", progressLossDebit >= 0),
+            ("remaining_maximum_positive", f.MaximumGameTicks >= 1),
             ("remaining_return_minimum", f.ReturnReserveGameTicks >= 3600),
-            ("remaining_original_tick_reserve", (decimal)f.SpentGameTicks + f.SourceGameTick - f.LastLandedGameTick!.Value
+            ("remaining_original_tick_reserve", (decimal)f.SpentGameTicks + progressLossDebit + f.SourceGameTick - f.LastLandedGameTick!.Value
                 + f.ReturnReserveGameTicks + 1 + VoyagerLocalWalkReservePolicy.StopGameTicks <= f.MaximumGameTicks),
             ("remaining_clock_observed", f.NowUtc != default), ("remaining_deadline_observed", f.OriginalDeadlineUtc != default),
             ("remaining_original_wall_reserve", (effectiveDeadline - f.NowUtc).TotalSeconds > f.ReturnReserveGameTicks / 60d

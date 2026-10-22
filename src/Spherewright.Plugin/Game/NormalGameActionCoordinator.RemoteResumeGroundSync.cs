@@ -31,7 +31,7 @@ internal sealed partial class NormalGameActionCoordinator
         return VoyagerRecoveryWindowPolicy.ChargeBlocker(p.mecha.coreEnergy, p.mecha.coreEnergyCap,
             CalculateAvailableFlightEnergy(p.mecha), journey.ReturnEnergyFloorJoules,
             reserve.PerNativeTickEnergyJoules ?? double.NaN, journey.ReturnCoreEnergyMinimumJoules,
-            journey.SpentGameTicks, GameMain.gameTick - journey.LastLandedGameTick!.Value,
+            _sessions.EffectiveVoyagerSpentGameTicks(journey) ?? -1, GameMain.gameTick - journey.LastLandedGameTick!.Value,
             journey.MaximumGameTicks, journey.ReturnReserveGameTicks, 0, authorization.Proposal.MaximumChargeGameTicks,
             0d, authorization.Proposal.MaximumChargeWallSeconds, now, deadline, adoption.CurrentDecisionEvidence);
     }

@@ -3,6 +3,7 @@ using Spherewright.Contracts.Protocol;
 using Spherewright.Contracts.Versioning;
 using Spherewright.Plugin.Bootstrap;
 using Spherewright.Plugin.Hosting;
+using Spherewright.Bridge.Core.Diagnostics;
 
 namespace Spherewright.Plugin;
 
@@ -22,6 +23,11 @@ public sealed class SpherewrightPlugin : BaseUnityPlugin
         Logger.LogInfo("Spherewright plugin loaded");
         Logger.LogInfo($"Spherewright plugin version: {PluginVersion}");
         Logger.LogInfo($"Spherewright protocol version: {ProtocolConstants.CurrentVersion}");
+        // Actual loaded metadata, not hashes borrowed from the install folder.
+        // No Native game/physics call or health assertion is made here.
+        foreach (var assembly in new[] { typeof(SpherewrightPlugin).Assembly, typeof(LoadedModuleIdentity).Assembly,
+            typeof(ProtocolConstants).Assembly, typeof(GameMain).Assembly })
+            Logger.LogInfo("Spherewright loaded module: " + LoadedModuleIdentity.Capture(assembly).ToLogFields());
 
         try
         {

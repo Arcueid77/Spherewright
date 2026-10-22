@@ -17,6 +17,8 @@
 <a id="current-public-mcp-surface"></a>
 ## 当前公共 MCP 接口
 
+显式 `prepare_resume_owned_game(recoveryMode=authorize_remote_primary_recovery)` 接受用户新授予的精确远端主档有限恢复窗口，不依赖旧自动操作凭据继续有效。回显 `remotePrimaryRecoveryAuthorizationUsed` 及准确新期限/范围/充能上限、候选与舍弃 tick 数；仍须独立 digest 确认、原 Journey/Journal/成功去程证明、持久消费及完整 Native 健康接管。舍弃进度不返还旅程时间，不改变普通 `open_saved_primary` 或宣称旧动作结果。见[手册](agent-playbook.zh-CN.md#远端主档的新有限恢复授权)。
+
 公共 MCP 的 `prepare_resume_owned_game` 参数现默认 `open_saved_primary`。显式使用旧 `default` 模式的既有 wire 请求保留原行为；普通 MCP 读档请求不会被推断为继续旧任务。
 
 普通读档使用 `prepare_resume_owned_game(recoveryMode=open_saved_primary)`：即使旧自动操作许可已过期，也核验精确完整的同 Native 主档、受保护归属双副本及原 Journal；原生加载完成后停在准确存档 tick，不续跑旧任务，不自动保存/充能/飞行。Prepare 回显 `opensSavedWorldOnly`、`previousAutomationRemainsStopped`、`newChargingProhibited`、`discardedUnstoredProgressGameTicks`。可选 `acceptUnstoredProgressLoss` 默认 false，须同时绑定准确已知 `minimumRecoveryGameTick` 和获准主档 `expectedRecoveryGameTick`。保留 fresh prepare/digest/确认、持久单次消费、完整文件租约及禁止回退来源；新签发的仅读档凭据可供以后再次打开存档，不能充当自动操作许可。见[手册](agent-playbook.zh-CN.md#打开存档并保持旧自动任务停止)。

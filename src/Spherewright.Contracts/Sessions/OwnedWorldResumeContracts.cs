@@ -11,6 +11,7 @@ public static class OwnedWorldResumeModes
     public const string ReauthorizeFailedRemoteLastExit = "reauthorize_failed_remote_last_exit";
     public const string ContinueCompletedRemoteLastExit = "continue_completed_remote_last_exit";
     public const string OpenSavedPrimary = "open_saved_primary";
+    public const string AuthorizeRemotePrimaryRecovery = "authorize_remote_primary_recovery";
 }
 
 public sealed class PrepareOwnedWorldResumeRequest
@@ -21,7 +22,7 @@ public sealed class PrepareOwnedWorldResumeRequest
 
     public bool UserConfirmedInConversation { get; set; }
 
-    /// <summary>Only an exact disclosed saved-primary rollback; never an automatic fallback.</summary>
+    /// <summary>Only an exact disclosed primary rollback; never an automatic fallback or task grant.</summary>
     public bool AcceptUnstoredProgressLoss { get; set; }
 
     public long? MinimumRecoveryGameTick { get; set; }
@@ -80,6 +81,7 @@ public sealed class PreparedOwnedWorldResumePlan
     public bool PriorActionTerminalFailureAttested { get; set; }
     public bool FailedRemoteLastExitReauthorizationUsed { get; set; }
     public bool CompletedRemoteLastExitContinuationUsed { get; set; }
+    public bool RemotePrimaryRecoveryAuthorizationUsed { get; set; }
     public bool PriorActionTerminalCompletionAttested { get; set; }
     public bool NewChargingProhibited { get; set; }
     public bool OpensSavedWorldOnly { get; set; }

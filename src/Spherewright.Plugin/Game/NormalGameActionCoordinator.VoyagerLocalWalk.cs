@@ -92,7 +92,7 @@ internal sealed partial class NormalGameActionCoordinator
                 JourneyBudget = new VoyagerLocalActionBudgetFacts
                 {
                     ExactRemoteBinding = true, NativePlayerIdle = !groundMiss && physicallyAtRest, CurrentGameTick = GameMain.gameTick,
-                    LastLandedGameTick = lastLandedGameTick, SpentGameTicks = spentGameTicks,
+                    LastLandedGameTick = lastLandedGameTick, SpentGameTicks = _sessions.EffectiveVoyagerSpentGameTicks(journey, spentGameTicks) ?? -1,
                     MaximumGameTicks = journey.MaximumGameTicks, ReturnReserveGameTicks = journey.ReturnReserveGameTicks,
                     WorkGameTicks = 1, TailGameTicks = VoyagerLocalWalkReservePolicy.StopGameTicks,
                     NowUtc = now, JourneyDeadlineUtc = _sessions.EffectiveVoyagerDeadline(journey),

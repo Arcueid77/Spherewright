@@ -23,11 +23,12 @@ using Xunit;
 
 namespace Spherewright.Mcp.Tests;
 
-public sealed class SpherewrightToolsTests
+public sealed partial class SpherewrightToolsTests
 {
     [Theory]
     [InlineData("valid")] [InlineData("no_saved_open")] [InlineData("tasks_resumed")]
     [InlineData("charging")] [InlineData("new_clock")] [InlineData("loss")] [InlineData("failed_claim")]
+    [InlineData("primary_authority_claim")]
     public async Task SavedWorldOpeningRequiresAnIndependentNoAutomationEcho(string fault)
     {
         var p = new PreparedOwnedWorldResumePlan
@@ -46,6 +47,7 @@ public sealed class SpherewrightToolsTests
             case "new_clock": p.EffectiveRecoveryDeadlineUtc = DateTimeOffset.UtcNow.AddHours(1); break;
             case "loss": p.DiscardedUnstoredProgressGameTicks = 1; break;
             case "failed_claim": p.PriorActionTerminalFailureAttested = true; break;
+            case "primary_authority_claim": p.RemotePrimaryRecoveryAuthorizationUsed = true; break;
         }
         var bridge = new FakeBridgeClient(SuccessResult()) { ResumePlan = p };
         var services = new ServiceCollection(); services.AddSingleton<IBridgeClient>(bridge);

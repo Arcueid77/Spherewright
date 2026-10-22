@@ -640,8 +640,16 @@ internal sealed class OwnedWorldResumeTicketStore
 
     public bool TryConsumeReauthorization(string resumeToken, string expectedFingerprint,
         string actionId, string confirmationDigest, bool requireActiveCredential = false,
-        bool versionChangedPrimary = false, bool savedWorldOpenOnly = false)
+        bool versionChangedPrimary = false, bool savedWorldOpenOnly = false,
+        VoyagerRecoveryAuthorization? recoveryAuthorization = null)
     {
+        if (recoveryAuthorization is not null && (!savedWorldOpenOnly || requireActiveCredential || versionChangedPrimary
+            || recoveryAuthorization.ResumeActionId != actionId || recoveryAuthorization.ConfirmationDigest != confirmationDigest
+            || !OwnedWorldRecoveryPolicy.IsCanonicalFingerprint(recoveryAuthorization.EvidenceFingerprint)
+            || recoveryAuthorization.ConfirmedAtUtc == default || recoveryAuthorization.ConfirmedAtUtc > DateTimeOffset.UtcNow
+            || DateTimeOffset.UtcNow - recoveryAuthorization.ConfirmedAtUtc > TimeSpan.FromSeconds(2)
+            || recoveryAuthorization.InheritedWindowConfirmedAtUtc.HasValue
+            || recoveryAuthorization.PriorConsumedResumeTokenHash is not null)) return false;
         if (!Guid.TryParse(actionId, out _) || string.IsNullOrWhiteSpace(confirmationDigest)
             || !TryGetProtectedProvenance(resumeToken, requireActiveCredential, out var ticket, out var currentFingerprint, out _, versionChangedPrimary, savedWorldOpenOnly)
             || !FixedTimeEquals(currentFingerprint, expectedFingerprint)) return false;
@@ -660,7 +668,7 @@ internal sealed class OwnedWorldResumeTicketStore
             handoffDirectory, attempt, "handoff reauthorization attempt");
         if (!runtimeRecorded || !handoffRecorded) return false;
         // Write-ahead consumption precedes the native loader. A crash cannot revive this approval.
-        if (!PersistConsumptionTombstone(resumeToken, ticket!.GameVersion)) return false;
+        if (!PersistConsumptionTombstone(resumeToken, ticket!.GameVersion, recoveryAuthorization)) return false;
         _currentTicket = null;
         _currentTicketPath = null;
         DeleteTicketReplicaIfMatching(_ticketPath, resumeToken);

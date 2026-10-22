@@ -114,6 +114,7 @@ public static class VoyagerCompletedRemoteContinuationPolicy
     public static bool HasMatchingEcho(PrepareOwnedWorldResumeRequest r, PreparedOwnedWorldResumePlan p) =>
         p.Prepared && p.RecoveryMode == OwnedWorldResumeModes.ContinueCompletedRemoteLastExit
         && p.RecoveryEvidenceVersion == EvidenceVersion && p.CompletedRemoteLastExitContinuationUsed
+        && !p.RemotePrimaryRecoveryAuthorizationUsed
         && p.PriorActionTerminalCompletionAttested && !p.PriorActionTerminalFailureAttested
         && !p.FailedRemoteLastExitReauthorizationUsed && !p.PriorFailedResumeProvenanceUsed
         && !p.PriorFailedResumeV2ProvenanceUsed && !p.PriorFailedResumeV3ProvenanceUsed

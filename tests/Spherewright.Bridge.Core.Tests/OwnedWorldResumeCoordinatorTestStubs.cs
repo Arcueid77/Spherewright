@@ -58,12 +58,24 @@ internal sealed partial class GameSessionTracker : IDisposable
     internal bool FixedAutosave { get; private set; }
     internal bool RequiresRemoteResumeEvidence { get; set; }
     internal Spherewright.Contracts.Players.NativeResumeFailureSnapshot? CompletedContinuationFailure => RemoteResumeCheckpoints?.CompletedContinuationFailure;
+    internal Spherewright.Contracts.Players.NativeResumeFailureSnapshot? RemotePrimaryRecoveryFailure => RemoteResumeCheckpoints?.RemotePrimaryRecoveryFailure;
+    internal void BeginRemotePrimaryDecision() => RemoteResumeCheckpoints?.BeginRemotePrimaryDecision();
+    internal void RecordRemotePrimarySourceFailure(string code, string predicate, string? exceptionType = null) =>
+        RemoteResumeCheckpoints?.RecordRemotePrimarySourceFailure(code, predicate, exceptionType);
     internal void BeginCompletedContinuationDecision() => RemoteResumeCheckpoints?.BeginCompletedContinuationDecision();
     internal FlightCheckpointStore? RemoteResumeCheckpoints { get; set; }
     internal VoyagerRemoteResumeEvidence? RemoteEvidence { get; private set; }
     internal string? RemoteResumeActionId { get; private set; }
     internal OwnedWorldResumeSourceKind ResumeSource { get; private set; }
     internal VoyagerRecoveryAuthorization? RecoveryAuthorization { get; private set; }
+    private string? PersistRemoteResumeProgressDebit(VoyagerRemoteResumeEvidence evidence) =>
+        RemoteResumeCheckpoints?.PersistRemotePrimaryProgressDebit(evidence);
+    internal Spherewright.Contracts.Players.NativeResumeFailureSnapshot? PrimaryDebitFailure { get; private set; }
+    private void RetainRemotePrimaryDebitFailure(string code, VoyagerRemoteResumeEvidence evidence)
+    {
+        PrimaryDebitFailure ??= NativeResumeDecisionEvidence.UnobservedFailure(code, "remote_primary_progress_debit",
+            GameMain.gameTick, DateTimeOffset.UtcNow, "progress_loss_debit_persisted");
+    }
     internal Action? BeforeRemoteLoaderBind { get; set; }
     internal bool RemoteLoaderObserverPrepared { get; private set; }
     internal bool RemoteLoaderObserverBound { get; private set; }
@@ -90,7 +102,8 @@ internal sealed partial class GameSessionTracker : IDisposable
         string priorSourceFingerprint = "", bool priorActionKnownTerminalFailed = false, string priorLegacySourceFingerprint = "", string priorIntermediateSourceFingerprint = "",
         bool failedRemoteReauthorization = false, string expectedRemoteContext = "", string validatedJournalHash = "",
         string legacyLocalMoveEvidenceJson = "", string legacyLocalMoveEvidenceHash = "", string legacyCredentialRawFingerprint = "",
-        bool completedRemoteContinuation = false, bool priorActionKnownTerminalCompleted = false)
+        bool completedRemoteContinuation = false, bool priorActionKnownTerminalCompleted = false,
+        PrepareOwnedWorldResumeRequest? remotePrimaryRequest = null, OwnedSaveRecoveryLease? progressLastExit = null)
     {
         evidence = null; rejection = "test_remote_store_unavailable";
         return RemoteResumeCheckpoints is not null
@@ -98,7 +111,7 @@ internal sealed partial class GameSessionTracker : IDisposable
                 priorConsumedProof, priorSourceFingerprint, priorActionKnownTerminalFailed, priorLegacySourceFingerprint, priorIntermediateSourceFingerprint,
                 failedRemoteReauthorization, expectedRemoteContext, validatedJournalHash,
                 legacyLocalMoveEvidenceJson, legacyLocalMoveEvidenceHash, legacyCredentialRawFingerprint,
-                completedRemoteContinuation, priorActionKnownTerminalCompleted);
+                completedRemoteContinuation, priorActionKnownTerminalCompleted, remotePrimaryRequest, progressLastExit);
     }
     internal SessionState CaptureOnMainThread() => Snapshot;
     internal void ExpectNextSessionToBeResumed(OwnedWorldResumeTicket ticket,

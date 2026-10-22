@@ -15,6 +15,12 @@ internal sealed partial class NormalGameActionCoordinator
         e.Number("core_j", p.mecha.coreEnergy); e.Number("reactor_j", p.mecha.reactorEnergy);
         e.Number("speed_mps", p.speed); e.Number("vertical_mps", p.controller.vertSpeed);
         e.Observe("native_paused", GameMain.isPaused);
+        if (adoption.Evidence.RemotePrimaryRecovery)
+        {
+            e.Number("original_spent_ticks", adoption.Evidence.Journey.SpentGameTicks);
+            e.Number("discarded_progress_debit_ticks", adoption.Evidence.KnownPrimaryProgressTick is { } floor
+                ? Math.Max(0, floor - adoption.Evidence.SourceGameTick) : (long?)null);
+        }
         e.NotReached("native_capture", "contact", "charge", "strict_idle", "healthy_takeover");
         adoption.CurrentDecisionEvidence = e;
         return e;

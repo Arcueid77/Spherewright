@@ -228,7 +228,8 @@ public sealed partial class VoyagerRemoteResumeCoordinatorIntegrationTests
     private sealed partial class Scenario : IDisposable
     {
         internal const string Identity = "synthetic-remote-resume-world";
-        private const string Version = "0.10.34.28529";
+        private readonly string Version;
+        private readonly bool _currentNativePrefix;
         private readonly string _root = Path.Combine(Path.GetTempPath(), "spherewright-remote-resume-" + Guid.NewGuid().ToString("N"));
         private readonly string _oldRoot = GameSave.Root;
         private readonly Action? _oldBeforeLoad = DSPGame.BeforeLoad;
@@ -239,18 +240,20 @@ public sealed partial class VoyagerRemoteResumeCoordinatorIntegrationTests
         internal string RuntimeTicket => Path.Combine(Runtime, "owned-world-resume.json");
         internal string HandoffTicket => Path.Combine(Handoff, "owned-world-resume.json");
         internal string JournalPath => Path.Combine(Runtime, "journals", "gameplay-" + GameplayJournalIdentity.HashOwnedSaveIdentity(Identity) + ".json");
-        internal OwnedWorldResumeTicketStore Tickets { get; }
+        internal OwnedWorldResumeTicketStore Tickets { get; private set; }
         internal FlightCheckpointStore Checkpoints { get; }
         internal GameSessionTracker Sessions { get; }
-        private OwnedWorldResumeCoordinator Coordinator { get; }
+        private OwnedWorldResumeCoordinator Coordinator { get; set; }
         internal string Token { get; private set; }
         internal DateTimeOffset OriginalDeadline { get; private set; }
         private string CheckpointSaveName { get; }
         internal IEnumerable<string> ProtectedEvidencePaths => new[] { GameSave.SavePath(GameSave.LastExit), GameSave.SavePath(Identity),
             GameSave.SavePath(CheckpointSaveName), JournalPath, Path.Combine(Handoff, "flight-checkpoint.json"), Path.Combine(Handoff, "voyager-journey.json") };
 
-        internal Scenario(bool expiredJourney = false)
+        internal Scenario(bool expiredJourney = false, bool currentNative = false)
         {
+            _currentNativePrefix = currentNative;
+            Version = currentNative ? "0.10.35.29151" : "0.10.34.28529";
             Directory.CreateDirectory(_root); Directory.CreateDirectory(Runtime); Directory.CreateDirectory(Handoff);
             GameSave.Root = _root; DSPGame.BeforeLoad = null; DSPGame.LoadCalls = 0; DSPGame.LoadedName = null;
             TestWorldCoordinator.ReadinessError = null;
@@ -308,7 +311,9 @@ public sealed partial class VoyagerRemoteResumeCoordinatorIntegrationTests
         internal bool Result(string actionId, out ActionResultSnapshot? result) => Coordinator.TryGetActionResultOnMainThread(actionId, out result);
         internal void WriteSave(string name, long tick)
         {
-            using var data = OwnedSavePrefixReaderTests.Fixture(identity: Identity);
+            using var data = _currentNativePrefix
+                ? OwnedSavePrefixReaderTests.Fixture(identity: Identity, versionPatch: 35, versionBuild: 29151, patch: 23, gameDescVersion: 10)
+                : OwnedSavePrefixReaderTests.Fixture(identity: Identity);
             data.Position = 36; using (var writer = new BinaryWriter(data, Encoding.UTF8, true)) writer.Write(tick);
             File.WriteAllBytes(GameSave.SavePath(name), data.ToArray());
         }

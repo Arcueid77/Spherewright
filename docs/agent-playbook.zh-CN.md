@@ -18,6 +18,16 @@
 本指南描述 DSP `0.10.35.29151` 的 0.5.0 开发接口，保留 0.4 协议接口；逐源码的离线及实机证据见[原生兼容验证](https://github.com/Arcueid77/Spherewright/blob/main/docs/validation/native-29151-preflight.zh-CN.md)。历史 29145 生产验收仍固定于 `2a7a98d1932c404e3a7abc2c11233d9c0b8780d9`。准确构建身份应读取已安装组件版本与包清单，正式版本见[发行](https://github.com/Arcueid77/Spherewright/releases)。修改本指南不会更新已安装 MCP 或冻结包。能力、当前授权、原生可执行性和最终验收是不同事实。本指南不授予游戏、加载、恢复、安装、部署或发布权限。
 
 <a id="session-entry-and-ownership"></a>
+## 远端主档的新有限恢复授权
+
+只有用户另行授予新的有界自动恢复窗口时，才在空闲主菜单准备 `recoveryMode=authorize_remote_primary_recovery`，提供准确 `recoveryDeadlineUtc`、`recoveryScope=continue_original_finite_task` 和有限自然充能上限。此路径在披露并确认准确 digest 后建立新授权。普通读档、旧成功动作、消费记录或泛化的“继续”都不提供新的墙钟预算。它可使用已过期或仅读档的受保护归属来源；旧续接模式仍保留原限制。
+
+来源仅为同 Native 的精确完整 owned 主档，并持有原 Journal、仅作历史证明而禁止加载的成功去程检查点、当前 Journey 及同 owned 固定 LastExit。它不宣称旧动作成功或失败，不沿旧消费记录重放，不加载检查点。明确舍弃进度时沿用准确下限/主档 tick 双绑定。已观察后舍弃的时间继续计入原旅程：接管期间的预算包含该扣费，严格接管成功后仅一次持久记入保守 spent；原 maximum tick、issued/deadline 字段、返程能源/核心/翘曲器预留及旧动作终态保留。
+
+核对 `remotePrimaryRecoveryAuthorizationUsed`、证据版本1、精确主档 tick、舍弃 tick 数、新期限/范围/充能上限和确认 digest。插件须通过现有精确加载器、暂停初始化、Native151/501投影、接触、获准自然充能和严格 idle 检查，才能健康接管并普通 Save。缺失/变化的证明、未知观察、原预留耗尽或扣费落盘失败都会终止本次尝试；保留原动作及首错证据。离线 Store/coordinator/接触替身不证明 Unity 或真实 Save。本指南不授予执行窗口。
+
+Load 前应对照启动日志 `Spherewright loaded module:` 中 Plugin、Core、Contracts 和 Native 的模块身份与候选/Native 元数据。日志仅从实际已加载 CLR 模块读取 MVID 和 informational version，不读取磁盘路径或游戏状态；磁盘安装一致不能代替加载身份，这些日志也不证明 Native 健康。
+
 ## 会话入口与所有权
 
 1. 读取状态、本资源及新的会话、玩家快照。核对 `ownedBySpherewright`、精确会话、星球、revision、和平证据、`writeHealth`、持久 Journal、已接受和进行中的操作及已安装组件组合。明确指出失败字段，未知不能替换为零。

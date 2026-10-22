@@ -13,11 +13,16 @@ public sealed partial class VoyagerRemoteResumeCoordinatorIntegrationTests
     // contact facts/transition/completion. The shell supplies Native observations
     // and the audited151->501->601 ordering. No PhysX, loader, real Save, terrain
     // registration, Native energy generator or whole GameSessionTracker is run.
-    [Fact]
-    public void StoreBoundPausedDirtyProjectionContactAndStrictTakeoverComposeWithoutAReadyFlag()
+    [Theory]
+    [InlineData(false, false, 0)]
+    [InlineData(true, false, 0)]
+    [InlineData(true, false, 18)]
+    [InlineData(true, true, 18)]
+    public void StoreBoundPausedDirtyProjectionContactAndStrictTakeoverComposeWithoutAReadyFlag(bool primary, bool openedFirst, long gap)
     {
-        using var s = new Scenario();
-        Assert.True(s.Commit(s.Prepare()).Success);
+        using var s = new Scenario(expiredJourney: primary, currentNative: primary);
+        var prepared = primary ? s.Prepare(s.PrimaryRecoveryRequest(gap, openedFirst)) : s.Prepare();
+        Assert.True(s.Commit(prepared).Success);
         var evidence = s.Sessions.RemoteEvidence!;
         var journey = s.Checkpoints.VoyagerJourney!;
         Assert.NotSame(journey, s.Checkpoints.VoyagerJourney);
@@ -48,6 +53,7 @@ public sealed partial class VoyagerRemoteResumeCoordinatorIntegrationTests
         var contact = new NormalGameActionCoordinator.ContactStateProbe(player, source);
         var support = FixtureSupport(source);
         var idle = ChainIdleFacts(s, player, support);
+        Assert.Equal(journey.SpentGameTicks + gap, idle.JourneyBudget!.SpentGameTicks);
         Assert.Null(contact.Policy.PreflightBlocker(contact.Facts(player, idle, support)));
         var adoption = new VoyagerRemoteResumeAdoption();
         Assert.Null(adoption.FirstFrame.ArmNearSupport(source, true, true, true, true,
@@ -97,6 +103,8 @@ public sealed partial class VoyagerRemoteResumeCoordinatorIntegrationTests
         Assert.True(s.Sessions.CompleteContactForTest(null));
         Assert.True(s.Sessions.ContactAdmittedForTest); Assert.True(evidence.IsDisposed);
         Assert.False(s.Sessions.CompleteContactForTest(null));
+        Assert.Equal(journey.SpentGameTicks + gap, s.Checkpoints.VoyagerJourney!.SpentGameTicks);
+        Assert.Equal(journey.DeadlineUtc, s.Checkpoints.VoyagerJourney.DeadlineUtc);
         foreach (var path in s.ProtectedEvidencePaths)
             using (new FileStream(path, FileMode.Open, FileAccess.ReadWrite, FileShare.None)) { }
     }
@@ -174,6 +182,10 @@ public sealed partial class VoyagerRemoteResumeCoordinatorIntegrationTests
             ReactorConsumptionRatio = 2, RtsSpeed = 0, ManualSpeed = 0, SoftLandingRecover = 1,
         });
         var now = DateTimeOffset.UtcNow;
+        var resumeEvidence = s.Sessions.RemoteEvidence!;
+        var spent = resumeEvidence.RemotePrimaryRecovery
+            ? VoyagerRemotePrimaryRecoveryPolicy.ConservedSpent(j.SpentGameTicks, resumeEvidence.Journey.SpentGameTicks,
+                resumeEvidence.SourceGameTick, resumeEvidence.KnownPrimaryProgressTick!.Value) ?? -1 : j.SpentGameTicks;
         return new()
         {
             MovementReserve = reserve, CoreEnergyJoules = p.mecha.coreEnergy,
@@ -181,10 +193,10 @@ public sealed partial class VoyagerRemoteResumeCoordinatorIntegrationTests
             {
                 ExactRemoteBinding = s.Checkpoints.RemoteResumeRetainedJourneyStillMatches(j, s.Sessions.RemoteEvidence!),
                 NativePlayerIdle = support.ActualGroundSphereHit == true && p.speed <= .1f,
-                CurrentGameTick = GameMain.gameTick, LastLandedGameTick = j.LastLandedGameTick, SpentGameTicks = j.SpentGameTicks,
+                CurrentGameTick = GameMain.gameTick, LastLandedGameTick = j.LastLandedGameTick, SpentGameTicks = spent,
                 MaximumGameTicks = j.MaximumGameTicks, ReturnReserveGameTicks = j.ReturnReserveGameTicks,
                 WorkGameTicks = 1, TailGameTicks = VoyagerLocalWalkReservePolicy.StopGameTicks,
-                NowUtc = now, JourneyDeadlineUtc = j.DeadlineUtc,
+                NowUtc = now, JourneyDeadlineUtc = s.Sessions.RecoveryAuthorization?.Proposal.DeadlineUtc ?? j.DeadlineUtc,
                 AvailableLoadedEnergyJoules = p.mecha.LoadedEnergy, LockedReturnFloorJoules = j.ReturnEnergyFloorJoules,
                 WorkPowerUpperWatts = reserve.WorkPowerUpperWatts, TailAndNextTickEnergyJoules = reserve.StopEnergyJoules!.Value,
                 NativeWarperCount = 1 + j.ExtraWarperReserve, OriginalExtraWarperReserve = j.ExtraWarperReserve,

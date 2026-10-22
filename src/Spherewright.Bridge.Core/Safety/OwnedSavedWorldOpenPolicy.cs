@@ -51,6 +51,7 @@ public static class OwnedSavedWorldOpenPolicy
         && !p.PriorFailedResumeProvenanceUsed && !p.PriorFailedResumeV2ProvenanceUsed && !p.PriorFailedResumeV3ProvenanceUsed
         && !p.PriorActionTerminalFailureAttested && !p.PriorActionTerminalCompletionAttested
         && !p.FailedRemoteLastExitReauthorizationUsed && !p.CompletedRemoteLastExitContinuationUsed
+        && !p.RemotePrimaryRecoveryAuthorizationUsed
         && !p.LegacyLocalMoveUnknownProvenanceUsed
         && !string.IsNullOrEmpty(p.ConfirmationDigest);
 }
