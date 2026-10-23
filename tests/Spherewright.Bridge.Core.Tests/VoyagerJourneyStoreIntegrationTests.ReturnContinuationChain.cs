@@ -77,8 +77,9 @@ public sealed partial class VoyagerJourneyStoreIntegrationTests
         Assert.Equal(2, DSPGame.DispatchCalls);
     }
 
-    [Fact]
-    public void ReturnContinuationTraversesRealStoresStrictIdleSaveReturnAndHomeSaveWithoutTickRefund()
+    [Theory]
+    [InlineData(20)] [InlineData(60)]
+    public void ReturnContinuationTraversesRealStoresStrictIdleSaveReturnAndHomeSaveWithoutTickRefund(int wallMinutes)
     {
         using var f = new Fixture(returnLeg: true, recoveryPhase: "active", originalWindowExpired: true);
         var first = DispatchReturnOnly(f, NewReturnOnlyProposal(f)); f.AdoptExactCheckpoint();
@@ -86,15 +87,21 @@ public sealed partial class VoyagerJourneyStoreIntegrationTests
         var tick = f.Ticket.SavedGameTick + 39; Fixture.WriteSave(GameSave.LastExit, tick);
         var credentials = ReturnContinuationCredentials(f, tick);
         var coordinator = new OwnedWorldResumeCoordinator(true, 60, 30, 32, f.Sessions, credentials);
-        var proposal = coordinator.PrepareOnMainThread(new()
+        var request = new PrepareOwnedWorldResumeRequest
         {
             ResumeToken = credentials.CurrentResumeToken!,
             RecoveryMode = OwnedWorldResumeModes.ResumeReturnOnlyTask,
             RecoveryScope = VoyagerReturnOnlyContinuationPolicy.Scope,
             ExpectedRecoveryGameTick = tick,
-            RecoveryDeadlineUtc = DateTimeOffset.UtcNow.AddMinutes(20)
-        });
+            RecoveryDeadlineUtc = DateTimeOffset.UtcNow.AddMinutes(wallMinutes)
+        };
+        var proposal = coordinator.PrepareOnMainThread(request);
         Assert.True(proposal.Success, proposal.Error?.Message);
+        // Production Store/coordinator output crosses the actual serialized
+        // contract before the identical policy used by the MCP tool checks it.
+        var wire = System.Text.Json.JsonSerializer.Deserialize<PreparedOwnedWorldResumePlan>(
+            PluginJson.Serialize(proposal.Value), new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+        Assert.Null(VoyagerReturnOnlyContinuationPolicy.EchoFailure(request, wire, DateTimeOffset.UtcNow));
         var committed = coordinator.CommitOnMainThread(new()
         {
             PlanToken = proposal.Value!.PlanToken,

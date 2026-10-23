@@ -108,7 +108,7 @@ internal sealed partial class OwnedWorldResumeCoordinator
             blockers.Add(new WriteBlocker
             {
                 Code = BridgeErrorCodes.UserConfirmationRequired,
-                Message = payload.ActiveFixedAutosaveRecovery || payload.FailedRemoteReauthorization || payload.CompletedRemoteContinuation || payload.LegacyLocalMoveUnknown
+                Message = payload.ActiveFixedAutosaveRecovery || payload.FailedRemoteReauthorization || payload.CompletedRemoteContinuation || payload.LegacyLocalMoveUnknown || payload.ReturnOnlyContinuation
                     ? "Verify this exact disclosed owned candidate is covered by explicit conversation authority; an existing matching grant needs no repeated question."
                     : "Display this plan's disclosure and wait for subsequent explicit conversation confirmation before commit.",
             });

@@ -264,7 +264,7 @@ internal sealed partial class FlightCheckpointStore
                 || !OwnedWorldRecoveryPolicy.IsCanonicalFingerprint(r.ContextFingerprint)
                 || r.ConfirmedAtUtc == default || r.ConfirmedAtUtc.Offset != TimeSpan.Zero || r.DeadlineUtc.Offset != TimeSpan.Zero
                 || r.DeadlineUtc <= r.ConfirmedAtUtc || !r.NewWallAuthority && r.DeadlineUtc != deadline || r.NewWallAuthority
-                    && r.DeadlineUtc - r.ConfirmedAtUtc > TimeSpan.FromSeconds(VoyagerReturnOnlyRecoveryPolicy.MaximumWallSeconds)
+                    && r.DeadlineUtc - r.ConfirmedAtUtc > TimeSpan.FromSeconds(VoyagerReturnOnlyContinuationPolicy.MaximumWallSeconds)
                 || r.State is not ("pending_native_load" or "adopted" or "completed_health" or "failed_health" or "outcome_unknown")) return false;
             if (r.State == "pending_native_load")
             { if (r.SessionId.Length != 0 || r.AdoptedAtGameTick.HasValue || r.TerminalAtGameTick.HasValue || r.FirstFailure is not null) return false; }

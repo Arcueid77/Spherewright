@@ -38,6 +38,68 @@ public sealed class VoyagerReturnOnlyContinuationDecision
 public static class VoyagerReturnOnlyContinuationPolicy
 {
     public const string Scope = "recover_and_return_only";
+    // A separately authorized wall window does not change the existing task's
+    // tick grant, original UTC terms, resource floors or Native phase limits.
+    public const int MaximumWallSeconds = 3600;
+
+    public static NativeResumeFailureSnapshot? EchoFailure(PrepareOwnedWorldResumeRequest r,
+        PreparedOwnedWorldResumePlan? p, DateTimeOffset now)
+    {
+        var e = new NativeResumeDecisionEvidence("return_only_continuation_echo", null, now, true);
+        var q = p?.ReturnOnlyContinuation;
+        e.Number("requested_source_tick", r.ExpectedRecoveryGameTick);
+        e.Number("returned_source_tick", q?.SourceGameTick);
+        e.Number("original_task_maximum_ticks", q?.OriginalMaximumGameTicks);
+        e.Number("remaining_task_ticks", q?.RemainingGameTicks);
+        e.Number("remaining_wall_seconds", p?.EffectiveRecoveryDeadlineUtc is { } deadline
+            ? (deadline - now).TotalSeconds : null);
+        e.Number("requested_charge_ticks", r.MaximumChargeGameTicks);
+        e.Number("returned_charge_ticks", p?.MaximumChargeGameTicks);
+        e.Number("returned_charge_seconds", p?.MaximumChargeWallSeconds);
+        var checks = new (string Name, bool? Value)[] {
+            ("exact_return_continuation_request", RequestFailure(r) is null),
+            ("returned_plan_observed", p is not null),
+            ("prepared", p?.Prepared),
+            ("exact_mode", p is null ? null : p.RecoveryMode == r.RecoveryMode),
+            ("typed_evidence_version", p is null ? null : p.RecoveryEvidenceVersion == VoyagerRemoteResumePolicy.EvidenceVersion),
+            ("single_use_plan_observed", p is null ? null : !string.IsNullOrWhiteSpace(p.PlanToken)),
+            ("exact_source_tick", p is null ? null : p.CandidateGameTick.HasValue
+                ? p.CandidateGameTick == r.ExpectedRecoveryGameTick && p.MinimumGameTick == r.ExpectedRecoveryGameTick : null),
+            ("original_journey_window_observed", p is null ? null : p.OriginalJourneyDeadlineUtc.HasValue),
+            ("exact_return_only_scope", p is null ? null : p.RecoveryScope == Scope),
+            ("no_charging_grant", p is null ? null : p.NewChargingProhibited && p.MaximumChargeGameTicks == 0
+                && p.MaximumChargeWallSeconds == 0 && !p.NativeChargeFeasibilityRequiresFreshCapture),
+            ("exact_native_version", p is null ? null : !string.IsNullOrEmpty(p.SourceGameVersion)
+                && p.SourceGameVersion == p.TargetGameVersion),
+            ("exact_embedded_identity", p?.ExactEmbeddedIdentityVerified),
+            ("digest_confirmation_required", p is null ? null : p.UserConfirmationRequired && !p.CommitAllowedNow
+                && OwnedWorldRecoveryPolicy.IsCanonicalFingerprint(p.ConfirmationDigest)),
+            ("typed_return_preview_observed", p is null ? null : q is not null),
+            ("original_task_observed", q is null ? null : !string.IsNullOrWhiteSpace(q.OriginalTaskId)),
+            ("exact_preview_source_tick", q is null ? null : q.SourceGameTick == r.ExpectedRecoveryGameTick),
+            ("original_tick_cap", q is null ? null : q.OriginalMaximumGameTicks >= VoyagerReturnOnlyRecoveryPolicy.MinimumTotalGameTicks
+                && q.OriginalMaximumGameTicks <= VoyagerReturnOnlyRecoveryPolicy.MaximumGameTicks),
+            ("remaining_original_ticks", q is null ? null : q.RemainingGameTicks > 0
+                && q.RemainingGameTicks <= q.OriginalMaximumGameTicks && !q.NewTicksGranted),
+            ("original_task_window_observed", q is null ? null : q.OriginalDeadlineUtc != default
+                && q.OriginalDeadlineUtc.Offset == TimeSpan.Zero),
+            ("effective_window_observed", p is null ? null : p.EffectiveRecoveryDeadlineUtc.HasValue),
+            ("exact_effective_window", q is null || p is null ? null : q.EffectiveDeadlineUtc == p.EffectiveRecoveryDeadlineUtc
+                && (!r.RecoveryDeadlineUtc.HasValue || q.EffectiveDeadlineUtc == r.RecoveryDeadlineUtc)),
+            ("exact_wall_authority_disclosure", q is null ? null : q.NewWallAuthorityRequired == r.RecoveryDeadlineUtc.HasValue),
+            ("no_other_recovery_authority", p is null ? null : !p.OpensSavedWorldOnly && !p.PreviousAutomationRemainsStopped
+                && !p.RemotePrimaryRecoveryAuthorizationUsed && !p.CompletedRemoteLastExitContinuationUsed
+                && !p.FailedRemoteLastExitReauthorizationUsed && !p.PriorActionTerminalCompletionAttested
+                && !p.PriorActionTerminalFailureAttested && !p.PriorFailedResumeProvenanceUsed
+                && !p.PriorFailedResumeV2ProvenanceUsed && !p.PriorFailedResumeV3ProvenanceUsed
+                && !p.LegacyLocalMoveUnknownProvenanceUsed && p.InheritedWindowConfirmedAtUtc is null),
+        };
+        e.NotReached(checks.Select(c => c.Name).Concat(new[] { "owner_commit_confirmation", "native_load",
+            "native_idle", "home_return", "home_save" }).ToArray());
+        foreach (var check in checks)
+            if (!e.Require(check.Name, check.Value)) return e.Failure(Spherewright.Contracts.Errors.BridgeErrorCodes.BridgeNotReady);
+        return null;
+    }
     public static string? ValidateRequest(PrepareOwnedWorldResumeRequest r)
     {
         if (RequestFailure(r) is not null)
@@ -121,7 +183,7 @@ public static class VoyagerReturnOnlyContinuationPolicy
             return Failed("return_only_continuation_clock_unproved");
         if (f.ProposedWallDeadlineUtc.HasValue
             && !e.Require("new_wall_window_finite", deadline.Offset == TimeSpan.Zero && deadline > f.NowUtc
-                && deadline - f.NowUtc <= TimeSpan.FromSeconds(VoyagerReturnOnlyRecoveryPolicy.MaximumWallSeconds)))
+                && deadline - f.NowUtc <= TimeSpan.FromSeconds(MaximumWallSeconds)))
             return Failed("return_only_continuation_wall_window_invalid");
         e.Number("remaining_wall_seconds", (deadline - f.NowUtc).TotalSeconds);
         if (!e.Require("wall_return_and_stop_reserved", deadline.Offset == TimeSpan.Zero

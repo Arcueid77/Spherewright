@@ -81,12 +81,25 @@ public sealed class VoyagerReturnOnlyContinuationPolicyTests
             case "primary": f.PrimaryGameTick = 140; break;
             case "cap": f.OriginalMaximumGameTicks++; break;
             case "exhausted": f.SourceGameTick = f.CredentialMinimumGameTick = 54099; break;
-            case "window": f.ProposedWallDeadlineUtc = Now.AddMinutes(21); break;
+            case "window": f.ProposedWallDeadlineUtc = Now.AddSeconds(VoyagerReturnOnlyContinuationPolicy.MaximumWallSeconds + 1); break;
         }
         var d = VoyagerReturnOnlyContinuationPolicy.Evaluate(f);
         Assert.False(d.SourceEligible); Assert.Equal(predicate, d.FirstFailure!.FirstFailedPredicate);
         if (change == "journal") Assert.Equal("unknown", d.FirstFailure.Predicates[predicate]);
         Assert.Equal("not_reached", d.FirstFailure.Predicates["native_load"]);
+    }
+
+    [Theory]
+    [InlineData(1200, true)] [InlineData(3600, true)] [InlineData(3601, false)]
+    public void ExplicitWallWindowRemainsFiniteAndNeverChangesTheTickAllowance(int seconds, bool eligible)
+    {
+        var f = Facts(); f.ProposedWallDeadlineUtc = Now.AddSeconds(seconds);
+        var d = VoyagerReturnOnlyContinuationPolicy.Evaluate(f);
+        Assert.Equal(eligible, d.SourceEligible);
+        Assert.Equal(53961, d.RemainingGameTicks);
+        Assert.Equal(54000, f.OriginalMaximumGameTicks);
+        Assert.Equal(Now.AddDays(-1), f.OriginalDeadlineUtc);
+        if (!eligible) Assert.Equal("new_wall_window_finite", d.FirstFailure!.FirstFailedPredicate);
     }
 
     [Theory]
