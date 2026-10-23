@@ -459,3 +459,7 @@ Move 地表预览是观察，不是寻路，180/600 tick 失败指导禁止重�
 
 
 源码依据：[Contracts](../src/Spherewright.Contracts)、[MCP 工具](../src/Spherewright.Mcp/Tools)、[Core](../src/Spherewright.Bridge.Core)、[原生适配器](../src/Spherewright.Plugin/Game)。早期细节：[已验收协议](https://github.com/Arcueid77/Spherewright/blob/2a7a98d1932c404e3a7abc2c11233d9c0b8780d9/docs/protocol.md)、[Lab 固定参考](https://github.com/Arcueid77/Spherewright-Lab/tree/14478a03c64c550e644c559405c8496b647552e7)。离线契约不证明已安装或实机验收。
+
+## Voyager 暂停闲置的原地复核
+
+现有隔离复核的请求和提交 schema 不变。除保留的未知建造外，接口还接受由 Voyager 闲置守卫记录的精确同进程隔离。Prepared 的 `completionCondition` 披露原地恢复操作。Prepare 与 commit 都重新核验原会话、动作、原因、原生引用、严格闲置和原储备；证明变化或其他阻塞均拒绝。成功提交恢复当前世界运行，同时保留原动作结果及账目字节。不引入新的恢复模式、凭据、Load、Save、tick 授予或墙钟续期。见[手册](agent-playbook.zh-CN.md#同会话暂停闲置的原地复核)。

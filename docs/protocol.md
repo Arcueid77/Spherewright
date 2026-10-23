@@ -441,3 +441,7 @@ For this exact, fully adopted checkpoint role, `prepare_save(preserveQuarantined
 
 
 Source authority: [Contracts](../src/Spherewright.Contracts), [MCP tools](../src/Spherewright.Mcp/Tools), [Core](../src/Spherewright.Bridge.Core), [native adapter](../src/Spherewright.Plugin/Game). Earlier detail: [accepted protocol](https://github.com/Arcueid77/Spherewright/blob/2a7a98d1932c404e3a7abc2c11233d9c0b8780d9/docs/protocol.md), [fixed Lab](https://github.com/Arcueid77/Spherewright-Lab/tree/14478a03c64c550e644c559405c8496b647552e7). Offline contracts do not establish installed/live acceptance.
+
+## Paused Voyager idle reconciliation
+
+The existing quarantine-reconciliation request and commit schemas are unchanged. In addition to retained unknown builds, the endpoint accepts an exact same-process idle quarantine recorded by the Voyager idle guard. The prepared `completionCondition` discloses an in-place resume. Prepare and commit both recheck the original session/action/reason, Native references, strict idle and original reserves; a changed proof or other blocker refuses. Successful commit retains all original action outcomes and ledger bytes while resuming the current world. No new recovery mode, credential, Load, Save, tick grant or wall renewal is introduced. See the [playbook](agent-playbook.md#same-session-paused-idle-reconciliation).

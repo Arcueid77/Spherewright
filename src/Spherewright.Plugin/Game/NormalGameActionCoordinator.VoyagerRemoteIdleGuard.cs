@@ -40,6 +40,7 @@ internal sealed partial class NormalGameActionCoordinator
 
     private void GuardVoyagerRemoteIdleOnMainThread(bool stoppingHost = false)
     {
+        if (stoppingHost) _voyagerIdlePause = null;
         // The successful outbound remains successful. Its existing journey
         // continues owning idle energy until a budgeted controller takes over.
         // A terminal local order alone cannot guarantee the next tick stays dry.
@@ -107,6 +108,7 @@ internal sealed partial class NormalGameActionCoordinator
             + VoyagerRemoteIdleFailureDetail(admission)
             + FreezeNativeLocalFailureEnergy(bindingMatches);
         _sessions.QuarantineRemoteIdleOnMainThread(owner.ActionId, message);
+        RetainVoyagerIdlePause(owner, journey, message, stoppingHost);
     }
 
     private sealed class VoyagerRemoteIdleOwner

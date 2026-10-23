@@ -454,3 +454,9 @@ Native Import 可将 double 宇宙坐标逆投影为 float 本地位置；普通
 中断返航无最终源tick观察时，冷恢复仍作废原剩余tick。另经用户批准的 `returnOnlyTask` 才可经准确合格检查点授予一次新任务，至多1200墙钟秒/54000游戏tick，必须明确接受未存进度损失并在commit确认。先完成离线准备，再开始已批绝对执行窗口；保留原终态、账目、资源底线及完整文件。核对prepare提案回显和会话任务绑定，仅返原母星，恢复后立即普通Save，到家再次Save并核完整证明。到家正常保存前继续拒绝其他写入。Plugin在新额度内保留停机/尾部成本，无客户端时也会在耗尽后暂停。有限观察器与游戏须独立于调用宿主的清理机制，读档前核验实际游戏进程；原操作消失时不重启，也不把进程创建回执当作任务接管成功。
 
 当前场景执行从当前 [Spherewright-Lab](https://github.com/Arcueid77/Spherewright-Lab) 检出目录开始，先读取其当前 [AGENTS.md](https://github.com/Arcueid77/Spherewright-Lab/blob/main/AGENTS.md) 与[活动交接](https://github.com/Arcueid77/Spherewright-Lab/blob/main/operations/active-handoff.md)；本内嵌指南不授予权限。[Lab 固定快照](https://github.com/Arcueid77/Spherewright-Lab/tree/14478a03c64c550e644c559405c8496b647552e7)与[已验收指南](https://github.com/Arcueid77/Spherewright/blob/2a7a98d1932c404e3a7abc2c11233d9c0b8780d9/docs/agent-playbook.md)仅保留历史证据、示例。历史成功绝不授予重放权限。
+
+## 同会话暂停闲置的原地复核
+
+同一运行进程内，远端闲置保护导致暂停后，先读取当前会话，以精确的 `writeQuarantineActionId`、星球和 revision 调用 `spherewright_prepare_quarantine_reconciliation`。现有接口除核销结果未知的建造外，也可复核仍然保留的闲置控制绑定。检查 `completionCondition`：此分支要求相同世界、玩家和控制器，未改变的原旅程，没有未决动作或其他写阻塞，重新证明静止 Walk、接地以及原剩余 tick、墙钟、能量和翘曲器储备。Prepare 不恢复游戏运行。
+
+使用该计划和原幂等键只提交一次。成功 commit 在当前原生世界恢复运行，并只解除匹配的写隔离；不 Load、Save、重发 Move、改写成功/失败/未知结果、续期或返还已耗资源。新操作前读回健康会话。世界或 Host 替换、检查点接管未决、仅返航范围仍活跃、未知动作、观察变化或储备过期仍拒绝。此操作是明确提交，单独点击游戏的“继续”不会清除写隔离。

@@ -15,7 +15,7 @@ internal sealed partial class NormalGameActionCoordinator
         long? lastLandedGameTick, out NativeLocalWalkSceneBinding? observedScene, int? prospectiveRemotePlanetId = null,
         Action<VoyagerRemoteIdleAdmissionFacts>? captureFacts = null, bool collectAfterGroundMiss = false,
         Action<NativePlayerGroundContactSnapshot>? captureGround = null, string groundStage = "native_guard",
-        bool collectNaturalContact = false)
+        bool collectNaturalContact = false, bool reconcilePaused = false)
     {
         observedScene = scene;
         var stage = "binding";
@@ -31,8 +31,9 @@ internal sealed partial class NormalGameActionCoordinator
             observedScene ??= CaptureNativeLocalWalkScene();
             if (observedScene is null) return Blocked("remote_idle_scene_unproved");
             stage = "native_mode";
-            var nativeBlocker = NativeWalkModeBlocker(player, stationary: false, observedScene,
-                finiteWaterCostWithNativePause: true, allowDrift: true, allowBudgetedRecharge: true, captureGround, groundStage);
+            var nativeBlocker = NativeWalkModeBlocker(player, stationary: reconcilePaused, observedScene,
+                finiteWaterCostWithNativePause: true, allowDrift: !reconcilePaused, allowBudgetedRecharge: true,
+                captureGround, groundStage, allowNativePause: reconcilePaused);
             var groundMiss = collectAfterGroundMiss && nativeBlocker == "remote_idle_ground_contact_unproved";
             if (nativeBlocker is not null && !groundMiss) return Blocked(nativeBlocker);
             stage = "order_queue";
@@ -347,12 +348,12 @@ internal sealed partial class NormalGameActionCoordinator
     private static string? NativeWalkModeBlocker(Player player, bool stationary, NativeLocalWalkSceneBinding? scene,
         bool finiteWaterCostWithNativePause, bool allowDrift, bool allowBudgetedRecharge = false,
         Action<NativePlayerGroundContactSnapshot>? captureGround = null, string groundStage = "native_guard",
-        Action<bool>? captureSphere = null)
+        Action<bool>? captureSphere = null, bool allowNativePause = false)
     {
         var c = player.controller; var w = c.actionWalk;
         var vertical = c.vertSpeed;
         if (!player.isAlive) return "remote_idle_player_not_alive";
-        if (GameMain.isPaused) return "remote_idle_game_paused";
+        if (GameMain.isPaused && !allowNativePause) return "remote_idle_game_paused";
         if (GameMain.data.disableController) return "remote_idle_controller_disabled";
         if (GameMain.data.guideRunning) return "remote_idle_guide_running";
         if (!(player.movementState == EMovementState.Walk || allowDrift && player.movementState == EMovementState.Drift)) return "remote_idle_movement_mode_unproved";
@@ -373,6 +374,9 @@ internal sealed partial class NormalGameActionCoordinator
         if (c.input0.sqrMagnitude != 0f || c.input1.sqrMagnitude != 0f) return "remote_idle_controller_input_active";
         if (w.jumpDelayTick > 0 || w.flyUpChance != 0f) return "remote_idle_jump_or_fly_pending";
         if (w.moveVelocity.sqrMagnitude != 0f) return "remote_idle_walk_manual_velocity_nonzero";
+        if (allowNativePause && (c.rigid == null || c.velocity.sqrMagnitude != 0f
+            || c.rigid.velocity.sqrMagnitude != 0f || c.actionDrift.rtsVelocity.sqrMagnitude != 0f))
+            return "paused_idle_motion_tail_unproved";
         if (finiteWaterCostWithNativePause && (c.actionDrift.moveVelocity.sqrMagnitude != 0f
             || float.IsNaN(c.actionDrift.rtsVelocity.magnitude) || float.IsInfinity(c.actionDrift.rtsVelocity.magnitude)
             || !(c.actionDrift.rtsVelocity.magnitude <= player.mecha.walkSpeed + .01f))) return "remote_idle_drift_velocity_unproved";

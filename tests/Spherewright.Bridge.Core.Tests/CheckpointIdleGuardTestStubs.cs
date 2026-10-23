@@ -90,9 +90,12 @@ internal sealed partial class NormalGameActionCoordinator
     private VoyagerRemoteIdleAdmissionDecision CaptureVoyagerRemoteIdleAdmission(VoyagerRemoteIdleOwner owner,
         VoyagerJourneyRecord journey, NativeLocalWalkSceneBinding? scene, long spent, long? landed, out NativeLocalWalkSceneBinding? observed,
         int? prospectiveRemotePlanetId = null, Action<VoyagerRemoteIdleAdmissionFacts>? captureFacts = null, bool collectAfterGroundMiss = false,
-        Action<NativePlayerGroundContactSnapshot>? captureGround = null, string groundStage = "native_guard", bool collectNaturalContact = false)
+        Action<NativePlayerGroundContactSnapshot>? captureGround = null, string groundStage = "native_guard", bool collectNaturalContact = false,
+        bool reconcilePaused = false)
     {
         observed = scene ?? new(); var n = NativeIdleObservation;
+        if (reconcilePaused && (!GameMain.isPaused || n.RtsSpeed != 0 || n.ManualSpeed != 0 || n.PhysicsSpeed != 0))
+            return VoyagerRemoteIdleAdmissionPolicy.Blocked("paused_idle_not_stationary", "native_mode");
         if (n.Dirty) { observed = null; return VoyagerRemoteIdleAdmissionPolicy.Blocked("remote_idle_scene_unproved", "scene_capture"); }
         if (n.MovementState != "Walk") return VoyagerRemoteIdleAdmissionPolicy.Blocked("remote_idle_movement_mode_unproved", "native_mode");
         captureGround?.Invoke(new() { CapturedAtGameTick = GameMain.gameTick, CaptureStage = groundStage, CheckSphereHit = n.GroundSphereHit });
@@ -135,7 +138,7 @@ internal sealed partial class NormalGameActionCoordinator
                 ReturnReserveGameTicks = journey.ReturnReserveGameTicks,
                 WorkGameTicks = 1,
                 TailGameTicks = 13,
-                NowUtc = DateTimeOffset.UtcNow,
+                NowUtc = n.NowOverride ?? DateTimeOffset.UtcNow,
                 JourneyDeadlineUtc = journey.DeadlineUtc,
                 AvailableLoadedEnergyJoules = n.Loaded,
                 LockedReturnFloorJoules = journey.ReturnEnergyFloorJoules,
@@ -182,5 +185,7 @@ internal sealed class CheckpointNativeObservation
     internal bool? GroundSphereHit = true;
     internal bool Dirty = false;
     internal double RtsSpeed = 0, ManualSpeed = 0;
+    internal double? PhysicsSpeed = 0;
     internal int? Warpers = 3;
+    internal DateTimeOffset? NowOverride;
 }

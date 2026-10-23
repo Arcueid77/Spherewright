@@ -70,8 +70,11 @@ internal sealed partial class GameSessionTracker
             return false;
         }
         Snapshot.WriteHealth = WriteHealthStates.Healthy;
+        _writeHealth = WriteHealthStates.Healthy;
+        _writeQuarantineActionId = _writeQuarantineReason = null;
         Snapshot.WriteQuarantineActionId = null;
         Snapshot.WritesAllowed = true;
+        Snapshot.WriteBlockers.RemoveAll(b => b.Code == Spherewright.Contracts.Errors.BridgeErrorCodes.WriteSubsystemQuarantined);
         QuarantineReason = null;
         return true;
     }

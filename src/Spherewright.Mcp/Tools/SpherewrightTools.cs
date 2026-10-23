@@ -954,7 +954,7 @@ public static partial class SpherewrightTools
         Destructive = false,
         Idempotent = false,
         OpenWorld = false)]
-    [Description("Re-reads only the exact outcome-unknown build named by writeQuarantineActionId and prepares a short-lived proof when its retained item cost, built entities, components, and directed topology are all unambiguous. This never clears quarantine or changes the game.")]
+    [Description("Re-reads the exact writeQuarantineActionId. For an outcome-unknown build, proves retained item cost, built entities, components and directed topology. For a retained same-session paused Voyager idle owner, freshly proves strict idle, the unchanged journey and remaining time, energy and warper reserves. Prepare never resumes or changes the world. Read completionCondition for the exact transition; missing bindings, unresolved actions and expired budgets remain blocked.")]
     public static async Task<CallToolResult> PrepareQuarantineReconciliationAsync(
         IBridgeClient bridgeClient,
         string sessionId,
@@ -984,7 +984,7 @@ public static partial class SpherewrightTools
         Destructive = true,
         Idempotent = true,
         OpenWorld = false)]
-    [Description("Revalidates the prepared proof and clears write quarantine only when the same retained outcome-unknown action, reason, item cost, entities, components, and topology still match. It is not an unconditional administrative clear.")]
+    [Description("Revalidates the exact prepared quarantine proof. A proved unknown build is reconciled as before. A proved same-session Voyager idle pause is resumed in place and its exact write quarantine cleared, without Load, Save, action replay, outcome rewriting or budget renewal. Changed facts or another blocker refuse the transition; this is not an administrative clear.")]
     public static async Task<CallToolResult> CommitQuarantineReconciliationAsync(
         IBridgeClient bridgeClient,
         string sessionId,
@@ -995,7 +995,7 @@ public static partial class SpherewrightTools
     {
         var request = CreateCommitRequest(sessionId, planetId, planToken, idempotencyKey);
         var result = await bridgeClient.CommitQuarantineReconciliationAsync(sessionId, request, cancellationToken).ConfigureAwait(false);
-        return ToToolResult(result, "The exact prior action was proved and its matching write quarantine was cleared.");
+        return ToToolResult(result, "The exact prepared quarantine transition completed; inspect the current session before a new operation.");
     }
 
     [McpServerTool(

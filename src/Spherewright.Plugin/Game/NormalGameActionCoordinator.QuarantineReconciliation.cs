@@ -38,30 +38,38 @@ internal sealed partial class NormalGameActionCoordinator
                 "Use writeQuarantineActionId from the current owned-session state."));
         }
 
-        if (!_actions.TryGetValue(request.ActionId, out var action)
+        var pausedIdle = IsPausedVoyagerIdleReconciliation(request.ActionId);
+        ActionRecord? action = null;
+        if (!pausedIdle && (!_actions.TryGetValue(request.ActionId, out action)
+            || action is null
             || !string.Equals(action.SessionId, session.SessionId, StringComparison.Ordinal)
             || action.PlanetId != request.PlanetId
             || !action.Terminal
             || !string.Equals(action.State, NormalActionStates.OutcomeUnknown, StringComparison.Ordinal)
-            || !string.Equals(action.ActionKind, NormalActionKinds.Build, StringComparison.Ordinal))
+            || !string.Equals(action.ActionKind, NormalActionKinds.Build, StringComparison.Ordinal)))
         {
             return GameCallResult<PreparedNormalAction>.Failed(BridgeError.Create(
                 BridgeErrorCodes.ActionOutcomeUnknown,
-                "Only the retained, exact outcome-unknown build action that caused this quarantine can be reconciled.",
+                "Only an exact retained unknown build or a proved same-session paused Voyager idle owner can be reconciled.",
                 false,
                 "Keep the session running and inspect the writeQuarantineActionId action; restart-resume is required if its proof record is unavailable."));
         }
 
-        if (!TryProveQuarantinedBuild(action, out var resolvedEntityIds, out var proofHash, out var rejection))
+        IReadOnlyList<int> resolvedEntityIds = Array.Empty<int>();
+        string proofHash, rejection;
+        var proved = pausedIdle
+            ? TryProvePausedVoyagerIdle(session, request.ActionId, out proofHash, out rejection)
+            : TryProveQuarantinedBuild(action!, out resolvedEntityIds, out proofHash, out rejection);
+        if (!proved)
         {
             return GameCallResult<PreparedNormalAction>.Failed(BridgeError.Create(
-                BridgeErrorCodes.ActionOutcomeUnknown,
-                "The quarantined build still cannot be proved: " + rejection,
+                pausedIdle ? BridgeErrorCodes.ActionRejected : BridgeErrorCodes.ActionOutcomeUnknown,
+                "The quarantined action still cannot be reconciled: " + rejection,
                 true,
                 "Leave writes quarantined, inspect the exact entities and topology, and retry only after the world itself provides unambiguous proof."));
         }
 
-        var reason = _sessions.WriteQuarantineReason ?? action.OriginalOutcomeMessage ?? action.Message ?? string.Empty;
+        var reason = _sessions.WriteQuarantineReason ?? action?.OriginalOutcomeMessage ?? action?.Message ?? string.Empty;
         var payload = NormalActionPlanPayload.QuarantineReconciliation(
             session.SessionId!,
             request.PlanetId,
@@ -70,6 +78,7 @@ internal sealed partial class NormalGameActionCoordinator
             reason,
             session.Revision,
             resolvedEntityIds);
+        payload.ReconcilePausedVoyagerIdle = pausedIdle;
         PreparedPlan<NormalActionPlanPayload> plan;
         try
         {
@@ -98,7 +107,9 @@ internal sealed partial class NormalGameActionCoordinator
             StateHashVersion = StateHashVersion,
             CommitAllowedNow = blockers.Count == 0,
             CommitBlockers = blockers,
-            CompletionCondition = "The exact retained outcome-unknown build still has the same item-cost, entity identities, components, and directed topology; only then is its quarantine cleared.",
+            CompletionCondition = pausedIdle
+                ? "The same paused world, controller, original journey and quarantine are freshly rechecked for strict idle and unchanged remaining reserves. Commit resumes this world and clears only this quarantine; no Load, Save, order replay or budget renewal occurs."
+                : "The exact retained outcome-unknown build still has the same item-cost, entity identities, components, and directed topology; only then is its quarantine cleared.",
             ReconcilesActionId = request.ActionId,
             ProvedObjectIds = resolvedEntityIds.ToList(),
         });
@@ -179,6 +190,31 @@ internal sealed partial class NormalGameActionCoordinator
         if (accessError is not null)
         {
             return GameCallResult<NormalActionCommitResult>.Failed(accessError);
+        }
+
+        if (plan.ReconcilePausedVoyagerIdle)
+        {
+            _plans.Remove(request.PlanToken);
+            if (!TryResumeProvedVoyagerIdle(session, plan.ReconcileActionId, plan.ExpectedStateHash, out var idleRejection))
+                return GameCallResult<NormalActionCommitResult>.Failed(BridgeError.Create(BridgeErrorCodes.StaleState,
+                    idleRejection, false, "Keep the original pause and action outcomes; inspect the current failed predicate before preparing again."));
+            var resumed = new NormalActionCommitResult
+            {
+                ActionId = plan.ReconcileActionId,
+                ActionKind = NormalActionKinds.ReconcileQuarantine,
+                IdempotencyKey = request.IdempotencyKey,
+                State = NormalActionStates.Completed,
+                Accepted = true,
+            };
+            if (!_idempotency.TryAdd(request.SessionId, request.IdempotencyKey, fingerprint, resumed))
+            {
+                GameMain.Pause();
+                _sessions.QuarantineWritesOnMainThread(plan.ReconcileActionId,
+                    "Paused Voyager reconciliation completed but its idempotent receipt could not be retained.");
+                return GameCallResult<NormalActionCommitResult>.Failed(BridgeError.Create(BridgeErrorCodes.ActionOutcomeUnknown,
+                    "The reconciliation receipt is unproved; Native Pause was restored.", false, "Inspect the same session; do not replay any previous action."));
+            }
+            return GameCallResult<NormalActionCommitResult>.Succeeded(resumed); // Original flight/Move results are untouched.
         }
 
         var rejection = "The retained quarantine action is unavailable.";
@@ -466,6 +502,8 @@ internal sealed partial class NormalGameActionCoordinator
         public string ReconcileReason { get; private set; } = string.Empty;
 
         public long ReconcileExpectedRevision { get; private set; }
+
+        public bool ReconcilePausedVoyagerIdle { get; set; }
 
         public List<int> ReconcileEntityIds { get; } = new List<int>();
 
