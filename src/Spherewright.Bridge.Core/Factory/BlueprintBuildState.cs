@@ -71,6 +71,9 @@ public sealed class BlueprintBuildState
             StructuredConstruction.Validate(Site);
             if (FoundryPlan is not null || FoundryIntent is not null) throw new InvalidDataException("Structured provenance is not blueprint/Foundry authority.");
             ConstructionControl?.Validate(Site.CapturedAtGameTick);
+            if (ConstructionControl?.Phase == "completed_idle"
+                && (Phase != "completed" || Objects.Any(o => o.State != BlueprintObjectStates.Completed)))
+                throw new InvalidDataException("Completed-idle control requires a fully completed structured batch.");
             if (ConstructionControl?.PhysicalIdleVerifiedAtGameTick > LastEvidenceGameTick
                 || ConstructionControl?.DisabledNativeFactoryPassGameTick > LastEvidenceGameTick)
                 throw new InvalidDataException("Physical drone idle must be covered by the durable native evidence watermark.");

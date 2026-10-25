@@ -121,6 +121,83 @@ public sealed class StructuredConstructionStoreIntegrationTests
         Assert.Throws<InvalidOperationException>(() => restored.BeforeStructuredSubmission(200, 10, "replay"));
     }
 
+    [Fact]
+    public void CompletedOriginalDroneRestorationSurvivesDurableStoreAndRestart()
+    {
+        using var fixture = new Fixture(); var state = Pending(1);
+        state.ConfirmCompletion(0, 100, 110);
+        ProvePhysicalDrain(state, 110, 112);
+        var control = state.ConstructionControl!; control.Phase = "completed_idle";
+        state.Stop("completed");
+        var store = fixture.Store(); Assert.True(store.TryPut(state));
+        var before = Assert.Single(fixture.Read());
+        Assert.True(control.MayRestoreOriginalDroneSetting(true, true, true, false));
+
+        control.DispatchDisabled = false; state.Generation++;
+        Assert.True(store.TryPut(state));
+
+        var restored = Assert.Single(fixture.Read());
+        var beforeControl = before.ConstructionControl!;
+        var restoredControl = restored.ConstructionControl!;
+        Assert.Equal("completed", restored.Phase);
+        Assert.Equal(before.PlanHash, restored.PlanHash);
+        Assert.Equal(before.ActionId, restored.ActionId);
+        Assert.False(restoredControl.DispatchDisabled);
+        Assert.True(restoredControl.RetainsOriginalWindowAndSubmission(beforeControl));
+        Assert.Equal(beforeControl.StopReason, restoredControl.StopReason);
+        Assert.Equal(beforeControl.NativeCreateActionId, restoredControl.NativeCreateActionId);
+        Assert.Equal(beforeControl.WorkDeadlineGameTick, restoredControl.WorkDeadlineGameTick);
+        Assert.Equal(beforeControl.WorkDeadlineUtc, restoredControl.WorkDeadlineUtc);
+        Assert.Equal(110, restoredControl.DisabledNativeFactoryPassGameTick);
+        Assert.Equal(112, restoredControl.PhysicalIdleVerifiedAtGameTick);
+        Assert.Equal(before.Objects[0].PrebuildId, restored.Objects[0].PrebuildId);
+        Assert.Equal(before.Objects[0].EntityId, restored.Objects[0].EntityId);
+        Assert.Equal(before.Objects[0].InventoryBefore, restored.Objects[0].InventoryBefore);
+        Assert.Equal(before.Objects[0].InventoryAfter, restored.Objects[0].InventoryAfter);
+        Assert.Throws<InvalidOperationException>(() => restored.BeforeStructuredSubmission(200, 11, "replay"));
+    }
+
+    [Theory]
+    [InlineData(false)] [InlineData(true)]
+    public void CompletedIdleControlCannotLabelAPausedBatchAsCompleted(bool completedObject)
+    {
+        var state = Pending(1);
+        if (completedObject) state.ConfirmCompletion(0, 100, 110);
+        ProvePhysicalDrain(state, 110, 112);
+        state.ConstructionControl!.Phase = "completed_idle";
+        state.Stop("paused");
+
+        Assert.Throws<InvalidDataException>(state.Validate);
+    }
+
+    [Theory]
+    [InlineData("working")] [InlineData("cancelled")] [InlineData("original_disabled")]
+    [InlineData("binding_lost")] [InlineData("missing_idle")] [InlineData("missing_pass")]
+    [InlineData("pass_after_idle")]
+    public void ReenabledDispatchWithoutSealedOriginalCompletionCannotReplaceDurableEvidence(string fault)
+    {
+        using var fixture = new Fixture(); var state = Pending(1);
+        state.ConfirmCompletion(0, 100, 110);
+        ProvePhysicalDrain(state, 110, 112);
+        state.ConstructionControl!.Phase = "completed_idle"; state.Stop("completed");
+        var store = fixture.Store(); Assert.True(store.TryPut(state));
+        var bytes = File.ReadAllBytes(fixture.Path); var changed = Clone(state); changed.Generation++;
+        var control = changed.ConstructionControl!; control.DispatchDisabled = false;
+        switch (fault)
+        {
+            case "working": control.Phase = "working"; break;
+            case "cancelled": control.StopReason = "explicit_structured_cancellation"; break;
+            case "original_disabled": control.OriginalDroneEnabled = false; break;
+            case "binding_lost": control.BindingLost = true; break;
+            case "missing_idle": control.PhysicalIdleVerified = false; control.PhysicalIdleVerifiedAtGameTick = null; break;
+            case "missing_pass": control.DisabledNativeFactoryPassGameTick = null; break;
+            case "pass_after_idle": control.DisabledNativeFactoryPassGameTick = 113; break;
+        }
+
+        Assert.False(store.TryPut(changed));
+        Assert.Equal(bytes, File.ReadAllBytes(fixture.Path));
+    }
+
     [Theory]
     [InlineData(0)] [InlineData(9)]
     public void StructuredBatchCannotExpandBeyondItsEightObjectTask(int count) =>

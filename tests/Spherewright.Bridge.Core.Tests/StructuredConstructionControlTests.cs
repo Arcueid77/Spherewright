@@ -96,6 +96,25 @@ public sealed class StructuredConstructionControlTests
     }
 
     [Fact]
+    public void RestoringTheOriginalEnabledFlagRetainsTheCompletedNativeDrainCertificate()
+    {
+        var c = Control(); c.RequestStop("construction_complete_draining", 200, Start.AddSeconds(2), false);
+        c.DispatchDisabled = true;
+        Assert.True(c.RecordDisabledNativeFactoryPass(201));
+        Assert.True(c.TryMarkPhysicalIdle(202, true, true));
+        c.Phase = "completed_idle";
+        Assert.True(c.MayRestoreOriginalDroneSetting(true, true, true, false));
+
+        c.DispatchDisabled = false;
+        c.Validate(100);
+
+        Assert.Equal(200, c.DrainStartedAtGameTick);
+        Assert.Equal(201, c.DisabledNativeFactoryPassGameTick);
+        Assert.Equal(202, c.PhysicalIdleVerifiedAtGameTick);
+        Assert.True(c.PhysicalIdleVerified);
+    }
+
+    [Fact]
     public void CachedPrelaunchCannotBecomeIdleBeforeARealDisabledFactoryPassAndLaterPoolReadback()
     {
         var c = Control();

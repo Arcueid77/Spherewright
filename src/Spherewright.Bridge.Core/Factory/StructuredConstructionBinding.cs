@@ -205,6 +205,11 @@ public sealed class StructuredConstructionControlState
 
     public void Validate(long capturedTick)
     {
+        // A disabled Native pass remains historical proof when a known, fully
+        // idle completion restores the original enabled setting. Active drains
+        // and every incomplete/unknown outcome still require disabled dispatch.
+        var restoredCompletedIdle = Phase == "completed_idle" && OriginalDroneEnabled
+            && !BindingLost && PhysicalIdleVerified && StopReason == "construction_complete_draining";
         if (Anchor is null || new[] { Anchor.X, Anchor.Y, Anchor.Z }.Any(v => float.IsNaN(v) || float.IsInfinity(v))
             || string.IsNullOrWhiteSpace(NativeCostHash) || StartedAtGameTick < capturedTick
             || WorkDeadlineGameTick <= StartedAtGameTick || WorkDeadlineGameTick - (decimal)StartedAtGameTick > 3600
@@ -215,7 +220,7 @@ public sealed class StructuredConstructionControlState
             || (NativeCreateActionId is not null && !Guid.TryParse(NativeCreateActionId, out _))
             || PreexistingEntityIds.Any(id => id <= 0) || PreexistingEntityIds.Distinct().Count() != PreexistingEntityIds.Count
             || !Phases.Contains(Phase) || DrainStartedAtGameTick.HasValue != DrainStartedAtUtc.HasValue
-            || (DisabledNativeFactoryPassGameTick.HasValue && (!DispatchDisabled || !DrainStartedAtGameTick.HasValue
+            || (DisabledNativeFactoryPassGameTick.HasValue && ((!DispatchDisabled && !restoredCompletedIdle) || !DrainStartedAtGameTick.HasValue
                 || DisabledNativeFactoryPassGameTick < DrainStartedAtGameTick))
             || PhysicalIdleVerified != PhysicalIdleVerifiedAtGameTick.HasValue
             || (PhysicalIdleVerified && (!DrainStartedAtGameTick.HasValue
