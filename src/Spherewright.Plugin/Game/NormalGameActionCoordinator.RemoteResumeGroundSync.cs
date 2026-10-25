@@ -34,7 +34,7 @@ internal sealed partial class NormalGameActionCoordinator
             CalculateAvailableFlightEnergy(p.mecha), journey.ReturnEnergyFloorJoules,
             reserve.PerNativeTickEnergyJoules ?? double.NaN, journey.ReturnCoreEnergyMinimumJoules,
             _sessions.EffectiveVoyagerSpentGameTicks(journey) ?? -1, GameMain.gameTick - journey.LastLandedGameTick!.Value,
-            journey.MaximumGameTicks, journey.ReturnReserveGameTicks, 0, authorization.Proposal.MaximumChargeGameTicks,
+            _sessions.EffectiveVoyagerMaximumGameTicks(journey), journey.ReturnReserveGameTicks, 0, authorization.Proposal.MaximumChargeGameTicks,
             0d, authorization.Proposal.MaximumChargeWallSeconds, now, deadline, adoption.CurrentDecisionEvidence);
     }
 

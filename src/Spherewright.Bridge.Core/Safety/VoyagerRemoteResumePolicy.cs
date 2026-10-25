@@ -78,12 +78,16 @@ public static class VoyagerRemoteResumePolicy
                 f.OriginalIssuedAtUtc, f.OriginalDeadlineUtc, f.ReturnReserveGameTicks) is { } proposalBlocker)
         { evidence?.Require("remaining_existing_proposal_valid", false); return proposalBlocker; }
         var effectiveDeadline = f.RecoveryProposal?.DeadlineUtc ?? f.OriginalDeadlineUtc;
+        var effectiveMaximum = VoyagerRecoveryWindowPolicy.EffectiveMaximumGameTicks(f.MaximumGameTicks, f.RecoveryProposal);
+        evidence?.Number("additional_voyager_ticks", f.RecoveryProposal?.AdditionalVoyagerGameTicks ?? 0);
+        evidence?.Number("effective_maximum_ticks", effectiveMaximum);
         evidence?.Number("progress_loss_debit_ticks", progressLossDebit);
         if (!All(("remaining_spent_nonnegative", f.SpentGameTicks >= 0), ("remaining_progress_debit_nonnegative", progressLossDebit >= 0),
             ("remaining_maximum_positive", f.MaximumGameTicks >= 1),
             ("remaining_return_minimum", f.ReturnReserveGameTicks >= 3600),
-            ("remaining_original_tick_reserve", (decimal)f.SpentGameTicks + progressLossDebit + f.SourceGameTick - f.LastLandedGameTick!.Value
-                + f.ReturnReserveGameTicks + 1 + VoyagerLocalWalkReservePolicy.StopGameTicks <= f.MaximumGameTicks),
+            ("remaining_original_tick_reserve", effectiveMaximum.HasValue
+                && (decimal)f.SpentGameTicks + progressLossDebit + f.SourceGameTick - f.LastLandedGameTick!.Value
+                + f.ReturnReserveGameTicks + 1 + VoyagerLocalWalkReservePolicy.StopGameTicks <= effectiveMaximum.Value),
             ("remaining_clock_observed", f.NowUtc != default), ("remaining_deadline_observed", f.OriginalDeadlineUtc != default),
             ("remaining_original_wall_reserve", (effectiveDeadline - f.NowUtc).TotalSeconds > f.ReturnReserveGameTicks / 60d
                 + VoyagerRemoteIdleAdmissionPolicy.StopWallSeconds + 1d / 60d)))

@@ -6,6 +6,8 @@ Protocol version remains `1`; the `0.5.0` Voyager development interface targets 
 
 ## Framing and authentication
 
+For `prepare_resume_owned_game` with `recoveryMode=authorize_remote_primary_recovery`, optional `additionalVoyagerGameTicks` (default0, maximum108000) requests a separately confirmed addition above the immutable original journey cap. Prepared echoes `additionalVoyagerGameTicks`, `originalJourneyMaximumGameTicks` and `effectiveJourneyMaximumGameTicks`; the exact addition is bound into the existing disclosure/digest and durable authorization. It is not accumulated across proposals. Original spent time and return reserves remain charged. Other request modes reject a nonzero addition. See the [Agent playbook](agent-playbook.md) for execution checks.
+
 Each Pipe message is a four-byte little-endian signed length followed by UTF-8 JSON. Negative lengths and payloads over 1 MiB reject before allocation. Zero-length frames reach and fail JSON validation.
 
 Every connection begins with authenticated `handshake` carrying the active `bridgeInstanceId` and startup token from the current-user-protected runtime descriptor. Invalid credentials or pre-authentication requests close it. Pipe/descriptor credentials are protected transport details, never public evidence.

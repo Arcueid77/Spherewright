@@ -146,6 +146,10 @@ internal sealed partial class OwnedWorldResumeCoordinator
                 : payload.RemoteEvidence?.RecoveryProposal?.Scope ?? payload.Request.RecoveryScope,
             MaximumChargeGameTicks = payload.RemoteEvidence?.RecoveryProposal?.MaximumChargeGameTicks ?? payload.Request.MaximumChargeGameTicks,
             MaximumChargeWallSeconds = payload.RemoteEvidence?.RecoveryProposal?.MaximumChargeWallSeconds ?? payload.Request.MaximumChargeWallSeconds,
+            AdditionalVoyagerGameTicks = payload.RemoteEvidence?.RecoveryProposal?.AdditionalVoyagerGameTicks ?? 0,
+            OriginalJourneyMaximumGameTicks = payload.RemoteEvidence?.Journey.MaximumGameTicks,
+            EffectiveJourneyMaximumGameTicks = payload.RemoteEvidence is { } budgetEvidence
+                ? VoyagerRecoveryWindowPolicy.EffectiveMaximumGameTicks(budgetEvidence.Journey.MaximumGameTicks, budgetEvidence.RecoveryProposal) : null,
             NativeChargeFeasibilityRequiresFreshCapture = !payload.CompletedRemoteContinuation && !payload.ReturnOnlyContinuation
                 && payload.RemoteEvidence?.RecoveryProposal is not null,
             PriorFailedResumeProvenanceUsed = payload.RemoteEvidence?.PriorConsumedResumeTokenHash is not null,
@@ -184,6 +188,8 @@ internal sealed partial class OwnedWorldResumeCoordinator
             TargetGameVersion = _tickets.CurrentGameVersion,
             ConfirmationPrompt = (payload.RemoteEvidence?.SuccessfulFlightWitnessRetiredAtGameTick is { } coveredTick
                 ? $"The original successful-flight checkpoint was retired by primary coverage at tick {coveredTick}. It is a bound historical witness only and will never be loaded. " : string.Empty)
+                + (payload.RemotePrimaryRecovery && payload.Request.AdditionalVoyagerGameTicks > 0
+                ? $"Separately authorize {payload.Request.AdditionalVoyagerGameTicks} additional game ticks above the original {payload.RemoteEvidence!.Journey.MaximumGameTicks}-tick journey cap. This addition is not stacked with a previous proposal; all observed spent time stays charged, the original deadline and cap remain recorded, and return ticks, energy and warpers stay reserved. " : string.Empty)
                 + (payload.RemotePrimaryRecovery
                 ? $"Review the exact complete owned primary at tick {payload.MinimumGameTick}. This is a NEW finite automation authorization, not ordinary file opening or continuation of an old action. Known progress floor: {payload.SavedOpenKnownProgressTick}; explicitly discarded progress: {Math.Max(0, payload.SavedOpenKnownProgressTick - payload.MinimumGameTick)} ticks. Total conserved observed-time debit: {Math.Max(0, payload.RemoteEvidence!.KnownPrimaryProgressTick!.Value - payload.MinimumGameTick)} ticks, including any previous approved loss. Historical completed/failed/unknown outcomes and every old consumption record remain unchanged. Native initialization, projection, contact, any permitted natural charging and strict healthy takeover must all succeed. "
                 : payload.LegacyLocalMoveUnknown
@@ -199,7 +205,7 @@ internal sealed partial class OwnedWorldResumeCoordinator
                 : payload.CompletedRemoteContinuation && payload.RemoteEvidence?.RecoveryProposal is { } inheritedWindow
                 ? $"Review the same absolute deadline {inheritedWindow.DeadlineUtc:O} and original window origin {payload.RemoteEvidence.InheritedWindowConfirmedAtUtc:O}. Strict funded first-frame/contact admission remains mandatory, without new charging. If either original window or return reserve is exhausted, do not load; this disclosure is not new budget authority."
                 : payload.RemoteEvidence?.RecoveryProposal is { } recoveryWindow
-                ? $"Confirm one finite attempt to continue the original bounded task until {recoveryWindow.DeadlineUtc:O}. The original deadline {payload.RemoteEvidence.Journey.DeadlineUtc:O} and all tick/energy/warper limits remain unchanged. Natural charging is capped at {recoveryWindow.MaximumChargeGameTicks} game ticks / {recoveryWindow.MaximumChargeWallSeconds} wall seconds within the five-minute adoption lease; Native P/g and feasibility remain unknown until fresh capture. No promised admission or flight, automatic renewal, checkpoint load or Resume of isolated RAM."
+                ? $"Confirm one finite attempt to continue the original bounded task until {recoveryWindow.DeadlineUtc:O}. The original deadline {payload.RemoteEvidence.Journey.DeadlineUtc:O} and original tick cap remain recorded. Only a separately disclosed addition changes this attempt's effective tick cap; spent time, return ticks, energy and warpers remain charged/reserved. Natural charging is capped at {recoveryWindow.MaximumChargeGameTicks} game ticks / {recoveryWindow.MaximumChargeWallSeconds} wall seconds within the five-minute adoption lease; Native P/g and feasibility remain unknown until fresh capture. No promised admission or flight, automatic renewal, checkpoint load or Resume of isolated RAM."
                 : payload.RemoteContinuation
                 ? "Confirm this exact fixed LastExit candidate after reviewing its disclosed tick and full-file proof. It retains the original successful flight, Journal and unchanged journey deadline/reserves; it does not load the successful pre-flight checkpoint."
                 : payload.SavedWorldOpenOnly
@@ -892,7 +898,7 @@ internal sealed partial class OwnedWorldResumeCoordinator
             journal = _tickets.OpenReauthorizationJournalLease(ticket, provenance, savedWorldOpenOnly: true);
             var journalHash = FlightCheckpointStore.HashResumeRecord(journal);
             var proposal = new VoyagerRecoveryWindowProposal(request.RecoveryDeadlineUtc!.Value, request.RecoveryScope,
-                request.MaximumChargeGameTicks, request.MaximumChargeWallSeconds);
+                request.MaximumChargeGameTicks, request.MaximumChargeWallSeconds, request.AdditionalVoyagerGameTicks);
             if (!_sessions.TryOpenRemoteResumeEvidence(ticket, source, primary, out evidence, out rejection, proposal,
                 validatedJournalHash: journalHash, remotePrimaryRequest: request, progressLastExit: progress)) return false;
             progress = null; // The fresh evidence holds any matching fixed LastExit through admission.
@@ -1018,6 +1024,7 @@ internal sealed partial class OwnedWorldResumeCoordinator
                 ExpectedRecoveryGameTick = request.ExpectedRecoveryGameTick,
                 RecoveryDeadlineUtc = request.RecoveryDeadlineUtc, RecoveryScope = request.RecoveryScope,
                 MaximumChargeGameTicks = request.MaximumChargeGameTicks, MaximumChargeWallSeconds = request.MaximumChargeWallSeconds,
+                AdditionalVoyagerGameTicks = request.AdditionalVoyagerGameTicks,
                 PriorConsumedResumeToken = request.PriorConsumedResumeToken, PriorSourceFingerprint = request.PriorSourceFingerprint,
                 PriorLegacySourceFingerprint = request.PriorLegacySourceFingerprint,
                 PriorIntermediateSourceFingerprint = request.PriorIntermediateSourceFingerprint,

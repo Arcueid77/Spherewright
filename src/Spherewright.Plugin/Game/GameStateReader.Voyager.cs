@@ -300,7 +300,7 @@ internal sealed partial class GameStateReader
             {
                 input.ReturnJourneyId = journey!.JourneyId;
                 input.ReturnLegMaximumGameTicks = journey.ReturnReserveGameTicks;
-                input.RemainingJourneyGameTicks = journey.MaximumGameTicks - journey.SpentGameTicks
+                input.RemainingJourneyGameTicks = _sessions.EffectiveVoyagerMaximumGameTicks(journey) - journey.SpentGameTicks
                     - (GameMain.gameTick - journey.LastLandedGameTick!.Value);
                 if (journey.ReturnOnlyTask is not null)
                 {

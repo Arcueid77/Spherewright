@@ -62,11 +62,21 @@ internal sealed partial class GameSessionTracker
             return IsCurrentSessionOwned && task.CurrentSessionId == _sessionId && journey.OwnedSaveName == _ownedSaveName
                 && journey.GameVersion == _gameVersion ? task.CurrentDeadlineUtc.AddSeconds(-VoyagerControlDeadlinePolicy.StopCleanupSeconds)
                     : journey.DeadlineUtc;
+        return MatchingVoyagerRecoveryAuthorization(journey)?.Proposal.DeadlineUtc ?? journey.DeadlineUtc;
+    }
+
+    internal long EffectiveVoyagerMaximumGameTicks(VoyagerJourneyRecord journey) =>
+        VoyagerRecoveryWindowPolicy.EffectiveMaximumGameTicks(journey.MaximumGameTicks,
+            MatchingVoyagerRecoveryAuthorization(journey)?.Proposal) ?? -1;
+
+    private VoyagerRecoveryAuthorization? MatchingVoyagerRecoveryAuthorization(VoyagerJourneyRecord journey)
+    {
+        if (journey.ReturnOnlyTask is not null) return null;
         var adoption = _remoteResumeAdoption;
         var authorization = adoption?.Authorization;
         if (authorization is null || !IsCurrentSessionOwned || !ReferenceEquals(GameMain.data, adoption!.World)
             || _sessionId != adoption.SessionId || authorization.ResumeActionId != adoption.ResumeActionId
-            || authorization.EvidenceFingerprint != adoption.Evidence.Fingerprint) return journey.DeadlineUtc;
+            || authorization.EvidenceFingerprint != adoption.Evidence.Fingerprint) return null;
         var original = adoption.Evidence.Journey;
         // Phase/action/accounting may advance normally; immutable limits may not.
         return journey.Version == original.Version && journey.JourneyId == original.JourneyId && journey.OwnedSaveName == original.OwnedSaveName
@@ -81,7 +91,7 @@ internal sealed partial class GameSessionTracker
             && journey.WithdrawalReserveJoules == original.WithdrawalReserveJoules
             && journey.ReturnCoreEnergyMinimumJoules == original.ReturnCoreEnergyMinimumJoules
             && journey.ExtraWarperReserve == original.ExtraWarperReserve
-            ? authorization.Proposal.DeadlineUtc : journey.DeadlineUtc;
+            ? authorization : null;
     }
 
     internal long? EffectiveVoyagerSpentGameTicks(VoyagerJourneyRecord journey, long? projectedSpent = null)

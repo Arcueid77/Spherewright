@@ -33,6 +33,8 @@ public sealed class PrepareOwnedWorldResumeRequest
     public string RecoveryScope { get; set; } = string.Empty;
     public long MaximumChargeGameTicks { get; set; }
     public double MaximumChargeWallSeconds { get; set; }
+    /// <summary>Separately confirmed allowance above the original journey cap; primary recovery only, never stacked.</summary>
+    public long AdditionalVoyagerGameTicks { get; set; }
     public string PriorConsumedResumeToken { get; set; } = string.Empty;
     public string PriorSourceFingerprint { get; set; } = string.Empty;
     public string PriorLegacySourceFingerprint { get; set; } = string.Empty;
@@ -57,6 +59,9 @@ public sealed class CommitOwnedWorldResumeRequest
 
 public sealed class PreparedOwnedWorldResumePlan
 {
+    public long AdditionalVoyagerGameTicks { get; set; }
+    public long? OriginalJourneyMaximumGameTicks { get; set; }
+    public long? EffectiveJourneyMaximumGameTicks { get; set; }
     public bool Prepared { get; set; }
 
     public string PlanToken { get; set; } = string.Empty;

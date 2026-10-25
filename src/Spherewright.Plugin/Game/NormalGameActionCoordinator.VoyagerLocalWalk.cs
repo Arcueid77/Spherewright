@@ -63,7 +63,7 @@ internal sealed partial class NormalGameActionCoordinator
                 {
                     ExactRemoteBinding = true, NativePlayerIdle = !groundMiss && physicallyAtRest, CurrentGameTick = GameMain.gameTick,
                     LastLandedGameTick = lastLandedGameTick, SpentGameTicks = _sessions.EffectiveVoyagerSpentGameTicks(journey, spentGameTicks) ?? -1,
-                    MaximumGameTicks = journey.MaximumGameTicks, ReturnReserveGameTicks = journey.ReturnReserveGameTicks,
+                    MaximumGameTicks = _sessions.EffectiveVoyagerMaximumGameTicks(journey), ReturnReserveGameTicks = journey.ReturnReserveGameTicks,
                     WorkGameTicks = 1, TailGameTicks = VoyagerLocalWalkReservePolicy.StopGameTicks,
                     NowUtc = now, JourneyDeadlineUtc = _sessions.EffectiveVoyagerDeadline(journey),
                     AvailableLoadedEnergyJoules = CalculateAvailableFlightEnergy(player.mecha), LockedReturnFloorJoules = journey.ReturnEnergyFloorJoules,
@@ -209,7 +209,7 @@ internal sealed partial class NormalGameActionCoordinator
         var startUtc = adoption.ChargeStartedUtc ?? now;
         var blocker = VoyagerRecoveryWindowPolicy.ChargeBlocker(m.coreEnergy, m.coreEnergyCap, CalculateAvailableFlightEnergy(m),
             journey.ReturnEnergyFloorJoules, perTick, journey.ReturnCoreEnergyMinimumJoules, journey.SpentGameTicks,
-            GameMain.gameTick - journey.LastLandedGameTick!.Value, journey.MaximumGameTicks, journey.ReturnReserveGameTicks,
+            GameMain.gameTick - journey.LastLandedGameTick!.Value, _sessions.EffectiveVoyagerMaximumGameTicks(journey), journey.ReturnReserveGameTicks,
             GameMain.gameTick - startTick, authorization.Proposal.MaximumChargeGameTicks, (now - startUtc).TotalSeconds,
             authorization.Proposal.MaximumChargeWallSeconds, now, effectiveDeadline, adoption.CurrentDecisionEvidence);
         if (blocker is not null) return blocker;
@@ -466,7 +466,7 @@ internal sealed partial class NormalGameActionCoordinator
             {
                 ExactRemoteBinding = exactJourney, NativePlayerIdle = false,
                 CurrentGameTick = GameMain.gameTick, LastLandedGameTick = journey.LastLandedGameTick,
-                SpentGameTicks = journey.SpentGameTicks, MaximumGameTicks = journey.MaximumGameTicks,
+                SpentGameTicks = journey.SpentGameTicks, MaximumGameTicks = _sessions.EffectiveVoyagerMaximumGameTicks(journey),
                 ReturnReserveGameTicks = journey.ReturnReserveGameTicks,
                 NowUtc = now, JourneyDeadlineUtc = _sessions.EffectiveVoyagerDeadline(journey),
                 AvailableLoadedEnergyJoules = CalculateAvailableFlightEnergy(p.mecha),

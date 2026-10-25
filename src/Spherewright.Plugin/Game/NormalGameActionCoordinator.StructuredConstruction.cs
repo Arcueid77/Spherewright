@@ -123,7 +123,7 @@ internal sealed partial class NormalGameActionCoordinator
         {
             ExactRemoteBinding = true, NativePlayerIdle = true,
             CurrentGameTick = GameMain.gameTick, LastLandedGameTick = journey.LastLandedGameTick,
-            SpentGameTicks = journey.SpentGameTicks, MaximumGameTicks = journey.MaximumGameTicks,
+            SpentGameTicks = journey.SpentGameTicks, MaximumGameTicks = _sessions.EffectiveVoyagerMaximumGameTicks(journey),
             ReturnReserveGameTicks = journey.ReturnReserveGameTicks,
             WorkGameTicks = workTicks, TailGameTicks = reserve.TailGameTicks,
             NowUtc = DateTimeOffset.UtcNow, JourneyDeadlineUtc = _sessions.EffectiveVoyagerDeadline(journey),
@@ -401,7 +401,7 @@ internal sealed partial class NormalGameActionCoordinator
         {
             ExactRemoteBinding = true, NativePlayerIdle = true, CurrentGameTick = GameMain.gameTick,
             LastLandedGameTick = journey.LastLandedGameTick, SpentGameTicks = journey.SpentGameTicks,
-            MaximumGameTicks = journey.MaximumGameTicks, ReturnReserveGameTicks = journey.ReturnReserveGameTicks,
+            MaximumGameTicks = _sessions.EffectiveVoyagerMaximumGameTicks(journey), ReturnReserveGameTicks = journey.ReturnReserveGameTicks,
             WorkGameTicks = 1, TailGameTicks = reserve.TailGameTicks,
             NowUtc = DateTimeOffset.UtcNow, JourneyDeadlineUtc = _sessions.EffectiveVoyagerDeadline(journey),
             AvailableLoadedEnergyJoules = CalculateAvailableFlightEnergy(player.mecha), LockedReturnFloorJoules = journey.ReturnEnergyFloorJoules,

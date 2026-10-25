@@ -10,6 +10,8 @@ public static class OwnedWorldRecoveryPolicy
 
     public static string? ValidateRequest(PrepareOwnedWorldResumeRequest request)
     {
+        if (request.AdditionalVoyagerGameTicks != 0 && request.RecoveryMode != OwnedWorldResumeModes.AuthorizeRemotePrimaryRecovery)
+            return "Additional Voyager ticks require the explicit current-primary authorization and its separate digest confirmation.";
         if (request.RecoveryMode == OwnedWorldResumeModes.ResumeReturnOnlyTask)
             return VoyagerReturnOnlyContinuationPolicy.ValidateRequest(request);
         if (request.RecoveryMode == OwnedWorldResumeModes.OpenSavedPrimary)

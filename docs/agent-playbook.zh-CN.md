@@ -22,6 +22,8 @@
 
 只有用户另行授予新的有界自动恢复窗口时，才在空闲主菜单准备 `recoveryMode=authorize_remote_primary_recovery`，提供准确 `recoveryDeadlineUtc`、`recoveryScope=continue_original_finite_task` 和有限自然充能上限。此路径在披露并确认准确 digest 后建立新授权。普通读档、旧成功动作、消费记录或泛化的“继续”都不提供新的墙钟预算。它可使用已过期或仅读档的受保护归属来源；旧续接模式仍保留原限制。
 
+原 tick 额度耗尽时，同一模式接受另行明确批准的 `additionalVoyagerGameTicks`，范围0至108000。确认 digest 前须核对准备响应的新增额度及 `originalJourneyMaximumGameTicks` / `effectiveJourneyMaximumGameTicks`。新增额度始终以不可变的原上限为基准，不与上次提案叠加。所有已观察耗时继续计费；原记录、返航 tick、能源及翘曲器预留保持受保护。获批的有效上限必须覆盖原生初始化、步行、建造和原母星返航；仅给新的墙钟期限不会增加 tick。
+
 来源仅为同 Native 的精确完整 owned 主档，并持有原 Journal、仅作历史证明而禁止加载的成功去程检查点、当前 Journey 及同 owned 固定 LastExit。它不宣称旧动作成功或失败，不沿旧消费记录重放，不加载检查点。明确舍弃进度时沿用准确下限/主档 tick 双绑定。已观察后舍弃的时间继续计入原旅程：接管期间的预算包含该扣费，严格接管成功后仅一次持久记入保守 spent；原 maximum tick、issued/deadline 字段、返程能源/核心/翘曲器预留及旧动作终态保留。
 
 核对 `remotePrimaryRecoveryAuthorizationUsed`、证据版本2、精确主档 tick、舍弃 tick 数、`conservedObservedProgressDebitGameTicks`、新期限/范围/充能上限和确认 digest。保守扣费包含此前舍弃且经仅读档、正常退出继续保留的已观察时间；`discardedUnstoredProgressGameTicks` 只描述本次加载。受保护的仅读档凭据保留这项观察，不授予自动操作，也不改变物理存档 minimum。旧仅读档凭据若缺少该观察，保持未知并拒绝自动恢复，普通文件访问仍可用。健康普通 Save 签发凭据时清除已持久扣费的观察，防止重复扣费。

@@ -3,12 +3,17 @@ namespace Spherewright.Bridge.Core.Safety;
 public sealed class VoyagerRecoveryWindowProposal
 {
     public const string TaskScope = "continue_original_finite_task";
-    public VoyagerRecoveryWindowProposal(DateTimeOffset deadlineUtc, string scope, long maximumChargeGameTicks, double maximumChargeWallSeconds)
-    { DeadlineUtc = deadlineUtc; Scope = scope; MaximumChargeGameTicks = maximumChargeGameTicks; MaximumChargeWallSeconds = maximumChargeWallSeconds; }
+    public VoyagerRecoveryWindowProposal(DateTimeOffset deadlineUtc, string scope, long maximumChargeGameTicks, double maximumChargeWallSeconds,
+        long additionalVoyagerGameTicks = 0)
+    { DeadlineUtc = deadlineUtc; Scope = scope; MaximumChargeGameTicks = maximumChargeGameTicks; MaximumChargeWallSeconds = maximumChargeWallSeconds;
+      AdditionalVoyagerGameTicks = additionalVoyagerGameTicks; }
     public DateTimeOffset DeadlineUtc { get; }
     public string Scope { get; }
     public long MaximumChargeGameTicks { get; }
     public double MaximumChargeWallSeconds { get; }
+    public long AdditionalVoyagerGameTicks { get; }
+    // Preserve the byte shape of all previously committed zero-addition proposals.
+    public bool ShouldSerializeAdditionalVoyagerGameTicks() => AdditionalVoyagerGameTicks != 0;
 }
 
 public sealed class VoyagerRecoveryAuthorization
@@ -35,6 +40,17 @@ public sealed class VoyagerRecoveryAuthorization
 public static class VoyagerRecoveryWindowPolicy
 {
     public const string ChargingPending = "remote_resume_charging_pending";
+    public const long MaximumAdditionalVoyagerGameTicks = 108000;
+
+    // Each proposal names its total addition above the immutable original cap.
+    // An earlier proposal is never added again; observed spent ticks are separate.
+    public static long? EffectiveMaximumGameTicks(long originalMaximum, VoyagerRecoveryWindowProposal? proposal)
+    {
+        var extra = proposal?.AdditionalVoyagerGameTicks ?? 0;
+        if (originalMaximum < 1 || extra < 0 || extra > MaximumAdditionalVoyagerGameTicks
+            || originalMaximum > long.MaxValue - extra) return null;
+        return originalMaximum + extra;
+    }
     public static string? ChargeBudgetBlocker(VoyagerLocalActionBudgetFacts? f, DateTimeOffset now, DateTimeOffset effectiveDeadline,
         NativeResumeDecisionEvidence? evidence = null)
     {
@@ -68,7 +84,8 @@ public static class VoyagerRecoveryWindowPolicy
     public static string? ProposalBlocker(VoyagerRecoveryWindowProposal p, DateTimeOffset now, DateTimeOffset originalIssued,
         DateTimeOffset originalDeadline, long returnTicks)
     {
-        if (p.Scope != VoyagerRecoveryWindowProposal.TaskScope || now == default || originalIssued == default
+        if (p.AdditionalVoyagerGameTicks < 0 || p.AdditionalVoyagerGameTicks > MaximumAdditionalVoyagerGameTicks
+            || p.Scope != VoyagerRecoveryWindowProposal.TaskScope || now == default || originalIssued == default
             || originalDeadline <= originalIssued || p.DeadlineUtc <= now
             || p.DeadlineUtc - now > originalDeadline - originalIssued
             || returnTicks < 3600 || (p.DeadlineUtc - now).TotalSeconds <= returnTicks / 60d + 1d + 1d / 60d

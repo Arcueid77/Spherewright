@@ -942,6 +942,7 @@ internal sealed partial class GameSessionTracker : IDisposable
             || recoveryAuthorization.Proposal.DeadlineUtc != proposal.DeadlineUtc
             || recoveryAuthorization.Proposal.Scope != proposal.Scope
             || recoveryAuthorization.Proposal.MaximumChargeGameTicks != proposal.MaximumChargeGameTicks
+            || recoveryAuthorization.Proposal.AdditionalVoyagerGameTicks != proposal.AdditionalVoyagerGameTicks
             || recoveryAuthorization.Proposal.MaximumChargeWallSeconds != proposal.MaximumChargeWallSeconds)
             || remoteEvidence?.RecoveryProposal is not null && recoveryAuthorization is null)
             throw new InvalidOperationException("remote_resume_recovery_authorization_handoff_unproved");

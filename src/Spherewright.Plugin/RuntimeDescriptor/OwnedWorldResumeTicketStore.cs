@@ -517,6 +517,8 @@ internal sealed class OwnedWorldResumeTicketStore
                 || proposal.DeadlineUtc <= authorization.ConfirmedAtUtc
                 || proposal.Scope != VoyagerRecoveryWindowProposal.TaskScope
                 || proposal.MaximumChargeGameTicks < 1 || proposal.MaximumChargeGameTicks > 18000
+                || proposal.AdditionalVoyagerGameTicks < 0
+                || proposal.AdditionalVoyagerGameTicks > VoyagerRecoveryWindowPolicy.MaximumAdditionalVoyagerGameTicks
                 || double.IsNaN(proposal.MaximumChargeWallSeconds) || double.IsInfinity(proposal.MaximumChargeWallSeconds)
                 || proposal.MaximumChargeWallSeconds <= 0d || proposal.MaximumChargeWallSeconds > 300d)
                 throw new InvalidDataException("The fixed prior consumption proof is incomplete, changed or already a compatibility hop.");

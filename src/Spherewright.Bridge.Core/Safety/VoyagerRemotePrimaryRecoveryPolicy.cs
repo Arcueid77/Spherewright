@@ -23,6 +23,7 @@ public static class VoyagerRemotePrimaryRecoveryPolicy
         var evidence = new NativeResumeDecisionEvidence("remote_primary_request", null, now, true);
         evidence.Number("requested_charge_ticks", r.MaximumChargeGameTicks);
         evidence.Number("requested_charge_wall_s", r.MaximumChargeWallSeconds);
+        evidence.Number("requested_additional_voyager_ticks", r.AdditionalVoyagerGameTicks);
         evidence.Number("requested_known_floor", r.MinimumRecoveryGameTick);
         evidence.Number("requested_primary_tick", r.ExpectedRecoveryGameTick);
         evidence.Observe("prior_failure_claim", r.PriorActionKnownTerminalFailed);
@@ -40,6 +41,8 @@ public static class VoyagerRemotePrimaryRecoveryPolicy
             return true;
         }
         if (!All(("request_primary_mode", r.RecoveryMode == OwnedWorldResumeModes.AuthorizeRemotePrimaryRecovery),
+            ("request_additional_tick_minimum", r.AdditionalVoyagerGameTicks >= 0),
+            ("request_additional_tick_maximum", r.AdditionalVoyagerGameTicks <= VoyagerRecoveryWindowPolicy.MaximumAdditionalVoyagerGameTicks),
             ("request_prepare_unconfirmed", !r.UserConfirmedInConversation), ("request_new_deadline_observed", r.RecoveryDeadlineUtc.HasValue),
             ("request_original_task_scope", r.RecoveryScope == VoyagerRecoveryWindowProposal.TaskScope),
             ("request_charge_tick_minimum", r.MaximumChargeGameTicks >= 1), ("request_charge_tick_maximum", r.MaximumChargeGameTicks <= 18000),
@@ -104,6 +107,8 @@ public static class VoyagerRemotePrimaryRecoveryPolicy
             || !e.Require("primary_source_covers_landing", f.SourceGameTick >= f.LastLandedGameTick))
             return "remote_resume_newer_progress_rollback_forbidden";
         if (!e.Require("primary_new_window_observed", f.RecoveryProposal is not null)) return "remote_primary_new_authority_required";
+        if (!e.Require("primary_additional_ticks_match", f.RecoveryProposal!.AdditionalVoyagerGameTicks == r.AdditionalVoyagerGameTicks))
+            return "remote_primary_additional_tick_authority_mismatch";
         // Discarding world progress does not refund the original Journey's time.
         return VoyagerRemoteResumePolicy.FiniteJourneyBudgetBlocker(f, e,
             Math.Max(0, Math.Max(knownProgress, observedBudgetFloor ?? knownProgress) - f.SourceGameTick));
@@ -121,6 +126,9 @@ public static class VoyagerRemotePrimaryRecoveryPolicy
         && p.OriginalJourneyDeadlineUtc.HasValue && !string.IsNullOrEmpty(p.SourceGameVersion)
         && p.SourceGameVersion == p.TargetGameVersion
         && p.MaximumChargeGameTicks == r.MaximumChargeGameTicks && p.MaximumChargeWallSeconds == r.MaximumChargeWallSeconds
+        && p.AdditionalVoyagerGameTicks == r.AdditionalVoyagerGameTicks
+        && (r.AdditionalVoyagerGameTicks == 0 || p.OriginalJourneyMaximumGameTicks is { } original && original >= 7200 && original <= 108000
+            && p.EffectiveJourneyMaximumGameTicks == original + r.AdditionalVoyagerGameTicks)
         && p.NativeChargeFeasibilityRequiresFreshCapture && !p.NewChargingProhibited
         && p.DiscardedUnstoredProgressGameTicks.HasValue && p.DiscardedUnstoredProgressGameTicks >= 0
         && p.ConservedObservedProgressDebitGameTicks.HasValue

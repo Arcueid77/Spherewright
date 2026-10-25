@@ -661,7 +661,7 @@ internal sealed partial class NormalGameActionCoordinator
     private BridgeError? ValidateVoyagerReturnReserve(VoyagerJourneyRecord journey, Player player)
     {
         var elapsedRemote = journey.LastLandedGameTick.HasValue ? Math.Max(0L, GameMain.gameTick - journey.LastLandedGameTick.Value) : 0L;
-        var remaining = journey.ReturnOnlyTask is null ? journey.MaximumGameTicks - journey.SpentGameTicks - elapsedRemote
+        var remaining = journey.ReturnOnlyTask is null ? _sessions.EffectiveVoyagerMaximumGameTicks(journey) - journey.SpentGameTicks - elapsedRemote
             : journey.RemainingReturnOnlyTicks(_sessions.SessionId, GameMain.gameTick) ?? -1;
         if (DateTimeOffset.UtcNow >= _sessions.EffectiveVoyagerDeadline(journey)
             || journey.ReturnOnlyTask is not null && _sessions.ReturnOnlyTaskStopped
@@ -739,7 +739,7 @@ internal sealed partial class NormalGameActionCoordinator
                 && player.currentOrder is null && !player.warpCommand && player.warpState == 0f && VoyagerMechaWorkIdle(player)
                 && player.mecha.constructionModule.allDronesIdle,
             CurrentGameTick = GameMain.gameTick, LastLandedGameTick = journey.LastLandedGameTick,
-            SpentGameTicks = journey.SpentGameTicks, MaximumGameTicks = journey.MaximumGameTicks,
+            SpentGameTicks = journey.SpentGameTicks, MaximumGameTicks = _sessions.EffectiveVoyagerMaximumGameTicks(journey),
             ReturnReserveGameTicks = journey.ReturnReserveGameTicks, WorkGameTicks = workTicks, TailGameTicks = tailTicks,
             NowUtc = nowUtc, JourneyDeadlineUtc = _sessions.EffectiveVoyagerDeadline(journey),
             AvailableLoadedEnergyJoules = CalculateAvailableFlightEnergy(player.mecha),
