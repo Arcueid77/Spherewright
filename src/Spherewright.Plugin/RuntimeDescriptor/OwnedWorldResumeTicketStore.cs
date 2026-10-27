@@ -9,7 +9,7 @@ using Spherewright.Plugin.Transport;
 
 namespace Spherewright.Plugin.RuntimeDescriptor;
 
-internal sealed class OwnedWorldResumeTicketStore
+internal sealed partial class OwnedWorldResumeTicketStore
 {
     public string CurrentGameVersion => _gameVersion;
     private const int TicketVersion = 1;

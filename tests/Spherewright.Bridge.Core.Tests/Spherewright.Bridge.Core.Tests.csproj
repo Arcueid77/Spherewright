@@ -35,12 +35,14 @@
     <Compile Include="..\..\src\Spherewright.Plugin\Game\NormalGameActionCoordinator.RemoteResumeDecision.cs" Link="PluginGame\NormalGameActionCoordinator.RemoteResumeDecision.cs" />
     <Compile Include="..\..\src\Spherewright.Plugin\Game\NormalGameActionCoordinator.RemoteResumeEnvironment.cs" Link="PluginGame\NormalGameActionCoordinator.RemoteResumeEnvironment.cs" />
     <Compile Include="..\..\src\Spherewright.Plugin\Game\GameSessionTracker.RemoteResumeCompletion.cs" Link="PluginGame\GameSessionTracker.RemoteResumeCompletion.cs" />
+    <Compile Include="..\..\src\Spherewright.Plugin\Game\GameSessionTracker.RemoteResumeLeaseHandoff.cs" Link="PluginGame\GameSessionTracker.RemoteResumeLeaseHandoff.cs" />
     <Compile Include="..\..\src\Spherewright.Plugin\Game\GameSessionTracker.PausedSave.cs" Link="PluginGame\GameSessionTracker.PausedSave.cs" />
     <Compile Include="..\..\src\Spherewright.Plugin\Game\GameSessionTracker.WriteBlockers.cs" Link="PluginGame\GameSessionTracker.WriteBlockers.cs" />
     <Compile Include="..\..\src\Spherewright.Plugin\Game\GameSessionTracker.OwnedSave.cs" Link="PluginGame\GameSessionTracker.OwnedSave.cs" />
     <Compile Include="..\..\src\Spherewright.Plugin\Game\GameSessionTracker.RemoteResumeSavePermission.cs" Link="PluginGame\GameSessionTracker.RemoteResumeSavePermission.cs" />
     <Compile Include="..\..\src\Spherewright.Plugin\Game\NormalGameActionCoordinator.CommitAccess.cs" Link="PluginGame\NormalGameActionCoordinator.CommitAccess.cs" />
     <Compile Include="..\..\src\Spherewright.Plugin\RuntimeDescriptor\OwnedWorldResumeTicketStore.cs" Link="PluginRuntimeDescriptor\OwnedWorldResumeTicketStore.cs" />
+    <Compile Include="..\..\src\Spherewright.Plugin\RuntimeDescriptor\OwnedWorldResumeTicketStore.SavedFileAccess.cs" Link="PluginRuntimeDescriptor\OwnedWorldResumeTicketStore.SavedFileAccess.cs" />
     <Compile Include="..\..\src\Spherewright.Plugin\RuntimeDescriptor\FlightCheckpointStore.cs" Link="PluginRuntimeDescriptor\FlightCheckpointStore.cs" />
     <Compile Include="..\..\src\Spherewright.Plugin\RuntimeDescriptor\FlightCheckpointStore.Voyager.cs" Link="PluginRuntimeDescriptor\FlightCheckpointStore.Voyager.cs" />
     <Compile Include="..\..\src\Spherewright.Plugin\RuntimeDescriptor\FlightCheckpointStore.ReturnOnlyRecovery.cs" Link="PluginRuntimeDescriptor\FlightCheckpointStore.ReturnOnlyRecovery.cs" />

@@ -360,6 +360,13 @@ internal sealed partial class OwnedWorldResumeCoordinator
         VoyagerRecoveryAuthorization? recoveryAuthorization = null;
         try
         {
+            if (payload.RemoteContinuation && currentPayload!.RemoteEvidence is { } preflightEvidence
+                && !GameSessionTracker.RemoteResumeLeaseHandoffMatches(currentTicket, sourceLease, primaryLease,
+                    currentPayload.RemoteJournalLease, preflightEvidence, action.ActionId, payload.ResumeSource,
+                    payload.Reauthorizing, payload.FixedAutosaveRecovery))
+                return GameCallResult<OwnedWorldResumeResult>.Failed(BridgeError.Create(BridgeErrorCodes.StaleState,
+                    "remote_resume_full_lease_handoff_unproved_before_consumption", false,
+                    "No credential was consumed and no Native load was entered; preserve the original plan and inspect its exact source leases."));
             if(payload.ReturnOnlyContinuation)
             {
                 var native=currentPayload!.RemoteEvidence!;
@@ -611,8 +618,13 @@ internal sealed partial class OwnedWorldResumeCoordinator
         out OwnedWorldResumeTicket? ticket, out string provenance, out string rejection)
     {
         provenance = string.Empty;
+        if (request.RecoveryMode == OwnedWorldResumeModes.AuthorizeRemotePrimaryRecovery)
+        {
+            if (_actions.Values.Any(action => action.TerminalResult?.Terminal != true))
+            { ticket = null; provenance = string.Empty; rejection = "A previous resume is still pending or unknown; no saved-file identity reconciliation is permitted."; return false; }
+            return _tickets.TryGetFreshRemoteFileAccessProvenance(token, out ticket, out provenance, out rejection);
+        }
         if (request.RecoveryMode == OwnedWorldResumeModes.OpenSavedPrimary
-            || request.RecoveryMode == OwnedWorldResumeModes.AuthorizeRemotePrimaryRecovery
             || request.RecoveryMode == OwnedWorldResumeModes.ResumeReturnOnlyTask)
             return _tickets.TryGetSavedWorldOpenProvenance(token, out ticket, out provenance, out rejection);
         if (request.RecoveryMode == OwnedWorldResumeModes.ReauthorizeVersionChangedPrimary)

@@ -117,6 +117,7 @@ internal sealed partial class GameSessionTracker : IDisposable
     }
     internal SessionState CaptureOnMainThread()
     { RefreshCheckpointNativeShellForTest(); return Snapshot; }
+    internal bool FailBeforeRemoteLeaseHandoffForTest;
     internal void ExpectNextSessionToBeResumed(OwnedWorldResumeTicket ticket,
         OwnedSaveRecoveryLease? sourceLease = null, bool reauthorizingExpiredPrimary = false,
         IDisposable? journalLease = null, bool reauthorizingFixedAutosave0 = false,
@@ -126,6 +127,10 @@ internal sealed partial class GameSessionTracker : IDisposable
         bool savedWorldOpenOnly = false, string? savedWorldOpenActionId = null,
         long? savedWorldOpenKnownProgressGameTick = null)
     {
+        if (FailBeforeRemoteLeaseHandoffForTest) throw new InvalidOperationException("synthetic_pre_dispatch_failure");
+        if (remoteEvidence is not null && !RemoteResumeLeaseHandoffMatches(ticket, sourceLease, primaryLease,
+            journalLease, remoteEvidence, remoteResumeActionId, resumeSource, reauthorizingExpiredPrimary, reauthorizingFixedAutosave0))
+            throw new InvalidOperationException("remote_resume_full_lease_handoff_unproved");
         SourceLease = sourceLease;
         ResetContactForExpectedWorld();
         JournalLease = journalLease;

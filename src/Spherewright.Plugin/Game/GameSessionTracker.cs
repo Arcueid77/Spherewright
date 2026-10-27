@@ -926,13 +926,8 @@ internal sealed partial class GameSessionTracker : IDisposable
             ? !OwnedWorldVersionCompatibilityPolicy.AllowsReauthorization(ticket.GameVersion, _gameVersion)
             : ticket.GameVersion != _gameVersion)
             throw new InvalidOperationException("The source game version is not permitted for this resume mode.");
-        if (remoteEvidence is not null && (remoteEvidence.IsDisposed || reauthorizingExpiredPrimary || reauthorizingFixedAutosave0
-            || resumeSource != (remoteEvidence.RemotePrimaryRecovery ? OwnedWorldResumeSourceKind.OwnedPrimary : OwnedWorldResumeSourceKind.LastExit)
-            || !Guid.TryParse(remoteResumeActionId, out _)
-            || sourceLease is null || primaryLease is null || journalLease is null || ticket.GameplayJournalCheckpoint is null
-            || (!remoteEvidence.RemotePrimaryRecovery && string.IsNullOrEmpty(ticket.QuarantineActionId))
-            || sourceLease.Fingerprint != remoteEvidence.SourceFingerprint
-            || primaryLease.Fingerprint != remoteEvidence.PrimaryFingerprint))
+        if (remoteEvidence is not null && !RemoteResumeLeaseHandoffMatches(ticket, sourceLease, primaryLease,
+            journalLease, remoteEvidence, remoteResumeActionId, resumeSource, reauthorizingExpiredPrimary, reauthorizingFixedAutosave0))
             throw new InvalidOperationException("remote_resume_full_lease_handoff_unproved");
         if (recoveryAuthorization is not null && (remoteEvidence?.RecoveryProposal is not { } proposal
             || recoveryAuthorization.ResumeActionId != remoteResumeActionId
