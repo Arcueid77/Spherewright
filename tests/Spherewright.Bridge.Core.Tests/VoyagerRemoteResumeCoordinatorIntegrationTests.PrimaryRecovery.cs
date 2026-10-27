@@ -152,7 +152,9 @@ public sealed partial class VoyagerRemoteResumeCoordinatorIntegrationTests
                 r.AcceptUnstoredProgressLoss = false; r.MinimumRecoveryGameTick = null; r.ExpectedRecoveryGameTick = null;
                 s.WriteSave(GameSave.LastExit, 12527); // Neither complete file covers the current12528 boundary.
                 break;
-            case "wrong_floor": r.MinimumRecoveryGameTick++; break;
+            // A higher expressly accepted missing-progress floor adds debit.
+            // Reject understating the complete Native boundary/refunding time.
+            case "wrong_floor": r.MinimumRecoveryGameTick--; break;
             case "wrong_tick": r.ExpectedRecoveryGameTick--; break;
             case "refunded_time":
                 s.WriteSave(GameSave.LastExit, 12510 + 60000);
