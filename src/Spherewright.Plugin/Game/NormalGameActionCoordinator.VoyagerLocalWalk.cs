@@ -15,7 +15,7 @@ internal sealed partial class NormalGameActionCoordinator
         long? lastLandedGameTick, out NativeLocalWalkSceneBinding? observedScene, int? prospectiveRemotePlanetId = null,
         Action<VoyagerRemoteIdleAdmissionFacts>? captureFacts = null, bool collectAfterGroundMiss = false,
         Action<NativePlayerGroundContactSnapshot>? captureGround = null, string groundStage = "native_guard",
-        bool collectNaturalContact = false, bool reconcilePaused = false)
+        bool collectNaturalContact = false, bool reconcilePaused = false, bool allowSavedConstructionTail = false)
     {
         observedScene = scene;
         var stage = "binding";
@@ -45,9 +45,13 @@ internal sealed partial class NormalGameActionCoordinator
             stage = "construction_drones";
             if (!TryObserveOwnedConstructionDrones(player.factory, player.mecha.constructionModule, out var dronesIdle, out _))
                 return Blocked("remote_idle_construction_drones_unobserved");
-            if (!dronesIdle) return Blocked("remote_idle_construction_drones_active");
+            var savedTail = allowSavedConstructionTail && owner.ResumeAdoption is { } tailAdoption
+                && ReferenceEquals(_savedConstructionTail?.Adoption, tailAdoption)
+                && SavedConstructionTailMatches(player, journey.JourneyId);
+            if (!dronesIdle && !savedTail) return Blocked("remote_idle_construction_drones_active");
             stage = "movement_cost";
-            var reserve = EvaluateNativeLocalMovementCost(player, modeTransitionsExcluded: true);
+            var reserve = EvaluateNativeLocalMovementCost(player, modeTransitionsExcluded: true,
+                additionalNativePowerUpperWatts: savedTail ? _savedConstructionTail!.Power : 0d);
             if (!reserve.Proved) return Blocked(reserve.BlockerCode ?? "remote_idle_movement_cost_unproved");
             stage = "walk_at_rest";
             if (player.movementState != EMovementState.Walk) return Blocked("remote_idle_actual_walk_required");
@@ -84,6 +88,7 @@ internal sealed partial class NormalGameActionCoordinator
             captureFacts?.Invoke(facts);
             if (groundMiss) return Blocked("remote_idle_ground_contact_unproved");
             if (!physicallyAtRest) return Blocked("remote_idle_actual_speed_not_at_rest");
+            if (!dronesIdle) return Blocked("remote_idle_construction_drones_active");
             return VoyagerRemoteIdleAdmissionPolicy.Evaluate(facts, stage);
         }
         catch (Exception exception)
@@ -140,6 +145,11 @@ internal sealed partial class NormalGameActionCoordinator
         VoyagerRemoteIdleAdmissionFacts? captured = null;
         NativePlayerGroundContactSnapshot? ground = null;
         var loadBoundary = !admit && !sameOwner && _sessions.ExactRemoteResumeLoadPreflight(adoption);
+        if (!sameOwner && (loadBoundary || _savedConstructionTail is not null))
+        {
+            var tailBlocker = PrepareSavedConstructionTail(adoption, journey.JourneyId);
+            if (tailBlocker is not null) return tailBlocker;
+        }
         adoption.CurrentDecisionEvidence!.Stage(loadBoundary ? "load_preflight_before_first_frame"
             : admit ? "native_physics_post501" : "native_universe_post151");
         var naturalContact = !sameOwner && ReferenceEquals(_firstFrameAdoption, adoption) && _firstFrameContact is { Policy.Retired: false };
@@ -149,7 +159,9 @@ internal sealed partial class NormalGameActionCoordinator
             collectAfterGroundMiss: loadBoundary || naturalContact, captureGround: g =>
             { ground = g; adoption.CurrentDecisionEvidence!.Observe("ground_sphere_hit", g.CheckSphereHit); },
             groundStage: loadBoundary ? "load_preflight_before_first_frame" : admit ? "native_physics_post501" : "native_universe_post151",
-            collectNaturalContact: naturalContact);
+            collectNaturalContact: naturalContact, allowSavedConstructionTail: !sameOwner);
+        if (!sameOwner && captured is not null && SavedConstructionTailFundingBlocker(adoption, journey, captured) is { } tailFunding)
+            return tailFunding;
         if (!sameOwner && adoption.FirstFrame.Armed && captured?.MovementReserve is { Proved: true } frameReserve
             && (adoption.ChargePerTickUpper != frameReserve.PerNativeTickEnergyJoules
                 || adoption.ChargeCostEnvelope != RemoteResumeChargeCostEnvelope(adoption.Player)))
@@ -179,6 +191,8 @@ internal sealed partial class NormalGameActionCoordinator
             + (decision.CaptureExceptionType is null ? string.Empty : ":" + decision.CaptureExceptionType);
         if (admit)
         {
+            var tailCompletion = SealSavedConstructionTail(adoption);
+            if (tailCompletion is not null) return tailCompletion;
             adoption.CurrentDecisionEvidence!.Require("strict_idle", true);
             _voyagerRemoteIdleOwner = owner;
             _voyagerRemoteIdleScene = scene;
@@ -245,7 +259,8 @@ internal sealed partial class NormalGameActionCoordinator
     }
 
     private static VoyagerLocalWalkReserve EvaluateNativeLocalMovementCost(Player player, bool modeTransitionsExcluded,
-        NativeMechaBackgroundCostFacts? background = null, NativeMechaRechargeFacts? recharge = null)
+        NativeMechaBackgroundCostFacts? background = null, NativeMechaRechargeFacts? recharge = null,
+        double additionalNativePowerUpperWatts = 0d)
     {
         var c = player.controller; var w = c.actionWalk; var m = player.mecha;
         background ??= CaptureNativeMechaBackgroundCosts(player);
@@ -260,6 +275,7 @@ internal sealed partial class NormalGameActionCoordinator
             IncludePotentialWaterDrift = true, NativeThrustPowerPerAcceleration = m.thrustPowerPerAcc,
             NativeGravityUpperBound = NativeLocalGravityUpperBound(player),
             IndependentMechaCosts = background, BoundedRechargeCosts = recharge,
+            AdditionalNativePowerUpperWatts = additionalNativePowerUpperWatts,
         });
     }
 

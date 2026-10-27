@@ -25,12 +25,13 @@ internal sealed partial class NormalGameActionCoordinator
         // an exact journey; an ordinary landing cannot inherit this exception.
         if (factory.entityCount == 0 && factory.entityCursor <= 1
             && factory.prebuildCount == 0 && factory.prebuildCursor <= 1) return null;
-        return RetainedUnpoweredRecoveryMinerMatches(p, factory, journeyId, evidence)
+        var retainedIls = RetainedUnpoweredRecoveryIls(p, factory, journeyId, evidence);
+        return RetainedUnpoweredRecoveryMinerMatches(p, factory, journeyId, evidence, retainedIls)
             ? null : "remote_resume_charge_native_construction_not_empty";
     }
 
     private bool RetainedUnpoweredRecoveryMinerMatches(Player p, PlanetFactory factory, string? journeyId,
-        NativeResumeDecisionEvidence? evidence)
+        NativeResumeDecisionEvidence? evidence, BlueprintBuildState? retainedIls = null)
     {
         bool Proved(string predicate, bool value) => evidence?.Require(predicate, value) ?? value;
         evidence?.Number("retained_miner_entity_count", factory.entityCount);
@@ -42,16 +43,19 @@ internal sealed partial class NormalGameActionCoordinator
             || !Proved("retained_miner_local_factory_reference", ReferenceEquals(GameMain.localPlanet?.factory, factory))) return false;
         var entities = factory.entityPool; var prebuilds = factory.prebuildPool;
         if (entities is null || prebuilds is null) return Proved("retained_miner_factory_pool_bounds", false);
-        if (!Proved("retained_miner_factory_pool_bounds", !(factory.planetId != p.planetId || factory.entityCount != 1
+        if (!Proved("retained_miner_factory_pool_bounds", !(factory.planetId != p.planetId || factory.entityCount != (retainedIls is null ? 1 : 2)
             || factory.entityCursor < 2 || factory.entityCursor > 131072
             || factory.entityCursor > entities.Length || factory.prebuildCount != 0
             || factory.prebuildCursor < 1 || factory.prebuildCursor > 131072
             || factory.prebuildCursor > prebuilds.Length))) return false;
-        if (!Proved("retained_miner_native_drone_idle", TryObserveOwnedConstructionDrones(factory, p.mecha.constructionModule, out var idle, out _) && idle)
+        if (!Proved("retained_miner_native_drone_idle", TryObserveOwnedConstructionDrones(factory, p.mecha.constructionModule, out var idle, out _)
+                && (idle || retainedIls is not null && SavedConstructionTailMatches(p, journeyId)))
             || !Proved("retained_miner_owned_progress_store", _blueprints.TryRead(out var builds))) return false;
         var local = builds.Where(b => b.Site.PlanetId == factory.planetId).ToArray();
-        if (!Proved("retained_miner_single_local_receipt", local.Length == 1)) return false;
-        var build = local[0];
+        if (!Proved("retained_miner_single_local_receipt", local.Length == (retainedIls is null ? 1 : 2))) return false;
+        var miners = local.Where(b => b.Site.Objects.Count == 1 && b.Site.Objects[0].ItemId == 2301).ToArray();
+        if (miners.Length != 1) return false;
+        var build = miners[0];
         if (build.Phase != "completed" || build.LastEvidenceGameTick > GameMain.gameTick
             || build.Objects.Count != 1 || build.Site.Objects.Count != 1 || build.Site.Objects[0].ItemId != 2301
             || build.StructuredConstruction is not { Kind: "resource" } provenance || provenance.JourneyId != journeyId
@@ -63,7 +67,8 @@ internal sealed partial class NormalGameActionCoordinator
             // DispatchDisabled is the retained stop/pass receipt, not a fresh
             // observation of the imported Native switch. Both sealed record
             // forms are valid; prove the current switch and idle independently.
-            || p.mecha.constructionModule.droneEnabled != control.OriginalDroneEnabled)
+            || p.mecha.constructionModule.droneEnabled != control.OriginalDroneEnabled
+                && !(retainedIls is not null && !p.mecha.constructionModule.droneEnabled))
             return Proved("retained_miner_sealed_completion", false);
         Proved("retained_miner_sealed_completion", true);
         var step = build.Objects[0];
@@ -86,7 +91,8 @@ internal sealed partial class NormalGameActionCoordinator
         for (var index = 1; index < factory.prebuildCursor; index++)
             if (prebuilds[index].id != 0) return Proved("retained_miner_no_live_prebuilds", false);
         for (var index = 1; index < factory.entityCursor; index++)
-            if (index != id && entities[index].id != 0) return Proved("retained_miner_no_other_entities", false);
+            if (index != id && index != retainedIls?.Objects[0].EntityId && entities[index].id != 0)
+                return Proved("retained_miner_no_other_entities", false);
         ref var entity = ref entities[id];
         var system = factory.factorySystem; var power = factory.powerSystem;
         if (system?.minerPool is null || entity.minerId < 1 || entity.minerId >= system.minerCursor

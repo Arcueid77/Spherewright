@@ -45,6 +45,11 @@ internal sealed partial class NormalGameActionCoordinator
     { _blueprints = store; _sessions = sessions; }
     internal string? MinerEnvironmentForTest(Player player, string? journeyId, NativeResumeDecisionEvidence? evidence = null)
         => RemoteResumeChargeEnvironmentBlocker(player, journeyId, evidence);
+    // These legacy single-miner regressions do not simulate the Native tower
+    // or stop-only stage4 controller. Its motion/cost proof has separate tests.
+    private BlueprintBuildState? RetainedUnpoweredRecoveryIls(Player p, PlanetFactory f, string? journeyId, NativeResumeDecisionEvidence? evidence) => null;
+    private bool SavedConstructionTailMatches(Player p, string? journeyId) => false;
+    internal static bool SavedTowerReceiptForTest(BlueprintBuildState b, string journeyId, long tick) => HasSavedPassiveTowerReceipt(b, journeyId, tick);
     private static bool StructuredEntityMatches(PlanetFactory factory, int id, BlueprintBuildState build, BlueprintSiteObject spec)
         => factory.TestGeometryMatches && id > 0 && id < factory.entityCursor && factory.entityPool[id].id == id
             && factory.entityPool[id].protoId == spec.ItemId && factory.entityPool[id].minerId > 0;

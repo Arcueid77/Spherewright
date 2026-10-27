@@ -222,8 +222,10 @@ internal sealed partial class NormalGameActionCoordinator
         };
         build.Begin(action.SessionId, action.ActionId, build.Objects.Count, GameMain.gameTick);
         if (!_blueprints.TryPut(build)) { Fail(action, "The finite structured lease could not persist; no native create or drone toggle occurred."); return; }
-        action.PlayerOrder = OrderNode.MoveTo(player.position);
-        player.Order(action.PlayerOrder, false);
+        // Admission already proves a stationary, order-free Native player.
+        // A self-target Move is still a movement command; repeatedly issuing
+        // it needlessly lets Native re-fit the ground pose under the anchor.
+        action.PlayerOrder = null;
         action.State = NormalActionStates.WaitingForGame;
         try
         {
@@ -304,6 +306,7 @@ internal sealed partial class NormalGameActionCoordinator
     // that a cached prelaunch nomination has had its chance to be consumed.
     public void ObserveStructuredConstructionNativeFactoryPassOnMainThread(GameData sourceWorld)
     {
+        ObserveSavedConstructionTailFactoryPass(sourceWorld);
         if (!ReferenceEquals(GameMain.data, sourceWorld) || sourceWorld.factories is null
             || sourceWorld.factoryCount < 1 || sourceWorld.factoryCount > 512 || sourceWorld.factoryCount > sourceWorld.factories.Length) return;
         foreach (var action in _actions.ActiveValues.Where(a => IsStructuredConstruction(a.Plan)
@@ -363,21 +366,6 @@ internal sealed partial class NormalGameActionCoordinator
                 { FinishStructuredConstructionIdle(action); return; }
                 if (control.StopOutcomeUnknown(tick, DateTimeOffset.UtcNow))
                 { FinishStructuredConstructionUnknown(action); return; }
-                if (!control.BindingLost && player.currentOrder is null && ConstructionHoldOwned(action))
-                {
-                    action.PlayerOrder = OrderNode.MoveTo(ToVector(control.Anchor));
-                    player.Order(action.PlayerOrder, false);
-                }
-            }
-            else
-            {
-                // A normal at-anchor Move order is naturally achieved by DSP.
-                // Renew it only after proving that no user order/input replaced it.
-                if (player.currentOrder is null)
-                {
-                    action.PlayerOrder = OrderNode.MoveTo(ToVector(control.Anchor));
-                    player.Order(action.PlayerOrder, false);
-                }
             }
         }
         catch (Exception exception)

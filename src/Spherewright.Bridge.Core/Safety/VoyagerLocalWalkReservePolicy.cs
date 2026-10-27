@@ -20,6 +20,9 @@ public sealed class VoyagerLocalWalkFacts
     public double? NativeGravityUpperBound { get; set; }
     public NativeMechaBackgroundCostFacts? IndependentMechaCosts { get; set; }
     public NativeMechaRechargeFacts? BoundedRechargeCosts { get; set; }
+    // Only a separately bound Native controller may supply an additional
+    // unscaled debit, e.g. already-launched returning construction drones.
+    public double AdditionalNativePowerUpperWatts { get; set; }
 }
 
 public sealed class VoyagerLocalWalkReserve
@@ -57,7 +60,8 @@ public static class VoyagerLocalWalkReservePolicy
             || !Known(f.MiningPowerWatts) || !Known(f.OtherWorkPowerWatts) || !Known(f.ReactorConsumptionRatio)
             || !Known(f.RtsSpeed) || !Known(f.ManualSpeed) || !Known(f.SoftLandingRecover)
             || f.WalkSpeed < 1d || f.WalkSpeed > 60d || f.ReactorConsumptionRatio <= 0d
-            || f.SoftLandingRecover > 1d || f.ManualSpeed != 0d || f.RtsSpeed > f.WalkSpeed + .01d)
+            || f.SoftLandingRecover > 1d || f.ManualSpeed != 0d || f.RtsSpeed > f.WalkSpeed + .01d
+            || !Finite(f.AdditionalNativePowerUpperWatts))
             return new VoyagerLocalWalkReserve { BlockerCode = "native_rts_walk_mode_or_tail_unproved" };
         NativeMechaRechargeCost? recharge = null;
         if (!NativeMechaBackgroundCostPolicy.IndependentCombatCoreDebitsExcluded(f.IndependentMechaCosts))
@@ -92,7 +96,7 @@ public static class VoyagerLocalWalkReservePolicy
             totalPower += driftPower.Value;
         }
         // Native shield/laser refill is independent of energyConsumptionCoef.
-        var perTick = totalPower * NativeTickSeconds + (recharge?.PerNativeTickEnergyUpperJoules ?? 0d);
+        var perTick = (totalPower + f.AdditionalNativePowerUpperWatts) * NativeTickSeconds + (recharge?.PerNativeTickEnergyUpperJoules ?? 0d);
         var stop = perTick * StopGameTicks;
         var workPower = perTick * 60d;
         if (!Finite(totalPower) || !Finite(perTick) || !Finite(stop) || !Finite(workPower))

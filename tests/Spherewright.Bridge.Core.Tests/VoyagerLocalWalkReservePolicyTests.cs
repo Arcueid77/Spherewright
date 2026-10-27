@@ -7,6 +7,23 @@ namespace Spherewright.Bridge.Core.Tests;
 // RTS-stop trajectories. The Plugin must separately prove the mode predicates.
 public sealed class VoyagerLocalWalkReservePolicyTests
 {
+    [Fact]
+    public void SeparatelyBoundNativeDroneDebitPaysEveryTickWithoutApplyingTheMechaConsumptionRatioAgain()
+    {
+        var f=Facts();f.ReactorConsumptionRatio=2;
+        var before=VoyagerLocalWalkReservePolicy.Evaluate(f);
+        f.AdditionalNativePowerUpperWatts=60000;
+        var after=VoyagerLocalWalkReservePolicy.Evaluate(f);
+        Assert.True(before.Proved && after.Proved);
+        Assert.Equal(60000*VoyagerLocalWalkReservePolicy.NativeTickSeconds,
+            after.PerNativeTickEnergyJoules!.Value-before.PerNativeTickEnergyJoules!.Value,5);
+        Assert.Equal(13*(after.PerNativeTickEnergyJoules.Value-before.PerNativeTickEnergyJoules.Value),
+            after.StopEnergyJoules!.Value-before.StopEnergyJoules!.Value,5);
+        f.AdditionalNativePowerUpperWatts=double.NaN;
+        Assert.False(VoyagerLocalWalkReservePolicy.Evaluate(f).Proved);
+        f.AdditionalNativePowerUpperWatts=-1;
+        Assert.False(VoyagerLocalWalkReservePolicy.Evaluate(f).Proved);
+    }
     [Theory]
     [InlineData(1f)] [InlineData(6f)] [InlineData(12f)] [InlineData(60f)]
     public void PaidThirteenTickMarginCoversOneActiveTickTheEntireDecliningNativeRtsTailAndOneSpare(float speed)
