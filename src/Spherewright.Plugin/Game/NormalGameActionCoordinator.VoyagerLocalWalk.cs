@@ -198,7 +198,7 @@ internal sealed partial class NormalGameActionCoordinator
         var originalBudgetBlocker = VoyagerRecoveryWindowPolicy.ChargeBudgetBlocker(facts.JourneyBudget, now, effectiveDeadline,
             adoption.CurrentDecisionEvidence);
         if (originalBudgetBlocker is not null) return originalBudgetBlocker;
-        var environment = RemoteResumeChargeEnvironmentBlocker(p, journey.JourneyId);
+        var environment = RemoteResumeChargeEnvironmentBlocker(p, journey.JourneyId, adoption.CurrentDecisionEvidence);
         if (environment is not null) return environment;
         var reserve = facts.MovementReserve!;
         var perTick = reserve.PerNativeTickEnergyJoules ?? double.NaN;

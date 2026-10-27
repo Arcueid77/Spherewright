@@ -1,4 +1,5 @@
 using Spherewright.Bridge.Core.Factory;
+using Spherewright.Bridge.Core.Safety;
 using Spherewright.Contracts.Factory;
 
 // TEST ONLY Native pool/value substitutes. The environment predicate and owned
@@ -42,7 +43,8 @@ internal sealed partial class NormalGameActionCoordinator
     private readonly BlueprintBuildStore _blueprints = null!;
     internal NormalGameActionCoordinator(BlueprintBuildStore store, GameSessionTracker sessions)
     { _blueprints = store; _sessions = sessions; }
-    internal string? MinerEnvironmentForTest(Player player, string? journeyId) => RemoteResumeChargeEnvironmentBlocker(player, journeyId);
+    internal string? MinerEnvironmentForTest(Player player, string? journeyId, NativeResumeDecisionEvidence? evidence = null)
+        => RemoteResumeChargeEnvironmentBlocker(player, journeyId, evidence);
     private static bool StructuredEntityMatches(PlanetFactory factory, int id, BlueprintBuildState build, BlueprintSiteObject spec)
         => factory.TestGeometryMatches && id > 0 && id < factory.entityCursor && factory.entityPool[id].id == id
             && factory.entityPool[id].protoId == spec.ItemId && factory.entityPool[id].minerId > 0;

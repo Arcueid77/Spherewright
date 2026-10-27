@@ -25,7 +25,7 @@ internal sealed partial class NormalGameActionCoordinator
             return "remote_resume_ground_sync_original_budget_unproved";
         if (!f.NativeWarperCount.HasValue || f.NativeWarperCount < 1 + f.OriginalExtraWarperReserve)
             return "remote_resume_charge_original_warper_reserve_insufficient";
-        var environment = RemoteResumeChargeEnvironmentBlocker(p, journey.JourneyId);
+        var environment = RemoteResumeChargeEnvironmentBlocker(p, journey.JourneyId, adoption.CurrentDecisionEvidence);
         if (environment is not null) return environment;
         if(adoption.Evidence.ReturnOnlyContinuation)
             return ReturnOnlyNativeFundingBlocker(adoption,journey,reserve.PerNativeTickEnergyJoules??double.NaN);

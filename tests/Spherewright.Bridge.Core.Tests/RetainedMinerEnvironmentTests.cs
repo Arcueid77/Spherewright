@@ -1,5 +1,6 @@
 using BepInEx.Logging;
 using Spherewright.Bridge.Core.Factory;
+using Spherewright.Bridge.Core.Safety;
 using Spherewright.Contracts.Factory;
 using Spherewright.Plugin.Game;
 using Xunit;
@@ -11,10 +12,11 @@ public sealed class RetainedMinerEnvironmentTests
     private const string Blocker = "remote_resume_charge_native_construction_not_empty";
 
     [Theory]
-    [InlineData(false)] [InlineData(true)]
-    public void SealedUnpoweredMinerSurvivesRestartWithRetiredPrebuildAndUnchangedReceipt(bool historicalDispatchDisabled)
+    [InlineData(false, 1)] [InlineData(true, 1)]
+    [InlineData(false, 2)] [InlineData(true, 2)]
+    public void SealedUnpoweredMinerSurvivesRestartWithRetiredPrebuildAndUnchangedReceipt(bool historicalDispatchDisabled, int prebuildCursor)
     {
-        using var f = new Fixture(historicalDispatchDisabled); var before = File.ReadAllBytes(f.Path);
+        using var f = new Fixture(historicalDispatchDisabled, prebuildCursor); var before = File.ReadAllBytes(f.Path);
         Assert.Null(f.Guard());
         Assert.Null(f.Guard()); // New Store/coordinator each time, no cached grant.
         Assert.Equal(before, File.ReadAllBytes(f.Path));
@@ -30,6 +32,7 @@ public sealed class RetainedMinerEnvironmentTests
     [InlineData("repair_target")] [InlineData("reconstruct_target")] [InlineData("wrong_component")]
     [InlineData("wrong_world_reference")]
     [InlineData("live_dispatch_changed")]
+    [InlineData("retired_slot_live_beyond_reset_cursor")]
     public void OnlyTheExactCompletedIdleUnpoweredSingleMinerCanEnter(string fault)
     {
         using var f = new Fixture();
@@ -58,6 +61,7 @@ public sealed class RetainedMinerEnvironmentTests
             case "wrong_component": f.Factory.factorySystem.minerPool[1].entityId = 2; break;
             case "wrong_world_reference": GameMain.data!.localLoadedPlanetFactory = new object(); break;
             case "live_dispatch_changed": f.Player.mecha.constructionModule.droneEnabled = false; break;
+            case "retired_slot_live_beyond_reset_cursor": f.Factory.prebuildCursor = 1; f.Factory.prebuildPool[1].id = 1; break;
         }
         Assert.Equal(Blocker, f.Guard());
     }
@@ -98,6 +102,22 @@ public sealed class RetainedMinerEnvironmentTests
         Assert.Equal("remote_resume_charge_rts_or_manual_velocity_nonzero", f.Guard());
     }
 
+    [Fact]
+    public void FailedRecoveryRetainsTheFirstSameSampleFactoryPredicateAndActualCursor()
+    {
+        using var f = new Fixture(true, 1);
+        GameMain.data!.localLoadedPlanetFactory = new object();
+        var evidence = new NativeResumeDecisionEvidence("load_preflight_before_first_frame", 112,
+            new DateTimeOffset(2025, 1, 1, 0, 0, 0, TimeSpan.Zero), true);
+        Assert.Equal(Blocker, f.Guard(evidence));
+        var failure = evidence.Failure(Blocker);
+        Assert.Equal("retained_miner_loaded_factory_reference", failure.FirstFailedPredicate);
+        Assert.Equal(1, failure.Values["retained_miner_prebuild_cursor"]);
+        Assert.Equal("true", failure.Predicates["retained_miner_owned_journey"]);
+        Assert.Equal("false", failure.Predicates["retained_miner_loaded_factory_reference"]);
+        Assert.False(failure.SafetyCertified);
+    }
+
     private sealed class Fixture : IDisposable
     {
         private readonly string root = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "Spherewright", "retained-miner", Guid.NewGuid().ToString("N"));
@@ -108,13 +128,14 @@ public sealed class RetainedMinerEnvironmentTests
         internal string Path => Directory.GetFiles(System.IO.Path.Combine(root, "foundry"), "blueprints-*.json").Single();
         internal BlueprintBuildStore Store() => new(root, "0.10.35.29151", Sessions, new ManualLogSource());
         internal BlueprintBuildState Record() { Assert.True(Store().TryRead(out var builds)); return Assert.Single(builds); }
-        internal string? Guard() => new NormalGameActionCoordinator(Store(), Sessions).MinerEnvironmentForTest(Player, Journey);
-        internal Fixture(bool historicalDispatchDisabled = false)
+        internal string? Guard(NativeResumeDecisionEvidence? evidence = null)
+            => new NormalGameActionCoordinator(Store(), Sessions).MinerEnvironmentForTest(Player, Journey, evidence);
+        internal Fixture(bool historicalDispatchDisabled = false, int prebuildCursor = 2)
         {
             GameMain.history = new(); GameMain.gameTick = 112;
             Player.factory = Factory; GameMain.data = new() { localLoadedPlanetFactory = Factory };
             GameMain.localPlanet = new() { id = 201, factory = Factory };
-            Factory.entityCount = 1; Factory.entityCursor = Factory.prebuildCursor = 2;
+            Factory.entityCount = 1; Factory.entityCursor = 2; Factory.prebuildCursor = prebuildCursor;
             Factory.entityPool[1] = new() { id = 1, protoId = 2301, minerId = 1, powerConId = 1 };
             Factory.factorySystem.minerPool[1] = new() { id = 1, entityId = 1, pcId = 1 };
             Factory.powerSystem.consumerPool[1] = new() { id = 1, entityId = 1 };
