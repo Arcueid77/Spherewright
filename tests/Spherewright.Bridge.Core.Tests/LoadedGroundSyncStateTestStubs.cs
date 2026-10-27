@@ -5,6 +5,7 @@ namespace UnityEngine
     internal record struct Vector3(float x, float y, float z)
     {
         internal float magnitude => MathF.Sqrt(x * x + y * y + z * z);
+        internal float sqrMagnitude => x * x + y * y + z * z;
         internal Vector3 normalized => magnitude > 0f ? new(x / magnitude, y / magnitude, z / magnitude) : default;
         internal static float Dot(Vector3 a, Vector3 b) => a.x * b.x + a.y * b.y + a.z * b.z;
         public static Vector3 operator +(Vector3 a, Vector3 b) => new(a.x + b.x, a.y + b.y, a.z + b.z);
@@ -62,7 +63,7 @@ namespace Spherewright.Plugin.Game
         }
     }
     internal enum EMovementState { Walk, Drift }
-    internal sealed class Player
+    internal sealed partial class Player
     {
         internal PlayerController controller = new();
         internal UnityEngine.Transform transform = new();
@@ -76,7 +77,7 @@ namespace Spherewright.Plugin.Game
         internal bool warpCommand;
         internal EMovementState movementState;
     }
-    internal sealed class PlayerController
+    internal sealed partial class PlayerController
     {
         internal UnityEngine.Rigidbody rigid = new();
         internal UnityEngine.Vector3 velocity;
@@ -85,7 +86,7 @@ namespace Spherewright.Plugin.Game
         internal EMovementState movementStateInFrame;
     }
     internal sealed class PlayerOrders { internal int orderCount; }
-    internal sealed class Mecha
+    internal sealed partial class Mecha
     {
         internal double coreEnergy = 100, reactorEnergy = 200, LoadedEnergy = 500;
         internal int LoadedReads;

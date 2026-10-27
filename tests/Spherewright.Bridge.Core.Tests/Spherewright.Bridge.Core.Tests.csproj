@@ -33,6 +33,7 @@
     <Compile Include="..\..\src\Spherewright.Plugin\Game\NativeContactTransformBinding.cs" Link="PluginGame\NativeContactTransformBinding.cs" />
     <Compile Include="..\..\src\Spherewright.Plugin\Game\NormalGameActionCoordinator.RemoteResumeContactState.cs" Link="PluginGame\NormalGameActionCoordinator.RemoteResumeContactState.cs" />
     <Compile Include="..\..\src\Spherewright.Plugin\Game\NormalGameActionCoordinator.RemoteResumeDecision.cs" Link="PluginGame\NormalGameActionCoordinator.RemoteResumeDecision.cs" />
+    <Compile Include="..\..\src\Spherewright.Plugin\Game\NormalGameActionCoordinator.RemoteResumeEnvironment.cs" Link="PluginGame\NormalGameActionCoordinator.RemoteResumeEnvironment.cs" />
     <Compile Include="..\..\src\Spherewright.Plugin\Game\GameSessionTracker.RemoteResumeCompletion.cs" Link="PluginGame\GameSessionTracker.RemoteResumeCompletion.cs" />
     <Compile Include="..\..\src\Spherewright.Plugin\Game\GameSessionTracker.PausedSave.cs" Link="PluginGame\GameSessionTracker.PausedSave.cs" />
     <Compile Include="..\..\src\Spherewright.Plugin\Game\GameSessionTracker.WriteBlockers.cs" Link="PluginGame\GameSessionTracker.WriteBlockers.cs" />

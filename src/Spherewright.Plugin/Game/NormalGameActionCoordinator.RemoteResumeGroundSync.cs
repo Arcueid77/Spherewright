@@ -25,7 +25,7 @@ internal sealed partial class NormalGameActionCoordinator
             return "remote_resume_ground_sync_original_budget_unproved";
         if (!f.NativeWarperCount.HasValue || f.NativeWarperCount < 1 + f.OriginalExtraWarperReserve)
             return "remote_resume_charge_original_warper_reserve_insufficient";
-        var environment = RemoteResumeChargeEnvironmentBlocker(p);
+        var environment = RemoteResumeChargeEnvironmentBlocker(p, journey.JourneyId);
         if (environment is not null) return environment;
         if(adoption.Evidence.ReturnOnlyContinuation)
             return ReturnOnlyNativeFundingBlocker(adoption,journey,reserve.PerNativeTickEnergyJoules??double.NaN);
@@ -36,24 +36,6 @@ internal sealed partial class NormalGameActionCoordinator
             _sessions.EffectiveVoyagerSpentGameTicks(journey) ?? -1, GameMain.gameTick - journey.LastLandedGameTick!.Value,
             _sessions.EffectiveVoyagerMaximumGameTicks(journey), journey.ReturnReserveGameTicks, 0, authorization.Proposal.MaximumChargeGameTicks,
             0d, authorization.Proposal.MaximumChargeWallSeconds, now, deadline, adoption.CurrentDecisionEvidence);
-    }
-
-    private static string? RemoteResumeChargeEnvironmentBlocker(Player p)
-    {
-        var h = GameMain.history; var factory = p.factory; var module = p.mecha.constructionModule;
-        if (p.controller.actionWalk.rtsVelocity.sqrMagnitude != 0f || p.controller.actionWalk.moveVelocity.sqrMagnitude != 0f
-            || p.controller.actionDrift.rtsVelocity.sqrMagnitude != 0f || p.controller.actionDrift.moveVelocity.sqrMagnitude != 0f)
-            return "remote_resume_charge_rts_or_manual_velocity_nonzero";
-        if (h is null || h.currentTech != 0 || h.techQueue is null || h.techQueue.Length != 32 || h.techQueue.Any(id => id != 0))
-            return "remote_resume_charge_global_research_active";
-        if (factory is null || factory.entityCount != 0 || factory.entityCursor > 1
-            || factory.prebuildCount != 0 || factory.prebuildCursor > 1
-            || module.buildTargetTotalCount != 0 || module.repairTargetTotalCount != 0 || module.autoReconstructTargetTotalCount != 0
-            || module.buildTargets is { } bt && (bt.Length > 256 || bt.Any(t => t.objectId != 0))
-            || module.repairTargets is { } rt && (rt.Length > 256 || rt.Any(t => t.objectId != 0))
-            || module.autoReconstructTargets is { } at && (at.Length > 256 || at.Any(t => t.objectId != 0)))
-            return "remote_resume_charge_native_construction_not_empty";
-        return null;
     }
 
 }

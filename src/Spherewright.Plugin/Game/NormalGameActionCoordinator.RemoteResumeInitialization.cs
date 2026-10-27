@@ -48,7 +48,7 @@ internal sealed partial class NormalGameActionCoordinator
             NativePaused = GameMain.isPaused,
             NativeStateUnchanged = hold.State.MatchesDuringNativeInitializationPause(p) && hold.MaterialsMatch(p)
                 && hold.CostEnvelope == RemoteResumeChargeCostEnvelope(p) && VoyagerMechaWorkIdle(p)
-                && RemoteResumeChargeEnvironmentBlocker(p) is null && !GameMain.data.disableController
+                && RemoteResumeChargeEnvironmentBlocker(p, hold.Journey.JourneyId) is null && !GameMain.data.disableController
                 && !GameMain.data.guideRunning && BuildUiIsIdle(p),
             RegisteredCount = count,
             ColliderRefreshPending = colliderRefreshPending,
