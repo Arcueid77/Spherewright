@@ -86,6 +86,13 @@ internal sealed partial class NormalGameActionCoordinator
             || !TryObserveOwnedConstructionDrones(t.Factory, p.mecha.constructionModule, out _, out var ids)
             || ids.Any(id => !t.DroneIds.Contains(id)) || t.Factory.constructionSystem.drones.count != ids.Count) return false;
         var live = p.position.normalized * (p.position.magnitude + 2.8f);
+        if (!t.AnchorHeld)
+        {
+            var displacement=p.position-t.SourceAnchor;var up=t.SourceAnchor.normalized;
+            var inward=-Vector3.Dot(displacement,up);var tangent=(displacement+up*inward).magnitude;
+            if (GameMain.gameTick-t.Adoption.Evidence.SourceGameTick>32 || float.IsNaN(inward) || float.IsInfinity(inward)
+                || inward<-.01f || inward>.5f || !FiniteConstruction(tangent) || tangent>.05f) return false;
+        }
         foreach (var id in ids)
         {
             var drone = t.Factory.constructionSystem.drones.buffer[id];
@@ -95,7 +102,13 @@ internal sealed partial class NormalGameActionCoordinator
                 SpeedMetersPerSecond = GameMain.history.constructionDroneSpeed, Initial = ConstructionVector(drone.initialVector),
                 Target = ConstructionVector(live), Eject = ConstructionVector(live),
                 Position = new Spherewright.Contracts.Celestial.UniversalPositionSnapshot { X = pos.x, Y = pos.y, Z = pos.z } };
-            if (!NativeSavedConstructionTailPolicy.CopiedReturnStepProved(motion, t.Anchor.magnitude,
+            if (!t.AnchorHeld)
+            {
+                var next=NativeConstructionDroneReservePolicy.PredictCopiedOrdinaryStep(motion);
+                if (next is null || Vector3.Distance((Vector3)pos,t.Eject)>NativeSavedConstructionTailPolicy.MaximumDistanceMeters
+                    || Vector3.Distance(new Vector3((float)next.X,(float)next.Y,(float)next.Z),t.Eject)>NativeSavedConstructionTailPolicy.MaximumDistanceMeters) return false;
+            }
+            else if (!NativeSavedConstructionTailPolicy.CopiedReturnStepProved(motion, t.Anchor.magnitude,
                 Vector3.Distance(p.position, t.Anchor), Vector3.Distance(live, t.Eject), ConstructionVector(t.Eject))) return false;
         }
         return true;
@@ -108,6 +121,23 @@ internal sealed partial class NormalGameActionCoordinator
             || !world.factories.Take(world.factoryCount).Any(f => ReferenceEquals(f, t.Factory))
             || !SavedConstructionTailMatches(t.Adoption.Player, t.Build.StructuredConstruction!.JourneyId)) return;
         if (GameMain.gameTick > t.Adoption.Evidence.SourceGameTick) t.NativeFactoryPass = GameMain.gameTick;
+        if (!t.AnchorHeld && t.LastPosePass!=GameMain.gameTick)
+        {
+            var p=t.Adoption.Player;
+            t.StablePosePasses=t.LastPosePass.HasValue && Vector3.Distance(p.position,t.LastPose)<=.001f && ConstructionPlayerIdle(p)
+                ? t.StablePosePasses+1:0;
+            t.LastPose=p.position;t.LastPosePass=GameMain.gameTick;
+            if (t.StablePosePasses>=3 && TryObserveOwnedConstructionDrones(t.Factory,p.mecha.constructionModule,out _,out var ids))
+            {
+                var eject=p.position.normalized*(p.position.magnitude+2.8f);var distance=0d;
+                foreach(var id in ids)distance=Math.Max(distance,Vector3.Distance((Vector3)t.Factory.craftPool[t.Factory.constructionSystem.drones.buffer[id].craftId].pos,eject));
+                var remaining=NativeSavedConstructionTailPolicy.MaximumGameTicks-(GameMain.gameTick-t.Adoption.Evidence.SourceGameTick);
+                // Only the remaining stop-only budget is used. The original
+                // build anchor/window/debit stay immutable; no work is issued.
+                if (NativeSavedConstructionTailPolicy.StableReturnFitsRemaining(distance,GameMain.history.constructionDroneSpeed,remaining))
+                {t.Anchor=p.position;t.Eject=eject;t.AnchorHeld=true;}
+            }
+        }
     }
 
     private string? SealSavedConstructionTail(VoyagerRemoteResumeAdoption adoption)
@@ -116,6 +146,7 @@ internal sealed partial class NormalGameActionCoordinator
         if (!ReferenceEquals(t.Adoption, adoption) || !SavedConstructionTailMatches(adoption.Player, t.Build.StructuredConstruction!.JourneyId))
             return "remote_resume_saved_drone_tail_binding_changed";
         if (t.Sealed) return null;
+        if (!t.AnchorHeld) return VoyagerRecoveryWindowPolicy.ChargingPending;
         if (!TryObserveOwnedConstructionDrones(t.Factory, adoption.Player.mecha.constructionModule, out var idle, out _) || !idle
             || !ConstructionPlayerIdle(adoption.Player) || !t.NativeFactoryPass.HasValue) return VoyagerRecoveryWindowPolicy.ChargingPending;
         var b = t.Build; var c = b.ConstructionControl!;
@@ -152,11 +183,12 @@ internal sealed partial class NormalGameActionCoordinator
     {
         internal readonly VoyagerRemoteResumeAdoption Adoption; internal readonly PlanetFactory Factory;
         internal readonly BlueprintBuildState Build; internal readonly HashSet<int> DroneIds;
-        internal readonly Vector3 Anchor, Eject; internal readonly double Power;
+        internal readonly Vector3 SourceAnchor; internal Vector3 Anchor,Eject,LastPose; internal readonly double Power;
+        internal bool AnchorHeld;internal long? LastPosePass;internal int StablePosePasses;
         internal readonly DateTimeOffset StartedUtc = DateTimeOffset.UtcNow;
         internal long? NativeFactoryPass; internal bool Sealed;
         internal SavedConstructionTail(VoyagerRemoteResumeAdoption a, PlanetFactory f, BlueprintBuildState b, List<int> ids, double power)
-        { Adoption=a; Factory=f; Build=b; DroneIds=new HashSet<int>(ids); Power=power; Anchor=a.Player.position; Eject=Anchor.normalized*(Anchor.magnitude+2.8f); }
+        { Adoption=a; Factory=f; Build=b; DroneIds=new HashSet<int>(ids); Power=power; SourceAnchor=Anchor=a.Player.position; Eject=Anchor.normalized*(Anchor.magnitude+2.8f); }
         internal static bool TryPower(Player p, out double power)
         {
             var n=p.mecha.constructionModule.droneCount; var s=GameMain.history.constructionDroneSpeed;

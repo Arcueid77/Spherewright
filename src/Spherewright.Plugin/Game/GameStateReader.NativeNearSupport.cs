@@ -9,13 +9,13 @@ internal sealed partial class GameStateReader
 {
     // Called only by the existing main-thread admission path. No lifecycle method is invoked.
     internal static string? TryCaptureNativeNearSupport(Player player, string stage, Collider[] currentTerrainSurface,
-        out NativeNearGroundSupportSnapshot snapshot, out NativeNearGroundSupportBinding? binding)
+        out NativeNearGroundSupportSnapshot snapshot, out NativeNearGroundSupportBinding? binding, bool allowInitializedTerrain = false)
     {
         snapshot = new NativeNearGroundSupportSnapshot { CaptureStage = stage, CapturedAtGameTick = GameMain.gameTick };
         binding = null;
         try
         {
-            var candidate = new NativeNearGroundSupportBinding(player, currentTerrainSurface, snapshot);
+            var candidate = new NativeNearGroundSupportBinding(player, currentTerrainSurface, snapshot, allowInitializedTerrain);
             var blocker = candidate.Capture(player, stage, currentTerrainSurface, true, out snapshot);
             // Empty or pending-refresh collections retain only their exact
             // context witness. No support has been bound in either case.
@@ -63,6 +63,7 @@ internal sealed partial class GameStateReader
         private ColliderObject? _registeredObject;
         private NativeNearSupportPose? _supportPose;
         private LoadedTerrainSupportPose? _loadedTerrainSupport;
+        private readonly bool _allowInitializedTerrain;
         private ColliderData _supportData;
         private int _supportId;
         private int _objectId;
@@ -71,8 +72,9 @@ internal sealed partial class GameStateReader
         private int _chainRoot;
         private List<NativeNearSupportCell>? _chain;
 
-        internal NativeNearGroundSupportBinding(Player player, Collider[] surface, NativeNearGroundSupportSnapshot initial)
+        internal NativeNearGroundSupportBinding(Player player, Collider[] surface, NativeNearGroundSupportSnapshot initial, bool allowInitializedTerrain = false)
         {
+            _allowInitializedTerrain=allowInitializedTerrain;
             _world = GameMain.data ?? throw new NativeNearSupportException("world_unavailable");
             _player = player ?? throw new NativeNearSupportException("player_unavailable");
             _planet = GameMain.localPlanet ?? throw new NativeNearSupportException("planet_unavailable");
@@ -174,11 +176,12 @@ internal sealed partial class GameStateReader
                     var dot = Vector3.Dot(info.normal, up); Require(Finite(dot), "normal_dot_unproved"); snapshot.NormalDotUp = dot;
                     if (initial)
                     {
-                        if (snapshot.CastLayerMask == (1 << 31))
+                        if (snapshot.CastLayerMask == (1 << 31) || _allowInitializedTerrain && queried is MeshCollider
+                            && queried.gameObject.layer == 9 && _terrain.Count(c => ReferenceEquals(c,queried) && c == queried) == 1)
                         {
                             Require(queried is MeshCollider mesh && _terrain.Count(c => ReferenceEquals(c, mesh) && c == mesh) == 1,
                                 "loaded_terrain_cast_owner_unproved");
-                            _support = queried; _loadedTerrainSupport = new LoadedTerrainSupportPose((MeshCollider)queried!);
+                            _support = queried; _loadedTerrainSupport = new LoadedTerrainSupportPose((MeshCollider)queried!,queried!.gameObject.layer);
                         }
                         else BindSupport(queried!);
                         snapshot.Identity = CaptureIdentityObservation(queried);
@@ -207,7 +210,9 @@ internal sealed partial class GameStateReader
                 Require(ContextMatches(player, surface), "context_changed_during_query");
                 snapshot.State = "observed";
                 if (initial && _loadedTerrainSupport is not null)
-                    Require(Spherewright.Bridge.Core.Safety.NativeResumeContactPolicy.LoadedTerrainCastProved(snapshot),
+                    Require(_loadedTerrainSupport.InitialLayer == 31
+                        ? Spherewright.Bridge.Core.Safety.NativeResumeContactPolicy.LoadedTerrainCastProved(snapshot)
+                        : _allowInitializedTerrain && Spherewright.Bridge.Core.Safety.NativeResumeContactPolicy.InitializedTerrainCastProved(snapshot),
                         "loaded_terrain_cast_geometry_unproved");
                 return null;
             }
@@ -292,7 +297,7 @@ internal sealed partial class GameStateReader
             if (_loadedTerrainSupport is { } terrainSupport)
             {
                 Require(_support is MeshCollider mesh && _terrain.Count(c => ReferenceEquals(c, mesh) && c == mesh) == 1
-                    && terrainSupport.Matches(mesh, initial ? 31 : 9), "loaded_terrain_support_changed");
+                    && terrainSupport.Matches(mesh, initial ? terrainSupport.InitialLayer : 9), "loaded_terrain_support_changed");
                 snapshot.Layer = _support!.gameObject.layer; snapshot.Shape = "mesh";
                 snapshot.IsTrigger = _support.isTrigger; snapshot.Enabled = _support.enabled;
                 snapshot.ActiveInHierarchy = _support.gameObject.activeInHierarchy; snapshot.SameDefaultPhysicsScene = Scene(_support.gameObject);
@@ -452,14 +457,16 @@ internal sealed partial class GameStateReader
             private readonly Quaternion _rotation;
             private readonly Matrix4x4 _matrix;
             private readonly Transform _parent;
-            internal LoadedTerrainSupportPose(MeshCollider collider)
+            internal int InitialLayer { get; }
+            internal LoadedTerrainSupportPose(MeshCollider collider,int initialLayer)
             {
+                InitialLayer=initialLayer;
                 _collider=collider; _mesh=collider.sharedMesh ?? throw new NativeNearSupportException("loaded_terrain_mesh_unavailable");
                 _position=collider.transform.position; _scale=collider.transform.lossyScale;
                 _rotation=collider.transform.rotation; _matrix=collider.transform.localToWorldMatrix; _parent=collider.transform.parent;
                 Require(Finite(_position) && Finite(_scale) && Finite(_rotation), "loaded_terrain_pose_unproved");
                 for(var i=0;i<16;i++) Require(Finite(_matrix[i]), "loaded_terrain_matrix_unproved");
-                Require(Matches(collider,31), "loaded_terrain_pose_unproved");
+                Require(Matches(collider,initialLayer), "loaded_terrain_pose_unproved");
             }
             internal bool Matches(MeshCollider collider,int layer) => collider != null && ReferenceEquals(collider,_collider)
                 && collider == _collider && collider.enabled && collider.gameObject.activeInHierarchy && !collider.isTrigger

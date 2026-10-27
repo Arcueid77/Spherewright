@@ -46,6 +46,14 @@ public sealed class NativeResumeContactPolicy
         && s.Enabled == true && s.ActiveInHierarchy == true && s.IsTrigger == false && s.SameDefaultPhysicsScene == true
         && s.CurrentPoolReference == true && s.LiveObject == true && s.ColliderChain == true && s.NativeLiveFlag is null
         && s.FootOverlapComplete == true && s.FootOverlapCount == 0 && s.AllFootHitsCurrentSupportOrTerrain == true;
+    public static bool InitializedTerrainCastProved(NativeNearGroundSupportSnapshot s) => s.State == "observed"
+        && s.ActualGroundSphereHit == false && s.CastAttempted == true && s.CastHit == true
+        && s.CastLayerMask == 15873 && s.Layer == 9 && s.Shape == "mesh" && s.OwnerType == "current_terrain"
+        && s.CastDistance.HasValue && !float.IsNaN(s.CastDistance.Value) && s.CastDistance >= 0f && s.CastDistance <= .5f
+        && s.NormalDotUp.HasValue && !float.IsNaN(s.NormalDotUp.Value) && s.NormalDotUp >= MinimumNormalDotUp && s.NormalDotUp <= 1.001f
+        && s.Enabled == true && s.ActiveInHierarchy == true && s.IsTrigger == false && s.SameDefaultPhysicsScene == true
+        && s.CurrentPoolReference == true && s.LiveObject == true && s.ColliderChain == true && s.NativeLiveFlag is null
+        && s.FootOverlapComplete == true && s.FootOverlapCount == 0 && s.AllFootHitsCurrentSupportOrTerrain == true;
     public const string GroundingPending = "remote_resume_native_contact_pending";
     public const int MaximumNativeWorkTicks = 8;
     public const double MaximumWallSeconds = 2d;
@@ -55,6 +63,10 @@ public sealed class NativeResumeContactPolicy
     public const double MaximumTangentialDisplacementMeters = .05d;
     public const double MaximumSpeedMetersPerSecond = 1.5d;
     public const int FundedTicks = 1 + VoyagerLocalWalkReservePolicy.StopGameTicks;
+    public int WorkTickLimit { get; }
+    public double CastDistanceLimit { get; }
+    public double SpeedLimit { get; }
+    public double InwardLimit { get; }
     public long SourceGameTick { get; }
     public long LastObservedGameTick { get; private set; }
     public long LastUniverseGameTick { get; private set; }
@@ -66,17 +78,21 @@ public sealed class NativeResumeContactPolicy
     public NativeResumeFailureSnapshot? LastDecisionEvidence { get; private set; }
     private NativeResumeDecisionEvidence? _decision;
 
-    public NativeResumeContactPolicy(long sourceGameTick, DateTimeOffset startedUtc)
+    public NativeResumeContactPolicy(long sourceGameTick, DateTimeOffset startedUtc, bool initializedTerrain = false)
     {
-        if (sourceGameTick < 0 || sourceGameTick > long.MaxValue - MaximumNativeWorkTicks - 1 || startedUtc == default)
+        WorkTickLimit=initializedTerrain?32:MaximumNativeWorkTicks;
+        CastDistanceLimit=initializedTerrain ? .5d : MaximumCastDistanceMeters;
+        SpeedLimit=initializedTerrain?3d:MaximumSpeedMetersPerSecond;
+        InwardLimit=initializedTerrain ? .5d : MaximumInwardDisplacementMeters;
+        if (sourceGameTick < 0 || sourceGameTick > long.MaxValue - WorkTickLimit - 1 || startedUtc == default)
             throw new ArgumentOutOfRangeException(nameof(sourceGameTick));
         SourceGameTick = LastObservedGameTick = LastUniverseGameTick = sourceGameTick;
         StartedUtc = startedUtc;
     }
 
-    public string? PreflightBlocker(NativeResumeContactFacts f)
+    public string? PreflightBlocker(NativeResumeContactFacts f, string stage = "load_preflight_before_first_frame")
     {
-        var blocker = CommonBlocker(f, "load_preflight_before_first_frame", out _);
+        var blocker = CommonBlocker(f, stage, out _);
         if (blocker is not null) return blocker;
         return _decision!.Require("preflight_source_tick", f.OriginalJourney!.CurrentGameTick == SourceGameTick)
             && _decision.Require("preflight_no_ground", f.NativeGroundSphereHit == false)
@@ -94,7 +110,7 @@ public sealed class NativeResumeContactPolicy
         if (Retired) return "remote_resume_contact_attempt_retired";
         var blocker = CommonBlocker(f, "native_universe_post151", out var detail);
         var tick = f?.OriginalJourney?.CurrentGameTick;
-        if (blocker is not null || tick != LastObservedGameTick + 1 || tick > SourceGameTick + MaximumNativeWorkTicks
+        if (blocker is not null || tick != LastObservedGameTick + 1 || tick > SourceGameTick + WorkTickLimit
             || LastUniverseGameTick != LastObservedGameTick)
         { Reject(blocker ?? "remote_resume_contact_universe_sequence_unproved", detail); return Failure; }
         LastUniverseGameTick = tick!.Value;
@@ -108,7 +124,7 @@ public sealed class NativeResumeContactPolicy
         var blocker = CommonBlocker(f, "native_physics_post501", out var detail);
         if (blocker is not null) return Reject(blocker, detail);
         var tick = f.OriginalJourney!.CurrentGameTick;
-        if (tick != LastObservedGameTick + 1 || tick != LastUniverseGameTick || tick > SourceGameTick + MaximumNativeWorkTicks)
+        if (tick != LastObservedGameTick + 1 || tick != LastUniverseGameTick || tick > SourceGameTick + WorkTickLimit)
             return Reject("remote_resume_contact_sequence_unproved");
         LastObservedGameTick = tick;
         if (f.StrictPhysicalIdleProved == true && f.NativeGroundSphereHit == true)
@@ -116,7 +132,7 @@ public sealed class NativeResumeContactPolicy
             Retired = true;
             return NativeResumeContactStep.Ready;
         }
-        return tick < SourceGameTick + MaximumNativeWorkTicks ? NativeResumeContactStep.Pending
+        return tick < SourceGameTick + WorkTickLimit ? NativeResumeContactStep.Pending
             : Reject("remote_resume_contact_attempt_exhausted");
     }
 
@@ -179,14 +195,14 @@ public sealed class NativeResumeContactPolicy
             ("contact_wall_remaining", (f.NowUtc - StartedUtc).TotalSeconds < MaximumWallSeconds)))
             return DecisionFailure("remote_resume_contact_wall_exhausted");
         if (f.NativeGroundSphereHit == false && !All(
-            ("cast_distance_known", Known(f.CastDistanceMeters)), ("cast_distance_bounded", f.CastDistanceMeters <= MaximumCastDistanceMeters),
+            ("cast_distance_known", Known(f.CastDistanceMeters)), ("cast_distance_bounded", f.CastDistanceMeters <= CastDistanceLimit),
             ("cast_normal_known", Finite(f.CastNormalDotUp)), ("cast_normal_supporting", f.CastNormalDotUp >= MinimumNormalDotUp),
             ("cast_normal_normalized", f.CastNormalDotUp <= 1d)))
             return DecisionFailure("remote_resume_contact_near_support_unproved");
         if (!All(("inward_known", Finite(f.InwardDisplacementMeters)), ("inward_lower_bound", f.InwardDisplacementMeters >= -.01d),
-            ("inward_upper_bound", f.InwardDisplacementMeters <= MaximumInwardDisplacementMeters),
+            ("inward_upper_bound", f.InwardDisplacementMeters <= InwardLimit),
             ("tangent_known", Known(f.TangentialDisplacementMeters)), ("tangent_bounded", f.TangentialDisplacementMeters <= MaximumTangentialDisplacementMeters),
-            ("speed_known", Known(f.SpeedMetersPerSecond)), ("speed_bounded", f.SpeedMetersPerSecond <= MaximumSpeedMetersPerSecond),
+            ("speed_known", Known(f.SpeedMetersPerSecond)), ("speed_bounded", f.SpeedMetersPerSecond <= SpeedLimit),
             ("idle_speed_bounded", f.StrictPhysicalIdleProved != true || f.SpeedMetersPerSecond <= .1d)))
             return DecisionFailure("remote_resume_contact_motion_unproved");
         var j = f.OriginalJourney;
@@ -223,7 +239,7 @@ public sealed class NativeResumeContactPolicy
             ? null : DecisionFailure("remote_resume_contact_current_and_stop_unfunded");
     }
 
-    private static NativeResumeDecisionEvidence CaptureEvidence(NativeResumeContactFacts? f, string stage)
+    private NativeResumeDecisionEvidence CaptureEvidence(NativeResumeContactFacts? f, string stage)
     {
         var e = new NativeResumeDecisionEvidence(stage, f?.CapturedAtGameTick ?? f?.OriginalJourney?.CurrentGameTick,
             f is null || f.NowUtc == default ? null : f.NowUtc, f is not null);
@@ -238,7 +254,7 @@ public sealed class NativeResumeContactPolicy
         e.Number("cast_normal_dot_up", f?.CastNormalDotUp); e.Number("inward_displacement_m", f?.InwardDisplacementMeters);
         e.Number("tangential_displacement_m", f?.TangentialDisplacementMeters); e.Number("speed_mps", f?.SpeedMetersPerSecond);
         e.Number("core_j", f?.CoreEnergyJoules); e.Number("per_tick_j", f?.PerNativeTickEnergyJoules);
-        e.Number("funded_ticks", FundedTicks); e.Number("maximum_contact_ticks", MaximumNativeWorkTicks);
+        e.Number("funded_ticks", FundedTicks); e.Number("maximum_contact_ticks", WorkTickLimit);
         var j = f?.OriginalJourney;
         e.Number("spent_ticks", j?.SpentGameTicks); e.Number("last_landed_tick", j?.LastLandedGameTick);
         e.Number("maximum_journey_ticks", j?.MaximumGameTicks); e.Number("return_ticks", j?.ReturnReserveGameTicks);

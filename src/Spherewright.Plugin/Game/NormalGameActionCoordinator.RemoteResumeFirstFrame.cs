@@ -86,8 +86,9 @@ internal sealed partial class NormalGameActionCoordinator
         {
             ground = GameStateReader.CaptureNativeGroundContact(adoption.Player, "native_universe_post151");
             terrain.NativeGroundSphereHit = ground.CheckSphereHit;
-            terrainBlocker ??= ground.State == "observed" && ground.CheckSphereHit == true
-                ? null : "remote_resume_terrain_initialization_actual_ground_unproved";
+            if (ground.State != "observed") terrainBlocker ??= "remote_resume_terrain_initialization_actual_ground_unproved";
+            else if (ground.CheckSphereHit != true)
+                terrainBlocker ??= ArmInitializedTerrainContact(adoption);
         }
         if (_firstFrameSurfaceState?.HasRegisteredOwners == true)
         {
@@ -164,9 +165,28 @@ internal sealed partial class NormalGameActionCoordinator
         var terrain=GameStateReader.CaptureNativeTerrain(adoption.Player,"native_physics_post501");
         terrain.NativeGroundSphereHit=ground.CheckSphereHit;
         var foot=GameStateReader.CapturePostUniverseTerrainFootOverlap(adoption.Player,terrain,surface.Surface);
-        if (ground.State!="observed" || ground.CapturedAtGameTick!=GameMain.gameTick || ground.CheckSphereHit!=true)
+        if (ground.State!="observed" || ground.CapturedAtGameTick!=GameMain.gameTick)
             return "remote_resume_terrain_initialization_actual_ground_unproved";
+        if (ground.CheckSphereHit!=true && _firstFrameContact is { } contact)
+            return contact.Support.Recheck(adoption.Player,"native_physics_post501",surface.Surface,out _);
+        if (ground.CheckSphereHit!=true) return "remote_resume_terrain_initialization_actual_ground_unproved";
         return foot;
+    }
+
+    private string? ArmInitializedTerrainContact(VoyagerRemoteResumeAdoption adoption)
+    {
+        if (_firstFrameContact is not null) return "remote_resume_terrain_contact_already_bound";
+        if (_firstFrameSurfaceState is not { } surface || _savedConstructionTail is not { } tail
+            || !ReferenceEquals(tail.Adoption,adoption) || !SavedConstructionTailMatches(adoption.Player,tail.Build.StructuredConstruction!.JourneyId))
+            return "remote_resume_terrain_contact_original_source_unproved";
+        var blocker=GameStateReader.TryCaptureNativeNearSupport(adoption.Player,"native_universe_post151",
+            surface.Surface,out var snapshot,out var binding,allowInitializedTerrain:true);
+        adoption.NearSupportPostUniverse=snapshot.Copy();adoption.NearSupportLatest=snapshot.Copy();
+        if (blocker is not null || binding is null || !NativeResumeContactPolicy.InitializedTerrainCastProved(snapshot))
+            return blocker??"remote_resume_terrain_contact_actual_support_unproved";
+        _firstFrameContact=new RemoteResumeContactState(adoption.Player,binding,GameMain.gameTick,initializedTerrain:true);
+        adoption.NativeContactPending=true;
+        return null;
     }
 
     private string? RecheckRegisteredTerrainAtPhysics(VoyagerRemoteResumeAdoption adoption)

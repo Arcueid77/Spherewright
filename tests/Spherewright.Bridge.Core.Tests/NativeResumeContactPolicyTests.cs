@@ -5,6 +5,42 @@ namespace Spherewright.Bridge.Core.Tests;
 
 public sealed class NativeResumeContactPolicyTests
 {
+    [Fact]
+    public void InitializedTerrainRequiresAnActualCurrentLayerNineCastAndKeepsGroundFalse()
+    {
+        var s=LoadedTerrain();s.Layer=9;s.CastLayerMask=15873;s.CastDistance=.38f;
+        Assert.True(NativeResumeContactPolicy.InitializedTerrainCastProved(s));
+        Assert.False(NativeResumeContactPolicy.LoadedTerrainCastProved(s));Assert.False(s.ActualGroundSphereHit);
+        s.CastHit=false;Assert.False(NativeResumeContactPolicy.InitializedTerrainCastProved(s));
+    }
+    [Fact]
+    public void InitializedCurrentTerrainUsesRealCastAndFiniteNativeSettlingBeforeActualGround()
+    {
+        var p=new NativeResumeContactPolicy(100,Now,initializedTerrain:true);var f=Good();f.CastDistanceMeters=.38;
+        Assert.Null(p.PreflightBlocker(f));Assert.Equal(32,p.WorkTickLimit);
+        for(var i=1;i<=20;i++)
+        {
+            f=Good(100+i);f.NowUtc=f.OriginalJourney!.NowUtc=Now.AddMilliseconds(i*20);
+            f.CastDistanceMeters=.38-i*.005;f.InwardDisplacementMeters=i*.005;f.SpeedMetersPerSecond=1.8;
+            if(i==20){Ready(f);f.SpeedMetersPerSecond=0;}
+            Assert.Equal(i==20?NativeResumeContactStep.Ready:NativeResumeContactStep.Pending,Frame(p,f));
+        }
+        Assert.True(p.Retired);Assert.Equal(120,p.LastObservedGameTick);
+        var legacy=new NativeResumeContactPolicy(100,Now);f=Good();f.CastDistanceMeters=.38;
+        Assert.NotNull(legacy.PreflightBlocker(f));Assert.Equal(8,legacy.WorkTickLimit);
+    }
+    [Fact]
+    public void CurrentTerrainSettlingStillStopsAtItsOriginalFiniteAttemptWithoutGround()
+    {
+        var p=new NativeResumeContactPolicy(100,Now,initializedTerrain:true);var f=Good();f.CastDistanceMeters=.38;
+        Assert.Null(p.PreflightBlocker(f));
+        for(var i=1;i<=32;i++)
+        {
+            f=Good(100+i);f.NowUtc=f.OriginalJourney!.NowUtc=Now.AddMilliseconds(i*20);f.CastDistanceMeters=.38;
+            Assert.Equal(i==32?NativeResumeContactStep.Rejected:NativeResumeContactStep.Pending,Frame(p,f));
+        }
+        Assert.False(p.Retired);Assert.Equal("remote_resume_contact_attempt_exhausted",p.Failure);
+    }
     private static Spherewright.Contracts.Players.NativeNearGroundSupportSnapshot LoadedTerrain() => new()
     {
         State="observed",ActualGroundSphereHit=false,CastAttempted=true,CastHit=true,CastLayerMask=1 << 31,

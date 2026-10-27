@@ -65,6 +65,10 @@ public static class VoyagerRemotePrimaryRecoveryPolicy
                 ("request_exact_primary_nonnegative", r.ExpectedRecoveryGameTick >= 0),
                 ("request_exact_positive_loss", r.ExpectedRecoveryGameTick < r.MinimumRecoveryGameTick))
                 ? null : "Exact known progress floor and exact approved primary tick are required for progress loss.";
+        if (r.MinimumRecoveryGameTick.HasValue || r.ExpectedRecoveryGameTick.HasValue)
+            return All(("request_exact_no_loss_boundary", r.MinimumRecoveryGameTick.HasValue
+                    && r.MinimumRecoveryGameTick >= 0 && r.MinimumRecoveryGameTick == r.ExpectedRecoveryGameTick))
+                ? null : "A no-loss current-boundary disclosure requires equal nonnegative exact minimum and candidate ticks.";
         return All(("request_no_unapproved_floor_override", !r.MinimumRecoveryGameTick.HasValue),
             ("request_no_unapproved_primary_override", !r.ExpectedRecoveryGameTick.HasValue))
             ? null : "Tick overrides require explicit exact progress-loss acceptance.";
@@ -139,7 +143,8 @@ public static class VoyagerRemotePrimaryRecoveryPolicy
         && (r.AcceptUnstoredProgressLoss
             ? p.CandidateGameTick == r.ExpectedRecoveryGameTick
                 && p.DiscardedUnstoredProgressGameTicks == r.MinimumRecoveryGameTick - r.ExpectedRecoveryGameTick
-            : p.DiscardedUnstoredProgressGameTicks == 0)
+            : p.DiscardedUnstoredProgressGameTicks == 0 && (!r.ExpectedRecoveryGameTick.HasValue
+                || p.CandidateGameTick == r.ExpectedRecoveryGameTick && p.MinimumGameTick == r.MinimumRecoveryGameTick))
         && p.CandidateGameTick == p.MinimumGameTick && p.ExactEmbeddedIdentityVerified
         && p.UserConfirmationRequired && !p.CommitAllowedNow && !p.NativeOriginalOutcomeProved
         && OwnedWorldRecoveryPolicy.IsCanonicalFingerprint(p.ConfirmationDigest);

@@ -8,6 +8,10 @@ namespace Spherewright.Bridge.Core.Tests;
 public sealed class NativeSavedConstructionTailPolicyTests
 {
     [Theory]
+    [InlineData(30d,10d,700L,true)] [InlineData(40d,10d,700L,false)] [InlineData(40d,10d,752L,true)]
+    public void SettledAnchorUsesOnlyTheObservedDistanceAndRemainingOriginalTail(double distance,double speed,long remaining,bool expected)
+        => Assert.Equal(expected,NativeSavedConstructionTailPolicy.StableReturnFitsRemaining(distance,speed,remaining));
+    [Theory]
     [InlineData(160f,10f)] [InlineData(200f,10f)] [InlineData(6000f,12f)]
     public void AlreadyReturningDronesRecycleInsideThePaidTailAcrossRadialAndTangentialStarts(float radius,float speed)
     {

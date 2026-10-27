@@ -11,9 +11,10 @@ internal sealed partial class OwnedWorldResumeTicketStore
     // execution remains consumed. It can recover saved-file identity, never
     // the old plan, action, window or permission to dispatch Native work.
     internal bool TryGetFreshRemoteFileAccessProvenance(string token, out OwnedWorldResumeTicket? ticket,
-        out string fingerprint, out string rejection)
+        out string fingerprint, out string rejection, long? exactNewerBoundary = null)
     {
-        if (TryGetSavedWorldOpenProvenance(token, out ticket, out fingerprint, out rejection)) return true;
+        if (TryGetSavedWorldOpenProvenance(token, out ticket, out fingerprint, out rejection))
+            return !exactNewerBoundary.HasValue || ticket!.MinimumGameTick == exactNewerBoundary;
         ticket = null; fingerprint = string.Empty;
         try
         {
@@ -54,8 +55,14 @@ internal sealed partial class OwnedWorldResumeTicketStore
             if (!source.Prefix.MatchesExpectedIdentity || !primary.Prefix.MatchesExpectedIdentity
                 || !source.Prefix.Peaceful || !primary.Prefix.Peaceful
                 || source.Prefix.GameVersion != _gameVersion || primary.Prefix.GameVersion != _gameVersion
-                || source.Prefix.GameTick != previous.MinimumGameTick || primary.Prefix.GameTick > source.Prefix.GameTick)
+                || primary.Prefix.GameTick > source.Prefix.GameTick)
                 return false;
+            var newer = exactNewerBoundary.HasValue && exactNewerBoundary > previous.MinimumGameTick;
+            if (newer ? source.Prefix.GameTick != exactNewerBoundary
+                    || source.WrittenAtUtc <= consumed.ConsumedAtUtc || source.Prefix.SavedAtUtc <= consumed.ConsumedAtUtc
+                    || source.Prefix.SavedAtUtc > DateTimeOffset.UtcNow.AddSeconds(1)
+                : source.Prefix.GameTick != previous.MinimumGameTick
+                    || exactNewerBoundary.HasValue && exactNewerBoundary != previous.MinimumGameTick) return false;
             var name = "owned-world-resume-file-access-" + hash + ".json";
             var paths = new[] { Path.Combine(_runtimeDirectory, name), Path.Combine(handoff, name) };
             var derivation = ReadExactFileAccessPair<SavedFileAccessDerivation>(paths[0], paths[1]);
@@ -65,7 +72,7 @@ internal sealed partial class OwnedWorldResumeTicketStore
                 if (derivation.ParentConsumedTokenHash != hash || derivation.SourceFingerprint != source.Fingerprint
                     || derivation.PrimaryFingerprint != primary.Fingerprint || derivation.JournalHash != journalHash
                     || current?.SavedWorldOpenOnly != true || current.OwnedSaveName != previous.OwnedSaveName
-                    || current.MinimumGameTick != previous.MinimumGameTick || HashToken(current.ResumeToken) != derivation.FileAccessTokenHash)
+                    || current.MinimumGameTick != source.Prefix.GameTick || HashToken(current.ResumeToken) != derivation.FileAccessTokenHash)
                     return false;
                 return TryGetSavedWorldOpenProvenance(current.ResumeToken, out ticket, out fingerprint, out rejection);
             }
@@ -75,7 +82,8 @@ internal sealed partial class OwnedWorldResumeTicketStore
             var now = DateTimeOffset.UtcNow;
             var fresh = PluginJson.Deserialize<OwnedWorldResumeTicket>(PluginJson.Serialize(previous))!;
             fresh.ResumeToken = CreateToken(); fresh.SavedWorldOpenOnly = true;
-            fresh.ObservedProgressGameTickFloor = Math.Max(previous.MinimumGameTick, previous.ObservedProgressGameTickFloor ?? previous.MinimumGameTick);
+            fresh.MinimumGameTick = source.Prefix.GameTick;
+            fresh.ObservedProgressGameTickFloor = Math.Max(fresh.MinimumGameTick, previous.ObservedProgressGameTickFloor ?? previous.MinimumGameTick);
             fresh.IssuedAtUtc = now; fresh.ExpiresAtUtc = now.AddHours(24);
             derivation = new SavedFileAccessDerivation { ParentConsumedTokenHash = hash,
                 FileAccessTokenHash = HashToken(fresh.ResumeToken), SourceFingerprint = source.Fingerprint,

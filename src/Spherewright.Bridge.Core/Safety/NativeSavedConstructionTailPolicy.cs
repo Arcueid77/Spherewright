@@ -13,6 +13,9 @@ public static class NativeSavedConstructionTailPolicy
     public const double MaximumAnchorDisplacementMeters = .025d;
     public const double MaximumEjectDisplacementMeters = .026d;
     public const double MaximumDistanceMeters = 40d;
+    public static bool StableReturnFitsRemaining(double distance,double speed,long remaining)
+        => Known(distance) && distance<=MaximumDistanceMeters && Known(speed) && speed>=10d && speed<=12d
+            && remaining>=0 && remaining<=MaximumGameTicks && Math.Ceiling(distance*180d/speed)+32d<=remaining;
 
     public static bool CopiedReturnStepProved(NativeConstructionDroneMotionFacts f,
         double anchorRadius, double anchorDisplacement, double fixedToLiveEjectDistance,

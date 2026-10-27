@@ -9,6 +9,33 @@ namespace Spherewright.Bridge.Core.Tests;
 public sealed partial class VoyagerRemoteResumeCoordinatorIntegrationTests
 {
     [Fact]
+    public void ExplicitExactNewerNormalExitKeepsNewProgressAndNeverReplaysTheConsumedResume()
+    {
+        using var s=new Scenario(expiredJourney:true,currentNative:true);
+        var r=s.PrimaryRecoveryRequest(18);r.AcceptUnstoredProgressLoss=false;r.MinimumRecoveryGameTick=r.ExpectedRecoveryGameTick=null;
+        var first=s.Prepare(r);s.Sessions.FailBeforeRemoteLeaseHandoffForTest=true;Assert.False(s.Commit(first).Success);
+        s.Sessions.FailBeforeRemoteLeaseHandoffForTest=false;
+        var originals=Directory.GetFiles(s.Runtime,"owned-world-*").Concat(Directory.GetFiles(s.Handoff,"owned-world-*")).ToDictionary(p=>p,File.ReadAllBytes);
+        s.WriteSave(GameSave.LastExit,12529);
+        using(var file=new FileStream(GameSave.SavePath(GameSave.LastExit),FileMode.Open,FileAccess.Write))
+        {file.Position=44;using var writer=new BinaryWriter(file);writer.Write(DateTime.UtcNow.Ticks);}
+        r.MinimumRecoveryGameTick=r.ExpectedRecoveryGameTick=12529;
+        var next=s.Prepare(r);Assert.Equal(12529,next.CandidateGameTick);Assert.Equal(12529,next.MinimumGameTick);
+        Assert.Equal(0,next.DiscardedUnstoredProgressGameTicks);Assert.Equal(0,DSPGame.LoadCalls);
+        Assert.True(s.Commit(next).Success);Assert.Equal(GameSave.LastExit,DSPGame.LoadedName);
+        foreach(var pair in originals)Assert.Equal(pair.Value,File.ReadAllBytes(pair.Key));
+    }
+    [Fact]
+    public void ExplicitNewerIdentityStillRejectsAnOldExitEvenWhenTheTickMatches()
+    {
+        using var s=new Scenario(expiredJourney:true,currentNative:true);
+        var r=s.PrimaryRecoveryRequest(18);r.AcceptUnstoredProgressLoss=false;r.MinimumRecoveryGameTick=r.ExpectedRecoveryGameTick=null;
+        var first=s.Prepare(r);s.Sessions.FailBeforeRemoteLeaseHandoffForTest=true;Assert.False(s.Commit(first).Success);
+        s.Sessions.FailBeforeRemoteLeaseHandoffForTest=false;s.WriteSave(GameSave.LastExit,12529);
+        Assert.False(s.Tickets.TryGetFreshRemoteFileAccessProvenance(s.Token,out _,out _,out _,12529));
+        Assert.Equal(0,DSPGame.LoadCalls);
+    }
+    [Fact]
     public void FailedPreDispatchConsumptionCanDeriveFileIdentityWithoutRevivingItsExecution()
     {
         using var s = new Scenario(expiredJourney: true, currentNative: true);

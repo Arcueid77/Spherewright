@@ -56,7 +56,7 @@ internal sealed partial class NormalGameActionCoordinator
             stage = "walk_at_rest";
             if (player.movementState != EMovementState.Walk) return Blocked("remote_idle_actual_walk_required");
             var physicallyAtRest = player.speed <= .1f;
-            if (!physicallyAtRest && (!collectNaturalContact || !(player.speed <= NativeResumeContactPolicy.MaximumSpeedMetersPerSecond)))
+            if (!physicallyAtRest && (!collectNaturalContact || !(player.speed <= (_firstFrameContact?.Policy.SpeedLimit ?? NativeResumeContactPolicy.MaximumSpeedMetersPerSecond))))
                 return Blocked("remote_idle_actual_speed_not_at_rest");
             stage = "energy_and_journey";
             var now = DateTimeOffset.UtcNow;

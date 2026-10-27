@@ -622,7 +622,9 @@ internal sealed partial class OwnedWorldResumeCoordinator
         {
             if (_actions.Values.Any(action => action.TerminalResult?.Terminal != true))
             { ticket = null; provenance = string.Empty; rejection = "A previous resume is still pending or unknown; no saved-file identity reconciliation is permitted."; return false; }
-            return _tickets.TryGetFreshRemoteFileAccessProvenance(token, out ticket, out provenance, out rejection);
+            var exactNewer = !request.AcceptUnstoredProgressLoss && request.MinimumRecoveryGameTick == request.ExpectedRecoveryGameTick
+                ? request.ExpectedRecoveryGameTick : null;
+            return _tickets.TryGetFreshRemoteFileAccessProvenance(token, out ticket, out provenance, out rejection, exactNewer);
         }
         if (request.RecoveryMode == OwnedWorldResumeModes.OpenSavedPrimary
             || request.RecoveryMode == OwnedWorldResumeModes.ResumeReturnOnlyTask)

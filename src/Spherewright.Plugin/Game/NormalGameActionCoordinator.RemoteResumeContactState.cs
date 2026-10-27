@@ -20,14 +20,14 @@ internal sealed partial class NormalGameActionCoordinator
         private readonly NativeContactTransformBinding? _transformScale;
         private readonly bool _autoSync, _triggers, _kinematic, _useGravity;
         private readonly RigidbodyConstraints _constraints;
-        public RemoteResumeContactState(Player p, GameStateReader.NativeNearGroundSupportBinding support, long sourceTick)
+        public RemoteResumeContactState(Player p, GameStateReader.NativeNearGroundSupportBinding support, long sourceTick, bool initializedTerrain = false)
         {
             _player = p; _controller = p.controller; _mecha = p.mecha; _body = p.controller.rigid;
             _transform = p.transform; _parent = p.transform.parent; _position = p.position; _up = p.position.normalized;
             _transformScale = NativeContactTransformBinding.Capture(_transform);
             _autoSync = Physics.autoSyncTransforms; _triggers = Physics.queriesHitTriggers;
             _kinematic = _body.isKinematic; _useGravity = _body.useGravity; _constraints = _body.constraints;
-            Support = support; Policy = new NativeResumeContactPolicy(sourceTick, DateTimeOffset.UtcNow);
+            Support = support; Policy = new NativeResumeContactPolicy(sourceTick, DateTimeOffset.UtcNow, initializedTerrain);
         }
         public NativeResumeContactFacts Facts(Player p, VoyagerRemoteIdleAdmissionFacts facts,
             NativeNearGroundSupportSnapshot support, bool exactBinding)
@@ -41,9 +41,9 @@ internal sealed partial class NormalGameActionCoordinator
                 && Physics.autoSyncTransforms == _autoSync && Physics.queriesHitTriggers == _triggers
                 && _body.isKinematic == _kinematic && _body.useGravity == _useGravity && _body.constraints == _constraints;
             var motion = Finite(p.position) && Finite(_controller.velocity) && Finite(_body.velocity) && Finite(_body.angularVelocity)
-                && Finite(_controller.vertSpeed) && Math.Abs(_controller.vertSpeed) <= NativeResumeContactPolicy.MaximumSpeedMetersPerSecond
-                && _controller.velocity.magnitude <= NativeResumeContactPolicy.MaximumSpeedMetersPerSecond
-                && _body.velocity.magnitude <= NativeResumeContactPolicy.MaximumSpeedMetersPerSecond;
+                && Finite(_controller.vertSpeed) && Math.Abs(_controller.vertSpeed) <= Policy.SpeedLimit
+                && _controller.velocity.magnitude <= Policy.SpeedLimit
+                && _body.velocity.magnitude <= Policy.SpeedLimit;
             return new NativeResumeContactFacts
             {
                 CapturedAtGameTick = GameMain.gameTick,

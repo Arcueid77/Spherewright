@@ -129,6 +129,12 @@ internal sealed partial class NormalGameActionCoordinator
             adoption.CurrentDecisionEvidence);
         if (blocker is not null) return blocker;
         var facts = contact.Facts(adoption.Player, currentFacts, support, true);
+        if (contact.Policy.SourceGameTick==GameMain.gameTick)
+        {
+            var initial=contact.Policy.PreflightBlocker(facts,"initialized_terrain_contact_start");
+            if (initial is not null) return initial;
+            return atPhysics?NativeResumeContactPolicy.GroundingPending:null;
+        }
         return AdvanceRemoteResumeContact(adoption, contact.Policy, facts, atPhysics);
     }
 
