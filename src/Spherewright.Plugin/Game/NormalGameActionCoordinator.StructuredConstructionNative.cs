@@ -36,7 +36,9 @@ internal sealed partial class NormalGameActionCoordinator
         return NativeWalkModeIsBounded(player, stationary: true, action.Plan.VoyagerLocalWalkScene,
                 finiteWaterCostWithNativePause: true, allowBudgetedRecharge: true) && player.speed <= .1f
             && Vector3.Distance(player.position, ToVector(action.BlueprintBuild!.ConstructionControl!.Anchor))
-                <= NativeConstructionDroneReservePolicy.MaximumAnchorDisplacementMeters
+                <= (action.Plan.ConstructionReserve?.TallStationTarget == true
+                    ? NativeConstructionDroneReservePolicy.MaximumTallStationAnchorDisplacementMeters
+                    : NativeConstructionDroneReservePolicy.MaximumAnchorDisplacementMeters)
             && player.orders.orderCount == 0 && (ReferenceEquals(order, action.PlayerOrder)
                 || order is null && action.PlayerOrder?.targetReached == true)
             && player.controller.input0.sqrMagnitude == 0f && player.controller.input1.sqrMagnitude == 0f
@@ -100,8 +102,14 @@ internal sealed partial class NormalGameActionCoordinator
         if (NativeConstructionDroneReservePolicy.ReturnClosureFraction(speed, ejectDisplacement) > .25d)
             costHash = CanonicalStateHash.Combine("native-structured-drone-return-eleven-twentieths-v1", costHash,
                 NativeConstructionDroneReservePolicy.MaximumTighterReturnEjectDisplacementMeters);
+        var tallStation = build.Site.Objects.Count == 1 && build.Site.Objects[0].ItemId == 2104
+            && reach > NativeConstructionDroneReservePolicy.MaximumTargetDistanceMeters;
+        if (tallStation) costHash = CanonicalStateHash.Combine("native-single-ils-tight34m-return-v1", costHash,
+            NativeConstructionDroneReservePolicy.MaximumTallStationAnchorDisplacementMeters,
+            NativeConstructionDroneReservePolicy.MaximumTallStationEjectDisplacementMeters);
         return NativeConstructionDroneReservePolicy.Evaluate(new NativeConstructionDroneFacts
         {
+            TallStationTarget = tallStation,
             MaximumMechaDrones = module.droneCount, NativeSpeedMetersPerSecond = speed,
             NativeEnergyPerMeter = rate, NativeEjectEnergyJoules = eject, NativeRepairEnergyPerTick = repair,
             OtherMechaPowerUpperWatts = background, AnchorRadiusMeters = anchor.magnitude,
@@ -204,7 +212,7 @@ internal sealed partial class NormalGameActionCoordinator
                     drone.stage == 4 ? 0d : Vector3.Distance(target, fixedEject),
                     Math.Sqrt(Math.Pow(next.X - fixedEject.x, 2d) + Math.Pow(next.Y - fixedEject.y, 2d) + Math.Pow(next.Z - fixedEject.z, 2d)),
                     NativeConstructionDroneReservePolicy.CopiedStepWouldNativeRecycle(motion),
-                    Vector3.Distance(fixedEject, liveEject)))
+                    Vector3.Distance(fixedEject, liveEject), action.Plan.ConstructionReserve?.TallStationTarget == true))
                 return false;
         }
         return true;

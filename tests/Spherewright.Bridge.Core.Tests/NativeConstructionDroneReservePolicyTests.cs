@@ -9,6 +9,75 @@ namespace Spherewright.Bridge.Core.Tests;
 // invoke a drone update, or establish a live construction/idle acceptance.
 public sealed class NativeConstructionDroneReservePolicyTests
 {
+    [Fact]
+    public void TallStationPaysIts34mReturnUnderFreshTighterAnchorFactsWithoutChangingCoreCapacity()
+    {
+        var f=Facts();f.MaximumMechaDrones=3;f.NativeSpeedMetersPerSecond=10;
+        f.NativeEnergyPerMeter=9000;f.NativeRepairEnergyPerTick=3600;f.NativeEjectEnergyJoules=60000;
+        f.OtherMechaPowerUpperWatts=218602038.89195016;f.AnchorRadiusMeters=200.5856781;
+        f.MaximumTargetDistanceMeters=32.61467743;f.FixedToLiveEjectDistanceMeters=0;
+        f.TallStationTarget=true;
+        var proof=NativeConstructionDroneReservePolicy.Evaluate(f);
+        Assert.True(proof.Proved);Assert.True(proof.TallStationTarget);
+        Assert.Equal(402,proof.TailGameTicks);
+        Assert.InRange(proof.TailAndNextTickEnergyJoules,1,1600000000);
+        Assert.True(NativeConstructionDroneReservePolicy.CanFundNativeTail(1600000000,64000000000,5300000000,proof.TailAndNextTickEnergyJoules));
+        f.TallStationTarget=false;Assert.False(NativeConstructionDroneReservePolicy.Evaluate(f).Proved);
+    }
+
+    [Theory]
+    [InlineData("missing_eject")] [InlineData("eject")] [InlineData("slow")]
+    [InlineData("fast")] [InlineData("small_radius")] [InlineData("target")]
+    public void TallStationCannotBorrowASubsetWithMissingOrWeakerPremises(string fault)
+    {
+        var f=Facts();f.TallStationTarget=true;f.NativeSpeedMetersPerSecond=10;
+        f.MaximumTargetDistanceMeters=32.7;f.FixedToLiveEjectDistanceMeters=0;
+        switch(fault)
+        {
+            case "missing_eject":f.FixedToLiveEjectDistanceMeters=null;break;
+            case "eject":f.FixedToLiveEjectDistanceMeters=.002900001;break;
+            case "slow":f.NativeSpeedMetersPerSecond=9.99999;break;
+            case "fast":f.NativeSpeedMetersPerSecond=12.00001;break;
+            case "small_radius":f.AnchorRadiusMeters=120;break;
+            case "target":f.MaximumTargetDistanceMeters=33.0001;break;
+        }
+        Assert.False(NativeConstructionDroneReservePolicy.Evaluate(f).Proved);
+        Assert.False(NativeConstructionDroneReservePolicy.CopiedDroneStepPreservesEnvelope(4,10,.0025001,34,0,33.8,
+            fixedToLiveEjectDistanceMeters:0,tallStationTarget:true));
+        Assert.False(NativeConstructionDroneReservePolicy.CopiedDroneStepPreservesEnvelope(2,10,0,33,33,34.0001,
+            fixedToLiveEjectDistanceMeters:0,tallStationTarget:true));
+    }
+
+    [Theory]
+    [InlineData(140d,10f)] [InlineData(200d,10f)] [InlineData(200d,12f)] [InlineData(6000d,10f)]
+    public void TallStationNativeCopiedReturnAtBoundaryPaysItsTighterClosureAndNearRecycle(double radius,float speed)
+    {
+        for(var angleIndex=0;angleIndex<16;angleIndex++)
+        {
+            var angle=angleIndex*Math.PI/8;var f=Motion(radius,speed);
+            var fixedEject=new Vector3Snapshot {X=f.Eject.X,Y=f.Eject.Y,Z=f.Eject.Z};
+            f.Eject=new Vector3Snapshot {X=fixedEject.X,Y=fixedEject.Y+.0029f,Z=fixedEject.Z};
+            // Stay inside the exact measured bound; angles can round34 to
+            //34.0000000000003, which the production guard correctly rejects.
+            const double insideBoundary=34d-1e-6;
+            f.Target=f.Eject;f.Position=new UniversalPositionSnapshot {X=fixedEject.X+insideBoundary*Math.Cos(angle),Y=fixedEject.Y+insideBoundary*Math.Sin(angle),Z=fixedEject.Z};
+            var budget=Facts();budget.TallStationTarget=true;budget.AnchorRadiusMeters=radius;budget.NativeSpeedMetersPerSecond=speed;
+            budget.MaximumTargetDistanceMeters=32.7;budget.FixedToLiveEjectDistanceMeters=.0029;
+            var reserve=NativeConstructionDroneReservePolicy.Evaluate(budget);Assert.True(reserve.Proved);
+            var ticks=0;
+            while(!NativeConstructionDroneReservePolicy.CopiedStepWouldNativeRecycle(f) && ticks<reserve.TailGameTicks)
+            {
+                var next=NativeConstructionDroneReservePolicy.PredictCopiedOrdinaryStep(f)!;
+                Assert.True(NativeConstructionDroneReservePolicy.CopiedDroneStepPreservesEnvelope(4,speed,.0025,
+                    Distance(f.Position,fixedEject),0,Distance(next,fixedEject),fixedToLiveEjectDistanceMeters:.0029,tallStationTarget:true),
+                    $"r={radius} angle={angleIndex} tick={ticks} before={Distance(f.Position,fixedEject):R} after={Distance(next,fixedEject):R}");
+                f.Position=next;ticks++;
+            }
+            Assert.True(NativeConstructionDroneReservePolicy.CopiedStepWouldNativeRecycle(f));
+            Assert.True(ticks<reserve.TailGameTicks-64);
+        }
+    }
+
     [Theory]
     [InlineData(24d)] [InlineData(26d)]
     public void TallNativeTargetInsideExistingOuterEnvelopeKeepsTheExactPaidReturnTail(double reach)

@@ -5,6 +5,7 @@ namespace Spherewright.Bridge.Core.Safety;
 
 public sealed class NativeConstructionDroneFacts
 {
+    public bool TallStationTarget { get; set; }
     public int? MaximumMechaDrones { get; set; }
     public double? NativeSpeedMetersPerSecond { get; set; }
     public double? NativeEnergyPerMeter { get; set; }
@@ -24,6 +25,7 @@ public sealed class NativeConstructionDroneFacts
 
 public sealed class NativeConstructionDroneReserve
 {
+    public bool TallStationTarget { get; internal set; }
     public bool Proved { get; internal set; }
     public string? BlockerCode { get; internal set; }
     public long TailGameTicks { get; internal set; }
@@ -52,9 +54,17 @@ public static class NativeConstructionDroneReservePolicy
     public const double MaximumDroneDistanceMeters = 28d;
     public const double MaximumAnchorDisplacementMeters = .01d;
     public const double MaximumTighterReturnEjectDisplacementMeters = .0109d;
+    public const double MaximumTallStationTargetDistanceMeters = 33d;
+    public const double MaximumTallStationDroneDistanceMeters = 34d;
+    public const double MaximumTallStationAnchorDisplacementMeters = .0025d;
+    public const double MaximumTallStationEjectDisplacementMeters = .0029d;
 
-    public static double ReturnClosureFraction(double speedMetersPerSecond, double? fixedToLiveEjectDistanceMeters)
-        => Finite(speedMetersPerSecond) && speedMetersPerSecond >= 10d && speedMetersPerSecond <= 12d
+    public static double ReturnClosureFraction(double speedMetersPerSecond, double? fixedToLiveEjectDistanceMeters,
+        bool tallStationTarget = false)
+        => tallStationTarget && Finite(speedMetersPerSecond) && speedMetersPerSecond >= 10d && speedMetersPerSecond <= 12d
+            && fixedToLiveEjectDistanceMeters.HasValue && Finite(fixedToLiveEjectDistanceMeters.Value)
+            && fixedToLiveEjectDistanceMeters.Value <= MaximumTallStationEjectDisplacementMeters ? 2d / 3d
+            : !tallStationTarget && Finite(speedMetersPerSecond) && speedMetersPerSecond >= 10d && speedMetersPerSecond <= 12d
             && fixedToLiveEjectDistanceMeters.HasValue && Finite(fixedToLiveEjectDistanceMeters.Value)
             && fixedToLiveEjectDistanceMeters.Value <= MaximumTighterReturnEjectDisplacementMeters
                 ? 11d / 20d : 1d / 4d;
@@ -103,10 +113,15 @@ public static class NativeConstructionDroneReservePolicy
         var background = f.OtherMechaPowerUpperWatts.Value;
         var radius = f.AnchorRadiusMeters.Value;
         var reach = f.MaximumTargetDistanceMeters.Value;
+        var outer = f.TallStationTarget ? MaximumTallStationDroneDistanceMeters : MaximumDroneDistanceMeters;
+        var target = f.TallStationTarget ? MaximumTallStationTargetDistanceMeters : MaximumTargetDistanceMeters;
+        var closure = ReturnClosureFraction(speed, f.FixedToLiveEjectDistanceMeters, f.TallStationTarget);
+        if (f.TallStationTarget && closure != 2d / 3d)
+            return Blocked("native_tall_station_strict_eject_or_speed_unproved");
         if (n < 1 || n > 32 || !Finite(speed) || speed < 6d || speed > 120d || !Finite(rate) || !Finite(eject)
             || !Finite(repair) || !Finite(background) || !Finite(radius) || radius < 120d || radius > 6000d
-            || !Finite(reach) || reach > MaximumTargetDistanceMeters
-            || MaximumDroneDistanceMeters > (radius + 2.8d) / 4d)
+            || !Finite(reach) || reach > target
+            || outer > (radius + 2.8d) / 4d)
             return Blocked("native_drone_finite_local_envelope_unproved");
         // In the explicitly observed 10..12m/s subset every moving Native
         // distance >=.5m exceeds 2*speed/60: no radial-clamp branch occurs.
@@ -114,9 +129,12 @@ public static class NativeConstructionDroneReservePolicy
         // arithmetic <=.01m, two live/fixed offsets <=.022m, current-distance
         // error <=.001m and .01m copied-step guard slack total .043m, below
         // (5/6-11/20)*(10/60) = .047222...m. Keep all other allowances/gates.
-        var closure = ReturnClosureFraction(speed, f.FixedToLiveEjectDistanceMeters);
-        var ticks = 64d + (closure > .25d
-            ? Math.Ceiling(MaximumDroneDistanceMeters / (closure * speed / 60d))
+        // For the tall-station subset the same ideal5s/6 closure pays at least
+        //2s/3 after .01 arithmetic +2*.0029 eject +.001 distance +.01 guard
+        //slack =.0268m, below (5/6-2/3)*(10/60)=.027777...m. Its stricter
+        //anchor/eject premises are checked on every copied Native step.
+        var ticks = 64d + (f.TallStationTarget ? Math.Ceiling(outer * 90d / speed) : closure > .25d
+            ? Math.Ceiling(outer / (closure * speed / 60d))
             : Math.Ceiling(4d * MaximumDroneDistanceMeters / speed * 60d)) + 32d;
         var power = n * (speed * rate + repair * 60d) + background;
         // Eject energy is a conservative allowance, not a claim that DSP's
@@ -124,7 +142,7 @@ public static class NativeConstructionDroneReservePolicy
         var margin = power * (ticks + 2d) / 60d + n * eject;
         if (!Finite(ticks) || ticks > 7200d || !Finite(power) || !Finite(margin))
             return Blocked("native_drone_tail_or_energy_bound_exceeded");
-        return new NativeConstructionDroneReserve { Proved = true, TailGameTicks = (long)ticks,
+        return new NativeConstructionDroneReserve { Proved = true, TallStationTarget = f.TallStationTarget, TailGameTicks = (long)ticks,
             PowerUpperWatts = power, TailAndNextTickEnergyJoules = margin };
     }
 
@@ -134,20 +152,25 @@ public static class NativeConstructionDroneReservePolicy
     // operations at radii <=6000m; the separate .01m anchor bound is mandatory.
     public static bool CopiedDroneStepPreservesEnvelope(int stage, double speedMetersPerSecond,
         double anchorDisplacementMeters, double droneDistanceMeters, double targetDistanceMeters,
-        double nextDroneDistanceMeters, bool nativeWouldRecycle = false, double? fixedToLiveEjectDistanceMeters = null)
+        double nextDroneDistanceMeters, bool nativeWouldRecycle = false, double? fixedToLiveEjectDistanceMeters = null,
+        bool tallStationTarget = false)
     {
+        var outer = tallStationTarget ? MaximumTallStationDroneDistanceMeters : MaximumDroneDistanceMeters;
+        var target = tallStationTarget ? MaximumTallStationTargetDistanceMeters : MaximumTargetDistanceMeters;
+        var anchor = tallStationTarget ? MaximumTallStationAnchorDisplacementMeters : MaximumAnchorDisplacementMeters;
+        if (tallStationTarget && ReturnClosureFraction(speedMetersPerSecond, fixedToLiveEjectDistanceMeters, true) != 2d / 3d) return false;
         if (stage < 1 || stage > 4 || !Finite(speedMetersPerSecond) || speedMetersPerSecond < 6d
             || speedMetersPerSecond > 120d || !Finite(anchorDisplacementMeters)
-            || anchorDisplacementMeters > MaximumAnchorDisplacementMeters
+            || anchorDisplacementMeters > anchor
             || !Finite(droneDistanceMeters) || !Finite(targetDistanceMeters) || !Finite(nextDroneDistanceMeters)
-            || droneDistanceMeters > MaximumDroneDistanceMeters || nextDroneDistanceMeters > MaximumDroneDistanceMeters)
+            || droneDistanceMeters > outer || nextDroneDistanceMeters > outer)
             return false;
-        if (stage <= 3 && targetDistanceMeters > MaximumTargetDistanceMeters) return false;
+        if (stage <= 3 && targetDistanceMeters > target) return false;
         if (stage != 4 || droneDistanceMeters < .5d || nativeWouldRecycle) return true;
         var step = speedMetersPerSecond / 60d;
         return droneDistanceMeters >= 2d * step
             ? nextDroneDistanceMeters + .01d <= droneDistanceMeters
-                - step * ReturnClosureFraction(speedMetersPerSecond, fixedToLiveEjectDistanceMeters)
+                - step * ReturnClosureFraction(speedMetersPerSecond, fixedToLiveEjectDistanceMeters, tallStationTarget)
             : nextDroneDistanceMeters + .01d <= .75d * droneDistanceMeters + .04d;
     }
 
