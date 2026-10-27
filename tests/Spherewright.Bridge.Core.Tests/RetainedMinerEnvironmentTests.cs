@@ -10,10 +10,11 @@ public sealed class RetainedMinerEnvironmentTests
 {
     private const string Blocker = "remote_resume_charge_native_construction_not_empty";
 
-    [Fact]
-    public void SealedUnpoweredMinerSurvivesRestartWithRetiredPrebuildAndUnchangedReceipt()
+    [Theory]
+    [InlineData(false)] [InlineData(true)]
+    public void SealedUnpoweredMinerSurvivesRestartWithRetiredPrebuildAndUnchangedReceipt(bool historicalDispatchDisabled)
     {
-        using var f = new Fixture(); var before = File.ReadAllBytes(f.Path);
+        using var f = new Fixture(historicalDispatchDisabled); var before = File.ReadAllBytes(f.Path);
         Assert.Null(f.Guard());
         Assert.Null(f.Guard()); // New Store/coordinator each time, no cached grant.
         Assert.Equal(before, File.ReadAllBytes(f.Path));
@@ -28,6 +29,7 @@ public sealed class RetainedMinerEnvironmentTests
     [InlineData("damaged_pool")] [InlineData("working_drone")] [InlineData("build_target")]
     [InlineData("repair_target")] [InlineData("reconstruct_target")] [InlineData("wrong_component")]
     [InlineData("wrong_world_reference")]
+    [InlineData("live_dispatch_changed")]
     public void OnlyTheExactCompletedIdleUnpoweredSingleMinerCanEnter(string fault)
     {
         using var f = new Fixture();
@@ -55,6 +57,7 @@ public sealed class RetainedMinerEnvironmentTests
             case "reconstruct_target": f.Player.mecha.constructionModule.autoReconstructTargetTotalCount = 1; break;
             case "wrong_component": f.Factory.factorySystem.minerPool[1].entityId = 2; break;
             case "wrong_world_reference": GameMain.data!.localLoadedPlanetFactory = new object(); break;
+            case "live_dispatch_changed": f.Player.mecha.constructionModule.droneEnabled = false; break;
         }
         Assert.Equal(Blocker, f.Guard());
     }
@@ -106,7 +109,7 @@ public sealed class RetainedMinerEnvironmentTests
         internal BlueprintBuildStore Store() => new(root, "0.10.35.29151", Sessions, new ManualLogSource());
         internal BlueprintBuildState Record() { Assert.True(Store().TryRead(out var builds)); return Assert.Single(builds); }
         internal string? Guard() => new NormalGameActionCoordinator(Store(), Sessions).MinerEnvironmentForTest(Player, Journey);
-        internal Fixture()
+        internal Fixture(bool historicalDispatchDisabled = false)
         {
             GameMain.history = new(); GameMain.gameTick = 112;
             Player.factory = Factory; GameMain.data = new() { localLoadedPlanetFactory = Factory };
@@ -128,7 +131,7 @@ public sealed class RetainedMinerEnvironmentTests
             state.ConfirmStructuredSubmission([1], 10, "after"); state.ConfirmCompletion(0, 1, 110);
             c.RequestStop("construction_complete_draining", 110, c.StartedAtUtc.AddSeconds(1), false);
             c.DispatchDisabled = true; Assert.True(c.RecordDisabledNativeFactoryPass(110)); Assert.True(c.TryMarkPhysicalIdle(112, true, true));
-            c.Phase = "completed_idle"; c.DispatchDisabled = false; state.LastEvidenceGameTick = 112; state.Stop("completed");
+            c.Phase = "completed_idle"; c.DispatchDisabled = historicalDispatchDisabled; state.LastEvidenceGameTick = 112; state.Stop("completed");
             Assert.True(Store().TryPut(state));
         }
         public void Dispose()

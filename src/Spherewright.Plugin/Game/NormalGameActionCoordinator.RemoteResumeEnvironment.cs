@@ -46,10 +46,13 @@ internal sealed partial class NormalGameActionCoordinator
             || build.Objects.Count != 1 || build.Site.Objects.Count != 1 || build.Site.Objects[0].ItemId != 2301
             || build.StructuredConstruction is not { Kind: "resource" } provenance || provenance.JourneyId != journeyId
             || build.ConstructionControl is not { Phase: "completed_idle", PhysicalIdleVerified: true,
-                BindingLost: false, DispatchDisabled: false, StopReason: "construction_complete_draining" } control
+                BindingLost: false, OriginalDroneEnabled: true, StopReason: "construction_complete_draining" } control
             || !control.PhysicalIdleVerifiedAtGameTick.HasValue || !control.DisabledNativeFactoryPassGameTick.HasValue
             || control.NativeCreateActionId is null || control.NativeCreateActionId != build.ActionId
             || control.PreexistingEntityIds.Count != 0
+            // DispatchDisabled is the retained stop/pass receipt, not a fresh
+            // observation of the imported Native switch. Both sealed record
+            // forms are valid; prove the current switch and idle independently.
             || p.mecha.constructionModule.droneEnabled != control.OriginalDroneEnabled) return false;
         var step = build.Objects[0];
         var id = step.EntityId.GetValueOrDefault();
