@@ -11,7 +11,7 @@ public sealed class NativeFirstFrameAdmission
             && !double.IsNaN(playerRadius.Value) && !double.IsInfinity(playerRadius.Value)
             && !double.IsNaN(nativeSurfaceRadius.Value) && !double.IsInfinity(nativeSurfaceRadius.Value)
             && playerRadius>=120d && playerRadius<=6000d && nativeSurfaceRadius>=120d && nativeSurfaceRadius<=6000d
-            && Math.Abs(playerRadius.Value-nativeSurfaceRadius.Value)<=.25d;
+            && Math.Abs(playerRadius.Value-nativeSurfaceRadius.Value)<=.5d;
     public bool Armed { get; private set; }
     public bool UniverseObserved { get; private set; }
     public bool PhysicsObserved { get; private set; }

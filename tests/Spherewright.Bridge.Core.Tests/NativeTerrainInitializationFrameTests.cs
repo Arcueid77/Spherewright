@@ -23,8 +23,9 @@ public sealed class NativeTerrainInitializationFrameTests
         Assert.False(p.Armed);Assert.False(p.UniverseObserved);Assert.False(p.PhysicsObserved);
     }
     [Theory]
-    [InlineData(200d,199.75d,true)] [InlineData(200d,200.25d,true)]
-    [InlineData(200d,199.7499d,false)] [InlineData(double.NaN,200d,false)] [InlineData(null,200d,false)]
+    [InlineData(200d,199.5d,true)] [InlineData(200d,200.5d,true)]
+    [InlineData(200.379d,200d,true)]
+    [InlineData(200d,199.4999d,false)] [InlineData(double.NaN,200d,false)] [InlineData(null,200d,false)]
     public void NativeHeightIsOnlyABoundedConditionalEntryAndNeverAnUnknownOrUnlimitedDrop(double? player,double? surface,bool expected)
         => Assert.Equal(expected,NativeFirstFrameAdmission.TerrainInitializationHeightIsBounded(player,surface));
 }
