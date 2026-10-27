@@ -5,6 +5,40 @@ namespace Spherewright.Bridge.Core.Tests;
 
 public sealed class NativeResumeContactPolicyTests
 {
+    private static Spherewright.Contracts.Players.NativeNearGroundSupportSnapshot LoadedTerrain() => new()
+    {
+        State="observed",ActualGroundSphereHit=false,CastAttempted=true,CastHit=true,CastLayerMask=1 << 31,
+        CastDistance=.224f,NormalDotUp=.9f,Layer=31,Shape="mesh",OwnerType="current_terrain",
+        Enabled=true,ActiveInHierarchy=true,IsTrigger=false,SameDefaultPhysicsScene=true,
+        CurrentPoolReference=true,LiveObject=true,ColliderChain=true,FootOverlapComplete=true,FootOverlapCount=0,
+        AllFootHitsCurrentSupportOrTerrain=true,
+    };
+    [Fact]
+    public void ExactLoadedTerrainCastFundsOnlyConditionalContactAndDoesNotInventNativeGroundOrIdle()
+    {
+        var s=LoadedTerrain();Assert.True(NativeResumeContactPolicy.LoadedTerrainCastProved(s));
+        Assert.False(s.ActualGroundSphereHit);Assert.False(s.SafetyCertified);Assert.Null(s.NativeLiveFlag);
+        var p=new NativeResumeContactPolicy(100,Now);Assert.Null(p.PreflightBlocker(Good()));
+        Assert.False(p.Retired);Assert.Equal(100,p.LastObservedGameTick);
+    }
+    [Theory]
+    [InlineData("mask")] [InlineData("layer")] [InlineData("normal")] [InlineData("gap")]
+    [InlineData("owner")] [InlineData("reference")] [InlineData("mesh")] [InlineData("native_ground")]
+    [InlineData("foot")] [InlineData("live_mark")] [InlineData("trigger")] [InlineData("pose")]
+    public void LoadedTerrainCannotBorrowAnUnobservedOrForeignContactWitness(string fault)
+    {
+        var s=LoadedTerrain();
+        switch(fault)
+        {
+            case "mask":s.CastLayerMask=15873;break;case "layer":s.Layer=9;break;
+            case "normal":s.NormalDotUp=.49f;break;case "gap":s.CastDistance=.251f;break;
+            case "owner":s.OwnerType="foreign_terrain";break;case "reference":s.CurrentPoolReference=null;break;
+            case "mesh":s.Shape="box";break;case "native_ground":s.ActualGroundSphereHit=true;break;
+            case "foot":s.FootOverlapCount=1;break;case "live_mark":s.NativeLiveFlag=true;break;
+            case "trigger":s.IsTrigger=true;break;case "pose":s.ColliderChain=false;break;
+        }
+        Assert.False(NativeResumeContactPolicy.LoadedTerrainCastProved(s));
+    }
     private static readonly DateTimeOffset Now = new(2025, 1, 1, 0, 0, 0, TimeSpan.Zero);
     private static NativeResumeContactFacts Good(long tick = 100) => new()
     {

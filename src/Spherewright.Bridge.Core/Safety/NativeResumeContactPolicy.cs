@@ -35,6 +35,17 @@ public sealed class NativeResumeContactFacts
 // here moves an actor, permits a Save, pays energy, or renews the old journey.
 public sealed class NativeResumeContactPolicy
 {
+    // Conditional source geometry for this same eight-tick contact controller.
+    // Actual Native ground remains false; layer31 is never passed off as9.
+    public static bool LoadedTerrainCastProved(NativeNearGroundSupportSnapshot s) => s.State == "observed"
+        && s.ActualGroundSphereHit == false && s.CastAttempted == true && s.CastHit == true
+        && s.CastLayerMask == (1 << 31) && s.Layer == 31 && s.Shape == "mesh" && s.OwnerType == "current_terrain"
+        && s.CastDistance.HasValue && !float.IsNaN(s.CastDistance.Value) && s.CastDistance >= 0f
+        && s.CastDistance <= MaximumCastDistanceMeters && s.NormalDotUp.HasValue && !float.IsNaN(s.NormalDotUp.Value)
+        && s.NormalDotUp >= MinimumNormalDotUp && s.NormalDotUp <= 1.001f
+        && s.Enabled == true && s.ActiveInHierarchy == true && s.IsTrigger == false && s.SameDefaultPhysicsScene == true
+        && s.CurrentPoolReference == true && s.LiveObject == true && s.ColliderChain == true && s.NativeLiveFlag is null
+        && s.FootOverlapComplete == true && s.FootOverlapCount == 0 && s.AllFootHitsCurrentSupportOrTerrain == true;
     public const string GroundingPending = "remote_resume_native_contact_pending";
     public const int MaximumNativeWorkTicks = 8;
     public const double MaximumWallSeconds = 2d;

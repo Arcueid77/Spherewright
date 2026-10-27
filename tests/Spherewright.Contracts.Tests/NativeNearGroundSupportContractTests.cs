@@ -39,7 +39,7 @@ public sealed class NativeNearGroundSupportContractTests
             State = "observed", ReasonCode = "synthetic-detail", CapturedAtGameTick = 12,
             RegisteredColliderCount = 19,
             CaptureStage = "synthetic-preflight", ActualGroundSphereHit = false,
-            CastAttempted = true, CastHit = true, CastDistance = .24f,
+            CastAttempted = true, CastHit = true, CastDistance = .24f, CastLayerMask = 1 << 31,
             HitPoint = new() { X = 1, Y = 2, Z = 3 }, HitNormal = new() { Y = 1 }, NormalDotUp = .9f,
             Layer = 10, Shape = "capsule", IsTrigger = false, Enabled = true, ActiveInHierarchy = true,
             SameDefaultPhysicsScene = true, OwnerType = "vegetable", ObjectId = 17,
@@ -56,6 +56,7 @@ public sealed class NativeNearGroundSupportContractTests
         Assert.Equal(1, copy.HitPoint!.X);
         Assert.Equal(1, copy.HitNormal!.Y);
         Assert.Equal(.24f, copy.CastDistance);
+        Assert.Equal(1 << 31, copy.CastLayerMask);
         Assert.Equal("vegetable", copy.OwnerType);
         Assert.False(copy.NativeLiveFlag);
         Assert.Equal(19, copy.RegisteredColliderCount);

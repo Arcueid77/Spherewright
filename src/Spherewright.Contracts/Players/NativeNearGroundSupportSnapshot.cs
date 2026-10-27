@@ -15,7 +15,9 @@ public sealed class NativeNearGroundSupportSnapshot
     public bool? ActualGroundSphereHit { get; set; }
     public bool? CastAttempted { get; set; }
     public bool? CastHit { get; set; }
-    /// <summary>Native sphere-cast travel distance in metres; null on a miss or an unavailable query.</summary>
+    /// <summary>Actual query mask. A loaded terrain layer31 cast is conditional support, never Native ground contact.</summary>
+    public int? CastLayerMask { get; set; }
+    /// <summary>Actual sphere-cast travel distance in metres; CastLayerMask distinguishes the query, null on a miss.</summary>
     public float? CastDistance { get; set; }
     public Vector3Snapshot? HitPoint { get; set; }
     public Vector3Snapshot? HitNormal { get; set; }
@@ -46,6 +48,7 @@ public sealed class NativeNearGroundSupportSnapshot
         State = State, ReasonCode = ReasonCode, CapturedAtGameTick = CapturedAtGameTick, CaptureStage = CaptureStage,
         RegisteredColliderCount = RegisteredColliderCount,
         ActualGroundSphereHit = ActualGroundSphereHit, CastAttempted = CastAttempted, CastHit = CastHit,
+        CastLayerMask = CastLayerMask,
         CastDistance = CastDistance, HitPoint = CopyVector(HitPoint), HitNormal = CopyVector(HitNormal), NormalDotUp = NormalDotUp,
         Layer = Layer, Shape = Shape, IsTrigger = IsTrigger, Enabled = Enabled, ActiveInHierarchy = ActiveInHierarchy,
         SameDefaultPhysicsScene = SameDefaultPhysicsScene, OwnerType = OwnerType, ObjectId = ObjectId,
