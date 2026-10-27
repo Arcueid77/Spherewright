@@ -112,13 +112,19 @@ internal sealed partial class NormalGameActionCoordinator
         if (!module.droneEnabled && !(build.ConstructionControl?.DispatchDisabled == true
             && build.ConstructionControl.OriginalDroneEnabled))
             return Stale("The ordinary construction drones were disabled outside this build's retained stop receipt.");
-        var reserve = CaptureConstructionReserve(build, player, out var costHash);
+        var decision = new NativeResumeDecisionEvidence("structured_construction_prepare", GameMain.gameTick, DateTimeOffset.UtcNow, true);
+        var reserve = CaptureConstructionReserve(build, player, out var costHash, decision);
         var workTicks = build.ConstructionControl is null ? StructuredConstructionWorkTicks
             : build.ConstructionControl.RemainingWorkGameTicks(GameMain.gameTick, DateTimeOffset.UtcNow).GetValueOrDefault();
         if (workTicks < 1) return Stale("The original structured batch's absolute work window expired; fresh resume cannot renew it or recreate its pending objects.");
-        if (!reserve.Proved || !NativeConstructionDroneReservePolicy.CanFundNativeTail(player.mecha.coreEnergy,
-            CalculateAvailableFlightEnergy(player.mecha), journey.ReturnEnergyFloorJoules, reserve.TailAndNextTickEnergyJoules))
-            return Stale("The ordinary drone tail lacks finite native geometry/core-energy proof (" + reserve.BlockerCode + ").");
+        if (!decision.Require("construction_native_geometry_and_cost", reserve.Proved)
+            || !decision.Require("construction_core_and_return_funded", NativeConstructionDroneReservePolicy.CanFundNativeTail(player.mecha.coreEnergy,
+                CalculateAvailableFlightEnergy(player.mecha), journey.ReturnEnergyFloorJoules, reserve.TailAndNextTickEnergyJoules)))
+        {
+            var error = Stale("The ordinary drone tail lacks finite native geometry/core-energy proof (" + reserve.BlockerCode + ").");
+            error.NativeFirstFailure = decision.Failure(reserve.BlockerCode ?? "native_drone_core_or_return_funding_unproved");
+            return error;
+        }
         var budget = VoyagerLocalActionBudgetPolicy.Evaluate(new VoyagerLocalActionBudgetFacts
         {
             ExactRemoteBinding = true, NativePlayerIdle = true,

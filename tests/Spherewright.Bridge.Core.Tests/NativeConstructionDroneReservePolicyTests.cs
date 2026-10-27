@@ -10,6 +10,47 @@ namespace Spherewright.Bridge.Core.Tests;
 public sealed class NativeConstructionDroneReservePolicyTests
 {
     [Theory]
+    [InlineData(24d)] [InlineData(26d)]
+    public void TallNativeTargetInsideExistingOuterEnvelopeKeepsTheExactPaidReturnTail(double reach)
+    {
+        var f = Facts(); var original = NativeConstructionDroneReservePolicy.Evaluate(f);
+        f.MaximumTargetDistanceMeters = reach;
+        var tall = NativeConstructionDroneReservePolicy.Evaluate(f);
+        Assert.True(tall.Proved);
+        Assert.Equal(28d, NativeConstructionDroneReservePolicy.MaximumDroneDistanceMeters);
+        Assert.Equal(original.TailGameTicks,tall.TailGameTicks);
+        Assert.Equal(original.TailAndNextTickEnergyJoules,tall.TailAndNextTickEnergyJoules);
+        Assert.True(NativeConstructionDroneReservePolicy.CopiedDroneStepPreservesEnvelope(2,10,0,reach,reach,reach));
+        Assert.False(NativeConstructionDroneReservePolicy.CopiedDroneStepPreservesEnvelope(2,10,0,reach,reach,28.001));
+    }
+
+    [Theory]
+    [InlineData(120d,6f)] [InlineData(200d,10f)] [InlineData(6000d,120f)]
+    public void NativeLaunchAndTallStraightApproachStayInsideTheOriginalOuterSphere(double radius,float speed)
+    {
+        // EjectMechaDrone:4.5*n+1.5*(unit_target+inside_unit_sphere), hence<=7.5m.
+        var f=Motion(radius,speed); var eject=f.Eject;
+        f.Initial=new Vector3Snapshot { X=eject.X+7.5f,Y=eject.Y,Z=eject.Z };
+        f.Target=new Vector3Snapshot { X=eject.X,Y=eject.Y+26f,Z=eject.Z };
+        f.Stage=1;
+        for(var i=0;i<64;i++)
+        {
+            f.Progress=i/64f;
+            var copied=NativeConstructionDroneReservePolicy.PredictCopiedOrdinaryStep(f)!;
+            Assert.InRange(Distance(copied,eject),0,7.501);
+        }
+        f.Stage=2;f.Position=new UniversalPositionSnapshot { X=f.Initial.X,Y=f.Initial.Y,Z=f.Initial.Z };
+        for(var i=0;i<1000 && Distance(f.Position,f.Target)>.5;i++)
+        {
+            var next=NativeConstructionDroneReservePolicy.PredictCopiedOrdinaryStep(f)!;
+            Assert.True(NativeConstructionDroneReservePolicy.CopiedDroneStepPreservesEnvelope(2,speed,0,
+                Distance(f.Position,eject),Distance(new UniversalPositionSnapshot {X=f.Target.X,Y=f.Target.Y,Z=f.Target.Z},eject),Distance(next,eject)));
+            Assert.InRange(Distance(next,eject),0,26.01);f.Position=next;
+        }
+        Assert.InRange(Distance(f.Position,f.Target),0,.5); // Native stage2 enters work within .5m.
+    }
+
+    [Theory]
     [InlineData(6d)] [InlineData(12d)] [InlineData(60d)] [InlineData(120d)]
     public void TailCoversCachedLaunchFarClosureAndNearRecycleAtEverySupportedSpeed(double speed)
     {
@@ -44,7 +85,7 @@ public sealed class NativeConstructionDroneReservePolicyTests
             case "too_many_drones": f.MaximumMechaDrones = 33; break;
             case "tiny_world": f.AnchorRadiusMeters = 100; break;
             case "large_world": f.AnchorRadiusMeters = 6001; break;
-            case "target_outside": f.MaximumTargetDistanceMeters = 16.001; break;
+            case "target_outside": f.MaximumTargetDistanceMeters = 26.001; break;
             case "overflow": f.NativeEnergyPerMeter = double.MaxValue; break;
             case "pending_jump": f.NativePendingJumpTicks = 1; break;
             case "unknown_jump": f.NativePendingJumpTicks = null; break;
@@ -90,7 +131,7 @@ public sealed class NativeConstructionDroneReservePolicyTests
     }
 
     [Theory]
-    [InlineData(1, 17d, 18d, 0d)] [InlineData(2, 28.1d, 18d, 0d)]
+    [InlineData(1, 26.001d, 18d, 0d)] [InlineData(2, 28.1d, 18d, 0d)]
     [InlineData(4, 0d, 28.001d, 0d)] [InlineData(4, 0d, 20d, .011d)]
     public void TargetMotionOrAnchorLossCannotInheritTheStationaryEnvelope(int stage, double target, double next, double drift)
     {

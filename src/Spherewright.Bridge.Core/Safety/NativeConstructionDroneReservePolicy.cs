@@ -44,7 +44,11 @@ public sealed class NativeConstructionDroneMotionFacts
 
 public static class NativeConstructionDroneReservePolicy
 {
-    public const double MaximumTargetDistanceMeters = 16d;
+    // Native tower targets include selectSize.y+1 above the ground pose.
+    // EjectMechaDrone's initial point is at most4.5+2*1.5=7.5m from eject;
+    // its cubic launch and subsequent straight target step are convex. A26m
+    // target remains inside the unchanged28m copied-step/return certificate.
+    public const double MaximumTargetDistanceMeters = 26d;
     public const double MaximumDroneDistanceMeters = 28d;
     public const double MaximumAnchorDisplacementMeters = .01d;
     public const double MaximumTighterReturnEjectDisplacementMeters = .0109d;

@@ -44,7 +44,8 @@ internal sealed partial class NormalGameActionCoordinator
             && !player.navigation.navigating && BuildUiIsIdle(player) && VoyagerMechaWorkIdle(player);
     }
 
-    private static NativeConstructionDroneReserve CaptureConstructionReserve(BlueprintBuildState build, Player player, out string costHash)
+    private static NativeConstructionDroneReserve CaptureConstructionReserve(BlueprintBuildState build, Player player, out string costHash,
+        NativeResumeDecisionEvidence? decision = null)
     {
         var module = player.mecha.constructionModule;
         var speed = GameMain.history.constructionDroneSpeed;
@@ -65,7 +66,7 @@ internal sealed partial class NormalGameActionCoordinator
         var ejectAnchor = anchor.normalized * (anchor.magnitude + 2.8f);
         var liveEject = player.position.normalized * (player.position.magnitude + 2.8f);
         var ejectDisplacement = Vector3.Distance(ejectAnchor, liveEject);
-        var reach = 0d;
+        var reach = 0d; var groundSpan = 0d;
         foreach (var spec in build.Site.Objects)
         {
             var desc = LDB.items.Select(spec.ItemId)?.prefabDesc;
@@ -74,8 +75,18 @@ internal sealed partial class NormalGameActionCoordinator
             var target = position + position.normalized * (desc.selectSize.y + 1f);
             reach = Math.Max(reach, Vector3.Distance(ejectAnchor, target));
             // Both sorter poses must remain in the same finite local envelope.
-            if (Vector3.Distance(anchor, ToVector(spec.Position2)) > 16d) { reach = double.NaN; break; }
+            groundSpan = Math.Max(groundSpan, Vector3.Distance(anchor, ToVector(spec.Position2)));
+            if (groundSpan > 16d) { reach = double.NaN; break; }
         }
+        decision?.Number("construction_target_distance_m", reach);
+        decision?.Number("construction_ground_span_m", groundSpan);
+        decision?.Number("construction_anchor_radius_m", anchor.magnitude);
+        decision?.Number("construction_drone_speed_mps", speed);
+        decision?.Number("construction_drone_count", module.droneCount);
+        decision?.Number("construction_background_power_w", background);
+        decision?.Number("construction_fixed_live_eject_m", ejectDisplacement);
+        decision?.Observe("construction_movement_cost_proved", movement.Proved);
+        decision?.Require("construction_ground_span_within_16m", groundSpan <= 16d);
         costHash = CanonicalStateHash.Combine("native-structured-drone-cost-v1", module.droneCount,
             speed, rate, eject, repair, background, player.mecha.coreEnergyCap,
             independent.EnergyShieldCapacity, independent.EnergyShieldRechargeEnabled, independent.LaserActive,
