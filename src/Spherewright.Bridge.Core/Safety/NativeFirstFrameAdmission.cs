@@ -6,6 +6,12 @@ namespace Spherewright.Bridge.Core.Safety;
 /// <summary>A one-frame observation latch; it never grants idle, skips a task or pays energy.</summary>
 public sealed class NativeFirstFrameAdmission
 {
+    public static bool TerrainInitializationHeightIsBounded(double? playerRadius, double? nativeSurfaceRadius)
+        => playerRadius.HasValue && nativeSurfaceRadius.HasValue
+            && !double.IsNaN(playerRadius.Value) && !double.IsInfinity(playerRadius.Value)
+            && !double.IsNaN(nativeSurfaceRadius.Value) && !double.IsInfinity(nativeSurfaceRadius.Value)
+            && playerRadius>=120d && playerRadius<=6000d && nativeSurfaceRadius>=120d && nativeSurfaceRadius<=6000d
+            && Math.Abs(playerRadius.Value-nativeSurfaceRadius.Value)<=.25d;
     public bool Armed { get; private set; }
     public bool UniverseObserved { get; private set; }
     public bool PhysicsObserved { get; private set; }
@@ -23,6 +29,13 @@ public sealed class NativeFirstFrameAdmission
         Func<string?> recheckAtPhysics)
         => recheckAtPhysics is null ? Fail("remote_resume_near_support_recheck_unavailable")
             : ArmBound(sourceTick, exactLoader, guideComplete, exactCurrentSupport, funded, recheckAtPhysics);
+
+    // Does not assert a foot hit. The Native consumer binds exact loaded
+    // terrain/height and must prove actual ground after151 and again at501.
+    public string? ArmTerrainInitialization(long sourceTick, bool exactLoader, bool guideComplete,
+        bool exactLoadedTerrainAndHeight, bool funded, Func<string?> recheckAtPhysics)
+        => recheckAtPhysics is null ? Fail("remote_resume_terrain_initialization_recheck_unavailable")
+            : ArmBound(sourceTick, exactLoader, guideComplete, exactLoadedTerrainAndHeight, funded, recheckAtPhysics);
 
     private string? ArmBound(long sourceTick, bool exactLoader, bool guideComplete, bool supportProved, bool funded,
         Func<string?>? recheckAtPhysics)

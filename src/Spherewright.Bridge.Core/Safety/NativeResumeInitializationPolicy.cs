@@ -15,6 +15,9 @@ public sealed class NativeResumeInitializationFacts
     public int? RegisteredCount { get; set; }
     public bool? ColliderRefreshPending { get; set; }
     public bool CurrentSupportOrGroundProof { get; set; }
+    // Separate from physical support: exact loaded terrain and a bounded
+    // Native height permit only a funded universe-frame initialization probe.
+    public bool CurrentTerrainInitializationProof { get; set; }
 }
 
 // A paused, zero-Native-tick initialization hold, independent of the later
@@ -70,7 +73,7 @@ public sealed class NativeResumeInitializationPolicy
         if (blocker is not null) { Reject(blocker); return false; }
         if (!_ready || ObservationCount == 0 || freshFacts.RegisteredCount <= 0
             || freshFacts.ColliderRefreshPending != false
-            || !freshFacts.CurrentSupportOrGroundProof)
+            || !(freshFacts.CurrentSupportOrGroundProof || freshFacts.CurrentTerrainInitializationProof))
         { Reject("remote_resume_initialization_current_support_unproved"); return false; }
         ResumeAuthorized = true;
         return true;

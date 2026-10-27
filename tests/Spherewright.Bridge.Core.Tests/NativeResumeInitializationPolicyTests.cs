@@ -5,6 +5,16 @@ namespace Spherewright.Bridge.Core.Tests;
 
 public sealed class NativeResumeInitializationPolicyTests
 {
+    [Fact]
+    public void ExactConditionalTerrainInitializationNeverPretendsPhysicalSupportOrPublishesIdle()
+    {
+        var p=new NativeResumeInitializationPolicy(100,Now);
+        Assert.Equal(NativeResumeInitializationStep.Ready,p.Observe(Facts(1)));
+        var fresh=Facts(1,1);fresh.CurrentTerrainInitializationProof=true;
+        Assert.False(fresh.CurrentSupportOrGroundProof);Assert.True(p.TryAuthorizeResume(fresh));
+        Assert.False(fresh.CurrentSupportOrGroundProof);Assert.Equal(100,p.SourceGameTick);
+        Assert.False(p.TryAuthorizeResume(fresh));
+    }
     private static readonly DateTimeOffset Now = new(2025, 1, 1, 0, 0, 0, TimeSpan.Zero);
     private static NativeResumeInitializationFacts Facts(int? count = 0, int milliseconds = 0) => new()
     {

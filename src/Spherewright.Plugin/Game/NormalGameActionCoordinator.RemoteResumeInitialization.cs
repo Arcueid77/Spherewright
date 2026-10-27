@@ -90,9 +90,18 @@ internal sealed partial class NormalGameActionCoordinator
         facts.CurrentSupportOrGroundProof = blocker is null || (ground.State == "observed"
             && ground.CapturedAtGameTick == GameMain.gameTick && ground.CheckSphereHit == true
             && blocker == "remote_resume_near_support_initial_sphere_already_grounded");
+        if (!facts.CurrentSupportOrGroundProof && blocker == "remote_resume_near_support_cast_miss_or_collider_unavailable")
+        {
+            var terrain=GameStateReader.CaptureNativeTerrain(p,"native_initialization_pause_pre_resume");
+            terrain.NativeGroundSphereHit=ground.CheckSphereHit;
+            GameStateReader.CaptureFirstFrameTerrainFootOverlap(p,terrain,hold.Surface.Surface,out _);
+            facts.CurrentTerrainInitializationProof=BoundedSavedTerrainInitialization(adoption,terrain);
+            if (facts.CurrentTerrainInitializationProof) _terrainInitializationAdoption=adoption;
+        }
         evidence.Observe("support_or_ground_proved", facts.CurrentSupportOrGroundProof);
+        evidence.Observe("conditional_current_terrain_initialization",facts.CurrentTerrainInitializationProof);
         evidence.Observe("final_collider_refresh_pending", facts.ColliderRefreshPending);
-        if (!facts.CurrentSupportOrGroundProof)
+        if (!(facts.CurrentSupportOrGroundProof || facts.CurrentTerrainInitializationProof))
         {
             hold.Policy.Cancel(blocker ?? "remote_resume_initialization_current_support_unproved");
             return hold.Policy.FirstFailure;
