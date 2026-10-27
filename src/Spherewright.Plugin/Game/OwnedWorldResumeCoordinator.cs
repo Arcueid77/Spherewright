@@ -191,7 +191,7 @@ internal sealed partial class OwnedWorldResumeCoordinator
                 + (payload.RemotePrimaryRecovery && payload.Request.AdditionalVoyagerGameTicks > 0
                 ? $"Separately authorize {payload.Request.AdditionalVoyagerGameTicks} additional game ticks above the original {payload.RemoteEvidence!.Journey.MaximumGameTicks}-tick journey cap. This addition is not stacked with a previous proposal; all observed spent time stays charged, the original deadline and cap remain recorded, and return ticks, energy and warpers stay reserved. " : string.Empty)
                 + (payload.RemotePrimaryRecovery
-                ? $"Review the exact complete owned primary at tick {payload.MinimumGameTick}. This is a NEW finite automation authorization, not ordinary file opening or continuation of an old action. Known progress floor: {payload.SavedOpenKnownProgressTick}; explicitly discarded progress: {Math.Max(0, payload.SavedOpenKnownProgressTick - payload.MinimumGameTick)} ticks. Total conserved observed-time debit: {Math.Max(0, payload.RemoteEvidence!.KnownPrimaryProgressTick!.Value - payload.MinimumGameTick)} ticks, including any previous approved loss. Historical completed/failed/unknown outcomes and every old consumption record remain unchanged. Native initialization, projection, contact, any permitted natural charging and strict healthy takeover must all succeed. "
+                ? $"Review the exact complete current owned {payload.ResumeSource} save at tick {payload.MinimumGameTick}. This is a NEW finite automation authorization, not ordinary file opening or continuation of an old action. Known progress floor: {payload.SavedOpenKnownProgressTick}; explicitly discarded progress: {Math.Max(0, payload.SavedOpenKnownProgressTick - payload.MinimumGameTick)} ticks. Total conserved observed-time debit: {Math.Max(0, payload.RemoteEvidence!.KnownPrimaryProgressTick!.Value - payload.MinimumGameTick)} ticks, including any previous approved loss. Historical completed/failed/unknown outcomes and every old consumption record remain unchanged. Native initialization, projection, contact, any permitted natural charging and strict healthy takeover must all succeed. "
                 : payload.LegacyLocalMoveUnknown
                 ? VoyagerLegacyLocalMoveUnknownPolicy.Disclosure + " "
                 : payload.CompletedRemoteContinuation
@@ -895,6 +895,18 @@ internal sealed partial class OwnedWorldResumeCoordinator
                     progress = OwnedSaveRecoveryLease.Open(lastExitPath, ticket.OwnedSaveName);
             }
             var knownProgress = Math.Max(ticket.MinimumGameTick, progress?.Prefix.GameTick ?? 0);
+            var sourceKind = OwnedWorldResumeSourceKind.OwnedPrimary;
+            // A normal shutdown can cover frames after the last ordinary Save.
+            // Use only the fixed LastExit at this exact current credential's
+            // boundary; a merely larger tick from another branch is not eligible.
+            if (!request.AcceptUnstoredProgressLoss && primary.Prefix.GameTick < ticket.MinimumGameTick
+                && progress is not null && progress.Prefix.GameTick == ticket.MinimumGameTick
+                && progress.Prefix.GameVersion == ticket.GameVersion && progress.Prefix.Peaceful)
+            {
+                source.Dispose();
+                source = OwnedSaveRecoveryLease.Open(lastExitPath, ticket.OwnedSaveName);
+                sourceKind = OwnedWorldResumeSourceKind.LastExit;
+            }
             journal = _tickets.OpenReauthorizationJournalLease(ticket, provenance, savedWorldOpenOnly: true);
             var journalHash = FlightCheckpointStore.HashResumeRecord(journal);
             var proposal = new VoyagerRecoveryWindowProposal(request.RecoveryDeadlineUtc!.Value, request.RecoveryScope,
@@ -902,7 +914,7 @@ internal sealed partial class OwnedWorldResumeCoordinator
             if (!_sessions.TryOpenRemoteResumeEvidence(ticket, source, primary, out evidence, out rejection, proposal,
                 validatedJournalHash: journalHash, remotePrimaryRequest: request, progressLastExit: progress)) return false;
             progress = null; // The fresh evidence holds any matching fixed LastExit through admission.
-            payload = new OwnedWorldResumePlanPayload(ticket, OwnedWorldResumeSourceKind.OwnedPrimary, request,
+            payload = new OwnedWorldResumePlanPayload(ticket, sourceKind, request,
                 source, provenance, _sessions.Revision, primary.Fingerprint, evidence, journal, journalHash,
                 savedOpenKnownProgressTick: knownProgress);
             return true;

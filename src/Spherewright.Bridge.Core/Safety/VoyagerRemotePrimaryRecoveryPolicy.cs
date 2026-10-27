@@ -4,7 +4,7 @@ using Spherewright.Contracts.Errors;
 
 namespace Spherewright.Bridge.Core.Safety;
 
-/// <summary>A new explicit finite authority for the current primary, never an old action replay.</summary>
+/// <summary>New finite authority for the current owned save, never an old action replay.</summary>
 public static class VoyagerRemotePrimaryRecoveryPolicy
 {
     public const int EvidenceVersion = 2;
@@ -88,7 +88,10 @@ public static class VoyagerRemotePrimaryRecoveryPolicy
             "primary_accounting_nonnegative", "primary_source_covers_accounted", "primary_source_covers_landing",
             "primary_new_window_observed");
         if (!e.Require("primary_request_valid", ValidateRequest(r, e) is null)) return "remote_primary_request_invalid";
-        if (!e.Require("primary_source_kind", !f.DefaultLastExit)) return "remote_primary_exact_primary_required";
+        var currentFixedExit = f.DefaultLastExit && !r.AcceptUnstoredProgressLoss
+            && f.SourceGameTick == f.TicketMinimumGameTick && f.SourceGameTick == knownProgress
+            && f.SourceGameTick > f.PrimaryGameTick;
+        if (!e.Require("primary_source_kind", !f.DefaultLastExit || currentFixedExit)) return "remote_primary_exact_primary_required";
         if (!e.Require("primary_identity_version", f.ExactOwnedIdentityAndVersion)
             || !e.Require("primary_peaceful", f.Peaceful)) return "remote_resume_native_identity_unproved";
         if (!e.Require("primary_complete_files", f.FullSourceAndPrimaryEvidence)) return "remote_resume_full_file_evidence_unproved";
@@ -96,7 +99,7 @@ public static class VoyagerRemotePrimaryRecoveryPolicy
             || !e.Require("primary_original_journal", f.OriginalJournalCheckpointPresent)) return "remote_primary_original_provenance_unproved";
         if (!e.Require("primary_remote_landed", f.RemoteLandedOutbound)
             || !e.Require("primary_successful_outbound", f.CheckpointFlightSucceededWithoutReload)) return "remote_resume_successful_outbound_required";
-        if (!e.Require("primary_source_is_current_primary", f.SourceGameTick >= 0 && f.SourceGameTick == f.PrimaryGameTick)
+        if (!e.Require("primary_source_is_current_primary", f.SourceGameTick >= 0 && (f.SourceGameTick == f.PrimaryGameTick || currentFixedExit))
             || !e.Require("primary_known_floor_covers_credential", f.TicketMinimumGameTick >= 0 && knownProgress >= f.TicketMinimumGameTick)
             || !e.Require("primary_exact_loss_authority", r.AcceptUnstoredProgressLoss
                 ? r.MinimumRecoveryGameTick == knownProgress && r.ExpectedRecoveryGameTick == f.SourceGameTick

@@ -11,6 +11,56 @@ namespace Spherewright.Bridge.Core.Tests;
 
 public sealed partial class VoyagerRemoteResumeCoordinatorIntegrationTests
 {
+    [Fact]
+    public void FreshNoLossAuthorityUsesOnlyTheExactCurrentNormalExitWhenPrimaryIsOlder()
+    {
+        using var s = new Scenario(expiredJourney: true, currentNative: true);
+        var request = s.PrimaryRecoveryRequest(18);
+        request.AcceptUnstoredProgressLoss = false;
+        request.MinimumRecoveryGameTick = request.ExpectedRecoveryGameTick = null;
+        var originals = s.ProtectedEvidencePaths.ToDictionary(path => path, File.ReadAllBytes);
+        var prepared = s.PrepareResult(request);
+        Assert.True(prepared.Success, prepared.Error?.Message);
+        var plan = prepared.Value!;
+        Assert.Equal(12528, plan.CandidateGameTick);
+        Assert.Equal(0, plan.DiscardedUnstoredProgressGameTicks);
+        Assert.True(VoyagerRemotePrimaryRecoveryPolicy.HasMatchingEcho(request, plan));
+        var accepted = s.Commit(plan);
+        Assert.True(accepted.Success, accepted.Error?.Message);
+        Assert.Equal(GameSave.LastExit, DSPGame.LoadedName);
+        foreach (var pair in originals) Assert.Equal(pair.Value, File.ReadAllBytes(pair.Key));
+    }
+
+    [Theory]
+    [InlineData(12527)] [InlineData(12529)]
+    public void NoLossAuthorityCannotSelectALastExitFromAnotherProgressBoundary(long otherTick)
+    {
+        using var s = new Scenario(expiredJourney: true, currentNative: true);
+        var request = s.PrimaryRecoveryRequest(18);
+        request.AcceptUnstoredProgressLoss = false;
+        request.MinimumRecoveryGameTick = request.ExpectedRecoveryGameTick = null;
+        s.WriteSave(GameSave.LastExit, otherTick);
+        var refused = s.PrepareResult(request);
+        Assert.False(refused.Success);
+        Assert.Equal(0, DSPGame.LoadCalls);
+    }
+
+    [Theory]
+    [InlineData("source")] [InlineData("primary")] [InlineData("journal")]
+    public void CurrentExitAuthorizationRechecksBothCompleteSavesAndJournalAtCommit(string fault)
+    {
+        using var s = new Scenario(expiredJourney: true, currentNative: true);
+        var request = s.PrimaryRecoveryRequest(18);
+        request.AcceptUnstoredProgressLoss = false;
+        request.MinimumRecoveryGameTick = request.ExpectedRecoveryGameTick = null;
+        var plan = s.Prepare(request);
+        if (fault == "source") s.WriteSave(GameSave.LastExit, 12529);
+        else if (fault == "primary") s.WriteSave(Scenario.Identity, 12511);
+        else File.AppendAllText(s.JournalPath, " ");
+        Assert.False(s.Commit(plan).Success);
+        Assert.Equal(0, DSPGame.LoadCalls);
+    }
+
     // The same test compiles against the exact prior product source: the new
     // mode is a wire string, so a RED is a production refusal, not a build error.
     [Fact]
@@ -98,7 +148,10 @@ public sealed partial class VoyagerRemoteResumeCoordinatorIntegrationTests
                 s.ReplaceCurrentTicket(t => t.GameVersion = "0.10.35.29145"); s.ReopenPrimaryCredentials(); break;
             case "stale_journal": File.AppendAllText(s.JournalPath, "broken-synthetic-journal"); break;
             case "missing_replica": File.Delete(s.HandoffTicket); break;
-            case "unapproved_loss": r.AcceptUnstoredProgressLoss = false; r.MinimumRecoveryGameTick = null; r.ExpectedRecoveryGameTick = null; break;
+            case "unapproved_loss":
+                r.AcceptUnstoredProgressLoss = false; r.MinimumRecoveryGameTick = null; r.ExpectedRecoveryGameTick = null;
+                s.WriteSave(GameSave.LastExit, 12527); // Neither complete file covers the current12528 boundary.
+                break;
             case "wrong_floor": r.MinimumRecoveryGameTick++; break;
             case "wrong_tick": r.ExpectedRecoveryGameTick--; break;
             case "refunded_time":

@@ -131,9 +131,12 @@ internal sealed partial class FlightCheckpointStore
                 { rejection = "remote_resume_prior_commitment_opening_failed"; return false; }
                 originalActionMatches = true; // Exact current route/CP/Journal/primary commitment opened.
             }
+            var exactCurrentExit = remotePrimaryRequest is { AcceptUnstoredProgressLoss: false }
+                && progressLastExit is not null && source.Fingerprint == progressLastExit.Fingerprint
+                && source.Prefix.GameTick == ticket.MinimumGameTick && source.Prefix.GameTick > primary.Prefix.GameTick;
             var facts = new VoyagerRemoteResumeFacts
             {
-                DefaultLastExit = remotePrimaryRequest is null,
+                DefaultLastExit = remotePrimaryRequest is null || exactCurrentExit,
                 ExactOwnedIdentityAndVersion = source.Prefix.MatchesExpectedIdentity && primary.Prefix.MatchesExpectedIdentity
                     && checkpoint.OwnedSaveName == ticket.OwnedSaveName && journey.OwnedSaveName == ticket.OwnedSaveName
                     && source.Prefix.GameVersion == ticket.GameVersion && primary.Prefix.GameVersion == ticket.GameVersion
@@ -166,7 +169,7 @@ internal sealed partial class FlightCheckpointStore
                 decision.Number("prior_observed_progress_floor", ticket.ObservedProgressGameTickFloor);
                 decision.NotReached("primary_matching_file_leases", "primary_progress_source_identity", "primary_mode_unmixed",
                     "primary_prior_observed_time_known");
-                var sourceBound = decision.Require("primary_matching_file_leases", source.Fingerprint == primary.Fingerprint)
+                var sourceBound = decision.Require("primary_matching_file_leases", source.Fingerprint == primary.Fingerprint || exactCurrentExit)
                     && decision.Require("primary_progress_source_identity", progressLastExit is null || progressLastExit.Prefix.MatchesExpectedIdentity)
                     && decision.Require("primary_mode_unmixed", !failedRemoteReauthorization && !completedRemoteContinuation
                         && priorConsumedProof is null && string.IsNullOrEmpty(legacyLocalMoveEvidenceJson))
