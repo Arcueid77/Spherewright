@@ -424,6 +424,7 @@ internal sealed partial class GameSessionTracker
                 QuarantineWritesOnMainThread(_pendingRemoteResumeActionId ?? _remoteResumeAdoption?.ResumeActionId ?? string.Empty, reason);
         }
         _resumeAdoptionError ??= reason;
+        ReleaseFailedRemotePrimaryEvidenceForExit();
         ReleaseFailedReturnOnlyEvidenceForPreservation();
         return false;
     }

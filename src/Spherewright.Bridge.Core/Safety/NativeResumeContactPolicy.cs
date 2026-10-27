@@ -82,7 +82,10 @@ public sealed class NativeResumeContactPolicy
     {
         WorkTickLimit=initializedTerrain?32:MaximumNativeWorkTicks;
         CastDistanceLimit=initializedTerrain ? .5d : MaximumCastDistanceMeters;
-        SpeedLimit=initializedTerrain?3d:MaximumSpeedMetersPerSecond;
+        // Only the closed, actual-support initialized-terrain subset may use
+        // this finite settling observation bound. Every velocity/displacement
+        // and paid tick is rechecked; this promises no gravity or landing result.
+        SpeedLimit=initializedTerrain?8d:MaximumSpeedMetersPerSecond;
         InwardLimit=initializedTerrain ? .5d : MaximumInwardDisplacementMeters;
         if (sourceGameTick < 0 || sourceGameTick > long.MaxValue - WorkTickLimit - 1 || startedUtc == default)
             throw new ArgumentOutOfRangeException(nameof(sourceGameTick));

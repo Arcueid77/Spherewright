@@ -909,11 +909,14 @@ internal sealed partial class OwnedWorldResumeCoordinator
                     progress = OwnedSaveRecoveryLease.Open(lastExitPath, ticket.OwnedSaveName);
             }
             var knownProgress = Math.Max(ticket.MinimumGameTick, progress?.Prefix.GameTick ?? 0);
+            if(request.AcceptUnstoredProgressLoss && request.MinimumRecoveryGameTick is { } disclosed)
+                knownProgress=Math.Max(knownProgress,disclosed);
             var sourceKind = OwnedWorldResumeSourceKind.OwnedPrimary;
             // A normal shutdown can cover frames after the last ordinary Save.
             // Use only the fixed LastExit at this exact current credential's
             // boundary; a merely larger tick from another branch is not eligible.
-            if (!request.AcceptUnstoredProgressLoss && primary.Prefix.GameTick < ticket.MinimumGameTick
+            if ((!request.AcceptUnstoredProgressLoss || request.ExpectedRecoveryGameTick == ticket.MinimumGameTick)
+                && primary.Prefix.GameTick < ticket.MinimumGameTick
                 && progress is not null && progress.Prefix.GameTick == ticket.MinimumGameTick
                 && progress.Prefix.GameVersion == ticket.GameVersion && progress.Prefix.Peaceful)
             {

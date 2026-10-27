@@ -92,8 +92,10 @@ public static class VoyagerRemotePrimaryRecoveryPolicy
             "primary_accounting_nonnegative", "primary_source_covers_accounted", "primary_source_covers_landing",
             "primary_new_window_observed");
         if (!e.Require("primary_request_valid", ValidateRequest(r, e) is null)) return "remote_primary_request_invalid";
-        var currentFixedExit = f.DefaultLastExit && !r.AcceptUnstoredProgressLoss
-            && f.SourceGameTick == f.TicketMinimumGameTick && f.SourceGameTick == knownProgress
+        var currentFixedExit = f.DefaultLastExit
+            && (!r.AcceptUnstoredProgressLoss ? f.SourceGameTick == knownProgress
+                : r.ExpectedRecoveryGameTick == f.SourceGameTick && r.MinimumRecoveryGameTick == knownProgress)
+            && f.SourceGameTick == f.TicketMinimumGameTick
             && f.SourceGameTick > f.PrimaryGameTick;
         if (!e.Require("primary_source_kind", !f.DefaultLastExit || currentFixedExit)) return "remote_primary_exact_primary_required";
         if (!e.Require("primary_identity_version", f.ExactOwnedIdentityAndVersion)

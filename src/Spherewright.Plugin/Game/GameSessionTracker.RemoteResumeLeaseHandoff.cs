@@ -15,7 +15,9 @@ internal sealed partial class GameSessionTracker
                     || source is not null && primary is not null
                     && source.Prefix.GameTick == ticket.MinimumGameTick
                     && source.Prefix.GameTick > primary.Prefix.GameTick
-                    && evidence.KnownPrimaryProgressTick <= source.Prefix.GameTick))
+                    && (evidence.KnownPrimaryProgressTick <= source.Prefix.GameTick
+                        || evidence.AcceptedProgressLossGameTicks>0
+                            && evidence.KnownPrimaryProgressTick-source.Prefix.GameTick==evidence.AcceptedProgressLossGameTicks)))
             && Guid.TryParse(actionId, out _) && source is not null && primary is not null && journal is not null
             && ticket.GameplayJournalCheckpoint is not null
             && (evidence.RemotePrimaryRecovery || !string.IsNullOrEmpty(ticket.QuarantineActionId))

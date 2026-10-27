@@ -131,7 +131,8 @@ internal sealed partial class FlightCheckpointStore
                 { rejection = "remote_resume_prior_commitment_opening_failed"; return false; }
                 originalActionMatches = true; // Exact current route/CP/Journal/primary commitment opened.
             }
-            var exactCurrentExit = remotePrimaryRequest is { AcceptUnstoredProgressLoss: false }
+            var exactCurrentExit = remotePrimaryRequest is not null
+                && (!remotePrimaryRequest.AcceptUnstoredProgressLoss || remotePrimaryRequest.ExpectedRecoveryGameTick == ticket.MinimumGameTick)
                 && progressLastExit is not null && source.Fingerprint == progressLastExit.Fingerprint
                 && source.Prefix.GameTick == ticket.MinimumGameTick && source.Prefix.GameTick > primary.Prefix.GameTick;
             var facts = new VoyagerRemoteResumeFacts
@@ -176,6 +177,8 @@ internal sealed partial class FlightCheckpointStore
                     && decision.Require("primary_prior_observed_time_known", ticket.SavedWorldOpenOnly != true
                         || ticket.ObservedProgressGameTickFloor.HasValue ? true : (bool?)null);
                 var knownProgress = Math.Max(ticket.MinimumGameTick, progressLastExit?.Prefix.GameTick ?? 0);
+                if(remotePrimaryRequest.AcceptUnstoredProgressLoss && remotePrimaryRequest.MinimumRecoveryGameTick is { } disclosed)
+                    knownProgress=Math.Max(knownProgress,disclosed);
                 var budgetFloor = Math.Max(knownProgress, ticket.ObservedProgressGameTickFloor ?? knownProgress);
                 rejection = sourceBound
                     ? VoyagerRemotePrimaryRecoveryPolicy.Blocker(remotePrimaryRequest, facts, knownProgress, decision, budgetFloor) ?? string.Empty
@@ -190,7 +193,7 @@ internal sealed partial class FlightCheckpointStore
                 evidence = VoyagerRemoteResumeEvidence.CreateRemotePrimaryRecovery(journeyJson, checkpointJson,
                     source.Fingerprint, primary.Fingerprint, source.Prefix.GameTick, primary.Prefix.GameTick,
                     ticket.GameplayJournalCheckpoint!, recoveryProposal!, budgetFloor,
-                    progressLastExit?.Fingerprint ?? string.Empty, validatedJournalHash, leases.ToArray());
+                    progressLastExit?.Fingerprint ?? string.Empty, validatedJournalHash, remotePrimaryRequest.AcceptUnstoredProgressLoss, leases.ToArray());
                 ticketLease = null; journeyLease = null; checkpointLease = null;
                 return true;
             }
@@ -472,6 +475,7 @@ internal sealed class VoyagerRemoteResumeEvidence : IDisposable
         Fingerprint=CanonicalStateHash.Combine("return-only-native-registered-v1",ReturnOnlySource.Fingerprint,journeyJson);
     }
     public long? KnownPrimaryProgressTick { get; private set; }
+    public long AcceptedProgressLossGameTicks { get; private set; }
     public string? CompletedContinuationTokenHash { get; private set; }
     public DateTimeOffset? InheritedWindowConfirmedAtUtc { get; private set; }
     public string RemoteRecoveryContextFingerprint { get; private set; } = string.Empty;
@@ -480,13 +484,18 @@ internal sealed class VoyagerRemoteResumeEvidence : IDisposable
     internal static VoyagerRemoteResumeEvidence CreateRemotePrimaryRecovery(string journeyJson, string checkpointJson,
         string sourceFingerprint, string primaryFingerprint, long sourceTick, long primaryTick,
         OwnedWorldGameplayJournalCheckpoint journal, VoyagerRecoveryWindowProposal proposal, long knownProgress,
-        string progressLastExitFingerprint, string validatedJournalHash, params IDisposable[] leases)
+        string progressLastExitFingerprint, string validatedJournalHash, bool acceptProgressLoss, params IDisposable[] leases)
     {
         var result = new VoyagerRemoteResumeEvidence(journeyJson, checkpointJson, sourceFingerprint, primaryFingerprint,
             sourceTick, primaryTick, journal, proposal, leases);
         result.RemotePrimaryRecovery = true; result.KnownPrimaryProgressTick = knownProgress;
         result.Fingerprint = CanonicalStateHash.Combine("voyager-remote-primary-new-authority-v1", result.Fingerprint,
             knownProgress, progressLastExitFingerprint, validatedJournalHash);
+        if(acceptProgressLoss && knownProgress>sourceTick)
+        {
+            result.AcceptedProgressLossGameTicks=knownProgress-sourceTick;
+            result.Fingerprint=CanonicalStateHash.Combine("voyager-remote-explicit-progress-loss-v1",result.Fingerprint,result.AcceptedProgressLossGameTicks);
+        }
         return result;
     }
     internal static VoyagerRemoteResumeEvidence CreateLegacyLocalMoveUnknown(string journeyJson, string checkpointJson,

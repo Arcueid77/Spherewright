@@ -9,6 +9,38 @@ namespace Spherewright.Bridge.Core.Tests;
 public sealed partial class VoyagerRemoteResumeCoordinatorIntegrationTests
 {
     [Fact]
+    public void ExplicitApprovedLossUsesTheLatestCompleteExitAndChargesTheDisclosedMissingProgress()
+    {
+        using var s=new Scenario(expiredJourney:true,currentNative:true);
+        var r=s.PrimaryRecoveryRequest(18);r.AcceptUnstoredProgressLoss=true;
+        r.MinimumRecoveryGameTick=12532;r.ExpectedRecoveryGameTick=12528;
+        var p=s.Prepare(r);Assert.Equal(12528,p.CandidateGameTick);
+        Assert.Equal(4,p.DiscardedUnstoredProgressGameTicks);Assert.Equal(4,p.ConservedObservedProgressDebitGameTicks);
+        var committed=s.Commit(p);Assert.True(committed.Success,committed.Error?.Message);Assert.Equal(GameSave.LastExit,DSPGame.LoadedName);
+    }
+    [Fact]
+    public void FullyLoadedFailedPausedPrimaryReleasesTheRealExitFileLeaseWithoutAdmittingWork()
+    {
+        using var s=new Scenario(expiredJourney:true,currentNative:true);
+        var r=s.PrimaryRecoveryRequest(18);r.AcceptUnstoredProgressLoss=false;r.MinimumRecoveryGameTick=r.ExpectedRecoveryGameTick=null;
+        var p=s.Prepare(r);Assert.True(s.Commit(p).Success);s.Sessions.BindFailedPrimaryExitForTest();
+        Assert.Throws<IOException>(()=>{using var file=new FileStream(GameSave.SavePath(GameSave.LastExit),FileMode.Open,FileAccess.ReadWrite,FileShare.None);});
+        s.Sessions.ReleaseFailedPrimaryExitForTest();
+        using(var file=new FileStream(GameSave.SavePath(GameSave.LastExit),FileMode.Open,FileAccess.ReadWrite,FileShare.None))Assert.True(file.CanWrite);
+        Assert.True(s.Sessions.FailedExitStillQuarantinedForTest);Assert.False(s.Sessions.ContactAdmittedForTest);
+    }
+    [Theory]
+    [InlineData("loading")] [InlineData("journal")] [InlineData("unpaused")] [InlineData("other_world")] [InlineData("other_action")]
+    public void IncompleteOrChangedFailedLoadKeepsItsRealSourceLease(string fault)
+    {
+        using var s=new Scenario(expiredJourney:true,currentNative:true);
+        var r=s.PrimaryRecoveryRequest(18);r.AcceptUnstoredProgressLoss=false;r.MinimumRecoveryGameTick=r.ExpectedRecoveryGameTick=null;
+        var p=s.Prepare(r);Assert.True(s.Commit(p).Success);s.Sessions.BindFailedPrimaryExitForTest(fault);
+        s.Sessions.ReleaseFailedPrimaryExitForTest();
+        Assert.Throws<IOException>(()=>{using var file=new FileStream(GameSave.SavePath(GameSave.LastExit),FileMode.Open,FileAccess.ReadWrite,FileShare.None);});
+        Assert.False(s.Sessions.ContactAdmittedForTest);
+    }
+    [Fact]
     public void ExplicitExactNewerNormalExitKeepsNewProgressAndNeverReplaysTheConsumedResume()
     {
         using var s=new Scenario(expiredJourney:true,currentNative:true);

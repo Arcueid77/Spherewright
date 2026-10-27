@@ -30,6 +30,30 @@ internal sealed partial class GameSessionTracker
     private bool _remoteResumeAdmitted;
     private VoyagerRemoteResumeEvidence? _pendingRemoteResumeEvidence;
     private string? _pendingRemoteResumeActionId;
+    private bool _remoteResumeLoadCompleteObserved,_remoteResumeJournalConfirmed;
+    private PausedSaveTestWorld? _remoteResumeCompletedWorld;
+    internal void BindFailedPrimaryExitForTest(string? fault=null)
+    {
+        _pendingRemoteResumeEvidence=RemoteEvidence;_remoteResumeAdmitted=false;
+        _sessionId=Snapshot.SessionId;_ownedSaveName=Snapshot.SaveName;IsCurrentSessionOwned=true;
+        _ownedData=GameMain.data=new(){gameName=_ownedSaveName!};_remoteResumeCompletedWorld=GameMain.data;
+        _remoteResumeAdoption=new(){World=GameMain.data,SessionId=_sessionId!,ResumeActionId=RemoteResumeActionId!};
+        _remoteResumeAdoption.RetainFailure(new(){Code="synthetic_failed_contact",FirstFailedPredicate="actual_ground",Stage="native_universe_post151"});
+        _remoteResumeLoadCompleteObserved=_remoteResumeJournalConfirmed=true;_resumeAdoptionError="synthetic_failed_contact";
+        _pendingJournalResumeTicket=null;GameMain.isPaused=true;GameMain.gameTick=RemoteEvidence!.SourceGameTick+1;
+        _writeHealth=Spherewright.Contracts.Sessions.WriteHealthStates.Quarantined;_writeQuarantineActionId=RemoteResumeActionId;
+        switch(fault)
+        {
+            case "loading":_remoteResumeLoadCompleteObserved=false;break;
+            case "journal":_pendingJournalResumeTicket=new();break;
+            case "unpaused":GameMain.isPaused=false;break;
+            case "other_world":_remoteResumeCompletedWorld=new();break;
+            case "other_action":_writeQuarantineActionId="synthetic-other-action";break;
+        }
+    }
+    internal void ReleaseFailedPrimaryExitForTest()=>ReleaseFailedRemotePrimaryEvidenceForExit();
+    internal bool FailedExitStillQuarantinedForTest=>_writeHealth==Spherewright.Contracts.Sessions.WriteHealthStates.Quarantined
+        && _resumeAdoptionError is not null && !_remoteResumeAdmitted && _remoteResumeAdoption?.FirstFailure is not null;
     internal bool CompleteContactForTest(string? blocker)
     {
         _pendingRemoteResumeEvidence ??= RemoteEvidence;
