@@ -132,9 +132,10 @@ internal sealed partial class FlightCheckpointStore
                 originalActionMatches = true; // Exact current route/CP/Journal/primary commitment opened.
             }
             var exactCurrentExit = remotePrimaryRequest is not null
-                && (!remotePrimaryRequest.AcceptUnstoredProgressLoss || remotePrimaryRequest.ExpectedRecoveryGameTick == ticket.MinimumGameTick)
                 && progressLastExit is not null && source.Fingerprint == progressLastExit.Fingerprint
-                && source.Prefix.GameTick == ticket.MinimumGameTick && source.Prefix.GameTick > primary.Prefix.GameTick;
+                && source.Prefix.GameTick > primary.Prefix.GameTick
+                && (!remotePrimaryRequest.AcceptUnstoredProgressLoss ? source.Prefix.GameTick == ticket.MinimumGameTick
+                    : remotePrimaryRequest.ExpectedRecoveryGameTick == source.Prefix.GameTick && source.Prefix.GameTick <= ticket.MinimumGameTick);
             var facts = new VoyagerRemoteResumeFacts
             {
                 DefaultLastExit = remotePrimaryRequest is null || exactCurrentExit,

@@ -13,7 +13,10 @@ internal sealed partial class GameSessionTracker
             && (sourceKind == OwnedWorldResumeSourceKind.OwnedPrimary && evidence.RemotePrimaryRecovery
                 || sourceKind == OwnedWorldResumeSourceKind.LastExit && (!evidence.RemotePrimaryRecovery
                     || source is not null && primary is not null
-                    && source.Prefix.GameTick == ticket.MinimumGameTick
+                    && (source.Prefix.GameTick == ticket.MinimumGameTick
+                        || source.Prefix.GameTick<ticket.MinimumGameTick && evidence.AcceptedProgressLossGameTicks>0
+                            && evidence.KnownPrimaryProgressTick>=ticket.MinimumGameTick
+                            && evidence.KnownPrimaryProgressTick-source.Prefix.GameTick==evidence.AcceptedProgressLossGameTicks)
                     && source.Prefix.GameTick > primary.Prefix.GameTick
                     && (evidence.KnownPrimaryProgressTick <= source.Prefix.GameTick
                         || evidence.AcceptedProgressLossGameTicks>0

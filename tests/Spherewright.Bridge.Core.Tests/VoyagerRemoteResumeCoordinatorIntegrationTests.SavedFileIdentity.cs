@@ -9,6 +9,16 @@ namespace Spherewright.Bridge.Core.Tests;
 public sealed partial class VoyagerRemoteResumeCoordinatorIntegrationTests
 {
     [Fact]
+    public void ExplicitLossCanUseTheLatestCompleteExitBelowTheCredentialObservedProgressWithoutUsingOlderPrimary()
+    {
+        using var s=new Scenario(expiredJourney:true,currentNative:true);
+        var r=s.PrimaryRecoveryRequest(18);
+        s.ReplaceCurrentTicket(t=>t.MinimumGameTick=12532);s.ReopenPrimaryCredentials();
+        r.AcceptUnstoredProgressLoss=true;r.MinimumRecoveryGameTick=12532;r.ExpectedRecoveryGameTick=12528;
+        var p=s.Prepare(r);Assert.Equal(12528,p.CandidateGameTick);Assert.Equal(4,p.DiscardedUnstoredProgressGameTicks);
+        var accepted=s.Commit(p);Assert.True(accepted.Success,accepted.Error?.Message);Assert.Equal(GameSave.LastExit,DSPGame.LoadedName);
+    }
+    [Fact]
     public void ExplicitApprovedLossUsesTheLatestCompleteExitAndChargesTheDisclosedMissingProgress()
     {
         using var s=new Scenario(expiredJourney:true,currentNative:true);

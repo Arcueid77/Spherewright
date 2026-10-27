@@ -915,9 +915,10 @@ internal sealed partial class OwnedWorldResumeCoordinator
             // A normal shutdown can cover frames after the last ordinary Save.
             // Use only the fixed LastExit at this exact current credential's
             // boundary; a merely larger tick from another branch is not eligible.
-            if ((!request.AcceptUnstoredProgressLoss || request.ExpectedRecoveryGameTick == ticket.MinimumGameTick)
-                && primary.Prefix.GameTick < ticket.MinimumGameTick
-                && progress is not null && progress.Prefix.GameTick == ticket.MinimumGameTick
+            if (progress is not null && primary.Prefix.GameTick < progress.Prefix.GameTick
+                && (!request.AcceptUnstoredProgressLoss ? progress.Prefix.GameTick == ticket.MinimumGameTick
+                    : request.ExpectedRecoveryGameTick == progress.Prefix.GameTick
+                        && progress.Prefix.GameTick <= ticket.MinimumGameTick)
                 && progress.Prefix.GameVersion == ticket.GameVersion && progress.Prefix.Peaceful)
             {
                 source.Dispose();
