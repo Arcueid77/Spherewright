@@ -10,8 +10,6 @@ internal sealed partial class OwnedWorldResumeTicketStore
     // This entry is called only by NEW finite remote authorization. Consumed
     // execution remains consumed. It can recover saved-file identity, never
     // the old plan, action, window or permission to dispatch Native work.
-    // A later consumed file-only parent is still only identity. Every parent
-    // retains its one derivation, exact unchanged boundary and all tombstones.
     internal bool TryGetFreshRemoteFileAccessProvenance(string token, out OwnedWorldResumeTicket? ticket,
         out string fingerprint, out string rejection)
     {
@@ -29,7 +27,7 @@ internal sealed partial class OwnedWorldResumeTicketStore
                 || attempt.Version != 1 || consumed.Version != 1 || consumed.ResumeTokenHash != hash
                 || attempt.State != "load_may_have_started_reconciliation_required"
                 || !FixedTimeEquals(previous.ResumeToken, token) || previous.Version != TicketVersion
-                || previous.GameVersion != _gameVersion || consumed.GameVersion != _gameVersion
+                || previous.SavedWorldOpenOnly == true || previous.GameVersion != _gameVersion || consumed.GameVersion != _gameVersion
                 || previous.MinimumGameTick < 0 || previous.GameplayJournalCheckpoint is null
                 || !Guid.TryParse(attempt.ActionId, out _) || oldAuthority.ResumeActionId != attempt.ActionId
                 || attempt.ConfirmationDigest != oldAuthority.ConfirmationDigest

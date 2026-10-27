@@ -9,21 +9,6 @@ namespace Spherewright.Bridge.Core.Tests;
 public sealed partial class VoyagerRemoteResumeCoordinatorIntegrationTests
 {
     [Fact]
-    public void NewExplicitAuthorizationMayDeriveOnlyFileIdentityFromALaterConsumedFileOnlyCredentialAtTheSameCompleteBoundary()
-    {
-        using var s=new Scenario(expiredJourney:true,currentNative:true);
-        var r=s.PrimaryRecoveryRequest(18);r.AcceptUnstoredProgressLoss=false;r.MinimumRecoveryGameTick=r.ExpectedRecoveryGameTick=null;
-        var first=s.Prepare(r);var original=s.Token;s.Sessions.FailBeforeRemoteLeaseHandoffForTest=true;
-        Assert.False(s.Commit(first).Success);s.Sessions.FailBeforeRemoteLeaseHandoffForTest=false;
-        var second=s.Prepare(r);Assert.True(s.Tickets.TryGetFreshRemoteFileAccessProvenance(original,out var fileOnly,out _,out _));
-        var consumedFileOnly=fileOnly!.ResumeToken;Assert.True(s.Commit(second).Success);
-        var loads=DSPGame.LoadCalls;
-        Assert.True(s.Tickets.TryGetFreshRemoteFileAccessProvenance(consumedFileOnly,out var fresh,out _,out _));
-        Assert.True(fresh!.SavedWorldOpenOnly);Assert.NotEqual(consumedFileOnly,fresh.ResumeToken);
-        Assert.Equal(12528,fresh.MinimumGameTick);Assert.Equal(loads,DSPGame.LoadCalls);
-        Assert.False(s.Tickets.TryGetSavedWorldOpenProvenance(consumedFileOnly,out _,out _,out _));
-    }
-    [Fact]
     public void FailedPreDispatchConsumptionCanDeriveFileIdentityWithoutRevivingItsExecution()
     {
         using var s = new Scenario(expiredJourney: true, currentNative: true);
