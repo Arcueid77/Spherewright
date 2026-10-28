@@ -53,7 +53,7 @@ public sealed class RetainedMinerEnvironmentTests
             case "generator": f.Factory.powerSystem.genCursor = 2; break;
             case "output": f.Factory.factorySystem.minerPool[1].productCount = 1; break;
             case "prebuild": f.Factory.prebuildPool[1].id = 1; break;
-            case "damaged_pool": f.Factory.entityCursor = 10; break;
+            case "damaged_pool": f.Factory.entityCursor = f.Factory.entityPool.Length + 1; break;
             case "working_drone": f.Player.mecha.constructionModule.TestPhysicalIdle = false; break;
             case "build_target": f.Player.mecha.constructionModule.buildTargetTotalCount = 1; break;
             case "repair_target": f.Player.mecha.constructionModule.repairTargets = [new() { objectId = 1 }]; break;
@@ -160,6 +160,43 @@ public sealed class RetainedMinerEnvironmentTests
         Assert.Equal(Blocker, f.Guard());
     }
 
+    [Theory]
+    [InlineData(true)] [InlineData(false)]
+    public void ExactPaidUnpoweredBeltChainAndEmptySupplySlotSurviveRecoveryWithoutStoreWrites(bool originalEnabled)
+    {
+        using var f = new Fixture(); f.AddPole(originalEnabled); f.AddStationAndBelt(12, originalEnabled);
+        var before = File.ReadAllBytes(f.Path);
+        Assert.Null(f.Guard()); Assert.Null(f.Guard());
+        Assert.Equal(before, File.ReadAllBytes(f.Path));
+    }
+
+    [Theory]
+    [InlineData("cargo")] [InlineData("missing_member")] [InlineData("foreign_member")]
+    [InlineData("output_port")] [InlineData("stock")] [InlineData("order")]
+    [InlineData("power")] [InlineData("drone")] [InlineData("wrong_journey")]
+    [InlineData("new_entity")] [InlineData("connection")]
+    public void SavedBeltChainStillRejectsStockTopologyPowerAndOriginalProofChanges(string fault)
+    {
+        using var f = new Fixture(); f.AddPole(); f.AddStationAndBelt(12);
+        var station = f.Factory.transport.stationPool[1]!;
+        var path = f.Factory.cargoTraffic.pathPool[1]!;
+        switch (fault)
+        {
+            case "cargo": path.Snapshot.CargoBuffer[0] = 128; break;
+            case "missing_member": path.Snapshot.BeltIds.RemoveAt(0); break;
+            case "foreign_member": path.Snapshot.BeltIds[0] = 31; break;
+            case "output_port": station.slots[8].dir = IODir.Output; break;
+            case "stock": station.storage[0].count = 1; break;
+            case "order": station.storage[0].remoteOrder = 1; break;
+            case "power": station.energy = 1; break;
+            case "drone": f.Player.mecha.constructionModule.TestPhysicalIdle = false; break;
+            case "wrong_journey": f.Journey = Guid.NewGuid().ToString(); break;
+            case "new_entity": f.Factory.entityCount++; break;
+            case "connection": f.Factory.TestConnectionsMatch = false; break;
+        }
+        Assert.Equal(Blocker, f.Guard());
+    }
+
     private sealed class Fixture : IDisposable
     {
         private readonly string root = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "Spherewright", "retained-miner", Guid.NewGuid().ToString("N"));
@@ -172,7 +209,7 @@ public sealed class RetainedMinerEnvironmentTests
         internal BlueprintBuildState Record() { Assert.True(Store().TryRead(out var builds)); return Assert.Single(builds); }
         internal string? Guard(NativeResumeDecisionEvidence? evidence = null)
             => new NormalGameActionCoordinator(Store(), Sessions).MinerEnvironmentForTest(Player, Journey, evidence);
-        internal void AddPole()
+        internal void AddPole(bool originalEnabled = true)
         {
             var id = Factory.entityCursor++; Factory.entityCount++;
             var nodeId = Factory.powerSystem.nodeCursor++;
@@ -190,12 +227,84 @@ public sealed class RetainedMinerEnvironmentTests
                 NativePlanHash = "sha256:" + new string('b', 64), Steps = [new()] };
             var state = BlueprintBuildState.Create(site, structuredConstruction: binding);
             var c = state.ConstructionControl = StructuredConstructionControlTests.Control();
+            c.OriginalDroneEnabled = originalEnabled;
+            Player.mecha.constructionModule.droneEnabled = originalEnabled;
             var action = Guid.NewGuid().ToString(); c.NativeCreateActionId = action;
             state.Begin("synthetic-session", action, 1, 100); state.BeforeStructuredSubmission(101, 11, "before-pole");
             state.ConfirmStructuredSubmission([id], 10, "after-pole"); state.ConfirmCompletion(0, id, 110);
             c.RequestStop("construction_complete_draining", 110, c.StartedAtUtc.AddSeconds(1), false);
             c.DispatchDisabled = true; Assert.True(c.RecordDisabledNativeFactoryPass(110)); Assert.True(c.TryMarkPhysicalIdle(112, true, true));
             c.Phase = "completed_idle"; state.LastEvidenceGameTick = 112; state.Stop("completed");
+            Assert.True(Store().TryPut(state));
+        }
+        internal void AddStationAndBelt(int count, bool originalEnabled = true)
+        {
+            var stationId = Factory.entityCursor++; Factory.entityCount++;
+            Factory.entityPool[stationId] = new() { id = stationId, protoId = 2104, stationId = 1, powerConId = 2 };
+            Factory.powerSystem.consumerCursor = 3;
+            Factory.powerSystem.consumerPool[2] = new() { id = 2, entityId = stationId };
+            var station = Factory.transport.stationPool[1] = new() { id = 1, entityId = stationId, planetId = 201, gid = 2 };
+            station.storage[0] = new() { itemId = 1013, max = 100, remoteLogic = ELogisticStorage.Supply };
+            Seal(2104, "core", [stationId], [new()], originalEnabled: true,
+                 stopReason: "construction_pre_player_stationary_binding_lost");
+            var prior = Enumerable.Range(1, Factory.entityCursor - 1).ToArray();
+            var ids = Enumerable.Range(Factory.entityCursor, count).ToArray();
+            Factory.entityCursor += count; Factory.entityCount += count;
+            Factory.cargoTraffic.beltCursor = count + 1; Factory.cargoTraffic.pathCursor = 2;
+            for (var i = 0; i < count; i++)
+            {
+                Factory.entityPool[ids[i]] = new() { id = ids[i], protoId = 2001, beltId = i + 1 };
+                Factory.cargoTraffic.beltPool[i + 1] = new() { id = i + 1, entityId = ids[i], segPathId = 1, segIndex = i * 10, segLength = 10 };
+            }
+            using var stream = new MemoryStream();
+            using (var writer = new BinaryWriter(stream, System.Text.Encoding.UTF8, leaveOpen: true))
+            {
+                var length = count * 10;
+                writer.Write(1); writer.Write(1); writer.Write(length); writer.Write(length);
+                writer.Write(1); writer.Write(1); writer.Write(length); writer.Write(false);
+                writer.Write(0); writer.Write(-1); writer.Write(count); writer.Write(0); writer.Write(new byte[length]);
+                writer.Write(0); writer.Write(length); writer.Write(1);
+                for (var i = 0; i < length * 7; i++) writer.Write(0f);
+                for (var i = 1; i <= count; i++) writer.Write(i);
+            }
+            Assert.True(BeltUpgradePathPolicy.TryReadExport(stream.ToArray(), 1, count * 10, out var captured, out _));
+            var snapshot = captured!;
+            Factory.cargoTraffic.pathPool[1] = new() { id = 1, buffer = snapshot.CargoBuffer, Snapshot = snapshot, cargoContainer = Factory.cargoContainer };
+            station.slots[8] = new() { dir = IODir.Input, beltId = count };
+            var connections = Enumerable.Range(0, count).Select(i => new StructuredConstructionConnection
+            {
+                InputStepIndex = i == 0 ? -1 : i - 1, InputObjectId = i == 0 ? 1 : 0,
+                OutputStepIndex = i + 1 == count ? -1 : i + 1, OutputObjectId = i + 1 == count ? stationId : 0,
+                OutputToSlot = i + 1 == count ? 8 : 1,
+            }).ToList();
+            Seal(2001, "belt", ids, connections, originalEnabled: originalEnabled, prior: prior, sourceId: 1, destinationId: stationId);
+        }
+        private void Seal(int item, string kind, int[] ids, List<StructuredConstructionConnection> connections,
+            bool originalEnabled, string stopReason = "construction_complete_draining", int[]? prior = null,
+            int sourceId = 0, int destinationId = 0)
+        {
+            var offset = item == 2001 ? 100 : 0;
+            var site = new BlueprintSiteSnapshot { SessionId = "synthetic-session", PlanetId = 201, CapturedAtGameTick = 100 + offset,
+                BlueprintHash = "synthetic-native-paid", NativeCheckPerformed = true, NativeCheckPassed = true,
+                InventorySufficient = true, TechnologySatisfied = true, NativeBlueprintObjectLimit = item == 2001 ? 12 : 8,
+                Objects = ids.Select((_, i) => new BlueprintSiteObject { Index = i, ItemId = item, NativeCondition = "Ok" }).ToList() };
+            var binding = new StructuredConstructionBinding { Kind = kind, JourneyId = Journey!, NativePlanHash = "sha256:" + new string('d', 64),
+                Steps = connections, SourceObjectId = sourceId, DestinationObjectId = destinationId };
+            foreach (var id in new[] { sourceId, destinationId }.Where(id => id > 0))
+                binding.Endpoints.Add(new() { ObjectId = id, ItemId = Factory.entityPool[id].protoId });
+            var state = BlueprintBuildState.Create(site, structuredConstruction: binding);
+            var c = state.ConstructionControl = StructuredConstructionControlTests.Control();
+            c.OriginalDroneEnabled = originalEnabled; c.PreexistingEntityIds = prior?.ToList() ?? [];
+            c.StartedAtGameTick += offset; c.WorkDeadlineGameTick += offset;
+            c.BindingLost = item == 2104;
+            var action = Guid.NewGuid().ToString(); c.NativeCreateActionId = action;
+            state.Begin("synthetic-session", action, ids.Length, 100 + offset); state.BeforeStructuredSubmission(101 + offset, ids.Length + 1, "before-paid");
+            state.ConfirmStructuredSubmission(ids, 1, "after-paid");
+            for (var i = 0; i < ids.Length; i++) state.ConfirmCompletion(i, ids[i], 110 + offset);
+            c.RequestStop(stopReason, 110 + offset, c.StartedAtUtc.AddSeconds(1), false); c.DispatchDisabled = true;
+            Assert.True(c.RecordDisabledNativeFactoryPass(110 + offset)); Assert.True(c.TryMarkPhysicalIdle(112 + offset, true, true));
+            c.Phase = "completed_idle"; state.LastEvidenceGameTick = 112 + offset; state.Stop("completed");
+            GameMain.gameTick = 112 + offset;
             Assert.True(Store().TryPut(state));
         }
         internal Fixture(bool historicalDispatchDisabled = false, int prebuildCursor = 2)
