@@ -322,7 +322,9 @@ public sealed class RetainedMinerEnvironmentTests
                 power.nodePool[node] = new() { id = node, entityId = id };
                 power.genPool[gen] = new() { id = gen, entityId = id, wind = true };
                 power.netPool[1]!.nodes.Add(new() { id = node, genId = gen }); power.netPool[1]!.generators.Add(gen);
-                Seal(2203, "core", [id], [new()], originalEnabled: true, prior: older.ToArray()); older.Add(id);
+                // The earlier wind is far outside the new site's0.5m
+                // attribution radius and is absent from this original list.
+                Seal(2203, "core", [id], [new()], originalEnabled: true, prior: []); older.Add(id);
             }
             Factory.transport.stationPool[1]!.storage[0].count = 16;
             var path = Factory.cargoTraffic.pathPool[1]!;

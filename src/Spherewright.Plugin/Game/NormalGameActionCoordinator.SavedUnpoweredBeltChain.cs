@@ -75,20 +75,19 @@ internal sealed partial class NormalGameActionCoordinator
                     || !ids.Add(id) || !StructuredEntityMatches(factory, id, build, build.Site.Objects[step.Index])) return false;
             }
         }
-        // CaptureConstructionExistingEntities intentionally records only the
-        // new batch's item kind for attribution. This one original belt batch
-        // had no older belts; miner/tower/poles are proved by their own receipts.
+        // The capture records only same-item entities within0.5m of this new
+        // site's poses. Distinct older buildings/winds are not attribution
+        // candidates. All original entities have their own exact receipts.
         if (!Require("saved_belt_chain_no_prior_belts", belt.ConstructionControl!.PreexistingEntityIds.Count == 0)
             || !Require("saved_belt_chain_exact_native_membership", factory.entityCount == ids.Count
                 && Enumerable.Range(1, factory.entityCursor - 1).All(i => factory.entityPool![i].id == 0 || ids.Contains(i)))
             || !Require("saved_belt_chain_retired_prebuilds", Enumerable.Range(1, factory.prebuildCursor - 1)
                 .All(i => factory.prebuildPool![i].id == 0))
             || !Require("saved_belt_chain_exact_topology", StructuredConnectionsMatch(factory, belt))) return false;
-        if (running && !Require("saved_belt_chain_exact_paid_winds", winds[0].ConstructionControl!.PreexistingEntityIds.Count == 0
-                && new HashSet<int>(winds[1].ConstructionControl!.PreexistingEntityIds).SetEquals(new[] { winds[0].Objects[0].EntityId!.Value })
-                && winds.All(w => w.Objects[0].SubmittedAtGameTick >= belt.Objects.Max(o => o.CompletedAtGameTick))
-                && winds.All(w => StructuredConnectionsMatch(factory, w))
-                && SavedKnownWindPowerGraph(factory, poles, winds))) return false;
+        if (running && (!Require("saved_belt_chain_wind_site_attribution", winds.All(w => w.ConstructionControl!.PreexistingEntityIds.Count == 0))
+                || !Require("saved_belt_chain_wind_after_connection", winds.All(w => w.Objects[0].SubmittedAtGameTick >= belt.Objects.Max(o => o.CompletedAtGameTick)))
+                || !Require("saved_belt_chain_exact_wind_connections", winds.All(w => StructuredConnectionsMatch(factory, w)))
+                || !Require("saved_belt_chain_exact_wind_power_graph", SavedKnownWindPowerGraph(factory, poles, winds)))) return false;
         // The later connection proves every miner/tower port, while each older
         // receipt still proves that exact entity/pose/component/material debit.
         var source = factory.entityPool![sourceId]; var destination = factory.entityPool[destinationId];
