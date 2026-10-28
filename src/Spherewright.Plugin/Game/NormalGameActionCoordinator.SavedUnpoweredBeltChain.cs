@@ -70,12 +70,15 @@ internal sealed partial class NormalGameActionCoordinator
                     || !ids.Add(id) || !StructuredEntityMatches(factory, id, build, build.Site.Objects[step.Index])) return false;
             }
         }
-        if (!Require("saved_belt_chain_exact_native_membership", factory.entityCount == ids.Count
-                && Enumerable.Range(1, factory.entityCursor - 1).All(i => factory.entityPool![i].id == 0 || ids.Contains(i))
-                && Enumerable.Range(1, factory.prebuildCursor - 1).All(i => factory.prebuildPool![i].id == 0)
-                && belt.ConstructionControl!.PreexistingEntityIds.Count == 2 + poles.Count
-                && new HashSet<int>(belt.ConstructionControl.PreexistingEntityIds).SetEquals(poles.Concat(new[] { sourceId, destinationId }))
-                && StructuredConnectionsMatch(factory, belt))) return false;
+        // CaptureConstructionExistingEntities intentionally records only the
+        // new batch's item kind for attribution. This one original belt batch
+        // had no older belts; miner/tower/poles are proved by their own receipts.
+        if (!Require("saved_belt_chain_no_prior_belts", belt.ConstructionControl!.PreexistingEntityIds.Count == 0)
+            || !Require("saved_belt_chain_exact_native_membership", factory.entityCount == ids.Count
+                && Enumerable.Range(1, factory.entityCursor - 1).All(i => factory.entityPool![i].id == 0 || ids.Contains(i)))
+            || !Require("saved_belt_chain_retired_prebuilds", Enumerable.Range(1, factory.prebuildCursor - 1)
+                .All(i => factory.prebuildPool![i].id == 0))
+            || !Require("saved_belt_chain_exact_topology", StructuredConnectionsMatch(factory, belt))) return false;
         // The later connection proves every miner/tower port, while each older
         // receipt still proves that exact entity/pose/component/material debit.
         var source = factory.entityPool![sourceId]; var destination = factory.entityPool[destinationId];

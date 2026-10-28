@@ -247,7 +247,9 @@ public sealed class RetainedMinerEnvironmentTests
             station.storage[0] = new() { itemId = 1013, max = 100, remoteLogic = ELogisticStorage.Supply };
             Seal(2104, "core", [stationId], [new()], originalEnabled: true,
                  stopReason: "construction_pre_player_stationary_binding_lost");
-            var prior = Enumerable.Range(1, Factory.entityCursor - 1).ToArray();
+            // The real attribution capture records only already-existing
+            // objects of this batch's item kind, not every older building.
+            int[] prior = [];
             var ids = Enumerable.Range(Factory.entityCursor, count).ToArray();
             Factory.entityCursor += count; Factory.entityCount += count;
             Factory.cargoTraffic.beltCursor = count + 1; Factory.cargoTraffic.pathCursor = 2;
