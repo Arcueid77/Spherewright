@@ -87,7 +87,10 @@ public sealed class LogisticsVesselObservationToolsTests
         static string Description(string method) => typeof(SpherewrightTools).GetMethod(method)!
             .GetCustomAttribute<DescriptionAttribute>()!.Description;
         var prepare = Description(nameof(SpherewrightTools.PrepareBuildAsync));
-        Assert.Contains("only1..8 same-item", prepare); Assert.Contains("within30seconds", prepare);
+        Assert.Contains("up to12 belts2001", prepare);
+        Assert.Contains("or1..8 of2301/2104/2201/2203/2205/2011", prepare);
+        Assert.Contains("does not increase the caller approved material allowance", prepare);
+        Assert.Contains("within30seconds", prepare);
         Assert.Contains("pending objects must never be recreated", prepare);
         var commit = Description(nameof(SpherewrightTools.CommitBuildAsync));
         Assert.Contains("whole-batch debit", commit); Assert.Contains("real Native factory pass", commit);
