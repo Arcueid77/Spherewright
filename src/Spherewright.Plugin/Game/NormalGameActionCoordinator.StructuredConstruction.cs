@@ -109,8 +109,10 @@ internal sealed partial class NormalGameActionCoordinator
         if (build.ConstructionControl is { } retainedControl
             && !retainedControl.NativeDrainBarrierPassed(GameMain.gameTick, ConstructionOwnPrelaunchCacheClear(factory, build)))
             return Stale("The original disabled dispatch has not proved a later native factory pass and a drained owned prelaunch cache.");
-        if (!module.droneEnabled && !(build.ConstructionControl?.DispatchDisabled == true
-            && build.ConstructionControl.OriginalDroneEnabled))
+        // Fresh, fully budgeted construction already owns a native enable at
+        // Start and restores the observed original switch after the real drain.
+        // A retained build still needs its own disabled-dispatch stop receipt.
+        if (!module.droneEnabled && build.ConstructionControl is { DispatchDisabled:false })
             return Stale("The ordinary construction drones were disabled outside this build's retained stop receipt.");
         var decision = new NativeResumeDecisionEvidence("structured_construction_prepare", GameMain.gameTick, DateTimeOffset.UtcNow, true);
         var reserve = CaptureConstructionReserve(build, player, out var costHash, decision);
