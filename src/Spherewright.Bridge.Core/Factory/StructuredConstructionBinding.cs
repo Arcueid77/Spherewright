@@ -20,6 +20,8 @@ public sealed class StructuredConstructionBinding
     public static bool SupportsItem(int id) => id == 2301 || id == 2104 || id == 2201 || id == 2203
         || id == 2205 || id == 2001 || id == 2011;
 
+    public static int MaximumNewObjects(int itemId) => itemId == 2001 ? 12 : 8;
+
     public string ImmutableHash()
     {
         if (Steps is null || Steps.Any(s => s is null) || Endpoints is null || Endpoints.Any(e => e is null))
@@ -33,7 +35,8 @@ public sealed class StructuredConstructionBinding
     public void Validate(BlueprintSiteSnapshot site)
     {
         if (!Guid.TryParse(JourneyId, out _) || string.IsNullOrEmpty(NativePlanHash) || !NativePlanHash.StartsWith("sha256:", StringComparison.Ordinal)
-            || site.Objects.Count < 1 || site.Objects.Count > 8 || Steps is null || Steps.Count != site.Objects.Count
+            || site.Objects.Count < 1 || site.Objects.Count > MaximumNewObjects(site.Objects[0].ItemId)
+            || Steps is null || Steps.Count != site.Objects.Count
             || site.Objects.Select(o => o.ItemId).Distinct().Count() != 1
             || !SupportsItem(site.Objects[0].ItemId)
             || (Kind != "core" && Kind != "resource" && Kind != "belt" && Kind != "inserter")

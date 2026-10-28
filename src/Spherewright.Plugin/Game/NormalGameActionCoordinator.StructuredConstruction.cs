@@ -27,10 +27,10 @@ internal sealed partial class NormalGameActionCoordinator
             return Stale("A structured batch cannot use another exact owned save's or Native version's journey.");
         if (journey.Phase != "remote_landed" || journey.RemotePlanetId != plan.PlanetId
             || !StructuredConstructionBinding.SupportsItem(plan.BuildingItemId)
-            || plan.BuildSteps.Count < 1 || plan.BuildSteps.Count > 8
+            || plan.BuildSteps.Count < 1 || plan.BuildSteps.Count > StructuredConstructionBinding.MaximumNewObjects(plan.BuildingItemId)
             || plan.BuildSteps.Any(s => s.SourceBeltAnchor is not null || s.DestinationBeltAnchor is not null
                 || s.BeltPathMode == BeltPathModes.NativeElevatedGrid))
-            return Stale($"Remote construction requires an original-journey native-validated batch of1..8 supported NEW objects without elevated paths or belt-cover reuse; observed NEW count={plan.BuildSteps.Count}, item={plan.BuildingItemId}, journey phase={journey.Phase}.");
+            return Stale($"Remote construction requires an original-journey native-validated batch of1..{StructuredConstructionBinding.MaximumNewObjects(plan.BuildingItemId)} supported NEW objects without elevated paths or belt-cover reuse; observed NEW count={plan.BuildSteps.Count}, item={plan.BuildingItemId}, journey phase={journey.Phase}.");
         if (!_blueprints.TryRead(out var old) || old.Count >= 32
             || old.Any(b => b.StructuredConstruction is not null && b.Phase != "completed"))
             return BlueprintError("Read and fresh-resume the exact existing structured build; do not submit a replacement batch.");
@@ -67,7 +67,7 @@ internal sealed partial class NormalGameActionCoordinator
             CapturedAtGameTick = GameMain.gameTick, BlueprintHash = plan.ExpectedStateHash,
             AssessmentHash = plan.ExpectedStateHash, Position = ConstructionVector(GameMain.mainPlayer.position),
             NativeCheckPerformed = true, NativeCheckPassed = true, InventorySufficient = true, TechnologySatisfied = true,
-            NativeBlueprintObjectLimit = 8,
+            NativeBlueprintObjectLimit = StructuredConstructionBinding.MaximumNewObjects(plan.BuildingItemId),
             Objects = plan.BuildSteps.Select((s, index) => new BlueprintSiteObject
             {
                 Index = index, ItemId = s.ItemId, FilterItemId = s.FilterItemId,

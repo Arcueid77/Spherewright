@@ -12,6 +12,45 @@ namespace Spherewright.Bridge.Core.Tests;
 // No DSP invocation, Native Create, flight or construction acceptance.
 public sealed class StructuredConstructionStoreIntegrationTests
 {
+    [Fact]
+    public void TwelveBeltBatchKeepsOneExactDebitTopologyAndPhysicalCompletionAcrossRestart()
+    {
+        using var fixture = new Fixture();
+        var binding = Binding(12); binding.Kind = "belt";
+        for (var i = 0; i < 12; i++)
+        {
+            binding.Steps[i].InputStepIndex = i == 0 ? -1 : i - 1;
+            binding.Steps[i].OutputStepIndex = i == 11 ? -1 : i + 1;
+        }
+        var site = Site(12, 2001); site.NativeBlueprintObjectLimit = 12;
+        var state = BlueprintBuildState.Create(site, structuredConstruction: binding); Start(state);
+        state.BeforeStructuredSubmission(101, 13, "before-twelve-belts");
+        Assert.True(fixture.Store().TryPut(state));
+        var ids = Enumerable.Range(20, 12).ToArray();
+        var underpaid = Clone(state);
+        Assert.Throws<InvalidOperationException>(() => underpaid.ConfirmStructuredSubmission(ids, 2, "underpaid"));
+        state.ConfirmStructuredSubmission(ids, 1, "exact-paid");
+        Assert.True(fixture.Store().TryPut(state));
+        var restored = Assert.Single(fixture.Read());
+        Assert.Equal(binding.ImmutableHash(), restored.StructuredConstruction!.ImmutableHash());
+        Assert.All(restored.Objects, o => { Assert.Equal(13, o.InventoryBefore); Assert.Equal(1, o.InventoryAfter); });
+        for (var i = 0; i < 12; i++) restored.ConfirmCompletion(i, 100 + i, 110);
+        ProvePhysicalDrain(restored, 110, 112); restored.ConstructionControl!.Phase = "completed_idle"; restored.Stop("completed");
+        Assert.True(fixture.Store().TryPut(restored));
+        Assert.Equal("completed", Assert.Single(fixture.Read()).Phase);
+        Assert.Throws<InvalidOperationException>(() => restored.BeforeStructuredSubmission(120, 13, "replay"));
+    }
+
+    [Theory]
+    [InlineData(13, 2001, "belt")]
+    [InlineData(9, 2201, "core")]
+    [InlineData(12, 2203, "core")]
+    public void BeltCapacityDoesNotExpandOtherItemsOrPermitThirteenObjects(int count, int item, string kind)
+    {
+        var binding = Binding(count); binding.Kind = kind;
+        Assert.Throws<InvalidDataException>(() => BlueprintBuildState.Create(Site(count, item), structuredConstruction: binding));
+    }
+
     [Theory]
     [InlineData(1)] [InlineData(8)]
     public void OneWholeBatchDebitSurvivesRestartAndPendingResumeWithoutAnotherSubmission(int count)

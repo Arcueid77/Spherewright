@@ -596,10 +596,10 @@ internal sealed partial class NormalGameActionCoordinator
                     var journey = _flightCheckpoints.VoyagerJourney;
                     if (journey is { Phase: "remote_landed" } && !IsVoyagerJourneyClosed(journey)
                         && VoyagerOwnedJourneyMatchesCurrentSession(journey, _sessions.SessionId!)
-                        && accepted.Count > 8)
+                        && accepted.Count > StructuredConstructionBinding.MaximumNewObjects(item.ID))
                     {
                         smallestRemoteNativeCount = Math.Min(smallestRemoteNativeCount ?? accepted.Count, accepted.Count);
-                        last = $"structured_remote_new_object_limit: Native candidate needs {accepted.Count} NEW objects; maximum8. Other bounded ports are checked before refusal.";
+                        last = $"structured_remote_new_object_limit: Native candidate needs {accepted.Count} NEW objects; maximum{StructuredConstructionBinding.MaximumNewObjects(item.ID)}. Other bounded ports are checked before refusal.";
                         continue;
                     }
                     var result = BuildPreparation.Succeeded(NormalBuildKinds.Belt, accepted);
@@ -622,7 +622,7 @@ internal sealed partial class NormalGameActionCoordinator
 
         if (smallestRemoteNativeCount.HasValue)
             return BuildPreparation.Failed(BridgeErrorCodes.BuildLocationInvalid,
-                $"structured_remote_new_object_limit: smallest Native-valid port candidate needs {smallestRemoteNativeCount.Value} NEW objects; maximum8. No build was prepared.",
+                $"structured_remote_new_object_limit: smallest Native-valid port candidate needs {smallestRemoteNativeCount.Value} NEW objects; maximum{StructuredConstructionBinding.MaximumNewObjects(item.ID)}. No build was prepared.",
                 "Inspect the exact endpoints and approved material limit; do not truncate a Native path or submit an oversized batch.");
         return BuildPreparation.Failed(lastError?.Code ?? BridgeErrorCodes.BuildLocationInvalid,
             last, lastError?.Recovery ?? BeltSourceReusePolicy.Recovery);
