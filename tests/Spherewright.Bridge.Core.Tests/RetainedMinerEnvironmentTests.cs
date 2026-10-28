@@ -118,6 +118,48 @@ public sealed class RetainedMinerEnvironmentTests
         Assert.False(failure.SafetyCertified);
     }
 
+    [Theory]
+    [InlineData(1)] [InlineData(2)]
+    public void CompletedPaidPolesPermitOnlyAZeroSourcePowerGraphWithoutChangingReceipts(int count)
+    {
+        using var f = new Fixture();
+        for (var i = 0; i < count; i++) f.AddPole();
+        var before = File.ReadAllBytes(f.Path);
+        Assert.Null(f.Guard());
+        Assert.Equal(before, File.ReadAllBytes(f.Path));
+    }
+
+    [Theory]
+    [InlineData("generator")] [InlineData("stored_energy")] [InlineData("served_energy")]
+    [InlineData("capacity")] [InlineData("export")] [InlineData("accumulator")]
+    [InlineData("exchanger")] [InlineData("foreign_node")] [InlineData("foreign_connection")]
+    [InlineData("missing_node")] [InlineData("missing_network")] [InlineData("wrong_component")]
+    [InlineData("lost_receipt")] [InlineData("foreign_journey")] [InlineData("live_prebuild")]
+    public void PoleRecoveryRejectsPoweredUnboundOrUnpaidState(string fault)
+    {
+        using var f = new Fixture(); f.AddPole();
+        var power = f.Factory.powerSystem; var net = power.netPool[1]!;
+        switch (fault)
+        {
+            case "generator": power.genCursor = 2; break;
+            case "stored_energy": net.energyStored = 1; break;
+            case "served_energy": net.energyServed = 1; break;
+            case "capacity": net.energyCapacity = 1; break;
+            case "export": net.energyExport = 1; break;
+            case "accumulator": net.accumulators.Add(1); break;
+            case "exchanger": net.exchangers.Add(1); break;
+            case "foreign_node": net.nodes.Add(new() { id = 9 }); break;
+            case "foreign_connection": net.nodes[0].conns.Add(new() { id = 9 }); break;
+            case "missing_node": net.nodes.Clear(); break;
+            case "missing_network": power.netPool[1] = null; break;
+            case "wrong_component": power.nodePool[1].entityId = 3; break;
+            case "lost_receipt": File.Delete(f.Path); break;
+            case "foreign_journey": f.Journey = Guid.NewGuid().ToString(); break;
+            case "live_prebuild": f.Factory.prebuildPool[2].id = 2; break;
+        }
+        Assert.Equal(Blocker, f.Guard());
+    }
+
     private sealed class Fixture : IDisposable
     {
         private readonly string root = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "Spherewright", "retained-miner", Guid.NewGuid().ToString("N"));
@@ -130,6 +172,32 @@ public sealed class RetainedMinerEnvironmentTests
         internal BlueprintBuildState Record() { Assert.True(Store().TryRead(out var builds)); return Assert.Single(builds); }
         internal string? Guard(NativeResumeDecisionEvidence? evidence = null)
             => new NormalGameActionCoordinator(Store(), Sessions).MinerEnvironmentForTest(Player, Journey, evidence);
+        internal void AddPole()
+        {
+            var id = Factory.entityCursor++; Factory.entityCount++;
+            var nodeId = Factory.powerSystem.nodeCursor++;
+            Factory.entityPool[id] = new() { id = id, protoId = 2201, powerNodeId = nodeId };
+            Factory.powerSystem.nodePool[nodeId] = new() { id = nodeId, entityId = id };
+            Factory.powerSystem.netCursor = 2;
+            Factory.powerSystem.netPool[1] ??= new();
+            Factory.powerSystem.netPool[1]!.nodes.Add(new() { id = nodeId });
+            Factory.powerSystem.consumerPool[1].networkId = 1;
+            var site = new BlueprintSiteSnapshot { SessionId = "synthetic-session", PlanetId = 201, CapturedAtGameTick = 100,
+                BlueprintHash = "synthetic-approved-pole", NativeCheckPerformed = true, NativeCheckPassed = true,
+                InventorySufficient = true, TechnologySatisfied = true,
+                Objects = [new() { Index = 0, ItemId = 2201, NativeCondition = "Ok" }] };
+            var binding = new StructuredConstructionBinding { Kind = "core", JourneyId = Journey!,
+                NativePlanHash = "sha256:" + new string('b', 64), Steps = [new()] };
+            var state = BlueprintBuildState.Create(site, structuredConstruction: binding);
+            var c = state.ConstructionControl = StructuredConstructionControlTests.Control();
+            var action = Guid.NewGuid().ToString(); c.NativeCreateActionId = action;
+            state.Begin("synthetic-session", action, 1, 100); state.BeforeStructuredSubmission(101, 11, "before-pole");
+            state.ConfirmStructuredSubmission([id], 10, "after-pole"); state.ConfirmCompletion(0, id, 110);
+            c.RequestStop("construction_complete_draining", 110, c.StartedAtUtc.AddSeconds(1), false);
+            c.DispatchDisabled = true; Assert.True(c.RecordDisabledNativeFactoryPass(110)); Assert.True(c.TryMarkPhysicalIdle(112, true, true));
+            c.Phase = "completed_idle"; state.LastEvidenceGameTick = 112; state.Stop("completed");
+            Assert.True(Store().TryPut(state));
+        }
         internal Fixture(bool historicalDispatchDisabled = false, int prebuildCursor = 2)
         {
             GameMain.history = new(); GameMain.gameTick = 112;

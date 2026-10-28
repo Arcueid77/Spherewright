@@ -472,3 +472,9 @@ Native Import 可将 double 宇宙坐标逆投影为 float 本地位置；普通
 ## 保存后回主界面，在同一进程恢复
 
 已有普通 Save/Load 授权时，使用 `spherewright_prepare_return_to_main_menu` / `spherewright_commit_return_to_main_menu`。先核当前 session/revision，等待角色落地无指令、真实施工无人机闲置和全部已接受动作完成。预检不保存、不离开世界。提交先普通保存并核验完整当前 owned 文件，再执行原生 EndGame；还可能生成正常 LastExit。查询原 `spherewright_get_action_result`，直到 `succeeded=true` 且 `mainMenuReturnReadback.mainMenuVerified=true`，并另核新 session 未载入世界；游戏进程保持打开。读档仍另需精确存档身份/进度、完整备份、新鲜恢复计划/摘要及适用授权。保留原回执和累计预算，回菜单不授新任务。可选 `preserveQuarantinedProgress=true` 沿用所有暂停隔离保全检查，不授 Resume。失败先保留原件并调查、不重放。只有已授权 Mod 换装或其他具体技术必要条件才关闭进程。
+
+### 已存未供电电塔及远端传送带端口
+
+远端主档恢复可额外证明已存未供电矿机及可选空被动ILS旁最多两座已完成的2201电塔。每座须有原已扣料、完成且真实无人机闲置的回执，精确原生实体/姿态/组件/连接，以及空的已退役预建槽。整个绑定电网只含这些节点，不含发电机/蓄电器/能量交换器，储能、供能、输出及容量能量均为零。因此可接管已连电网但未供电的矿机；不授新建、缓冲写入或已供电站点恢复。缺证、异源、活动中或带能量状态仍拒绝。
+
+远端传送带预检遇到原生合法但超过原八个NEW对象上限的路径时，会继续检查既有有界端口候选，不截短路径、不增加额度。若所有原生合法候选均超限，拒绝信息报告其中最少所需数量；该数量只是观察，不是增加施工预算的授权。

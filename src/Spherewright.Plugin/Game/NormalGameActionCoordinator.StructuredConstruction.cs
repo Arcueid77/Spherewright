@@ -30,7 +30,7 @@ internal sealed partial class NormalGameActionCoordinator
             || plan.BuildSteps.Count < 1 || plan.BuildSteps.Count > 8
             || plan.BuildSteps.Any(s => s.SourceBeltAnchor is not null || s.DestinationBeltAnchor is not null
                 || s.BeltPathMode == BeltPathModes.NativeElevatedGrid))
-            return Stale("Remote construction admits only an original-journey native-validated batch of 1..8 supported new objects, without elevated paths or belt-cover reuse.");
+            return Stale($"Remote construction requires an original-journey native-validated batch of1..8 supported NEW objects without elevated paths or belt-cover reuse; observed NEW count={plan.BuildSteps.Count}, item={plan.BuildingItemId}, journey phase={journey.Phase}.");
         if (!_blueprints.TryRead(out var old) || old.Count >= 32
             || old.Any(b => b.StructuredConstruction is not null && b.Phase != "completed"))
             return BlueprintError("Read and fresh-resume the exact existing structured build; do not submit a replacement batch.");

@@ -42,8 +42,10 @@ internal sealed partial class NormalGameActionCoordinator
             || !Proved("retained_miner_loaded_factory_reference", ReferenceEquals(GameMain.data?.localLoadedPlanetFactory, factory))
             || !Proved("retained_miner_local_factory_reference", ReferenceEquals(GameMain.localPlanet?.factory, factory))) return false;
         var entities = factory.entityPool; var prebuilds = factory.prebuildPool;
+        if (!TryBindSavedUnpoweredPoles(p, factory, journeyId, out var poles))
+            return Proved("retained_miner_saved_unpowered_poles", false);
         if (entities is null || prebuilds is null) return Proved("retained_miner_factory_pool_bounds", false);
-        if (!Proved("retained_miner_factory_pool_bounds", !(factory.planetId != p.planetId || factory.entityCount != (retainedIls is null ? 1 : 2)
+        if (!Proved("retained_miner_factory_pool_bounds", !(factory.planetId != p.planetId || factory.entityCount != (retainedIls is null ? 1 : 2) + poles.Count
             || factory.entityCursor < 2 || factory.entityCursor > 131072
             || factory.entityCursor > entities.Length || factory.prebuildCount != 0
             || factory.prebuildCursor < 1 || factory.prebuildCursor > 131072
@@ -52,7 +54,7 @@ internal sealed partial class NormalGameActionCoordinator
                 && (idle || retainedIls is not null && SavedConstructionTailMatches(p, journeyId)))
             || !Proved("retained_miner_owned_progress_store", _blueprints.TryRead(out var builds))) return false;
         var local = builds.Where(b => b.Site.PlanetId == factory.planetId).ToArray();
-        if (!Proved("retained_miner_single_local_receipt", local.Length == (retainedIls is null ? 1 : 2))) return false;
+        if (!Proved("retained_miner_single_local_receipt", local.Length == (retainedIls is null ? 1 : 2) + poles.Count)) return false;
         var miners = local.Where(b => b.Site.Objects.Count == 1 && b.Site.Objects[0].ItemId == 2301).ToArray();
         if (miners.Length != 1) return false;
         var build = miners[0];
@@ -91,7 +93,7 @@ internal sealed partial class NormalGameActionCoordinator
         for (var index = 1; index < factory.prebuildCursor; index++)
             if (prebuilds[index].id != 0) return Proved("retained_miner_no_live_prebuilds", false);
         for (var index = 1; index < factory.entityCursor; index++)
-            if (index != id && index != retainedIls?.Objects[0].EntityId && entities[index].id != 0)
+            if (index != id && index != retainedIls?.Objects[0].EntityId && !poles.Contains(index) && entities[index].id != 0)
                 return Proved("retained_miner_no_other_entities", false);
         ref var entity = ref entities[id];
         var system = factory.factorySystem; var power = factory.powerSystem;
@@ -99,12 +101,12 @@ internal sealed partial class NormalGameActionCoordinator
             || entity.minerId >= system.minerPool.Length || power?.consumerPool is null
             || entity.powerConId < 1 || entity.powerConId >= power.consumerCursor
             || entity.powerConId >= power.consumerPool.Length
-            || power.netCursor != 1 || power.nodeCursor != 1 || power.genCursor != 1)
+            || power.genCursor != 1 || poles.Count == 0 && (power.netCursor != 1 || power.nodeCursor != 1))
             return Proved("retained_miner_unpowered_component_binding", false);
         ref var miner = ref system.minerPool[entity.minerId];
         ref var consumer = ref power.consumerPool[entity.powerConId];
         return Proved("retained_miner_unpowered_empty_output", miner.id == entity.minerId && miner.entityId == id && miner.pcId == entity.powerConId
             && miner.productId == 0 && miner.productCount == 0
-            && consumer.id == entity.powerConId && consumer.entityId == id && consumer.networkId == 0);
+            && consumer.id == entity.powerConId && consumer.entityId == id && SavedUnpoweredConsumerNetwork(factory, consumer.networkId, poles));
     }
 }

@@ -28,7 +28,7 @@ internal sealed class PlanetFactory
     internal TestPowerSystem powerSystem = new();
     internal bool TestGeometryMatches = true, TestConnectionsMatch = true;
 }
-internal struct TestEntity { internal int id, protoId, minerId, powerConId; }
+internal struct TestEntity { internal int id, protoId, minerId, powerConId, powerNodeId; }
 internal struct TestPrebuild { internal int id; }
 internal sealed class TestFactorySystem { internal int minerCursor = 2; internal TestMiner[] minerPool = new TestMiner[4]; }
 internal struct TestMiner { internal int id, entityId, pcId, productId, productCount; }
@@ -36,6 +36,20 @@ internal sealed class TestPowerSystem
 {
     internal int consumerCursor = 2, netCursor = 1, nodeCursor = 1, genCursor = 1;
     internal TestConsumer[] consumerPool = new TestConsumer[4];
+    internal TestPowerNode[] nodePool = new TestPowerNode[4];
+    internal TestPowerNet?[] netPool = new TestPowerNet?[4];
+}
+internal struct TestPowerNode { internal int id, entityId; }
+internal sealed class TestPowerNet
+{
+    internal List<TestNetworkNode> nodes = [];
+    internal List<int> generators = [], accumulators = [], exchangers = [];
+    internal long energyStored, energyServed, energyCapacity, energyExport;
+}
+internal sealed class TestNetworkNode
+{
+    internal int id, genId, accId, excId;
+    internal List<TestNetworkNode> conns = [], lines = [];
 }
 internal struct TestConsumer { internal int id, entityId, networkId; }
 internal sealed partial class NormalGameActionCoordinator
@@ -52,7 +66,8 @@ internal sealed partial class NormalGameActionCoordinator
     internal static bool SavedTowerReceiptForTest(BlueprintBuildState b, string journeyId, long tick) => HasSavedPassiveTowerReceipt(b, journeyId, tick);
     private static bool StructuredEntityMatches(PlanetFactory factory, int id, BlueprintBuildState build, BlueprintSiteObject spec)
         => factory.TestGeometryMatches && id > 0 && id < factory.entityCursor && factory.entityPool[id].id == id
-            && factory.entityPool[id].protoId == spec.ItemId && factory.entityPool[id].minerId > 0;
+            && factory.entityPool[id].protoId == spec.ItemId
+            && (spec.ItemId == 2301 ? factory.entityPool[id].minerId > 0 : factory.entityPool[id].powerNodeId > 0);
     private static bool StructuredConnectionsMatch(PlanetFactory factory, BlueprintBuildState build) => factory.TestConnectionsMatch;
     private static bool TryObserveOwnedConstructionDrones(PlanetFactory factory, ConstructionModuleComponent module,
         out bool idle, out List<int> activeIds)

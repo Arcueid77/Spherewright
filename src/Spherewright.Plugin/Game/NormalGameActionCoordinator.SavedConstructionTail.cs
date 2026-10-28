@@ -15,12 +15,13 @@ internal sealed partial class NormalGameActionCoordinator
     private BlueprintBuildState? RetainedUnpoweredRecoveryIls(Player p, PlanetFactory factory,
         string? journeyId, NativeResumeDecisionEvidence? evidence)
     {
-        if (journeyId is null || factory.entityCount != 2 || !_sessions.IsCurrentSessionOwned
+        if (journeyId is null || factory.entityCount < 2 || factory.entityCount > 4 || !_sessions.IsCurrentSessionOwned
             || !ReferenceEquals(GameMain.data?.localLoadedPlanetFactory, factory)
             || !ReferenceEquals(GameMain.localPlanet?.factory, factory)
             || !_blueprints.TryRead(out var builds)) return null;
         var local = builds.Where(b => b.Site.PlanetId == factory.planetId).ToArray();
-        if (local.Length != 2) return null;
+        if (local.Length != factory.entityCount) return null;
+        if (!TryBindSavedUnpoweredPoles(p, factory, journeyId, out var poles)) return null;
         var towers = local.Where(b => b.Site.Objects.Count == 1 && b.Site.Objects[0].ItemId == 2104).ToArray();
         if (towers.Length != 1) return null;
         var build = CloneBlueprintState(towers[0]);
@@ -48,7 +49,7 @@ internal sealed partial class NormalGameActionCoordinator
             || station.storage.Any(s => s.itemId != 0 || s.count != 0 || s.inc != 0
                 || s.localLogic != ELogisticStorage.None || s.remoteLogic != ELogisticStorage.None)
             || power.consumerPool[entity.powerConId].id != entity.powerConId
-            || power.consumerPool[entity.powerConId].entityId != id || power.consumerPool[entity.powerConId].networkId != 0)
+            || power.consumerPool[entity.powerConId].entityId != id || !SavedUnpoweredConsumerNetwork(factory, power.consumerPool[entity.powerConId].networkId, poles))
             return null;
         evidence?.Observe("retained_ils_exact_unpowered_empty_entity", true);
         return build;
