@@ -151,6 +151,27 @@ public sealed partial class SpherewrightToolsTests
     }
 
     [Theory]
+    [InlineData(false, false, null, false)]
+    [InlineData(true, true, 12521L, false)]
+    [InlineData(true, false, 12521L, true)]
+    [InlineData(true, true, null, true)]
+    [InlineData(true, true, -1L, true)]
+    public async Task MainMenuReturnMapsExactSaveBindingAndRetainsPreservationDisclosure(
+        bool requested, bool echoed, long? tick, bool error)
+    {
+        var bridge = new FakeBridgeClient(SuccessResult()) { SavePlan = new()
+            { Prepared = true, ActionKind = NormalActionKinds.ReturnToMainMenu, PlanToken = "synthetic-menu-plan",
+                PreservesQuarantine = echoed, PreservationGameTick = tick } };
+        var result = await SpherewrightTools.PrepareReturnToMainMenuAsync(bridge, "synthetic-session", 201, 9,
+            preserveQuarantinedProgress: requested);
+        Assert.Equal(requested, bridge.LastSaveRequest!.PreserveQuarantinedProgress);
+        Assert.Equal(9, bridge.LastSaveRequest.ExpectedRevision);
+        Assert.Equal(201, bridge.LastSaveRequest.PlanetId);
+        Assert.Equal(error, result.IsError);
+        if (error) Assert.DoesNotContain("synthetic-menu-plan", result.StructuredContent!.Value.GetRawText());
+    }
+
+    [Theory]
     [InlineData("supported")] [InlineData("missing_echo")] [InlineData("wrong_hash")]
     [InlineData("unattested")] [InlineData("prior_claim")] [InlineData("no_disclosure")]
     [InlineData("no_identity")] [InlineData("evidence_zero")]
@@ -487,7 +508,7 @@ public sealed partial class SpherewrightToolsTests
         using var provider = services.BuildServiceProvider();
         var tools = provider.GetServices<McpServerTool>().ToArray();
         var tool = Assert.Single(tools, t => t.ProtocolTool.Name == "spherewright_prepare_resume_owned_game");
-        Assert.Equal(72, tools.Length);
+        Assert.Equal(74, tools.Length);
         var schema = tool.ProtocolTool.InputSchema;
         var names = new[] { "recoveryDeadlineUtc", "recoveryScope", "maximumChargeGameTicks", "maximumChargeWallSeconds" };
         foreach (var name in names)
@@ -2049,6 +2070,7 @@ public sealed partial class SpherewrightToolsTests
                 "spherewright_commit_refuel",
                 "spherewright_commit_reload_flight_checkpoint",
                 "spherewright_commit_resume_owned_game",
+                "spherewright_commit_return_to_main_menu",
                 "spherewright_commit_save",
                 "spherewright_commit_save_import",
                 "spherewright_commit_select_research",
@@ -2097,6 +2119,7 @@ public sealed partial class SpherewrightToolsTests
                 "spherewright_prepare_refuel",
                 "spherewright_prepare_reload_flight_checkpoint",
                 "spherewright_prepare_resume_owned_game",
+                "spherewright_prepare_return_to_main_menu",
                 "spherewright_prepare_save",
                 "spherewright_prepare_save_import",
                 "spherewright_prepare_select_research",
@@ -3921,6 +3944,21 @@ public sealed partial class SpherewrightToolsTests
             string sessionId,
             CommitNormalActionRequest request,
             CancellationToken cancellationToken) => Committed(sessionId, request, NormalActionKinds.Save);
+
+        public Task<BridgeCallResult<PreparedNormalAction>> PrepareReturnToMainMenuAsync(
+            string sessionId,
+            PrepareSaveRequest request,
+            CancellationToken cancellationToken)
+        {
+            LastSaveRequest = request;
+            return SavePlan is null ? Prepared(sessionId, NormalActionKinds.ReturnToMainMenu)
+                : Task.FromResult(BridgeCallResult<PreparedNormalAction>.Succeeded(SavePlan));
+        }
+
+        public Task<BridgeCallResult<NormalActionCommitResult>> CommitReturnToMainMenuAsync(
+            string sessionId,
+            CommitNormalActionRequest request,
+            CancellationToken cancellationToken) => Committed(sessionId, request, NormalActionKinds.ReturnToMainMenu);
 
         public Task<BridgeCallResult<PreparedNormalAction>> PrepareQuarantineReconciliationAsync(
             string sessionId,

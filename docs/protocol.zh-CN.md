@@ -479,3 +479,9 @@ Move 地表预览是观察，不是寻路，180/600 tick 失败指导禁止重�
 ## Voyager 暂停闲置的原地复核
 
 现有隔离复核的请求和提交 schema 不变。除保留的未知建造外，接口还接受由 Voyager 闲置守卫记录的精确同进程隔离。Prepared 的 `completionCondition` 披露原地恢复操作。Prepare 与 commit 都重新核验原会话、动作、原因、原生引用、严格闲置和原储备；证明变化或其他阻塞均拒绝。成功提交恢复当前世界运行，同时保留原动作结果及账目字节。不引入新的恢复模式、凭据、Load、Save、tick 授予或墙钟续期。见[手册](agent-playbook.zh-CN.md#同会话暂停闲置的原地复核)。
+
+## 受保护地返回主界面
+
+`prepare_return_to_main_menu` 复用 `prepare_save` 的星球、revision、hash version 及可选暂停隔离保全参数，签发独立的 `return-to-main-menu` 计划；`commit_return_to_main_menu` 使用普通提交信封和单个 UUID。MCP 对应同名 `spherewright_*` 工具。仅接受当前 owned 世界、角色落地无指令、真实施工无人机闲置且无其他活动动作或 loader；原写入、Journey、隔离及单动作安全检查保留。
+
+提交先执行一次普通 owned Save，核验完整文件的精确身份、版本、当前 tick、和平及非沙盒状态，再沿原生 Esc 菜单路径设置 `backToMainMenu=true` 并调用 `DSPGame.EndGame`。原生 EndGame 还可能写 LastExit；不退出进程、不读档。查询原动作的 `mainMenuReturnReadback`，分别取得保存成功/tick、完整文件、End 发出、真实闲置菜单及首个失败谓词。接受或发出 End 不等于成功，菜单观察限十秒；世界结束后仍能查询原幂等及终态记录。失败/unknown 原件保留、不重放。读档另走受保护预检、确认和提交。

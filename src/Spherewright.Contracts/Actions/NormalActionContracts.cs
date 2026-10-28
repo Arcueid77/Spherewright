@@ -22,6 +22,9 @@ public static class NormalActionKinds
     public const string SupplyMechaWarpers = "supply_mecha_warpers";
     public const string CancelVoyagerFlight = "cancel_voyager_flight";
     public const string Save = "save";
+    public const string ReturnToMainMenu = "return-to-main-menu";
+
+    public static bool IsSaveLifecycle(string actionKind) => actionKind == Save || actionKind == ReturnToMainMenu;
     public const string ReconcileQuarantine = "reconcile-quarantine";
     public const string UserSaveImport = "user-save-import";
 }

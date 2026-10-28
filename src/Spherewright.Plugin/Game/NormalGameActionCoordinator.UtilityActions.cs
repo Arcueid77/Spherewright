@@ -247,7 +247,8 @@ internal sealed partial class NormalGameActionCoordinator
 
     private GameCallResult<PreparedNormalAction> PrepareSavePlanOnMainThread(
         string? requestedSessionId,
-        PrepareSaveRequest request)
+        PrepareSaveRequest request,
+        string actionKind = NormalActionKinds.Save)
     {
         var common = ValidatePrepareCommon(requestedSessionId, request.PlanetId, request.StateHashVersion);
         if (common.Error is not null)
@@ -279,7 +280,7 @@ internal sealed partial class NormalGameActionCoordinator
         }
 
         var expectedHash = CanonicalStateHash.Combine(
-            NormalActionKinds.Save,
+            actionKind,
             _sessions.SessionId,
             request.PlanetId,
             request.ExpectedRevision,
@@ -290,7 +291,7 @@ internal sealed partial class NormalGameActionCoordinator
             request.PlanetId,
             expectedHash,
             common.Session.SaveName!,
-            request.ExpectedRevision, preservation);
+            request.ExpectedRevision, preservation, actionKind);
         var result = AddPreparedPlan(
             payload,
             common.Session,
@@ -405,9 +406,10 @@ internal sealed partial class NormalGameActionCoordinator
             int planetId,
             string expectedStateHash,
             string saveOwnedName,
-            long expectedRevision, PausedOwnedSaveBinding? preservation = null) => new NormalActionPlanPayload
+            long expectedRevision, PausedOwnedSaveBinding? preservation = null,
+            string actionKind = NormalActionKinds.Save) => new NormalActionPlanPayload
             {
-                ActionKind = NormalActionKinds.Save,
+                ActionKind = actionKind,
                 SessionId = sessionId,
                 PlanetId = planetId,
                 ExpectedStateHash = expectedStateHash,

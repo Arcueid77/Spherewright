@@ -57,7 +57,7 @@ public sealed class LogisticsVesselObservationToolsTests
         services.AddMcpServer().WithToolsFromAssembly(typeof(SpherewrightTools).Assembly);
         using var provider = services.BuildServiceProvider();
         var tools = provider.GetServices<McpServerTool>().Select(t => t.ProtocolTool).ToList();
-        Assert.Equal(72, tools.Count);
+        Assert.Equal(74, tools.Count);
         var tool = Assert.Single(tools, t => t.Name == "spherewright_inspect_factory_entity");
         Assert.True(tool.Annotations!.ReadOnlyHint);
         var schema = tool.InputSchema; var flag = schema.GetProperty("properties").GetProperty("ownedRemoteLogisticsStation");

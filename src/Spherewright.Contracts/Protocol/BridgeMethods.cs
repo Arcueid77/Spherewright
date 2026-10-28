@@ -68,6 +68,8 @@ public static class BridgeMethods
     public const string CommitSupplyMechaWarpers = "commit_supply_mecha_warpers";
     public const string PrepareSave = "prepare_save";
     public const string CommitSave = "commit_save";
+    public const string PrepareReturnToMainMenu = "prepare_return_to_main_menu";
+    public const string CommitReturnToMainMenu = "commit_return_to_main_menu";
     public const string PrepareQuarantineReconciliation = "prepare_quarantine_reconciliation";
     public const string CommitQuarantineReconciliation = "commit_quarantine_reconciliation";
     public const string PrepareResumeOwnedGame = "prepare_resume_owned_game";

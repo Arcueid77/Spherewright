@@ -263,6 +263,16 @@ public interface IBridgeClient
         CommitNormalActionRequest request,
         CancellationToken cancellationToken);
 
+    Task<BridgeCallResult<PreparedNormalAction>> PrepareReturnToMainMenuAsync(
+        string sessionId,
+        PrepareSaveRequest request,
+        CancellationToken cancellationToken);
+
+    Task<BridgeCallResult<NormalActionCommitResult>> CommitReturnToMainMenuAsync(
+        string sessionId,
+        CommitNormalActionRequest request,
+        CancellationToken cancellationToken);
+
     Task<BridgeCallResult<PreparedNormalAction>> PrepareQuarantineReconciliationAsync(
         string sessionId,
         PrepareQuarantineReconciliationRequest request,

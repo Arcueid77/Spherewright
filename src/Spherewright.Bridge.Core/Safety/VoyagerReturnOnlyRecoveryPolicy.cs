@@ -63,7 +63,7 @@ public static class VoyagerReturnOnlyRecoveryPolicy
 
     public static List<WriteBlocker> ActionBlockers(IEnumerable<WriteBlocker> blockers, string actionKind, bool returnLeg)
     {
-        var permitted = actionKind == NormalActionKinds.Save || actionKind == NormalActionKinds.CancelVoyagerFlight
+        var permitted = NormalActionKinds.IsSaveLifecycle(actionKind) || actionKind == NormalActionKinds.CancelVoyagerFlight
             || actionKind == NormalActionKinds.InterplanetaryFlight && returnLeg;
         return blockers.Where(b => !permitted || b.Code != ScopeBlocker || b.Message != ScopeMessage).ToList();
     }

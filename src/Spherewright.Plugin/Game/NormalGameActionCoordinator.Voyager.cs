@@ -677,7 +677,7 @@ internal sealed partial class NormalGameActionCoordinator
     private BridgeError? ValidateVoyagerJourneyLocalCommit(NormalActionPlanPayload plan)
     {
         var returnOnly = _flightCheckpoints.VoyagerJourney;
-        if (returnOnly?.ReturnOnlyScopeActive == true && plan.ActionKind != NormalActionKinds.Save
+        if (returnOnly?.ReturnOnlyScopeActive == true && !NormalActionKinds.IsSaveLifecycle(plan.ActionKind)
             && plan.ActionKind != NormalActionKinds.CancelVoyagerFlight
             && !(plan.VoyagerReturnLeg && plan.VoyagerBudget is not null))
             return Stale(VoyagerReturnOnlyRecoveryPolicy.ScopeMessage);
@@ -689,13 +689,13 @@ internal sealed partial class NormalGameActionCoordinator
         if (!VoyagerOwnedJourneyMatchesCurrentSession(journey, plan.SessionId))
             return Stale("The active journey belongs to another exact owned save or Native version; its local-action budget cannot be borrowed.");
         if (plan.VoyagerBudget is not null || plan.ActionKind == NormalActionKinds.CancelVoyagerFlight) return null;
-        if (journey.ReturnOnlyScopeActive && plan.ActionKind == NormalActionKinds.Save) return null;
-        if (journey.Phase == "home_awaiting_save" && plan.ActionKind == NormalActionKinds.Save) return null;
+        if (journey.ReturnOnlyScopeActive && NormalActionKinds.IsSaveLifecycle(plan.ActionKind)) return null;
+        if (journey.Phase == "home_awaiting_save" && NormalActionKinds.IsSaveLifecycle(plan.ActionKind)) return null;
         if (journey.Phase != "remote_landed" || journey.RemotePlanetId != plan.PlanetId)
             return Stale("The active Voyager action/checkpoint must be reconciled before unrelated writes.");
         if (!VoyagerRemoteIdleBindingMatches())
             return Stale("Remote local work requires this live landed-controller idle binding; a remote Host/save reload is not silently recertified.");
-        if (plan.ActionKind == NormalActionKinds.Refuel || plan.ActionKind == NormalActionKinds.Save) return null;
+        if (plan.ActionKind == NormalActionKinds.Refuel || NormalActionKinds.IsSaveLifecycle(plan.ActionKind)) return null;
         var immediate = plan.ActionKind == NormalActionKinds.Transfer || plan.ActionKind == NormalActionKinds.LogisticsStationFleetTransfer
             || plan.ActionKind == NormalActionKinds.ConfigureBuilding
                 && (plan.ConfigureMode == BuildingConfigurationModes.LogisticsStationStorage

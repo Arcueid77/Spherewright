@@ -948,6 +948,62 @@ public static partial class SpherewrightTools
     }
 
     [McpServerTool(
+        Name = "spherewright_prepare_return_to_main_menu",
+        Title = "Prepare a protected return to the main menu",
+        ReadOnly = false,
+        Destructive = false,
+        Idempotent = false,
+        OpenWorld = false)]
+    [Description("Binds a grounded order-free owned world with idle drones without saving or ending it. Commit performs one ordinary Save, verifies the complete current owned file, then uses DSP native EndGame and requires idle-menu readback in the same process. Native EndGame may also write LastExit. No process exit or Load. preserveQuarantinedProgress is an explicit serialization-only opt-in for a previously admitted remote world paused by its retained idle guard: requires stable post-tail Native Pause and no pending action/load/Journal. It preserves quarantine, original outcomes, tickets and budgets; it does not grant Resume or recovery authority.")]
+    public static async Task<CallToolResult> PrepareReturnToMainMenuAsync(
+        IBridgeClient bridgeClient,
+        string sessionId,
+        int planetId,
+        long expectedRevision,
+        int stateHashVersion = 1,
+        bool preserveQuarantinedProgress = false,
+        CancellationToken cancellationToken = default)
+    {
+        var result = await bridgeClient.PrepareReturnToMainMenuAsync(
+            sessionId,
+            new PrepareSaveRequest
+            {
+                PlanetId = planetId,
+                ExpectedRevision = expectedRevision,
+                StateHashVersion = stateHashVersion,
+                PreserveQuarantinedProgress = preserveQuarantinedProgress,
+            },
+            cancellationToken).ConfigureAwait(false);
+        if (preserveQuarantinedProgress && result.Success && (result.Value?.PreservesQuarantine != true
+            || !result.Value.PreservationGameTick.HasValue || result.Value.PreservationGameTick < 0))
+            return ToToolResult(BridgeCallResult<PreparedNormalAction>.Failed(BridgeError.Create(
+                BridgeErrorCodes.StaleState, "The Plugin did not disclose the requested paused quarantine-preserving save.",
+                false, "Keep the world paused and use a matching verified Plugin/MCP cohort.")), "Save preservation is unproved.");
+        return ToToolResult(result, "Main-menu return plan prepared; no save or menu transition occurred.");
+    }
+
+    [McpServerTool(
+        Name = "spherewright_commit_return_to_main_menu",
+        Title = "Save and return to the main menu normally",
+        ReadOnly = false,
+        Destructive = true,
+        Idempotent = true,
+        OpenWorld = false)]
+    [Description("Normally saves and fully verifies the bound owned world before DSP native EndGame. Poll the original action until mainMenuReturnReadback.mainMenuVerified and succeeded are true; acceptance alone is not completion. No process exit or automatic Load.")]
+    public static async Task<CallToolResult> CommitReturnToMainMenuAsync(
+        IBridgeClient bridgeClient,
+        string sessionId,
+        int planetId,
+        string planToken,
+        string idempotencyKey,
+        CancellationToken cancellationToken = default)
+    {
+        var request = CreateCommitRequest(sessionId, planetId, planToken, idempotencyKey);
+        var result = await bridgeClient.CommitReturnToMainMenuAsync(sessionId, request, cancellationToken).ConfigureAwait(false);
+        return ToToolResult(result, "Main-menu return commit processed; poll its original action for complete-save and actual menu readback.");
+    }
+
+    [McpServerTool(
         Name = "spherewright_prepare_quarantine_reconciliation",
         Title = "Prove the exact quarantined action outcome",
         ReadOnly = false,

@@ -468,3 +468,7 @@ Native Import 可将 double 宇宙坐标逆投影为 float 本地位置；普通
 同一运行进程内，远端闲置保护导致暂停后，先读取当前会话，以精确的 `writeQuarantineActionId`、星球和 revision 调用 `spherewright_prepare_quarantine_reconciliation`。现有接口除核销结果未知的建造外，也可复核仍然保留的闲置控制绑定。检查 `completionCondition`：此分支要求相同世界、玩家和控制器，未改变的原旅程，没有未决动作或其他写阻塞，重新证明静止 Walk、接地以及原剩余 tick、墙钟、能量和翘曲器储备。Prepare 不恢复游戏运行。
 
 使用该计划和原幂等键只提交一次。成功 commit 在当前原生世界恢复运行，并只解除匹配的写隔离；不 Load、Save、重发 Move、改写成功/失败/未知结果、续期或返还已耗资源。新操作前读回健康会话。世界或 Host 替换、检查点接管未决、仅返航范围仍活跃、未知动作、观察变化或储备过期仍拒绝。此操作是明确提交，单独点击游戏的“继续”不会清除写隔离。
+
+## 保存后回主界面，在同一进程恢复
+
+已有普通 Save/Load 授权时，使用 `spherewright_prepare_return_to_main_menu` / `spherewright_commit_return_to_main_menu`。先核当前 session/revision，等待角色落地无指令、真实施工无人机闲置和全部已接受动作完成。预检不保存、不离开世界。提交先普通保存并核验完整当前 owned 文件，再执行原生 EndGame；还可能生成正常 LastExit。查询原 `spherewright_get_action_result`，直到 `succeeded=true` 且 `mainMenuReturnReadback.mainMenuVerified=true`，并另核新 session 未载入世界；游戏进程保持打开。读档仍另需精确存档身份/进度、完整备份、新鲜恢复计划/摘要及适用授权。保留原回执和累计预算，回菜单不授新任务。可选 `preserveQuarantinedProgress=true` 沿用所有暂停隔离保全检查，不授 Resume。失败先保留原件并调查、不重放。只有已授权 Mod 换装或其他具体技术必要条件才关闭进程。

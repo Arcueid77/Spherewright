@@ -385,6 +385,18 @@ internal sealed class NamedPipeBridgeClient : IBridgeClient
         CancellationToken cancellationToken) =>
         CallAsync<CommitNormalActionRequest, NormalActionCommitResult>(BridgeMethods.CommitSave, sessionId, request, cancellationToken);
 
+    public Task<BridgeCallResult<PreparedNormalAction>> PrepareReturnToMainMenuAsync(
+        string sessionId,
+        PrepareSaveRequest request,
+        CancellationToken cancellationToken) =>
+        CallAsync<PrepareSaveRequest, PreparedNormalAction>(BridgeMethods.PrepareReturnToMainMenu, sessionId, request, cancellationToken);
+
+    public Task<BridgeCallResult<NormalActionCommitResult>> CommitReturnToMainMenuAsync(
+        string sessionId,
+        CommitNormalActionRequest request,
+        CancellationToken cancellationToken) =>
+        CallAsync<CommitNormalActionRequest, NormalActionCommitResult>(BridgeMethods.CommitReturnToMainMenu, sessionId, request, cancellationToken);
+
     public Task<BridgeCallResult<PreparedNormalAction>> PrepareQuarantineReconciliationAsync(
         string sessionId,
         PrepareQuarantineReconciliationRequest request,

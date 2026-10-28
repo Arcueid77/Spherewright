@@ -853,6 +853,26 @@ internal sealed class NamedPipeBridgeServer : IDisposable
                 case BridgeMethods.CommitSave:
                     await DispatchNormalCommitAsync(pipe, header, requestJson, NormalActionKinds.Save, cancellationToken).ConfigureAwait(false);
                     break;
+                case BridgeMethods.PrepareReturnToMainMenu:
+                    {
+                        var request = PluginJson.Deserialize<BridgeRequestEnvelope<PrepareSaveRequest>>(requestJson);
+                        if (request?.Payload is null)
+                        {
+                            await WriteInvalidPayloadAsync(pipe, header.RequestId, cancellationToken).ConfigureAwait(false);
+                            break;
+                        }
+
+                        await DispatchAndWriteAsync(
+                            pipe,
+                            header.RequestId,
+                            header.SessionId,
+                            () => _normalActionCoordinator.PrepareReturnToMainMenuOnMainThread(header.SessionId, request.Payload),
+                            cancellationToken).ConfigureAwait(false);
+                        break;
+                    }
+                case BridgeMethods.CommitReturnToMainMenu:
+                    await DispatchNormalCommitAsync(pipe, header, requestJson, NormalActionKinds.ReturnToMainMenu, cancellationToken).ConfigureAwait(false);
+                    break;
                 case BridgeMethods.PrepareQuarantineReconciliation:
                     {
                         var request = PluginJson.Deserialize<BridgeRequestEnvelope<PrepareQuarantineReconciliationRequest>>(requestJson);

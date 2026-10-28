@@ -844,6 +844,9 @@ internal sealed partial class NormalGameActionCoordinator
             case NormalActionKinds.SupplyMechaWarpers:
                 ExecuteSupplyMechaWarpersOnMainThread(action);
                 break;
+            case NormalActionKinds.ReturnToMainMenu:
+                ExecuteReturnToMainMenuOnMainThread(action);
+                break;
             case NormalActionKinds.Save:
                 ExecuteSaveOnMainThread(action);
                 break;
@@ -913,6 +916,11 @@ internal sealed partial class NormalGameActionCoordinator
 
     private void UpdateActionOnMainThread(ActionRecord action)
     {
+        if (action.ActionKind == NormalActionKinds.ReturnToMainMenu)
+        {
+            if (!action.Terminal) UpdateReturnToMainMenuOnMainThread(action);
+            return;
+        }
         // Local journey identity loss is unknown under its original evidence;
         // the generic branch below must not stamp a replacement world's tick.
         if (action.Plan.VoyagerLocalDeadlineGameTick.HasValue && !GuardVoyagerLocalAction(action)) return;
@@ -1332,6 +1340,8 @@ internal sealed partial class NormalGameActionCoordinator
                 return RevalidateRefuelOnMainThread(plan);
             case NormalActionKinds.SupplyMechaWarpers:
                 return RevalidateSupplyMechaWarpersOnMainThread(plan);
+            case NormalActionKinds.ReturnToMainMenu:
+                return RevalidateSaveOnMainThread(plan) ?? MainMenuIdleBlocker();
             case NormalActionKinds.Save:
                 return RevalidateSaveOnMainThread(plan);
             case NormalActionKinds.ConfigureBuilding:
@@ -1597,6 +1607,15 @@ internal sealed partial class NormalGameActionCoordinator
             BeforeTargetAmount = action.BeforeTargetAmount,
             AfterTargetAmount = action.AfterTargetAmount,
             UpgradeReadback = action.UpgradeReadback,
+            MainMenuReturnReadback = action.MainMenuReturn is { } menu ? new MainMenuReturnReadback
+            {
+                NormalSaveConfirmed = menu.Readback.NormalSaveConfirmed,
+                SavedGameTick = menu.Readback.SavedGameTick,
+                CompleteSaveVerified = menu.Readback.CompleteSaveVerified,
+                NativeEndRequested = menu.Readback.NativeEndRequested,
+                MainMenuVerified = menu.Readback.MainMenuVerified,
+                FailedPredicate = menu.Readback.FailedPredicate,
+            } : null,
             ResearchQueueReadback = action.ResearchQueueReadback,
             StorageConfigurationReadback = action.StorageConfigurationReadback,
             MechaWarperSupplyReadback = action.MechaWarperSupplyReadback,

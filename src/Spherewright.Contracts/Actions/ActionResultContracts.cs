@@ -59,6 +59,7 @@ public sealed class ActionResultSnapshot
     public List<ActionItemDelta> ItemDeltas { get; set; } = new List<ActionItemDelta>();
 
     public UpgradeReadback? UpgradeReadback { get; set; }
+    public MainMenuReturnReadback? MainMenuReturnReadback { get; set; }
     public ResearchQueueReadback? ResearchQueueReadback { get; set; }
     public StorageConfigurationReadback? StorageConfigurationReadback { get; set; }
     public MechaWarperSupplyReadback? MechaWarperSupplyReadback { get; set; }
@@ -97,4 +98,14 @@ public sealed class ActionResultSnapshot
     public double? OrthogonalProbeDistanceMeters { get; set; }
 
     public int? MaximumOrthogonalProbeAttempts { get; set; }
+}
+
+public sealed class MainMenuReturnReadback
+{
+    public bool NormalSaveConfirmed { get; set; }
+    public long? SavedGameTick { get; set; }
+    public bool CompleteSaveVerified { get; set; }
+    public bool NativeEndRequested { get; set; }
+    public bool MainMenuVerified { get; set; }
+    public string? FailedPredicate { get; set; }
 }

@@ -33,7 +33,7 @@ internal sealed partial class NormalGameActionCoordinator
                 "Return to the planned planet and prepare a fresh action.");
         }
 
-        var commitBlockers = plan.ActionKind == NormalActionKinds.Save && plan.SavePreservation is not null
+        var commitBlockers = NormalActionKinds.IsSaveLifecycle(plan.ActionKind) && plan.SavePreservation is not null
             ? plan.SavePreservation.RemainingBlockers(session.WriteBlockers) : session.WriteBlockers;
         commitBlockers = VoyagerReturnOnlyRecoveryPolicy.ActionBlockers(commitBlockers, plan.ActionKind,
             plan.VoyagerReturnLeg && plan.VoyagerBudget is not null);
