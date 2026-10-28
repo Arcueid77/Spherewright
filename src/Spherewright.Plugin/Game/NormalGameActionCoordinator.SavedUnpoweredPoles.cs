@@ -9,7 +9,7 @@ internal sealed partial class NormalGameActionCoordinator
     // their original paid receipts and the whole zero-source power graph; this
     // does not admit wind generators, batteries, belts or powered production.
     private bool TryBindSavedUnpoweredPoles(Player player, PlanetFactory factory, string? journeyId,
-        out HashSet<int> ids)
+        out HashSet<int> ids, bool requireUnpoweredGraph = true)
     {
         ids = new HashSet<int>();
         if (!_blueprints.TryRead(out var builds)) return false;
@@ -40,6 +40,7 @@ internal sealed partial class NormalGameActionCoordinator
                 || !StructuredEntityMatches(factory, id, b, b.Site.Objects[0])
                 || !StructuredConnectionsMatch(factory, b)) return false;
         }
+        if (!requireUnpoweredGraph) return true; // Caller separately proves every known wind/node/network.
         var power = factory.powerSystem;
         if (power?.nodePool is null || power.netPool is null || power.genCursor != 1
             || power.nodeCursor != ids.Count + 1 || power.nodeCursor > power.nodePool.Length

@@ -31,7 +31,7 @@ internal sealed class PlanetFactory
     internal object cargoContainer = new();
     internal bool TestGeometryMatches = true, TestConnectionsMatch = true;
 }
-internal struct TestEntity { internal int id, protoId, minerId, powerConId, powerNodeId, stationId, beltId; }
+internal struct TestEntity { internal int id, protoId, minerId, powerConId, powerNodeId, powerGenId, stationId, beltId; }
 internal struct TestPrebuild { internal int id; }
 internal sealed class TestFactorySystem { internal int minerCursor = 2; internal TestMiner[] minerPool = new TestMiner[4]; }
 internal struct TestMiner { internal int id, entityId, pcId, productId, productCount; }
@@ -40,9 +40,11 @@ internal sealed class TestPowerSystem
     internal int consumerCursor = 2, netCursor = 1, nodeCursor = 1, genCursor = 1;
     internal TestConsumer[] consumerPool = new TestConsumer[4];
     internal TestPowerNode[] nodePool = new TestPowerNode[4];
+    internal TestGenerator[] genPool = new TestGenerator[4];
     internal TestPowerNet?[] netPool = new TestPowerNet?[4];
 }
 internal struct TestPowerNode { internal int id, entityId; }
+internal struct TestGenerator { internal int id, entityId; internal bool wind; }
 internal sealed class TestPowerNet
 {
     internal List<TestNetworkNode> nodes = [];
@@ -83,7 +85,11 @@ internal sealed class TestCargoPath
     internal byte[] buffer = [];
     internal object cargoContainer = null!;
     internal BeltPathExportSnapshot Snapshot = null!;
+    internal TestCargo Cargo = new() { item = 1013, stack = 1 };
+    internal bool GetCargoAtIndex(int cell, out TestCargo cargo, out int id, out int offset)
+    { cargo = Cargo; id = 0; offset = 0; return cell >= 0; }
 }
+internal struct TestCargo { internal int item, stack, inc; }
 // The Native Export/geometry adapter is substituted; the linked production
 // whole-path membership/cargo policy and durable recovery predicate run below.
 internal static class NativeBeltPathCapture

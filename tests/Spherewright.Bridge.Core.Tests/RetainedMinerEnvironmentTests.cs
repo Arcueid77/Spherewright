@@ -197,6 +197,36 @@ public sealed class RetainedMinerEnvironmentTests
         Assert.Equal(Blocker, f.Guard());
     }
 
+    [Fact]
+    public void SealedTwoWindSourceCanRetainOnlyItsRealMinedStockAndCargoWithoutWritingReceipts()
+    {
+        using var f = new Fixture(); f.AddPole(); f.AddStationAndBelt(12); f.AddWinds();
+        var before = File.ReadAllBytes(f.Path);
+        Assert.Null(f.Guard()); Assert.Equal(before, File.ReadAllBytes(f.Path));
+    }
+
+    [Theory]
+    [InlineData("foreign_cargo")] [InlineData("proliferated_cargo")] [InlineData("foreign_generator")]
+    [InlineData("battery")] [InlineData("stored_energy")] [InlineData("foreign_node")]
+    [InlineData("overstock")] [InlineData("one_wind")] [InlineData("unknown_entity")]
+    public void RunningRecoveryDoesNotAdmitOtherStockPowerSourcesOrUnaccountedObjects(string fault)
+    {
+        using var f = new Fixture(); f.AddPole(); f.AddStationAndBelt(12); f.AddWinds();
+        switch (fault)
+        {
+            case "foreign_cargo": f.Factory.cargoTraffic.pathPool[1]!.Cargo.item = 1001; break;
+            case "proliferated_cargo": f.Factory.cargoTraffic.pathPool[1]!.Cargo.inc = 1; break;
+            case "foreign_generator": f.Factory.powerSystem.genPool[1].wind = false; break;
+            case "battery": f.Factory.powerSystem.netPool[1]!.accumulators.Add(1); break;
+            case "stored_energy": f.Factory.powerSystem.netPool[1]!.energyStored = 1; break;
+            case "foreign_node": f.Factory.powerSystem.netPool[1]!.nodes.Add(new() { id = 9 }); break;
+            case "overstock": f.Factory.transport.stationPool[1]!.storage[0].count = 101; break;
+            case "one_wind": f.Factory.entityPool[f.Factory.entityCursor-1].protoId = 2201; break;
+            case "unknown_entity": f.Factory.entityCount++; break;
+        }
+        Assert.Equal(Blocker, f.Guard());
+    }
+
     private sealed class Fixture : IDisposable
     {
         private readonly string root = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "Spherewright", "retained-miner", Guid.NewGuid().ToString("N"));
@@ -281,11 +311,31 @@ public sealed class RetainedMinerEnvironmentTests
             }).ToList();
             Seal(2001, "belt", ids, connections, originalEnabled: originalEnabled, prior: prior, sourceId: 1, destinationId: stationId);
         }
+        internal void AddWinds()
+        {
+            var older = new List<int>();
+            for (var i = 0; i < 2; i++)
+            {
+                var id = Factory.entityCursor++; Factory.entityCount++;
+                var power = Factory.powerSystem; var node = power.nodeCursor++; var gen = power.genCursor++;
+                Factory.entityPool[id] = new() { id = id, protoId = 2203, powerNodeId = node, powerGenId = gen };
+                power.nodePool[node] = new() { id = node, entityId = id };
+                power.genPool[gen] = new() { id = gen, entityId = id, wind = true };
+                power.netPool[1]!.nodes.Add(new() { id = node, genId = gen }); power.netPool[1]!.generators.Add(gen);
+                Seal(2203, "core", [id], [new()], originalEnabled: true, prior: older.ToArray()); older.Add(id);
+            }
+            Factory.transport.stationPool[1]!.storage[0].count = 16;
+            var path = Factory.cargoTraffic.pathPool[1]!;
+            for (var i = 0; i < 5; i++) path.Snapshot.CargoBuffer[20+i] = (byte)(246+i);
+            for (var i = 5; i < 9; i++) path.Snapshot.CargoBuffer[20+i] = 1;
+            path.Snapshot.CargoBuffer[29] = 255;
+            Factory.factorySystem.minerPool[1].productId = 1013;
+        }
         private void Seal(int item, string kind, int[] ids, List<StructuredConstructionConnection> connections,
             bool originalEnabled, string stopReason = "construction_complete_draining", int[]? prior = null,
             int sourceId = 0, int destinationId = 0)
         {
-            var offset = item == 2001 ? 100 : 0;
+            var offset = item == 2001 ? 100 : item == 2203 ? (int)GameMain.gameTick : 0;
             var site = new BlueprintSiteSnapshot { SessionId = "synthetic-session", PlanetId = 201, CapturedAtGameTick = 100 + offset,
                 BlueprintHash = "synthetic-native-paid", NativeCheckPerformed = true, NativeCheckPassed = true,
                 InventorySufficient = true, TechnologySatisfied = true, NativeBlueprintObjectLimit = item == 2001 ? 12 : 8,
