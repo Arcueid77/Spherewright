@@ -121,7 +121,7 @@ internal sealed partial class NormalGameActionCoordinator
         var beltIds = new HashSet<int>(belt.Objects.Select(o => o.EntityId!.Value));
         var inputPorts = station!.slots.Where(s => s.beltId != 0).ToArray();
         if (!Require("saved_belt_chain_one_empty_input_port", inputPorts.Length == 1 && inputPorts[0].dir == IODir.Input
-                && inputPorts[0].counter == 0 && inputPorts[0].storageIdx == 0
+                && inputPorts[0].counter == 0 && (inputPorts[0].storageIdx == 0 || running && inputPorts[0].storageIdx == 1)
                 && station.slots.Where(s => s.beltId == 0).All(s => s.dir == IODir.None && s.counter == 0 && s.storageIdx == 0)
                 && beltIds.Any(id => factory.entityPool[id].beltId == inputPorts[0].beltId))) return false;
         return Require("saved_belt_chain_complete_known_cargo_paths", SavedBeltPathsEmpty(factory, beltIds, running));

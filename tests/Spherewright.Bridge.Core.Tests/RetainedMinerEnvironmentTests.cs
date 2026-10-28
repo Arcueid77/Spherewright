@@ -327,6 +327,9 @@ public sealed class RetainedMinerEnvironmentTests
                 Seal(2203, "core", [id], [new()], originalEnabled: true, prior: []); older.Add(id);
             }
             Factory.transport.stationPool[1]!.storage[0].count = 16;
+            // Native Input caches its matching storage as one-based index1
+            // after routing the first item; this is not an Output selector.
+            Factory.transport.stationPool[1]!.slots[8].storageIdx = 1;
             var path = Factory.cargoTraffic.pathPool[1]!;
             for (var i = 0; i < 5; i++) path.Snapshot.CargoBuffer[20+i] = (byte)(246+i);
             for (var i = 5; i < 9; i++) path.Snapshot.CargoBuffer[20+i] = 1;
