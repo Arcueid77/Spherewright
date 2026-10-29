@@ -2,6 +2,8 @@
 
 [English](AGENTS.md) · [简体中文](AGENTS.zh-CN.md)
 
+生命周期、调用端与验证方面的重复陷阱见[开发经验与避坑](docs/development-lessons.zh-CN.md)。这是工程参考，不新增审批门或执行权限。
+
 Spherewright 是 Plugin / MCP / Contracts / Bridge.Core 强版本耦合 monorepo。按需阅读[产品状态](docs/project-status.zh-CN.md)、[文档](docs/README.zh-CN.md)、[路线图](ROADMAP.zh-CN.md)、[架构](docs/architecture.zh-CN.md)、[协议](docs/protocol.zh-CN.md)和[安全](docs/safety-model.zh-CN.md)。不要把完整历史运行账本加载进模型上下文。
 
 - 通用能力、通用测试、打包安装脚本、协议、安全、用户指南及简明逐版本验收留在本仓。四个源码项目保持一起。

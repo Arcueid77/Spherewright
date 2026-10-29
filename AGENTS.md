@@ -20,3 +20,5 @@ Spherewright is the version-coupled Plugin / MCP / Contracts / Bridge.Core monor
 - Claude Code model names and API/base URLs are intentional user-managed settings. Do not alter them. Non-interactive calls must stream output; `claude-code:unrecognized_model` alone is nonterminal and does not justify retry or reconfiguration.
 
 See [Lab validation](docs/sample-validation.md), [v0.4 summary](docs/validation/v0.4.0.md), [installation](docs/release-installation.md) and [playbook](docs/agent-playbook.md).
+
+For recurring lifecycle, caller and validation pitfalls, see [development lessons](docs/development-lessons.md). This engineering reference adds no approval gate or execution authority.

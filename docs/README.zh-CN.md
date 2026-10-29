@@ -18,6 +18,7 @@
 | 安全 | [Safety model](safety-model.md) | [安全模型](safety-model.zh-CN.md) |
 | 贡献 | [Policy](../CONTRIBUTING.md) | [贡献政策](../CONTRIBUTING.zh-CN.md) |
 | Agent 贡献者 | [Rules](../AGENTS.md) | [协作规则](../AGENTS.zh-CN.md) |
+| 开发经验与常见陷阱 | [Lessons](development-lessons.md) | [经验与避坑](development-lessons.zh-CN.md) |
 | 已批准的版本方向 | [Roadmap](../ROADMAP.md) | [路线图](../ROADMAP.zh-CN.md) |
 | 变更 | [Changelog](../CHANGELOG.md) | [变更记录](../CHANGELOG.zh-CN.md) |
 

@@ -18,6 +18,7 @@ Maintained guides have equivalent English and Simplified Chinese editions. Open 
 | Safety | [Safety model](safety-model.md) | [安全模型](safety-model.zh-CN.md) |
 | Contributions | [Policy](../CONTRIBUTING.md) | [贡献政策](../CONTRIBUTING.zh-CN.md) |
 | Agent contributors | [Rules](../AGENTS.md) | [协作规则](../AGENTS.zh-CN.md) |
+| Development lessons and common pitfalls | [Lessons](development-lessons.md) | [经验与避坑](development-lessons.zh-CN.md) |
 | Approved version direction | [Roadmap](../ROADMAP.md) | [路线图](../ROADMAP.zh-CN.md) |
 | Changes | [Changelog](../CHANGELOG.md) | [变更记录](../CHANGELOG.zh-CN.md) |
 
