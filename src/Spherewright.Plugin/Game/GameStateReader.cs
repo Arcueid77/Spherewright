@@ -716,6 +716,8 @@ internal sealed partial class GameStateReader
                 snapshot.BeltCargo = CaptureBeltCargo(factory, request.ObjectId);
             if (snapshot?.ComponentKind == "power-generator")
                 snapshot.FuelPowerState = CaptureFuelPowerState(factory, request.ObjectId);
+            if (snapshot is not null && factory.entityPool[request.ObjectId].ejectorId > 0)
+                snapshot.Ejector = CaptureEjectorState(factory, snapshot);
             if (allowCurrentStarRemoteReadOnly && snapshot?.LogisticsStation is not null)
                 snapshot.LogisticsStation.ActiveVessels = CaptureActiveLogisticsVessels(factory, request.ObjectId);
         }
@@ -3769,6 +3771,7 @@ internal sealed partial class GameStateReader
         if (entity.minerId > 0) return "miner";
         if (entity.assemblerId > 0) return "assembler";
         if (entity.labId > 0) return "lab";
+        if (entity.ejectorId > 0) return "ejector";
         if (entity.inserterId > 0) return "inserter";
         if (entity.beltId > 0) return "belt";
         if (entity.storageId > 0) return "storage";
@@ -3788,6 +3791,7 @@ internal sealed partial class GameStateReader
         if (descriptor is null) return "other";
         if (descriptor.veinMiner || descriptor.oilMiner || descriptor.minerType != EMinerType.None) return "miner";
         if (descriptor.isLab) return "lab";
+        if (descriptor.isEjector) return "ejector";
         if (descriptor.isAssembler) return "assembler";
         if (descriptor.isInserter) return "inserter";
         if (descriptor.isBelt) return "belt";
@@ -4229,6 +4233,7 @@ internal sealed partial class GameStateReader
 
     private static string? GetBasicLineRole(PrefabDesc descriptor)
     {
+        if (descriptor.isEjector) return "ejector";
         if (descriptor.minerType == EMinerType.Water)
         {
             return "water-pump";

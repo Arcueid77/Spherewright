@@ -2167,6 +2167,10 @@ internal sealed partial class NormalGameActionCoordinator
             return GameCallResult<PreparedNormalAction>.Failed(common.Error);
         }
 
+        if (request.Mode == BuildingConfigurationModes.EjectorOrbit)
+            return PrepareEjectorOrbitOnMainThread(requestedSessionId, request, common.Session!);
+        if (request.EjectorOrbitId != -1)
+            return InvalidPlan("Ejector orbit parameters require ejector-orbit mode.");
         if (request.Mode == BuildingConfigurationModes.StorageCapacity)
             return PrepareStorageConfigurationOnMainThread(requestedSessionId, request, common.Session!);
         if (!string.IsNullOrEmpty(request.StorageOperation) || request.StorageBannedGridCount != -1)

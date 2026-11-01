@@ -884,6 +884,8 @@ internal sealed partial class NormalGameActionCoordinator
                         && !IsLogisticsStationStorageConfigurationApplied(configured.Value, plan))
                     || (plan.ConfigureMode == BuildingConfigurationModes.LogisticsStationBelt
                         && !IsLogisticsStationBeltConfigurationApplied(configured.Value, plan))
+                    || (plan.ConfigureMode == BuildingConfigurationModes.EjectorOrbit
+                        && !IsEjectorOrbitApplied(configured.Value, plan))
                     || (plan.ConfigureMode == BuildingConfigurationModes.LogisticsStationCharge
                         && !IsLogisticsStationChargeConfigurationApplied(configured.Value, plan)))
                 {
@@ -900,8 +902,12 @@ internal sealed partial class NormalGameActionCoordinator
                             ? "The current-version station UI field path selected the configured item for the exact output port; immediate topology and inventory readback matched."
                         : plan.ConfigureMode == BuildingConfigurationModes.LogisticsStationCharge
                             ? "The current-version station UI field path applied the maximum charge power once; immediate power-consumer readback matched and station/player inventory remained unchanged."
+                        : plan.ConfigureMode == BuildingConfigurationModes.EjectorOrbit
+                            ? "Native EjectorComponent.SetOrbit selected the exact fixed orbit once; stock was preserved and immediate readback matched. This setting is not a launch receipt."
                         : "The current-version device configuration path applied the unlocked recipe and readback matched.");
-                action.AfterStateHash = plan.ConfigureMode == BuildingConfigurationModes.LogisticsStationStorage
+                action.AfterStateHash = plan.ConfigureMode == BuildingConfigurationModes.EjectorOrbit
+                    ? configured.Value.Ejector?.ConfigurationStateHash
+                    : plan.ConfigureMode == BuildingConfigurationModes.LogisticsStationStorage
                                         || plan.ConfigureMode == BuildingConfigurationModes.LogisticsStationBelt
                                         || plan.ConfigureMode == BuildingConfigurationModes.LogisticsStationCharge
                     ? configured.Value.LogisticsStation?.ConfigurationStateHash
@@ -1347,6 +1353,8 @@ internal sealed partial class NormalGameActionCoordinator
             case NormalActionKinds.ConfigureBuilding:
                 if (plan.ConfigureMode == BuildingConfigurationModes.StorageCapacity)
                     return RevalidateStorageConfigurationOnMainThread(plan);
+                if (plan.ConfigureMode == BuildingConfigurationModes.EjectorOrbit)
+                    return RevalidateEjectorOrbitOnMainThread(plan);
                 var configureSnapshot = _reader.InspectFactoryEntityOnMainThread(
                     plan.SessionId,
                     new InspectFactoryEntityRequest { PlanetId = plan.PlanetId, ObjectId = plan.EntityId });
@@ -2002,6 +2010,11 @@ internal sealed partial class NormalGameActionCoordinator
 
     private void ApplyBuildingConfigurationOnMainThread(NormalActionPlanPayload plan)
     {
+        if (plan.ConfigureMode == BuildingConfigurationModes.EjectorOrbit)
+        {
+            ApplyEjectorOrbitOnMainThread(plan);
+            return;
+        }
         var factory = GameMain.localPlanet?.factory
             ?? throw new InvalidOperationException("The local factory is unavailable.");
         ref var entity = ref factory.entityPool[plan.EntityId];
@@ -2592,6 +2605,21 @@ internal sealed partial class NormalGameActionCoordinator
                 BuildRotation = rotation,
                 BuildYaw = yaw,
             };
+
+        public int ConfigureEjectorOrbitId { get; private set; } = -1;
+        public int ConfigureEjectorStarId { get; private set; }
+        public string ConfigureEjectorOrbitStateHash { get; private set; } = string.Empty;
+
+        public static NormalActionPlanPayload EjectorOrbit(string sessionId, int planetId, int entityId,
+            string expectedStateHash, EjectorOrbitPlanSnapshot configuration) => new NormalActionPlanPayload
+        {
+            ActionKind = NormalActionKinds.ConfigureBuilding, SessionId = sessionId, PlanetId = planetId,
+            EntityId = entityId, ExpectedStateHash = expectedStateHash,
+            FactoryStateHash = configuration.ConfigurationStateHash,
+            ConfigureMode = BuildingConfigurationModes.EjectorOrbit,
+            ConfigureEjectorOrbitId = configuration.OrbitId, ConfigureEjectorStarId = configuration.StarId,
+            ConfigureEjectorOrbitStateHash = configuration.OrbitStateHash,
+        };
 
         public static NormalActionPlanPayload Configure(
             string sessionId,

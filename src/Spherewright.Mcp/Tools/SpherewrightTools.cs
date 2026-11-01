@@ -435,6 +435,7 @@ public static partial class SpherewrightTools
         int recipeId,
         [Description("For mode=sorter-filter use the inspected root configurationStateHash, NOT stateHash, despite this parameter's name. For mode=storage-capacity use the full stateHash. Follow the documented hash domain for each other mode.")]
         string expectedFactoryStateHash,
+        [Description("production, research, sorter-filter, storage-capacity, logistics-station-storage, logistics-station-belt, logistics-station-charge, or ejector-orbit. For ejector-orbit use recipeId=0, ejectorOrbitId and the detail ejector.configurationStateHash; leave the other mode parameters at defaults.")]
         string mode = BuildingConfigurationModes.Production,
         int techId = 0,
         int filterItemId = 0,
@@ -450,11 +451,11 @@ public static partial class SpherewrightTools
         int stateHashVersion = 1,
         string storageOperation = "",
         int storageBannedGridCount = -1,
+        [Description("Only mode=ejector-orbit: use an inspected fixed-mode2311 ejector, recipeId=0 and expectedFactoryStateHash=ejector.configurationStateHash. Select one enabled native orbit ID, or0 to stop fixed targeting. Leave all other mode parameters at defaults. The Plugin confirms plannedEjectorOrbit; configuration consumes no sails and is not launch proof. Native supply/power/line of sight still determine actual automatic firing.")]
+        int ejectorOrbitId = -1,
         CancellationToken cancellationToken = default)
     {
-        var result = await bridgeClient.PrepareConfigureBuildingAsync(
-            sessionId,
-            new PrepareConfigureBuildingRequest
+        var request = new PrepareConfigureBuildingRequest
             {
                 PlanetId = planetId,
                 EntityId = entityId,
@@ -464,6 +465,7 @@ public static partial class SpherewrightTools
                 FilterItemId = filterItemId,
                 StorageOperation = storageOperation,
                 StorageBannedGridCount = storageBannedGridCount,
+                EjectorOrbitId = ejectorOrbitId,
                 StationStorageIndex = stationStorageIndex,
                 StationBeltSlotIndex = stationBeltSlotIndex,
                 StationBeltStorageIndex = stationBeltStorageIndex,
@@ -475,8 +477,8 @@ public static partial class SpherewrightTools
                 ExpectedStationConfigurationStateHash = expectedStationConfigurationStateHash,
                 ExpectedFactoryStateHash = expectedFactoryStateHash,
                 StateHashVersion = stateHashVersion,
-            },
-            cancellationToken).ConfigureAwait(false);
+            };
+        var result = await bridgeClient.PrepareConfigureBuildingAsync(sessionId, request, cancellationToken).ConfigureAwait(false);
         if (mode == BuildingConfigurationModes.StorageCapacity && result.Success
             && (result.Value?.PlannedStorageOperation != storageOperation
                 || result.Value?.PlannedStorageConfiguration is null))
@@ -484,6 +486,12 @@ public static partial class SpherewrightTools
                 BridgeErrorCodes.BridgeNotReady,
                 "The Plugin did not confirm the storage UI operation and expected configuration; no token is exposed.",
                 false, "Install a matching Plugin/MCP cohort, then fresh-read and prepare again."));
+        if (mode == BuildingConfigurationModes.EjectorOrbit && result.Success
+            && !Spherewright.Bridge.Core.Factory.EjectorOrbitConfigurationPolicy.ConfirmsPreparedEcho(request, result.Value))
+            result = BridgeCallResult<PreparedNormalAction>.Failed(BridgeError.Create(
+                BridgeErrorCodes.BridgeNotReady,
+                "The Plugin did not confirm the exact native ejector orbit plan; no token is exposed.",
+                false, "Install a matching Plugin/MCP cohort, then fresh-inspect and prepare again."));
         return ToToolResult(result, "Device configuration plan prepared; device and station inventory state are unchanged.");
     }
 

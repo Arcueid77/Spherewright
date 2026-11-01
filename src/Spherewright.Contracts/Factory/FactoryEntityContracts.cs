@@ -100,6 +100,10 @@ public sealed class FactoryEntitySnapshot
     // fuelEnergy is residual loaded heat, never an extra count of fuel items.
     public FuelPowerStateSnapshot? FuelPowerState { get; set; }
 
+    // Detail-only native ejector/swarm observations. Null remains unobserved.
+    // Excluded from the existing factory hashes; configuration has its own domain.
+    public EjectorStateSnapshot? Ejector { get; set; }
+
     public List<FactoryConnectionSnapshot> Connections { get; set; } = new List<FactoryConnectionSnapshot>();
 
     public List<FactoryBufferSnapshot> Buffers { get; set; } = new List<FactoryBufferSnapshot>();

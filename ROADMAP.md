@@ -149,6 +149,8 @@ The accepted candidate retains separate mid-plan three-stage and whole-kit recov
 
 ## 0.5.0 — Voyager
 
+**Current scope, 2026-11-01:** the original three Voyager clauses are closed at their recorded source scopes. The owner has extended 0.5 to the first normally manufactured and actually launched solar sail, with a plan followed by autonomous bounded execution and minimal repeated approval. Reuse ordinary manufacturing, construction, supply and power; add exact ejector/swarm observation and the smallest native orbit-setting path. Acceptance requires actual manufacturing conservation, attributed native launch/arrival evidence and normal save/recovery. Current results and the rolling plan belong to the [Lab first-sail extension](https://github.com/Arcueid77/Spherewright-Lab/blob/main/scenarios/v0.5-voyager/first-sail-extension.md). Existing resource limits and formal-publication gates remain. Rockets, structural Dyson design and long-route generalization are outside this slice. The following pre-runtime checkpoint paragraphs retain their historical scope.
+
 At this pre-runtime documentation checkpoint, status is **active development**, started by the owner's 2026-10-19 instruction; moved intact from former `0.7.0`. Historical Voyager gates 1 and 3 have passed on their distinct sources (**2/3**); sustained logistics and final release-review candidates remain open. The capability/gap table below records this checkpoint; latest installation and final qualification follow the Lab active evidence.
 
 ### Goal and scope
@@ -178,6 +180,8 @@ After protected recovery is proven, use a controlled recoverable native failure 
 Detailed scenario evidence and the active snapshot belong in [Spherewright-Lab Voyager](https://github.com/Arcueid77/Spherewright-Lab/tree/main/scenarios/v0.5-voyager); general capabilities, protocol, playbook and user guides stay here. New public Voyager capabilities use the `0.5` development version while retaining `0.4` protocol compatibility; the historical 64-tool count is not a feature ceiling. Final manual and Thunderstore-layout candidates must share one clean pushed source SHA, complete prescribed build/regression/package/schema/install/save-recovery checks and all three gates, and be presented for owner review with hashes. Keep the candidate source SHA distinct from later evidence-only SHAs. Creating a `0.5` tag, Release or Thunderstore upload still requires separate approval.
 
 ## 0.6.0 — Ascension
+
+The narrow first-sail slice was brought forward into 0.5 by the owner's 2026-11-01 direction. Reuse its qualified evidence when available; 0.6 retains rockets, Dyson node/frame/shell design, sustained receiver power and the remaining gates below.
 
 Status: **planned**, moved intact from former `0.8.0`.
 

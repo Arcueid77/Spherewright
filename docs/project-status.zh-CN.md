@@ -2,6 +2,8 @@
 
 [English](project-status.md) · [简体中文](project-status.zh-CN.md)
 
+**当前指令（2026-11-01）：0.5首帆扩展。** 原Voyager三项验收全部闭合，同源交审双包保留于Lab。所有者新增正常制造并真实发射第一张太阳帆目标，先列方案后自主有限推进。弹射器/云检查和普通固定轨道配置正在开发；源码测试/构建不代表实装发射或新增验收。当前源码/安装/运行态及进度以[唯一Lab快照](https://github.com/Arcueid77/Spherewright-Lab/blob/main/scenarios/v0.5-voyager/current-status.md)为准。下方截点段落均保留历史范围。
+
 **活动阶段（2026-10-19）：`0.5.0` Voyager 开发。** 所有者阶段启动指令保留且仅保留三项验收：正常跨恒星安全往返，带回出发星系有合法证据缺失的资源；至少一条持续跨恒星物流路线；一次可恢复飞行失败及其精确 checkpoint 恢复，且不回滚较新 primary 进度。历史实机验收为 **2/3**：往返在源码 `463fc888b1e4cf4a90e08cb1022d2b8896447700` 通过，可控失败/精确恢复及较新主档保护在源码 `216f4075e983d78fa4d4f5d222bdd279813e1d86` 通过。实际安装态独立记录于 Lab 活动快照，上述恢复组件组仅保留原历史证据范围；持续物流与最终同源手动/Thunderstore 双候选仍开放。详见[范围与能力/缺口表](../ROADMAP.zh-CN.md#050--voyager)；此后最新安装及最终资格以 [Lab 活动快照](https://github.com/Arcueid77/Spherewright-Lab/blob/main/scenarios/v0.5-voyager/current-status.md)为准。
 
 当前回主界面源码切片新增两个公开MCP工具（74工具/1资源）：先普通保存并核验完整当前owned文件，再走原生Esc菜单EndGame，实际观察闲置菜单后才成功，保留进程及原动作/幂等结果。不新增普通暂停/继续或任意选档。准确源码CI、同源实装及真实同进程保存恢复仍分别待验；历史Voyager2/3及最终双包仍开放。

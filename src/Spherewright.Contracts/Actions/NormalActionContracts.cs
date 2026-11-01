@@ -65,6 +65,7 @@ public static class BuildingConfigurationModes
     public const string LogisticsStationStorage = "logistics-station-storage";
     public const string LogisticsStationBelt = "logistics-station-belt";
     public const string LogisticsStationCharge = "logistics-station-charge";
+    public const string EjectorOrbit = "ejector-orbit";
 }
 
 public static class StorageConfigurationOperations
@@ -237,6 +238,9 @@ public sealed class PrepareConfigureBuildingRequest
 
     public string ExpectedStationConfigurationStateHash { get; set; } = string.Empty;
 
+    // Only ejector-orbit mode: -1 is unspecified; 0 stops orbit targeting.
+    public int EjectorOrbitId { get; set; } = -1;
+
     public string ExpectedFactoryStateHash { get; set; } = string.Empty;
 
     public int StateHashVersion { get; set; } = 1;
@@ -371,6 +375,7 @@ public sealed class PreparedNormalAction
     public string? PlannedStorageOperation { get; set; }
 
     public StorageConfigurationSnapshot? PlannedStorageConfiguration { get; set; }
+    public EjectorOrbitPlanSnapshot? PlannedEjectorOrbit { get; set; }
 
     public BlueprintBuildProgress? BlueprintBuild { get; set; }
     public bool Prepared { get; set; }

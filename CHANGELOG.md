@@ -2,12 +2,21 @@
 
 [English](CHANGELOG.md) · [简体中文](CHANGELOG.zh-CN.md)
 
-## 0.4.0 — accepted candidate, unpublished
+## 0.5.0 — accepted Voyager baseline; first-sail extension in development
+
+- Cross-star travel, ordinary warper supply, bounded remote construction and active-vessel observations extend the original industrial foundation.
+- The original Voyager clauses are accepted at their recorded sources, including real remote mining, three delivery cycles, home consumption and save/recovery continuation. The accepted source is on main; baseline review archives remain immutable in Lab.
+- Owner direction of 2026-11-01 adds the first normally manufactured and actually launched solar sail. Ejector/swarm detail inspection and fixed-orbit configuration are under development; source checks are separate from installation and live launch evidence.
+- Existing construction bounds remain, including the twelve-new-belt remote batch subset. Rockets and Dyson structural design remain in 0.6. No 0.5 tag, Release or registry upload is implied by this entry.
+
+See [current product scope](docs/project-status.md), [native first-sail research](docs/research/game-api-first-sail.md) and the [Lab active snapshot](https://github.com/Arcueid77/Spherewright-Lab/blob/main/scenarios/v0.5-voyager/current-status.md).
+
+## 0.4.0 — GitHub release; historical candidate details
 
 - Bounded Overseer diagnosis; Foundry recipe/material/site/base-power planning and native construction.
 - Finite blueprint progress, cancellation and fresh continuation; Governor pre-execution declarations and measured game-tick observations.
 - Matching MCP/Plugin surface, embedded and packaged playbook, durable Journal-bound owned-primary recovery and disclosed exact-version migration.
-- Frozen manual and Thunderstore-layout candidates passed their declared local installation, runtime, recovery and continuous-supply acceptance. Publication awaits owner review.
+- Frozen manual and Thunderstore-layout candidates passed their declared local installation, runtime, recovery and continuous-supply acceptance. GitHub v0.4.0 was subsequently published; Thunderstore website-upload verification remains separate.
 - Compatibility candidate for `0.10.35.29151`: exact expired-primary `29145→29151`, fifth durable Journal transition and completed-history retention; [offline evidence and pending live checks](docs/validation/native-29151-preflight.md) remain separate from frozen acceptance.
 
 See [release notes](docs/release-notes/v0.4.0.md) and [validation](docs/validation/v0.4.0.md). Later documentation maintenance does not replace frozen candidate bytes.
