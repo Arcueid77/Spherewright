@@ -21,12 +21,23 @@ public sealed class VoyagerActiveMoveGroundGapFacts
     public double? CoreEnergyJoules { get; set; }
     public double? PerNativeTickEnergyJoules { get; set; }
     public VoyagerLocalActionBudgetFacts? OriginalJourney { get; set; }
+    public double StopWallPatienceSeconds { get; set; } = 1d;
 }
 
 // In-memory sequence only; neither a renewed action nor recovery authority.
 public sealed class VoyagerActiveMoveGroundGapPolicy
 {
     public const int MaximumGapWorkGameTicks = 8;
+    public const double MaximumStopWallPatienceSeconds = 5d;
+    // Native logic ticks and Unity's scheduling/physics cadence need not run
+    // at60 wall frames/s. This is bounded patience for the SAME13 paid ticks.
+    public static double? StopWallPatience(double nativeFixedDeltaSeconds)
+    {
+        if (!Finite(nativeFixedDeltaSeconds) || nativeFixedDeltaSeconds <= 0 || nativeFixedDeltaSeconds > .25d) return null;
+        if (nativeFixedDeltaSeconds <= 1d / 60d + .000001d) return 1d;
+        return Math.Min(MaximumStopWallPatienceSeconds,
+            1d + Math.Ceiling(VoyagerLocalWalkReservePolicy.StopGameTicks * nativeFixedDeltaSeconds));
+    }
     public long LastObservedGameTick { get; private set; }
     public long? GapStartedGameTick { get; private set; }
     public bool StopLatched { get; private set; }
@@ -60,7 +71,7 @@ public sealed class VoyagerActiveMoveGroundGapPolicy
         GapStartedGameTick ??= tick;
         if (tick - GapStartedGameTick.Value >= MaximumGapWorkGameTicks
             || !facts.OriginalWorkWindowOpen || !OriginalBudgetAllows(facts, 1,
-                VoyagerLocalWalkReservePolicy.StopGameTicks, 1d + 1d / 60d)
+                VoyagerLocalWalkReservePolicy.StopGameTicks, facts.StopWallPatienceSeconds + 1d / 60d)
             || !CanFund(facts, 1 + VoyagerLocalWalkReservePolicy.StopGameTicks))
         {
             LatchStop("voyager_move_ground_gap_work_ended");
@@ -106,7 +117,9 @@ public sealed class VoyagerActiveMoveGroundGapPolicy
             || !j.NativeWarperCount.HasValue || j.NativeWarperCount < 1 + j.OriginalExtraWarperReserve
             || workTicks < 0 || workTicks > 1 || tailTicks < 1 || tailTicks > VoyagerLocalWalkReservePolicy.StopGameTicks
             || j.NowUtc == default || j.JourneyDeadlineUtc == default || !Finite(requiredCleanupWallSeconds)
-            || requiredCleanupWallSeconds > 1d + 1d / 60d) return false;
+            || !Finite(f.StopWallPatienceSeconds) || f.StopWallPatienceSeconds < 1d
+            || f.StopWallPatienceSeconds > MaximumStopWallPatienceSeconds
+            || requiredCleanupWallSeconds > f.StopWallPatienceSeconds + 1d / 60d) return false;
         var ticks = (decimal)j.SpentGameTicks + j.CurrentGameTick - j.LastLandedGameTick.Value
             + workTicks + tailTicks + j.ReturnReserveGameTicks;
         return ticks <= j.MaximumGameTicks

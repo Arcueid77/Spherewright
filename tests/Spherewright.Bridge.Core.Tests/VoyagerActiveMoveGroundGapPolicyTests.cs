@@ -5,6 +5,35 @@ namespace Spherewright.Bridge.Core.Tests;
 
 public sealed class VoyagerActiveMoveGroundGapPolicyTests
 {
+    [Fact]
+    public void SlowNativeCadenceRetainsTheSameThirteenTicksPastTheOldOneSecondCutoff()
+    {
+        var patience = VoyagerActiveMoveGroundGapPolicy.StopWallPatience(.12427807599306107)!.Value;
+        Assert.Equal(3d, patience);
+        // Actual failure shape: only seven paid ticks elapsed at the old UTC
+        // cutoff. A larger wall patience grants none of the fourteenth tick.
+        Assert.False(VoyagerActiveMoveGroundGapPolicy.MustPauseBeforeCurrentTick(100, 107, Now, Now.AddSeconds(1.05), Now.AddSeconds(patience)));
+        Assert.True(VoyagerActiveMoveGroundGapPolicy.MustPauseBeforeCurrentTick(100, 112, Now, Now.AddSeconds(1.7), Now.AddSeconds(patience)));
+        Assert.True(VoyagerActiveMoveGroundGapPolicy.MustPauseBeforeCurrentTick(100, 107, Now, Now.AddSeconds(patience), Now.AddSeconds(patience)));
+        Assert.Equal(13, VoyagerLocalWalkReservePolicy.StopGameTicks);
+        Assert.Equal(8, VoyagerActiveMoveGroundGapPolicy.MaximumGapWorkGameTicks);
+    }
+
+    [Theory]
+    [InlineData(double.NaN)][InlineData(double.PositiveInfinity)][InlineData(-1d)][InlineData(0d)][InlineData(.251d)]
+    public void UnprovedNativeCadenceCannotSupplyStopPatience(double step)
+        => Assert.Null(VoyagerActiveMoveGroundGapPolicy.StopWallPatience(step));
+
+    [Fact]
+    public void NewWallPatienceStillRequiresTheOriginalReturnWallAndUnchangedTickBudget()
+    {
+        var f = Good(); f.StopWallPatienceSeconds = 3;
+        Assert.True(VoyagerActiveMoveGroundGapPolicy.OriginalBudgetAllows(f, 0, 13, 3));
+        f.OriginalJourney!.JourneyDeadlineUtc = f.OriginalJourney.NowUtc.AddSeconds(f.OriginalJourney.ReturnReserveGameTicks / 60d + 2);
+        Assert.False(VoyagerActiveMoveGroundGapPolicy.OriginalBudgetAllows(f, 0, 13, 3));
+        Assert.Equal(1d, VoyagerActiveMoveGroundGapPolicy.StopWallPatience(1d / 60d));
+    }
+
     private static readonly DateTimeOffset Now = new(2025, 1, 1, 0, 0, 0, TimeSpan.Zero);
 
     [Fact]

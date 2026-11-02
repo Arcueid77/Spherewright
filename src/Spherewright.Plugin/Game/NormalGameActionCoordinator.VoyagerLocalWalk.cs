@@ -477,6 +477,8 @@ internal sealed partial class NormalGameActionCoordinator
             && VoyagerOwnedJourneyMatchesCurrentSession(journey, action.SessionId);
         return new VoyagerActiveMoveGroundGapFacts
         {
+            StopWallPatienceSeconds = action.VoyagerMoveStopWallPatienceSeconds
+                ?? VoyagerActiveMoveGroundGapPolicy.StopWallPatience(Time.fixedDeltaTime) ?? double.NaN,
             ExactActiveStrictMove = !action.Terminal && action.ActionKind == NormalActionKinds.Move
                 && action.VoyagerMoveGroundGap is not null && exactJourney && VoyagerLocalReferencesMatch(action),
             NonGroundNativePremisesProved = subset && reserve.Proved,
@@ -530,7 +532,7 @@ internal sealed partial class NormalGameActionCoordinator
         if (action.Terminal || action.VoyagerLocalStopDeadlineTick.HasValue) return;
         if (action.VoyagerMoveGroundGap!.Rejected || !facts.ExactActiveStrictMove || !facts.NonGroundNativePremisesProved
             || !VoyagerActiveMoveGroundGapPolicy.OriginalBudgetAllows(facts, 0, VoyagerLocalWalkReservePolicy.StopGameTicks,
-                VoyagerLocalStopWallSeconds)
+                facts.StopWallPatienceSeconds)
             || !VoyagerActiveMoveGroundGapPolicy.CanFund(facts, VoyagerLocalWalkReservePolicy.StopGameTicks))
         { FinishVoyagerLocalOrderUnknown(action, "The original Move cannot fund its unchanged finite contact-loss stop. " + message); return; }
         action.VoyagerMoveGroundGap!.LatchStop("voyager_move_ground_contact_gap_ended");
@@ -538,8 +540,9 @@ internal sealed partial class NormalGameActionCoordinator
         action.VoyagerMoveGroundGapStopping = true;
         action.VoyagerMoveGroundStopArmedAtTick = GameMain.gameTick;
         action.VoyagerMoveGroundStopArmedAtUtc = DateTimeOffset.UtcNow;
+        action.VoyagerMoveStopWallPatienceSeconds = facts.StopWallPatienceSeconds;
         action.VoyagerLocalStopDeadlineTick = checked(GameMain.gameTick + VoyagerLocalWalkReservePolicy.StopGameTicks);
-        action.VoyagerLocalStopDeadlineUtc = action.VoyagerMoveGroundStopArmedAtUtc.Value.AddSeconds(VoyagerLocalStopWallSeconds);
+        action.VoyagerLocalStopDeadlineUtc = action.VoyagerMoveGroundStopArmedAtUtc.Value.AddSeconds(facts.StopWallPatienceSeconds);
         action.VoyagerLocalStopSucceeded = false;
         action.VoyagerLocalStopMessage = message;
         action.FailureKind = "voyager_move_ground_contact_gap_ended";
@@ -674,10 +677,20 @@ internal sealed partial class NormalGameActionCoordinator
             CalculateAvailableFlightEnergy(player.mecha), journey.ReturnEnergyFloorJoules,
             reserve.PerNativeTickEnergyJoules, VoyagerLocalWalkReservePolicy.StopGameTicks))
         { FinishVoyagerLocalOrderUnknown(action, "The original order stopped without a proved remaining Native Walk tail. " + message); return; }
+        var stopWall = VoyagerLocalStopWallSeconds;
+        if (action.VoyagerMoveGroundGap is not null)
+        {
+            var stopFacts = CaptureVoyagerMoveGroundGapFacts(action, false, out _);
+            stopWall = stopFacts.StopWallPatienceSeconds;
+            if (!VoyagerActiveMoveGroundGapPolicy.OriginalBudgetAllows(stopFacts, 0,
+                VoyagerLocalWalkReservePolicy.StopGameTicks, stopWall))
+            { FinishVoyagerLocalOrderUnknown(action, "The original Move cannot fund its Native-cadence stop wall interval."); return; }
+            action.VoyagerMoveStopWallPatienceSeconds = stopWall;
+        }
         AbortPlayerOrderIfOwned(action, forLocalNativeStop: true); // Empty queue proved; Native velocity is never written.
         action.VoyagerLocalStopDeadlineTick = GameMain.gameTick + VoyagerLocalWalkReservePolicy.StopGameTicks;
         var stopStartedUtc = DateTimeOffset.UtcNow;
-        action.VoyagerLocalStopDeadlineUtc = stopStartedUtc.AddSeconds(VoyagerLocalStopWallSeconds);
+        action.VoyagerLocalStopDeadlineUtc = stopStartedUtc.AddSeconds(stopWall);
         if (action.VoyagerMoveGroundGap is not null)
         {
             action.VoyagerMoveGroundStopArmedAtTick = GameMain.gameTick;
@@ -776,5 +789,6 @@ internal sealed partial class NormalGameActionCoordinator
         public bool VoyagerMoveGroundGapStopping { get; set; }
         public long? VoyagerMoveGroundStopArmedAtTick { get; set; }
         public DateTimeOffset? VoyagerMoveGroundStopArmedAtUtc { get; set; }
+        public double? VoyagerMoveStopWallPatienceSeconds { get; set; }
     }
 }
