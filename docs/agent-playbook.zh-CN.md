@@ -522,3 +522,6 @@ Native Import 可将 double 宇宙坐标逆投影为 float 本地位置；普通
 ## 普通发电机冷启动
 
 新燃料发电机须先正常放入首批燃料，供电分拣器才能运行。fresh检查准确已建2204火电或2211聚变机组及玩家；使用`prepare_transfer`，`direction=player-to-generator-fuel`、`storageEntityId`填该机组、正数原生接受燃料及count1..10、`expectedPlayerStateHash`和机组完整`stateHash`作为`expectedStorageStateHash`。须空手、来源燃料inc0、正常建造交互距离，机组缓存燃料及已加载/当前燃料均空。核对`generatorColdStartFuel`中的身份/数量/原生操作回读后只提交原转移动作一次，核销同tick背包/机组的等量反向变化。由原生`PlanetFactory.InsertInto`正常插入燃料，不直接写游戏缓存/能量或推进模拟；后续燃烧与发电属于普通原生行为。冷插入不证明供电、运输、制造或真实验收；此子集不支持热机补料或燃料取出。
+
+
+原活动Move耗尽原有接触丢失停止预算时，`nativeFirstFailure`记录原pre-player当刻复制值：地面查询、实际/帧移动模式、速度、RTS/手动尾部、能量、停止起止tick及订单状态。该截点中的post-player停稳、后续Pause、序列化及Resume保持not_reached；后来的Walk/speed0观测不覆盖首个失败、不认证旧任务成功或续发停止预算。

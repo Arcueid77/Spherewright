@@ -1612,7 +1612,7 @@ internal sealed partial class NormalGameActionCoordinator
             SessionId = action.SessionId,
             PlanetId = action.PlanetId,
             Message = action.Message,
-            NativeFirstFailure = action.Plan.SavePreservation?.FirstFailure ?? (action.Plan.ReturnOnlyTaskCancellation
+            NativeFirstFailure = action.VoyagerLocalStopFailure?.Copy() ?? action.Plan.SavePreservation?.FirstFailure ?? (action.Plan.ReturnOnlyTaskCancellation
                 ? _sessions.ReturnOnlyFailureForTask(action.Plan.CancelVoyagerActionId!) : null),
             IdempotencyKey = action.IdempotencyKey,
             StartedAtGameTick = action.StartedAtGameTick,
@@ -2358,6 +2358,7 @@ internal sealed partial class NormalGameActionCoordinator
 
     private sealed partial class ActionRecord
     {
+        public Spherewright.Contracts.Players.NativeResumeFailureSnapshot? VoyagerLocalStopFailure { get; set; }
         public string ActionId { get; set; } = string.Empty;
         public string ActionKind { get; set; } = string.Empty;
         public string SessionId { get; set; } = string.Empty;

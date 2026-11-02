@@ -589,7 +589,21 @@ internal sealed partial class NormalGameActionCoordinator
         }
         if (VoyagerActiveMoveGroundGapPolicy.MustPauseBeforeCurrentTick(action.VoyagerMoveGroundStopArmedAtTick!.Value,
             tick, action.VoyagerMoveGroundStopArmedAtUtc!.Value, now, action.VoyagerLocalStopDeadlineUtc.Value))
+        {
+            // Reuse the already observed sphere result and scalar fields. No
+            // second Physics query, extra Native tick or post-Pause recapture.
+            action.VoyagerLocalStopFailure ??= VoyagerMoveStopDiagnostic.Capture(new()
+            {
+                GameTick = tick, NowUtc = now, ArmGameTick = action.VoyagerMoveGroundStopArmedAtTick.Value,
+                DeadlineGameTick = action.VoyagerLocalStopDeadlineTick.Value, GroundSphereHit = facts.GroundSphereHit,
+                ActualWalk = p.movementState == EMovementState.Walk, FrameWalk = p.controller.movementStateInFrame == EMovementState.Walk,
+                Speed = p.speed, VerticalSpeed = p.controller.vertSpeed, CoreEnergy = p.mecha.coreEnergy, NativePaused = GameMain.isPaused,
+                CurrentOrderAbsent = p.currentOrder is null, QueuedOrders = p.orders.orderCount,
+                WalkRtsSquared = p.controller.actionWalk.rtsVelocity.sqrMagnitude, WalkManualSquared = p.controller.actionWalk.moveVelocity.sqrMagnitude,
+                DriftRtsSquared = p.controller.actionDrift.rtsVelocity.sqrMagnitude, DriftManualSquared = p.controller.actionDrift.moveVelocity.sqrMagnitude,
+            });
             FinishVoyagerLocalOrderUnknown(action, "The unchanged contact-loss stop bound ended before strict physical settlement; its failure601 remains funded.");
+        }
     }
 
     private void UpdateVoyagerLocalPrePlayerTickCoreOnMainThread()
