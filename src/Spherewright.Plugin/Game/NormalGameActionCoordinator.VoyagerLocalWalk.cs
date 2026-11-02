@@ -598,6 +598,8 @@ internal sealed partial class NormalGameActionCoordinator
                 DeadlineGameTick = action.VoyagerLocalStopDeadlineTick.Value, GroundSphereHit = facts.GroundSphereHit,
                 ActualWalk = p.movementState == EMovementState.Walk, FrameWalk = p.controller.movementStateInFrame == EMovementState.Walk,
                 Speed = p.speed, VerticalSpeed = p.controller.vertSpeed, CoreEnergy = p.mecha.coreEnergy, NativePaused = GameMain.isPaused,
+                FixedDeltaTimeSeconds = Time.fixedDeltaTime, ControllerVelocitySquared = p.controller.velocity.sqrMagnitude,
+                RigidVelocitySquared = p.controller.rigid == null ? null : p.controller.rigid.velocity.sqrMagnitude,
                 CurrentOrderAbsent = p.currentOrder is null, QueuedOrders = p.orders.orderCount,
                 WalkRtsSquared = p.controller.actionWalk.rtsVelocity.sqrMagnitude, WalkManualSquared = p.controller.actionWalk.moveVelocity.sqrMagnitude,
                 DriftRtsSquared = p.controller.actionDrift.rtsVelocity.sqrMagnitude, DriftManualSquared = p.controller.actionDrift.moveVelocity.sqrMagnitude,

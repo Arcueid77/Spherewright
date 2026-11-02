@@ -10,7 +10,7 @@ public sealed class VoyagerMoveStopDiagnosticTests
         GameTick = 112, ArmGameTick = 100, DeadlineGameTick = 113,
         NowUtc = new DateTimeOffset(2025, 1, 1, 0, 0, 0, TimeSpan.Zero),
         GroundSphereHit = true, ActualWalk = true, FrameWalk = true, CurrentOrderAbsent = true,
-        CoreEnergy = 100_000_000,
+        CoreEnergy = 100_000_000, FixedDeltaTimeSeconds = .125,
     };
     [Theory]
     [InlineData("ground", "strict_ground_sphere")][InlineData("frame", "strict_frame_walk")]
@@ -32,6 +32,7 @@ public sealed class VoyagerMoveStopDiagnosticTests
         Assert.False(result.SafetyCertified);
         Assert.Equal("not_reached", result.Predicates["post_player_settlement"]);
         Assert.Equal("not_reached", result.Predicates["resume"]);
+        Assert.Equal(.125, result.Values["fixed_delta_seconds"]);
         Assert.Equal(100, f.ArmGameTick); Assert.Equal(113, f.DeadlineGameTick);
     }
     [Fact]

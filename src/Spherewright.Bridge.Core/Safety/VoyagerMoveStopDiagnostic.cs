@@ -20,6 +20,9 @@ public sealed class VoyagerMoveStopDiagnosticFacts
     public double DriftManualSquared { get; set; }
     public double CoreEnergy { get; set; }
     public double VerticalSpeed { get; set; }
+    public double FixedDeltaTimeSeconds { get; set; }
+    public double ControllerVelocitySquared { get; set; }
+    public double? RigidVelocitySquared { get; set; }
     public bool NativePaused { get; set; }
     public bool CurrentOrderAbsent { get; set; }
     public int QueuedOrders { get; set; }
@@ -35,6 +38,8 @@ public static class VoyagerMoveStopDiagnostic
         e.Number("walk_rts_squared", f.WalkRtsSquared); e.Number("walk_manual_squared", f.WalkManualSquared);
         e.Number("drift_rts_squared", f.DriftRtsSquared); e.Number("drift_manual_squared", f.DriftManualSquared);
         e.Number("core_j", f.CoreEnergy); e.Number("queued_orders", f.QueuedOrders);
+        e.Number("fixed_delta_seconds", f.FixedDeltaTimeSeconds);
+        e.Number("controller_velocity_squared", f.ControllerVelocitySquared); e.Number("rigid_velocity_squared", f.RigidVelocitySquared);
         e.Observe("native_paused_at_original_cut", f.NativePaused);
         e.Observe("actual_walk_at_original_cut", f.ActualWalk); e.Observe("frame_walk_at_original_cut", f.FrameWalk);
         e.Observe("original_order_absent", f.CurrentOrderAbsent);
