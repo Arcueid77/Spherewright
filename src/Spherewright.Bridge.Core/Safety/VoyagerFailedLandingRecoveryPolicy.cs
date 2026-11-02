@@ -43,6 +43,7 @@ public static class VoyagerFailedLandingRecoveryPolicy
     public static bool HasMatchingEcho(PrepareOwnedWorldResumeRequest r, PreparedOwnedWorldResumePlan? p) =>
         p is not null && ValidateRequest(r) is null && p.Prepared && p.RecoveryMode == Mode
         && p.RecoveryEvidenceVersion == EvidenceVersion && p.FailedLandingRecoveryAuthorizationUsed
+        && !p.CompletedSavedLandingAdmissionUsed
         && !string.IsNullOrEmpty(p.SourceGameVersion) && p.SourceGameVersion == p.TargetGameVersion
         && p.SavedLandingAccountingAnchorGameTick == r.ExpectedRecoveryGameTick
         && p.CandidateGameTick == r.ExpectedRecoveryGameTick && p.MinimumGameTick == r.ExpectedRecoveryGameTick

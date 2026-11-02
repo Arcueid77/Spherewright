@@ -7,7 +7,7 @@ internal sealed partial class GameSessionTracker
 {
     // Unity import/callback shell only. Source capture, registration, loaded
     // binding, terminal persistence and lease completion are production code.
-    internal bool AdoptFailedLandingNativeShellForTest(FlightCheckpointStore store)
+    internal bool AdoptFailedLandingNativeShellForTest(FlightCheckpointStore store, OwnedWorldResumeTicketStore? tickets = null)
     {
         var source = RemoteEvidence!.FailedLandingSource!;
         Snapshot.SessionId = SessionId = Guid.NewGuid().ToString();
@@ -16,6 +16,7 @@ internal sealed partial class GameSessionTracker
         Snapshot.LocalPlanetId = source.Journey.RemotePlanetId; Snapshot.GameTick = source.SavedAccountingAnchorGameTick;
         Snapshot.WriteHealth = WriteHealthStates.Healthy;
         BindCheckpointNativeWorldFromSnapshotForTest(store);
+        if (tickets is not null) _resumeTickets = tickets;
         _ownedSaveState = OwnedSaveStates.WaitingToSave; _lastOwnedSaveGameTick = null;
         _pendingRemoteResumeEvidence = RemoteEvidence; _pendingRemoteResumeActionId = RemoteResumeActionId;
         _remoteResumeLoadCompleteObserved = _remoteResumeJournalConfirmed = true;
@@ -35,4 +36,13 @@ internal sealed partial class GameSessionTracker
         GameMain.Pause();
         PreserveFailedLandingAdmission(code);
     }
+    internal void BindFailedLandingResaveShellForTest(NormalGameActionCoordinator native)
+        => _remoteResumeAdmissionGuard = a => native.CompletedLandingAccountingForTest(a, _flightCheckpoints.VoyagerJourney!)
+            == _flightCheckpoints.VoyagerJourney!.LastLandedGameTick ? null : "synthetic_saved_landing_binding_unproved";
+}
+
+internal sealed partial class NormalGameActionCoordinator
+{
+    internal long? CompletedLandingAccountingForTest(VoyagerRemoteResumeAdoption a, VoyagerJourneyRecord j)
+        => RemoteResumeAccountingAnchor(a, j);
 }

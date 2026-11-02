@@ -114,7 +114,8 @@ internal sealed partial class NormalGameActionCoordinator
         if (ground is null || ground.CapturedAtGameTick != GameMain.gameTick || ground.CheckSphereHit != support.ActualGroundSphereHit)
             return "remote_resume_contact_ground_queries_changed";
         blocker = RemoteResumeChargeEnvironmentBlocker(adoption.Player, journey.JourneyId, adoption.CurrentDecisionEvidence,
-            completedPaidLandingOnly: adoption.Evidence.FailedLandingRecovery);
+            completedPaidLandingOnly: adoption.Evidence.FailedLandingRecovery,
+            provedSavedLandingAdmission: adoption.Evidence.CompletedSavedLandingAdmissionUsed);
         if (blocker is not null) return blocker;
         // Preserve the already-started Native charge cap and original floor;
         // this is a numeric check, never an idle=true projection.

@@ -49,7 +49,8 @@ internal sealed partial class NormalGameActionCoordinator
             NativeStateUnchanged = hold.State.MatchesDuringNativeInitializationPause(p) && hold.MaterialsMatch(p)
                 && hold.CostEnvelope == RemoteResumeChargeCostEnvelope(p) && VoyagerMechaWorkIdle(p)
                 && RemoteResumeChargeEnvironmentBlocker(p, hold.Journey.JourneyId, adoption.CurrentDecisionEvidence,
-                    completedPaidLandingOnly: adoption.Evidence.FailedLandingRecovery) is null && !GameMain.data.disableController
+                    completedPaidLandingOnly: adoption.Evidence.FailedLandingRecovery,
+                    provedSavedLandingAdmission: adoption.Evidence.CompletedSavedLandingAdmissionUsed) is null && !GameMain.data.disableController
                 && !GameMain.data.guideRunning && BuildUiIsIdle(p),
             RegisteredCount = count,
             ColliderRefreshPending = colliderRefreshPending,

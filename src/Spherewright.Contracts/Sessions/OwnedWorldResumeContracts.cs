@@ -90,6 +90,7 @@ public sealed class PreparedOwnedWorldResumePlan
     public bool CompletedRemoteLastExitContinuationUsed { get; set; }
     public bool RemotePrimaryRecoveryAuthorizationUsed { get; set; }
     public bool FailedLandingRecoveryAuthorizationUsed { get; set; }
+    public bool CompletedSavedLandingAdmissionUsed { get; set; }
     public long? SavedLandingAccountingAnchorGameTick { get; set; }
     public string OriginalFailedFlightActionId { get; set; } = string.Empty;
     public bool PriorActionTerminalCompletionAttested { get; set; }

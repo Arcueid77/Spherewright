@@ -163,8 +163,10 @@ internal sealed partial class OwnedWorldResumeCoordinator
             CompletedRemoteLastExitContinuationUsed = payload.CompletedRemoteContinuation,
             RemotePrimaryRecoveryAuthorizationUsed = payload.RemotePrimaryRecovery,
             FailedLandingRecoveryAuthorizationUsed = payload.FailedLandingRecovery,
+            CompletedSavedLandingAdmissionUsed = payload.RemoteEvidence?.CompletedSavedLandingAdmissionUsed == true,
             SavedLandingAccountingAnchorGameTick = payload.RemoteEvidence?.FailedLandingAccountingAnchorGameTick,
-            OriginalFailedFlightActionId = payload.FailedLandingRecovery ? payload.RemoteEvidence!.Journey.ActiveActionId : string.Empty,
+            OriginalFailedFlightActionId = payload.FailedLandingRecovery || payload.RemoteEvidence?.CompletedSavedLandingAdmissionUsed == true
+                ? payload.RemoteEvidence!.Journey.ActiveActionId : string.Empty,
             PriorActionTerminalCompletionAttested = payload.CompletedRemoteContinuation && payload.Request.PriorActionKnownTerminalCompleted == true,
             NewChargingProhibited = payload.SavedWorldOpenOnly || payload.CompletedRemoteContinuation || payload.ReturnOnlyContinuation,
             ReturnOnlyContinuation = payload.RemoteEvidence?.ReturnOnlySource is { } returnSource
@@ -195,7 +197,9 @@ internal sealed partial class OwnedWorldResumeCoordinator
                 ? $"The original successful-flight checkpoint was retired by primary coverage at tick {coveredTick}. It is a bound historical witness only and will never be loaded. " : string.Empty)
                 + (payload.RemotePrimaryRecovery && payload.Request.AdditionalVoyagerGameTicks > 0
                 ? $"Separately authorize {payload.Request.AdditionalVoyagerGameTicks} additional game ticks above the original {payload.RemoteEvidence!.Journey.MaximumGameTicks}-tick journey cap. This addition is not stacked with a previous proposal; all observed spent time stays charged, the original deadline and cap remain recorded, and return ticks, energy and warpers stay reserved. " : string.Empty)
-                + (payload.RemotePrimaryRecovery
+                + (payload.RemotePrimaryRecovery && payload.RemoteEvidence?.CompletedSavedLandingAdmissionUsed == true
+                ? $"Review the exact complete current owned {payload.ResumeSource} save at tick {payload.MinimumGameTick}. Its separate completed saved-landing admission and covering primary prove the current boundary; the original outbound remains failed. This NEW finite authorization preserves all original budgets and observed time. No successful-flight witness, old action replay or checkpoint rollback is claimed. "
+                : payload.RemotePrimaryRecovery
                 ? $"Review the exact complete current owned {payload.ResumeSource} save at tick {payload.MinimumGameTick}. This is a NEW finite automation authorization, not ordinary file opening or continuation of an old action. Known progress floor: {payload.SavedOpenKnownProgressTick}; explicitly discarded progress: {Math.Max(0, payload.SavedOpenKnownProgressTick - payload.MinimumGameTick)} ticks. Total conserved observed-time debit: {Math.Max(0, payload.RemoteEvidence!.KnownPrimaryProgressTick!.Value - payload.MinimumGameTick)} ticks, including any previous approved loss. Historical completed/failed/unknown outcomes and every old consumption record remain unchanged. Native initialization, projection, contact, any permitted natural charging and strict healthy takeover must all succeed. "
                 : payload.LegacyLocalMoveUnknown
                 ? VoyagerLegacyLocalMoveUnknownPolicy.Disclosure + " "
@@ -229,6 +233,8 @@ internal sealed partial class OwnedWorldResumeCoordinator
                 ? "The exact current saved boundary and original return-only task are adopted; the original Native initialization/contact/idle chain proves control before a normal Save. Only the original-home return, cancellation and normal Save are permitted; old outcomes, tick grants and original deadlines remain unchanged."
                 : payload.SavedWorldOpenOnly
                 ? "Exact owned primary and durable Journal verified; Native load completed and paused at the saved tick. Reads are available; automated writes remain blocked. Opening does not change any original task result, Journey, spent amount or deadline, and does not resave the world."
+                : payload.RemotePrimaryRecovery && payload.RemoteEvidence?.CompletedSavedLandingAdmissionUsed == true
+                ? "The exact saved world, Journal and separate healthy landing admission are revalidated under new finite authority. Fresh Native contact/idle control, conserved accounting and a covering normal Save are required; the original outbound failure remains failed."
                 : payload.RemotePrimaryRecovery
                 ? "Only the exact complete current primary may load after new finite authorization and this disclosure's digest confirmation. Original Journey/Journal/successful-outbound evidence and any matching LastExit are held; old outcomes remain unchanged. Discarded observed progress remains charged against the original finite ticks. Existing Native initialization, first-frame, contact, charge, strict idle and 2P/13P gates remain; healthy takeover, conservative debit persistence, normal primary Save and a matching fresh credential are all required for success. No old action or checkpoint is replayed."
                 : payload.LegacyLocalMoveUnknown

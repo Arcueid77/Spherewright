@@ -6,6 +6,40 @@ namespace Spherewright.Plugin.RuntimeDescriptor;
 
 internal sealed partial class FlightCheckpointStore
 {
+    private static bool CompletedSavedLandingAdmissionWitness(VoyagerJourneyRecord j, FlightCheckpointTicket cp, long primaryTick)
+    {
+        var r = j.FailedLandingAdmissions.LastOrDefault();
+        if (r is null) return false;
+        var original = PluginJson.Deserialize<FlightCheckpointTicket>(r.OriginalCheckpointJson);
+        if (original is null || original.LifecycleState != FlightCheckpointLifecycleStates.RecoveryRequired
+            || original.RetiredAtGameTick.HasValue || original.RetiredAtUtc.HasValue) return false;
+        var comparison = PluginJson.Deserialize<FlightCheckpointTicket>(PluginJson.Serialize(cp))!;
+        if (cp.LifecycleState == FlightCheckpointLifecycleStates.Retired)
+        {
+            // Native covering-primary retirement is legitimate. It may retire
+            // the rollback capability, never rewrite the old failed outcome.
+            if (!cp.RetiredAtGameTick.HasValue || !cp.RetiredAtUtc.HasValue
+                || cp.RetiredAtGameTick < r.TerminalAtGameTick || cp.RetiredAtGameTick > primaryTick) return false;
+            comparison.LifecycleState = original.LifecycleState;
+            comparison.RetiredAtGameTick = null; comparison.RetiredAtUtc = null;
+        }
+        return j.Phase == "remote_landed" && !j.ReturnLeg && r is { State: "completed_health", FirstFailure: null }
+            && Guid.TryParse(r.SessionId, out _) && r.RemotePlanetId == j.RemotePlanetId
+            && r.OriginalFlightActionId == j.ActiveActionId && r.OriginalFlightActionId == cp.LastAttemptActionId
+            && r.CheckpointId == j.ActiveCheckpointId && r.CheckpointId == cp.CheckpointId
+            && cp.VoyagerJourneyId == j.JourneyId
+            && cp.LifecycleState is FlightCheckpointLifecycleStates.RecoveryRequired or FlightCheckpointLifecycleStates.Retired
+            && !cp.SuccessfulFlightAtGameTick.HasValue && !cp.ReloadPending && string.IsNullOrEmpty(cp.ReloadActionId)
+            && (cp.DestinationPlanetId == 0 || cp.DestinationPlanetId == r.RemotePlanetId)
+            && r.OriginalCheckpointJson == PluginJson.Serialize(comparison)
+            && r.OriginalCheckpointStateHash == CanonicalStateHash.Combine("failed-landing-original-checkpoint-v1", r.OriginalCheckpointJson)
+            && r.AdoptedAtGameTick >= r.SourceGameTick && r.TerminalAtGameTick >= r.AdoptedAtGameTick
+            && r.TerminalAtGameTick.HasValue && r.TerminalAtGameTick == j.LastLandedGameTick
+            && j.LastAccountedGameTick >= r.TerminalAtGameTick && primaryTick >= r.TerminalAtGameTick
+            && r.ConservedSpentGameTicks >= 0 && r.SourceGameTick >= cp.RecoveryRequiredAtGameTick
+            && (decimal)r.ConservedSpentGameTicks + r.TerminalAtGameTick.Value - r.SourceGameTick <= j.SpentGameTicks;
+    }
+
     private bool FailedLandingNativeEvidenceMatches(VoyagerRemoteResumeEvidence evidence)
     {
         if (evidence.FailedLandingSource is not { IsDisposed: false } source || VoyagerJourney is not { } j) return false;
@@ -38,6 +72,7 @@ internal sealed partial class FlightCheckpointStore
         next.FailedLandingAdmissions.Add(new()
         {
             ActionId = actionId, OriginalFlightActionId = next.ActiveActionId,
+            RemotePlanetId = next.RemotePlanetId!.Value,
             CheckpointId = next.ActiveCheckpointId,
             OriginalCheckpointStateHash = CanonicalStateHash.Combine("failed-landing-original-checkpoint-v1", source.CheckpointJson),
             OriginalCheckpointJson = source.CheckpointJson,
@@ -123,7 +158,7 @@ internal sealed partial class FlightCheckpointStore
         {
             var r = runs[i];
             if (!Guid.TryParse(r.ActionId, out _) || !Guid.TryParse(r.OriginalFlightActionId, out _)
-                || !Guid.TryParse(r.CheckpointId, out _) || r.SourceGameTick < 0 || r.ConservedSpentGameTicks < 0
+                || !Guid.TryParse(r.CheckpointId, out _) || r.RemotePlanetId <= 0 || r.SourceGameTick < 0 || r.ConservedSpentGameTicks < 0
                 || !OwnedWorldRecoveryPolicy.IsCanonicalFingerprint(r.SourceFingerprint)
                 || !OwnedWorldRecoveryPolicy.IsCanonicalFingerprint(r.PrimaryFingerprint)
                 || !OwnedWorldRecoveryPolicy.IsCanonicalFingerprint(r.ContextFingerprint)
@@ -216,6 +251,7 @@ internal sealed class VoyagerFailedLandingAdmissionRun
     public string SessionId { get; set; } = "";
     public string SourceSessionId { get; set; } = "";
     public string OriginalFlightActionId { get; set; } = "";
+    public int RemotePlanetId { get; set; }
     public string CheckpointId { get; set; } = "";
     public string OriginalCheckpointStateHash { get; set; } = "";
     public string OriginalCheckpointJson { get; set; } = "";

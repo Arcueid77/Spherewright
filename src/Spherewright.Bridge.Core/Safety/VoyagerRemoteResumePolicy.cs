@@ -13,6 +13,7 @@ public sealed class VoyagerRemoteResumeFacts
     public bool OriginalJournalCheckpointPresent { get; set; }
     public bool RemoteLandedOutbound { get; set; }
     public bool CheckpointFlightSucceededWithoutReload { get; set; }
+    public bool CompletedSavedLandingAdmissionProved { get; set; }
     public long SourceGameTick { get; set; }
     public long PrimaryGameTick { get; set; }
     public long TicketMinimumGameTick { get; set; }

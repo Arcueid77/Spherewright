@@ -380,6 +380,8 @@ Move/Harvest 复用既有普通 RTS 动作并保留无水快路。有限能耗�
 
 首次出航已观测为已知terminal失败、实际触及既选外星且保存在最新边界时，可用`authorize_failed_landing_last_exit`准备固定完整LastExit。两个恢复tick字段均填准确当前已核销边界，设置`priorActionKnownTerminalFailed=true`、新的有限UTC截止、`continue_original_finite_task`及有界充能上限；不接受进度损失或新增tick。Prepare不预确认；核对独立保存会计锚、既选外星、原失败action、原预算及完整身份后，在适用所有者授权下提交该新鲜摘要。旧票据位置仅作来源，不手改它。新的Native初始化/接触/严格501准入通过后才可记录新的健康落地和覆盖保存；pending、adopted或unknown尝试禁止换键加载。已知暂停失败保留所有实际经过tick并释放源文件，供原生正常退出保全。这是新准入，不是旧出航成功、检查点回退或旧动作重放；源码与离线测试不能认证真实加载世界。
 
+该新的健康准入成功并正常保存完整覆盖Primary后，后续显式`authorize_remote_primary_recovery`可回读`completedSavedLandingAdmissionUsed=true`及`originalFailedFlightActionId`。Native单独证明受保护completed_health记录、精确原失败CP、既选外星、保守会计及覆盖Primary。覆盖Primary使旧回退能力退役属于正常行为，不产生成功航行见证；旧航行成功字段仍false，成功航行退役预览仍null。仅这一显式新来源授权使用独立见证，旧模式保持原成功航行门；完整付料站点/待建体恢复证明、新鲜Native接触、有限预算及正常保存仍须满足。
+
 空闲要求针对实际机甲工作，不等同于全局工厂科研队列必须为空。有界Native证明仅允许每个已排队研究站科技都具有有效纯配方解锁、无解锁功能和完成物品奖励，且准确绑定的机甲研究点缓冲为空、背包不含任一排队科技的所需物品。由此排除机甲自动供料、研究能耗和点数消耗，同时保留工厂研究站运行。元数据未知/不完整、分数研究点、随身研究材料、属性升级及奖励仍拒绝。`prepare_voyager_flight.voyagerMechaWork`提供复制证明；准备、提交、飞行中、本地工作及远端恢复充能/稳定性检查均重新核验。不会为符合条件而更改科研队列、自动管理开关、库存、研究进度或费用参数；原空队列路径保留既有未用研究缓冲的行为。
 
 

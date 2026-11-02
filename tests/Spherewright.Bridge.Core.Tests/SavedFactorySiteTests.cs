@@ -13,6 +13,25 @@ namespace Spherewright.Bridge.Core.Tests;
 public sealed class SavedFactorySiteTests
 {
     [Fact]
+    public void NewSavedLandingWitnessCanRecoverAnEntirePaidMiningSiteWithoutRelaxingDefaultRecovery()
+    {
+        using var f = new Fixture(false, miningOnly: true);
+        var before = File.ReadAllBytes(f.StorePath);
+        Assert.NotNull(f.Guard());
+        Assert.Null(f.SavedLandingGuard());
+        Assert.Equal(before, File.ReadAllBytes(f.StorePath));
+        f.MakeUnknown();
+        Assert.NotNull(f.SavedLandingGuard());
+    }
+
+    [Fact]
+    public void NewSavedLandingWitnessPreservesTheExistingPaidPendingObjectRecoveryPath()
+    {
+        using var f = new Fixture(true);
+        Assert.Null(f.SavedLandingGuard());
+        Assert.Equal("landing_charge_completed_paid_site_required", f.LandingGuard());
+    }
+    [Fact]
     public void CompletedPaidMiningSiteCanSupportAnotherOwnedLandingWithoutChangingOldReceipts()
     {
         using var f = new Fixture(false, miningOnly: true);
@@ -140,6 +159,7 @@ public sealed class SavedFactorySiteTests
         internal string StorePath => Directory.GetFiles(Path.Combine(root, "foundry"), "blueprints-*.json").Single();
         internal string? Guard() => new NormalGameActionCoordinator(Store(), sessions).MinerEnvironmentForTest(Player, Journey);
         internal string? LandingGuard() => new NormalGameActionCoordinator(Store(), sessions).CompletedLandingEnvironmentForTest(Player, Journey);
+        internal string? SavedLandingGuard() => new NormalGameActionCoordinator(Store(), sessions).SavedLandingRecoveryEnvironmentForTest(Player, Journey);
         internal Fixture(bool pending, bool miningOnly = false)
         {
             sourceItem = miningOnly ? 2301 : 2304; destinationItem = miningOnly ? 2203 : 2101;

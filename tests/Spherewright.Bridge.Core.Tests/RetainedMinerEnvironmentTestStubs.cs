@@ -131,6 +131,8 @@ internal sealed partial class NormalGameActionCoordinator
         => RemoteResumeChargeEnvironmentBlocker(player, journeyId, evidence);
     internal string? CompletedLandingEnvironmentForTest(Player player, string? journeyId)
         => RemoteResumeChargeEnvironmentBlocker(player, journeyId, completedPaidLandingOnly: true);
+    internal string? SavedLandingRecoveryEnvironmentForTest(Player player, string? journeyId)
+        => RemoteResumeChargeEnvironmentBlocker(player, journeyId, provedSavedLandingAdmission: true);
     // These legacy single-miner regressions do not simulate the Native tower
     // or stop-only stage4 controller. Its motion/cost proof has separate tests.
     private BlueprintBuildState? RetainedUnpoweredRecoveryIls(Player p, PlanetFactory f, string? journeyId, NativeResumeDecisionEvidence? evidence) => null;

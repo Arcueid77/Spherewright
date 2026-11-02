@@ -223,7 +223,8 @@ internal sealed partial class NormalGameActionCoordinator
             adoption.CurrentDecisionEvidence);
         if (originalBudgetBlocker is not null) return originalBudgetBlocker;
         var environment = RemoteResumeChargeEnvironmentBlocker(p, journey.JourneyId, adoption.CurrentDecisionEvidence,
-            completedPaidLandingOnly: adoption.Evidence.FailedLandingRecovery);
+            completedPaidLandingOnly: adoption.Evidence.FailedLandingRecovery,
+            provedSavedLandingAdmission: adoption.Evidence.CompletedSavedLandingAdmissionUsed);
         if (environment is not null) return environment;
         var reserve = facts.MovementReserve!;
         var perTick = reserve.PerNativeTickEnergyJoules ?? double.NaN;

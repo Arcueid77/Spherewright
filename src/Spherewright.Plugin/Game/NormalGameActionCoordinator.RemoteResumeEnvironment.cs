@@ -7,7 +7,8 @@ namespace Spherewright.Plugin.Game;
 internal sealed partial class NormalGameActionCoordinator
 {
     private string? RemoteResumeChargeEnvironmentBlocker(Player p, string? journeyId = null,
-        NativeResumeDecisionEvidence? evidence = null, bool completedPaidLandingOnly = false)
+        NativeResumeDecisionEvidence? evidence = null, bool completedPaidLandingOnly = false,
+        bool provedSavedLandingAdmission = false)
     {
         var h = GameMain.history; var factory = p.factory; var module = p.mecha.constructionModule;
         if (p.controller.actionWalk.rtsVelocity.sqrMagnitude != 0f || p.controller.actionWalk.moveVelocity.sqrMagnitude != 0f
@@ -37,11 +38,11 @@ internal sealed partial class NormalGameActionCoordinator
                 && b.Objects.All(o => o.State == BlueprintObjectStates.Completed));
             if (completedPaidLandingOnly && !completePaidSite)
                 return "landing_charge_completed_paid_site_required";
-            if (hasFactoryCore || completedPaidLandingOnly)
+            if (hasFactoryCore || completedPaidLandingOnly || provedSavedLandingAdmission)
                 return SavedFactorySiteMatches(p, factory, journeyId, factorySaved, evidence)
                     ? null : "remote_resume_paid_factory_site_unproved";
         }
-        else if (completedPaidLandingOnly) return "landing_charge_paid_site_store_unavailable";
+        else if (completedPaidLandingOnly || provedSavedLandingAdmission) return "landing_charge_paid_site_store_unavailable";
         if (_blueprints.TryRead(out var saved) && saved.Any(b => b.Site.PlanetId == factory.planetId
                 && b.StructuredConstruction?.Kind == "belt"))
             return SavedUnpoweredBeltChainMatches(p, factory, journeyId, saved, evidence)

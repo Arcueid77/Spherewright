@@ -105,7 +105,8 @@ public static class VoyagerRemotePrimaryRecoveryPolicy
         if (!e.Require("primary_current_journey_checkpoint", f.ExactDurableJourneyAndCheckpoint)
             || !e.Require("primary_original_journal", f.OriginalJournalCheckpointPresent)) return "remote_primary_original_provenance_unproved";
         if (!e.Require("primary_remote_landed", f.RemoteLandedOutbound)
-            || !e.Require("primary_successful_outbound", f.CheckpointFlightSucceededWithoutReload)) return "remote_resume_successful_outbound_required";
+            || !e.Require(f.CompletedSavedLandingAdmissionProved ? "primary_completed_saved_landing_admission" : "primary_successful_outbound",
+                f.CompletedSavedLandingAdmissionProved || f.CheckpointFlightSucceededWithoutReload)) return "remote_resume_successful_outbound_required";
         if (!e.Require("primary_source_is_current_primary", f.SourceGameTick >= 0 && (f.SourceGameTick == f.PrimaryGameTick || currentFixedExit))
             || !e.Require("primary_known_floor_covers_credential", f.TicketMinimumGameTick >= 0 && knownProgress >= f.TicketMinimumGameTick)
             || !e.Require("primary_exact_loss_authority", r.AcceptUnstoredProgressLoss
@@ -127,6 +128,9 @@ public static class VoyagerRemotePrimaryRecoveryPolicy
     public static bool HasMatchingEcho(PrepareOwnedWorldResumeRequest r, PreparedOwnedWorldResumePlan p) =>
         ValidateRequest(r) is null && p.Prepared && p.RecoveryMode == OwnedWorldResumeModes.AuthorizeRemotePrimaryRecovery
         && p.RecoveryEvidenceVersion == EvidenceVersion && p.RemotePrimaryRecoveryAuthorizationUsed
+        && p.CompletedSavedLandingAdmissionUsed == !string.IsNullOrEmpty(p.OriginalFailedFlightActionId)
+        && (!p.CompletedSavedLandingAdmissionUsed || Guid.TryParse(p.OriginalFailedFlightActionId, out _)
+            && p.SuccessfulFlightWitnessRetiredAtGameTick is null)
         && !p.OpensSavedWorldOnly && !p.PreviousAutomationRemainsStopped && !p.CompletedRemoteLastExitContinuationUsed
         && !p.FailedRemoteLastExitReauthorizationUsed && !p.PriorActionTerminalCompletionAttested
         && !p.PriorActionTerminalFailureAttested && !p.PriorFailedResumeProvenanceUsed

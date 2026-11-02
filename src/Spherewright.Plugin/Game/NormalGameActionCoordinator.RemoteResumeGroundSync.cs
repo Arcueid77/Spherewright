@@ -27,7 +27,8 @@ internal sealed partial class NormalGameActionCoordinator
         if (!f.NativeWarperCount.HasValue || f.NativeWarperCount < 1 + f.OriginalExtraWarperReserve)
             return "remote_resume_charge_original_warper_reserve_insufficient";
         var environment = RemoteResumeChargeEnvironmentBlocker(p, journey.JourneyId, adoption.CurrentDecisionEvidence,
-            completedPaidLandingOnly: adoption.Evidence.FailedLandingRecovery);
+            completedPaidLandingOnly: adoption.Evidence.FailedLandingRecovery,
+            provedSavedLandingAdmission: adoption.Evidence.CompletedSavedLandingAdmissionUsed);
         if (environment is not null) return environment;
         if(adoption.Evidence.ReturnOnlyContinuation)
             return ReturnOnlyNativeFundingBlocker(adoption,journey,reserve.PerNativeTickEnergyJoules??double.NaN);
