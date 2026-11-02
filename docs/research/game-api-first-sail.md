@@ -25,3 +25,7 @@ The `fired` value is an animation latch which remains after the launch. It is ex
 ## Validation boundary
 
 Core regressions exercise production request/hash/orbit binding, disabled/unknown/mutated orbit rejection, fixed-mode stop semantics, conflicting mode fields, stock-independent configuration hashing and mixed prepared echoes. Native/solution compilation uses the exact references above. Neither those tests nor the native source study proves installed operation, a real launch or recovery of a populated swarm; those results belong in Lab.
+
+## Ordinary construction-drone readiness
+
+The same pinned native reference exposes `ConstructionModuleComponent.ToggleConstructionDrones(PlanetFactory, Player)`: it toggles `droneEnabled` and, when enabling, invokes normal build/repair target searches. Both master and construction flags are serialized by native Export/Import; a disabled flag is saved world state, not evidence of when it changed. The enable-only configuration mode binds the current idle grounded player and requires OFF/master plus ON/construction and live drones, then calls this normal business method once. Ordinary NEW builds now reject disabled/unavailable mecha drones before any prebuild or material debit; read-only route/endpoint qualification remains available. Existing paid prebuilds are preserved and normal game ticks own construction. Local builds/tests do not prove installed recovery or completion.

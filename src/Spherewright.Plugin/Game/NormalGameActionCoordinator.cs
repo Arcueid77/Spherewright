@@ -851,6 +851,11 @@ internal sealed partial class NormalGameActionCoordinator
                 ExecuteSaveOnMainThread(action);
                 break;
             case NormalActionKinds.ConfigureBuilding:
+                if (plan.ConfigureMode == BuildingConfigurationModes.EnableMechaConstructionDrones)
+                {
+                    ExecuteEnableMechaConstructionOnMainThread(action);
+                    break;
+                }
                 if (plan.ConfigureMode == BuildingConfigurationModes.StorageCapacity)
                 {
                     ExecuteStorageConfigurationOnMainThread(action);
@@ -1353,6 +1358,8 @@ internal sealed partial class NormalGameActionCoordinator
             case NormalActionKinds.ConfigureBuilding:
                 if (plan.ConfigureMode == BuildingConfigurationModes.StorageCapacity)
                     return RevalidateStorageConfigurationOnMainThread(plan);
+                if (plan.ConfigureMode == BuildingConfigurationModes.EnableMechaConstructionDrones)
+                    return RevalidateEnableMechaConstructionOnMainThread(plan);
                 if (plan.ConfigureMode == BuildingConfigurationModes.EjectorOrbit)
                     return RevalidateEjectorOrbitOnMainThread(plan);
                 var configureSnapshot = _reader.InspectFactoryEntityOnMainThread(

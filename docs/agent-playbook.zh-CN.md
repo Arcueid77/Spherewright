@@ -492,3 +492,6 @@ Native Import 可将 double 宇宙坐标逆投影为 float 本地位置；普通
 所有者指定的0.5首帆窄扩展复用正常制造、施工、供电和分拣供料。对已完成2311弹射器的详细`inspect_factory_entity`新增`ejector`，包含帆数量/增产点、固定/运行轨道、原生目标状态、周期原始时长和本地恒星已存在云的观察。null及轨道/恒星弹射器覆盖不完整均保持未知。`firedAnimationActive`是动画标志，明确不算发射回执。发射状态应读取弹射器专用字段；通用生产进度不描述发射周期。
 
 选择固定轨道前fresh检查精确本地弹射器，再用`prepare_configure_building`，设置`mode=ejector-orbit`、`recipeId=0`、`ejectorOrbitId`及`expectedFactoryStateHash=ejector.configurationStateHash`，其他模式参数全部保持默认。原生自动选轨须关闭；正数目标必须存在并启用，0清除固定目标。核对`plannedEjectorOrbit`后只提交原token/key一次并核销结果。原生`SetOrbit`调用保留库存/增产点，不制造、供料或发射帆。实际运行由原生供电、几何和射界决定。以原制造/供料库存、精确弹射器消耗、来源隔离/覆盖及云中弹道/抵达交叉观察，随后正常保存并验证支持的恢复。轨道预检成功、动画或单个全局计数均不足以验收。
+## 普通机甲施工无人机
+
+提交新的普通施工前先读玩家：总开关与施工开关均须开启，并至少有一架存活无人机。关闭状态仍可做只读几何/端点资格检查。要在施工开关已开启时显式开启关闭的总开关，使用`prepare_configure_building`，`mode=enable-mecha-construction-drones`、`entityId=0`、`recipeId=0`，`expectedFactoryStateHash`使用新鲜**玩家**`stateHash`，其他参数全部默认。须读到`plannedMechaConstructionDronesEnabled=true`，然后以原token/key提交一次。原生`ConstructionModuleComponent.ToggleConstructionDrones(factory,player)`仅将OFF切到ON并正常搜索现有建设/修复目标，不创建待建体或瞬间完工；开启前核对当前可调度工作与预算。保留已接受/付料的待建体并核销原动作，超时或重载后不得重新创建。源码验证不等于实装施工/恢复验收。

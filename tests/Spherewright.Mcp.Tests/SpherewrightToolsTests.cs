@@ -2642,6 +2642,31 @@ public sealed partial class SpherewrightToolsTests
         Assert.Equal(prioritize, bridge.LastSelectResearchRequest?.PrioritizeQueued);
     }
 
+    [Theory]
+    [InlineData(null)]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task MechaDroneEnableRequiresMatchingEnableOnlyCohortEcho(bool? echo)
+    {
+        var bridge = new FakeBridgeClient(SuccessResult())
+        {
+            ConfigurePlan = new PreparedNormalAction
+            {
+                Prepared = true, CommitAllowedNow = true, PlanToken = "synthetic-enable-plan",
+                ActionKind = NormalActionKinds.ConfigureBuilding,
+                PlannedMechaConstructionDronesEnabled = echo,
+            },
+        };
+        var result = await SpherewrightTools.PrepareConfigureBuildingAsync(bridge,
+            "synthetic-owned-session", 101, 0, 0, "fresh-player-hash",
+            mode: BuildingConfigurationModes.EnableMechaConstructionDrones);
+        Assert.Equal(echo != true, result.IsError);
+        Assert.Equal("fresh-player-hash", bridge.LastConfigureRequest!.ExpectedFactoryStateHash);
+        Assert.Equal(0, bridge.LastConfigureRequest.EntityId);
+        if (echo != true)
+            Assert.Equal(JsonValueKind.Null, result.StructuredContent!.Value.GetProperty("result").ValueKind);
+    }
+
     [Fact]
     public async Task WarehouseOperationMapsNativeDisabledGridCountAndFreshHash()
     {

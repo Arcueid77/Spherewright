@@ -2,12 +2,13 @@
 
 [English](CHANGELOG.md) · [简体中文](CHANGELOG.zh-CN.md)
 
-## 0.5.0 — accepted Voyager baseline; first-sail extension in development
+## 0.5.0 — accepted Voyager baseline; first-sail/rocket extension in development
 
 - Cross-star travel, ordinary warper supply, bounded remote construction and active-vessel observations extend the original industrial foundation.
 - The original Voyager clauses are accepted at their recorded sources, including real remote mining, three delivery cycles, home consumption and save/recovery continuation. The accepted source is on main; baseline review archives remain immutable in Lab.
 - Owner direction of 2026-11-01 adds the first normally manufactured and actually launched solar sail. Ejector/swarm detail inspection and fixed-orbit configuration are under development; source checks are separate from installation and live launch evidence.
-- Existing construction bounds remain, including the twelve-new-belt remote batch subset. Rockets and Dyson structural design remain in 0.6. No 0.5 tag, Release or registry upload is implied by this entry.
+- Adds an explicit enable-only native mecha construction-drone switch with a fresh player binding and matching-cohort echo. Ordinary construction rejects disabled/unavailable drones before creating a prebuild; existing paid prebuilds are retained and completed through normal game ticks.
+- Existing construction bounds remain, including the twelve-new-belt remote batch subset. The owner added the first carrier rocket and its minimum receiving structure to0.5; general Dyson structural design and sustained launch networks remain in0.6. No 0.5 tag, Release or registry upload is implied by this entry.
 
 See [current product scope](docs/project-status.md), [native first-sail research](docs/research/game-api-first-sail.md) and the [Lab active snapshot](https://github.com/Arcueid77/Spherewright-Lab/blob/main/scenarios/v0.5-voyager/current-status.md).
 

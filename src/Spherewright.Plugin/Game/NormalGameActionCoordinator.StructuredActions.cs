@@ -85,6 +85,12 @@ internal sealed partial class NormalGameActionCoordinator
             catch (InvalidOperationException error) { return NotReadyPlan(error.Message); }
         }
 
+        if (request.BeltEndpointPreview is null && request.BeltRoutePreview is null
+            && MechaConstructionDronePolicy.BuildReadiness(playerResult.Value) is { } droneReason)
+            return GameCallResult<PreparedNormalAction>.Failed(BridgeError.Create(
+                BridgeErrorCodes.ActionRejected, droneReason, false,
+                "Fresh-read the player. Enable ordinary mecha construction drones through the explicit enable-mecha-construction-drones configuration mode before submitting a new prebuild; retain existing prebuilds and never recreate them."));
+
         BuildPreparation preparation;
         if (item.prefabDesc.isBelt)
         {
@@ -2167,6 +2173,8 @@ internal sealed partial class NormalGameActionCoordinator
             return GameCallResult<PreparedNormalAction>.Failed(common.Error);
         }
 
+        if (request.Mode == BuildingConfigurationModes.EnableMechaConstructionDrones)
+            return PrepareEnableMechaConstructionOnMainThread(requestedSessionId, request, common.Session!);
         if (request.Mode == BuildingConfigurationModes.EjectorOrbit)
             return PrepareEjectorOrbitOnMainThread(requestedSessionId, request, common.Session!);
         if (request.EjectorOrbitId != -1)
