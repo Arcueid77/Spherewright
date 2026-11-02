@@ -13,6 +13,44 @@ namespace Spherewright.Bridge.Core.Tests;
 public sealed class SavedFactorySiteTests
 {
     [Fact]
+    public void CompletedPaidMiningSiteCanSupportAnotherOwnedLandingWithoutChangingOldReceipts()
+    {
+        using var f = new Fixture(false, miningOnly: true);
+        var before = File.ReadAllBytes(f.StorePath);
+        f.Journey = Guid.NewGuid().ToString();
+        Assert.Null(f.LandingGuard());
+        Assert.Equal(before, File.ReadAllBytes(f.StorePath));
+    }
+
+    [Fact]
+    public void LandingAdmissionDoesNotBorrowTheRecoveryPendingObjectException()
+    {
+        using var f = new Fixture(true);
+        Assert.Null(f.Guard());
+        Assert.Equal("landing_charge_completed_paid_site_required", f.LandingGuard());
+    }
+
+    [Theory]
+    [InlineData("missing_journey")]
+    [InlineData("foreign_entity")]
+    [InlineData("broken_edge")]
+    [InlineData("unknown_receipt")]
+    [InlineData("busy_drone")]
+    public void CompletedMiningLandingStillRequiresEveryOwnedObjectEdgeAndIdleReceipt(string fault)
+    {
+        using var f = new Fixture(false, miningOnly: true);
+        switch (fault)
+        {
+            case "missing_journey": f.Journey = null!; break;
+            case "foreign_entity": f.Factory.entityPool[4] = new() { id = 4, protoId = 2203 }; f.Factory.entityCount++; f.Factory.entityCursor++; break;
+            case "broken_edge": f.Factory.TestPorts.Remove((1, 0)); break;
+            case "unknown_receipt": f.MakeUnknown(); break;
+            case "busy_drone": f.Player.mecha.constructionModule.TestPhysicalIdle = false; break;
+        }
+        Assert.NotNull(f.LandingGuard());
+    }
+
+    [Fact]
     public void PassiveStationKeepsMultipleNormalSupplyAndDemandSlotsOnRecovery()
     {
         using var f = new Fixture(false); f.AddStation();
@@ -96,20 +134,24 @@ public sealed class SavedFactorySiteTests
         internal readonly PlanetFactory Factory = new() { planetId = 402 };
         internal readonly Player Player = new() { planetId = 402 };
         internal string Journey = Guid.NewGuid().ToString();
+        private readonly int sourceItem;
+        private readonly int destinationItem;
         internal BlueprintBuildStore Store() => new(root, "0.10.35.29151", sessions, new ManualLogSource());
         internal string StorePath => Directory.GetFiles(Path.Combine(root, "foundry"), "blueprints-*.json").Single();
         internal string? Guard() => new NormalGameActionCoordinator(Store(), sessions).MinerEnvironmentForTest(Player, Journey);
-        internal Fixture(bool pending)
+        internal string? LandingGuard() => new NormalGameActionCoordinator(Store(), sessions).CompletedLandingEnvironmentForTest(Player, Journey);
+        internal Fixture(bool pending, bool miningOnly = false)
         {
+            sourceItem = miningOnly ? 2301 : 2304; destinationItem = miningOnly ? 2203 : 2101;
             GameMain.gameTick = 120; GameMain.history = new(); Player.factory = Factory; GameMain.SavedFactoryTestPlayer = Player;
             GameMain.data = new() { localLoadedPlanetFactory = Factory }; GameMain.localPlanet = new() { id = 402, factory = Factory };
             Factory.entityCount = pending ? 2 : 3; Factory.entityCursor = pending ? 3 : 4;
             Factory.prebuildCount = pending ? 1 : 0; Factory.prebuildCursor = 2;
-            Factory.entityPool[1] = new() { id = 1, protoId = 2304, rot = new(0, 0, 0, 1) };
-            Factory.entityPool[2] = new() { id = 2, protoId = 2101, rot = new(0, 0, 0, 1) };
+            Factory.entityPool[1] = new() { id = 1, protoId = sourceItem, minerId = miningOnly ? 1 : 0, rot = new(0, 0, 0, 1) };
+            Factory.entityPool[2] = new() { id = 2, protoId = destinationItem, powerNodeId = miningOnly ? 1 : 0, rot = new(0, 0, 0, 1) };
             if (pending) Factory.prebuildPool[1] = new() { id = 1 };
             else Factory.entityPool[3] = new() { id = 3, protoId = 2011, rot = new(0, 0, 0, 1) };
-            Add(2304, 1, false); Add(2101, 2, false); Add(2011, 3, pending);
+            Add(sourceItem, 1, false); Add(destinationItem, 2, false); Add(2011, 3, pending);
             Player.mecha.constructionModule.droneEnabled = !pending;
             Connect(1, 0, pending ? -1 : 3, 0); Connect(pending ? -1 : 3, 1, 2, 0);
         }
@@ -135,12 +177,17 @@ public sealed class SavedFactorySiteTests
             var step = new StructuredConstructionConnection();
             var binding = new StructuredConstructionBinding { Kind = item == 2011 ? "inserter" : "core", JourneyId = Journey,
                 NativePlanHash = "sha256:" + new string('a', 64), Steps = [step] };
+            if (item == 2301)
+            {
+                binding.Kind = "resource"; binding.ResourceNodeId = 7; binding.ResourceStateHash = "synthetic-resource";
+                site.Objects[0].Parameters = [7];
+            }
             if (item == 2011)
             {
                 binding.SourceObjectId = step.InputObjectId = 1; binding.DestinationObjectId = step.OutputObjectId = 2;
                 step.InputFromSlot = 0; step.InputToSlot = 0; step.OutputFromSlot = 1; step.OutputToSlot = 0;
-                binding.Endpoints = [new() { ObjectId = 1, ItemId = 2304, Rotation = new() { W = 1 } },
-                    new() { ObjectId = 2, ItemId = 2101, Rotation = new() { W = 1 } }];
+                binding.Endpoints = [new() { ObjectId = 1, ItemId = sourceItem, Rotation = new() { W = 1 } },
+                    new() { ObjectId = 2, ItemId = destinationItem, Rotation = new() { W = 1 } }];
             }
             var state = BlueprintBuildState.Create(site, structuredConstruction: binding);
             var c = state.ConstructionControl = StructuredConstructionControlTests.Control();
@@ -156,6 +203,16 @@ public sealed class SavedFactorySiteTests
         internal void MakeUnknown()
         {
             Assert.True(Store().TryRead(out var states)); var state = states.Single(s => s.Site.Objects[0].ItemId == 2011);
+            if (state.Phase == "completed")
+            {
+                // A real completed receipt cannot be rewritten through the
+                // store. Corrupt input must not obtain a landing certificate.
+                var document = Newtonsoft.Json.Linq.JObject.Parse(File.ReadAllText(StorePath));
+                var row = document["builds"]!.Single(t => (string?)t!["buildId"] == state.BuildId);
+                row!["phase"] = "outcome_unknown";
+                File.WriteAllText(StorePath, document.ToString());
+                return;
+            }
             state.Stop("outcome_unknown"); Assert.True(Store().TryPut(state));
         }
         public void Dispose()

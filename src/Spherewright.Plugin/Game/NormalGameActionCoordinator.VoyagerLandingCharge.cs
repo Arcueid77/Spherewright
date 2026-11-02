@@ -63,7 +63,9 @@ internal sealed partial class NormalGameActionCoordinator
             NativeGuardFresh = VoyagerLandingChargeGuardFresh() && sequence,
             CostEnvelopeStable = perTick.HasValue && (wait is null
                 || wait.CostEnvelope == currentCost && wait.PerTick == perTick.Value),
-            EnvironmentBlocker = RemoteResumeChargeEnvironmentBlocker(player),
+            EnvironmentBlocker = RemoteResumeChargeEnvironmentBlocker(player,
+                VoyagerLandingChargeFlightMatches(action) ? action.VoyagerJourney?.JourneyId : null,
+                completedPaidLandingOnly: true),
             ContactAtGameTick = action.FlightDestinationContactAtGameTick,
             StableAtGameTick = action.FlightStableLandingAtGameTick,
             FlightDeadlineGameTick = action.VoyagerDeadlineGameTick,

@@ -7,7 +7,7 @@ namespace Spherewright.Plugin.Game;
 internal sealed partial class NormalGameActionCoordinator
 {
     private string? RemoteResumeChargeEnvironmentBlocker(Player p, string? journeyId = null,
-        NativeResumeDecisionEvidence? evidence = null)
+        NativeResumeDecisionEvidence? evidence = null, bool completedPaidLandingOnly = false)
     {
         var h = GameMain.history; var factory = p.factory; var module = p.mecha.constructionModule;
         if (p.controller.actionWalk.rtsVelocity.sqrMagnitude != 0f || p.controller.actionWalk.moveVelocity.sqrMagnitude != 0f
@@ -21,15 +21,27 @@ internal sealed partial class NormalGameActionCoordinator
             || module.repairTargets is { } rt && (rt.Length > 256 || rt.Any(t => t.objectId != 0))
             || module.autoReconstructTargets is { } at && (at.Length > 256 || at.Any(t => t.objectId != 0)))
             return "remote_resume_charge_native_construction_not_empty";
-        // Preserve the original empty-factory path. Only recovery callers pass
-        // an exact journey; an ordinary landing cannot inherit this exception.
+        // The empty-factory path remains unchanged. A live original landing
+        // may bind only a completely built, fully paid owned site. Recovery
+        // retains its existing separately proved pending-object admission.
         if (factory.entityCount == 0 && factory.entityCursor <= 1
             && factory.prebuildCount == 0 && factory.prebuildCursor <= 1) return null;
-        if (_blueprints.TryRead(out var factorySaved) && factorySaved.Any(b => b.Site.PlanetId == factory.planetId
-                && b.StructuredConstruction is not null && b.Objects.Any(o => o.SubmittedAtGameTick.HasValue)
-                && b.Site.Objects.Any(o => StructuredConstructionBinding.IsFactoryCoreItem(o.ItemId))))
-            return SavedFactorySiteMatches(p, factory, journeyId, factorySaved, evidence)
-                ? null : "remote_resume_paid_factory_site_unproved";
+        if (_blueprints.TryRead(out var factorySaved))
+        {
+            var local = factorySaved.Where(b => b.Site.PlanetId == factory.planetId
+                && b.Objects.Any(o => o.SubmittedAtGameTick.HasValue)).ToArray();
+            var hasFactoryCore = local.Any(b => b.StructuredConstruction is not null
+                && b.Site.Objects.Any(o => StructuredConstructionBinding.IsFactoryCoreItem(o.ItemId)));
+            var completePaidSite = local.Length > 0 && local.All(b => b.StructuredConstruction is not null
+                && b.Phase == "completed" && b.Objects.Count > 0
+                && b.Objects.All(o => o.State == BlueprintObjectStates.Completed));
+            if (completedPaidLandingOnly && !completePaidSite)
+                return "landing_charge_completed_paid_site_required";
+            if (hasFactoryCore || completedPaidLandingOnly)
+                return SavedFactorySiteMatches(p, factory, journeyId, factorySaved, evidence)
+                    ? null : "remote_resume_paid_factory_site_unproved";
+        }
+        else if (completedPaidLandingOnly) return "landing_charge_paid_site_store_unavailable";
         if (_blueprints.TryRead(out var saved) && saved.Any(b => b.Site.PlanetId == factory.planetId
                 && b.StructuredConstruction?.Kind == "belt"))
             return SavedUnpoweredBeltChainMatches(p, factory, journeyId, saved, evidence)
