@@ -517,3 +517,8 @@ Native Import 可将 double 宇宙坐标逆投影为 float 本地位置；普通
 ## 普通机甲施工无人机
 
 提交新的普通施工前先读玩家：总开关与施工开关均须开启，并至少有一架存活无人机。关闭状态仍可做只读几何/端点资格检查。要在施工开关已开启时显式开启关闭的总开关，使用`prepare_configure_building`，`mode=enable-mecha-construction-drones`、`entityId=0`、`recipeId=0`，`expectedFactoryStateHash`使用新鲜**玩家**`stateHash`，其他参数全部默认。须读到`plannedMechaConstructionDronesEnabled=true`，然后以原token/key提交一次。原生`ConstructionModuleComponent.ToggleConstructionDrones(factory,player)`仅将OFF切到ON并正常搜索现有建设/修复目标，不创建待建体或瞬间完工；开启前核对当前可调度工作与预算。保留已接受/付料的待建体并核销原动作，超时或重载后不得重新创建。源码验证不等于实装施工/恢复验收。
+
+
+## 普通发电机冷启动
+
+新燃料发电机须先正常放入首批燃料，供电分拣器才能运行。fresh检查准确已建2204火电或2211聚变机组及玩家；使用`prepare_transfer`，`direction=player-to-generator-fuel`、`storageEntityId`填该机组、正数原生接受燃料及count1..10、`expectedPlayerStateHash`和机组完整`stateHash`作为`expectedStorageStateHash`。须空手、来源燃料inc0、正常建造交互距离，机组缓存燃料及已加载/当前燃料均空。核对`generatorColdStartFuel`中的身份/数量/原生操作回读后只提交原转移动作一次，核销同tick背包/机组的等量反向变化。由原生`PlanetFactory.InsertInto`正常插入燃料，不直接写游戏缓存/能量或推进模拟；后续燃烧与发电属于普通原生行为。冷插入不证明供电、运输、制造或真实验收；此子集不支持热机补料或燃料取出。

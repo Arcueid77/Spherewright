@@ -3534,6 +3534,7 @@ public sealed partial class SpherewrightToolsTests
 
         public ActionResultSnapshot? ActionResult { get; set; }
         public PreparedNormalAction? MovePlan { get; set; }
+        public PreparedNormalAction? TransferPlan { get; set; }
         public PrepareMoveRequest? LastMoveRequest { get; private set; }
         public SessionState? SessionSnapshot { get; set; }
         public PrepareOwnedWorldResumeRequest? LastResumePrepareRequest { get; private set; }
@@ -3935,7 +3936,8 @@ public sealed partial class SpherewrightToolsTests
         public Task<BridgeCallResult<PreparedNormalAction>> PrepareTransferAsync(
             string sessionId,
             PrepareTransferRequest request,
-            CancellationToken cancellationToken) => Prepared(sessionId, NormalActionKinds.Transfer);
+            CancellationToken cancellationToken) => TransferPlan is null ? Prepared(sessionId, NormalActionKinds.Transfer)
+                : Task.FromResult(BridgeCallResult<PreparedNormalAction>.Succeeded(TransferPlan));
 
         public Task<BridgeCallResult<NormalActionCommitResult>> CommitTransferAsync(
             string sessionId,

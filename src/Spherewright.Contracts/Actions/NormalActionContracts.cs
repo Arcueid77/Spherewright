@@ -39,6 +39,7 @@ public static class NormalBuildKinds
 
 public static class TransferDirections
 {
+    public const string PlayerToGeneratorFuel = "player-to-generator-fuel";
     public const string PlayerToStorage = "player-to-storage";
     public const string StorageToPlayer = "storage-to-player";
 }
@@ -361,6 +362,7 @@ public sealed class CommitNormalActionRequest
 
 public sealed class PreparedNormalAction
 {
+    public GeneratorColdStartFuelPlan? GeneratorColdStartFuel { get; set; }
     public VoyagerMechaWorkSnapshot? VoyagerMechaWork { get; set; }
 
     public bool PreservesQuarantine { get; set; }
@@ -438,6 +440,17 @@ public sealed class PreparedNormalAction
     public string? ReconcilesActionId { get; set; }
 
     public List<int> ProvedObjectIds { get; set; } = new List<int>();
+}
+
+public sealed class GeneratorColdStartFuelPlan
+{
+    public int EvidenceVersion { get; set; }
+    public int EntityId { get; set; }
+    public int BuildingItemId { get; set; }
+    public int ItemId { get; set; }
+    public int Count { get; set; }
+    public bool EmptyUnlitGenerator { get; set; }
+    public string NativeOperation { get; set; } = string.Empty;
 }
 
 public sealed class ActionItemBudget

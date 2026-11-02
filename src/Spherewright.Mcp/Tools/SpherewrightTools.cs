@@ -737,7 +737,7 @@ public static partial class SpherewrightTools
         Destructive = false,
         Idempotent = false,
         OpenWorld = false)]
-    [Description("Re-reads the player and one exact storage, verifies source count, destination capacity, range, and bilateral conservation without moving any item.")]
+    [Description("Re-reads the player and one exact storage, verifies source count, destination capacity, range, and bilateral conservation without moving any item. The separate player-to-generator-fuel direction accepts only a fully empty unlit thermal2204 or fusion2211 generator, exact zero-inc package fuel1..10, empty hand and fresh full generator stateHash. It binds Native fuelNeeds membership and PlanetFactory.InsertInto; require generatorColdStartFuel echo. It never removes hot fuel, refills a running generator, writes energy or advances simulation.")]
     public static async Task<CallToolResult> PrepareTransferAsync(
         IBridgeClient bridgeClient,
         string sessionId,
@@ -765,7 +765,12 @@ public static partial class SpherewrightTools
                 StateHashVersion = stateHashVersion,
             },
             cancellationToken).ConfigureAwait(false);
-        return ToToolResult(result, "Exact player-storage transfer plan prepared; both containers are unchanged.");
+        if (direction == TransferDirections.PlayerToGeneratorFuel && result.Success
+            && !GeneratorColdStartFuelPolicy.HasMatchingEcho(storageEntityId, itemId, count, result.Value))
+            result = BridgeCallResult<PreparedNormalAction>.Failed(BridgeError.Create(BridgeErrorCodes.BridgeNotReady,
+                "The Plugin did not bind the exact empty generator and Native fuel insertion; no transfer token is exposed.",
+                false, "Use matching Plugin/MCP bytes and inspect the actual unlit generator and package fuel."));
+        return ToToolResult(result, "Exact transfer plan prepared without moving any item; cold-generator fuel requires its separate Native insertion echo.");
     }
 
     [McpServerTool(
@@ -775,7 +780,7 @@ public static partial class SpherewrightTools
         Destructive = true,
         Idempotent = true,
         OpenWorld = false)]
-    [Description("Moves the prepared exact count through StorageComponent's normal UI business operations and proves equal-and-opposite container deltas. Poll the action to terminal. For a successful transfer, beforeTargetAmount/afterTargetAmount are the storage counts and itemDeltas are the player's changes at completedAtGameTick. Check these same-tick deltas, then inspect later logistics separately: an active storage may already have received or sent items, so do not require cross-tick equality. A later stock difference or reporting error does not undo the terminal result; never replay an accepted transfer. Missing proof or an unexplained flow still requires reconciliation, not assumed conservation.")]
+    [Description("Moves the prepared exact count through StorageComponent's normal UI business operations and proves equal-and-opposite container deltas. For the explicitly prepared player-to-generator-fuel cold-start subset, the package debit and Native PlanetFactory.InsertInto instead prove exact same-tick fuel conservation; all unrelated generator fields and loaded energy stay unchanged. Poll the action to terminal. For a successful transfer, beforeTargetAmount/afterTargetAmount are the storage counts and itemDeltas are the player's changes at completedAtGameTick. Check these same-tick deltas, then inspect later logistics separately: an active storage may already have received or sent items, so do not require cross-tick equality. A later stock difference or reporting error does not undo the terminal result; never replay an accepted transfer. Missing proof or an unexplained flow still requires reconciliation, not assumed conservation.")]
     public static async Task<CallToolResult> CommitTransferAsync(
         IBridgeClient bridgeClient,
         string sessionId,
@@ -786,7 +791,7 @@ public static partial class SpherewrightTools
     {
         var request = CreateCommitRequest(sessionId, planetId, planToken, idempotencyKey);
         var result = await bridgeClient.CommitTransferAsync(sessionId, request, cancellationToken).ConfigureAwait(false);
-        return ToToolResult(result, "Player-storage transfer completed with exact bilateral conservation readback.");
+        return ToToolResult(result, "Normal item transfer completed with exact same-tick bilateral conservation readback.");
     }
 
     [McpServerTool(

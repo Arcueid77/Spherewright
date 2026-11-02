@@ -446,7 +446,9 @@ internal sealed partial class NormalGameActionCoordinator
     public GameCallResult<PreparedNormalAction> PrepareTransferOnMainThread(
         string? requestedSessionId,
         PrepareTransferRequest request)
-        => PrepareStorageTransferOnMainThread(requestedSessionId, request);
+        => request.Direction == TransferDirections.PlayerToGeneratorFuel
+            ? PrepareGeneratorColdStartFuelOnMainThread(requestedSessionId, request)
+            : PrepareStorageTransferOnMainThread(requestedSessionId, request);
 
     public GameCallResult<PreparedNormalAction> PrepareLogisticsStationFleetTransferOnMainThread(
         string? requestedSessionId,
@@ -833,7 +835,8 @@ internal sealed partial class NormalGameActionCoordinator
                 CancelBlueprintBuildOnMainThread(action);
                 break;
             case NormalActionKinds.Transfer:
-                ExecuteStorageTransferOnMainThread(action);
+                if (action.Plan.TransferDirection == TransferDirections.PlayerToGeneratorFuel) ExecuteGeneratorColdStartFuelOnMainThread(action);
+                else ExecuteStorageTransferOnMainThread(action);
                 break;
             case NormalActionKinds.LogisticsStationFleetTransfer:
                 ExecuteStationFleetTransferOnMainThread(action);
@@ -1344,7 +1347,8 @@ internal sealed partial class NormalGameActionCoordinator
             case NormalActionKinds.CancelBlueprintBuild:
                 return RevalidateBlueprintCancelOnMainThread(plan);
             case NormalActionKinds.Transfer:
-                return RevalidateStorageTransferOnMainThread(plan);
+                return plan.TransferDirection == TransferDirections.PlayerToGeneratorFuel
+                    ? RevalidateGeneratorColdStartFuelOnMainThread(plan) : RevalidateStorageTransferOnMainThread(plan);
             case NormalActionKinds.LogisticsStationFleetTransfer:
                 return RevalidateStationFleetTransferOnMainThread(plan);
             case NormalActionKinds.Refuel:
