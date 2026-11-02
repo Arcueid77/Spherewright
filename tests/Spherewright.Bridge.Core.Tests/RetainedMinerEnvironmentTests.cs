@@ -97,7 +97,7 @@ public sealed class RetainedMinerEnvironmentTests
         using var f = new Fixture(); f.Factory.entityCount = 0; f.Factory.entityCursor = f.Factory.prebuildCursor = 1;
         Assert.Null(f.Guard());
         GameMain.history!.currentTech = 1;
-        Assert.Equal("remote_resume_charge_global_research_active", f.Guard());
+        Assert.Equal("remote_resume_charge_mecha_work_not_quiescent", f.Guard());
         f.Player.controller.actionWalk.rtsVelocity = new(1, 0, 0);
         Assert.Equal("remote_resume_charge_rts_or_manual_velocity_nonzero", f.Guard());
     }

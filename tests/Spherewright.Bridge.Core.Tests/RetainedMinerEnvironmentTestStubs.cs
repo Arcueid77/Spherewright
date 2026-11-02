@@ -11,7 +11,12 @@ internal static partial class GameMain
     internal static TestHistory? history = new();
     internal static Player? SavedFactoryTestPlayer;
 }
-internal sealed class TestHistory { internal int currentTech; internal int[] techQueue = new int[32]; }
+internal sealed class TestHistory
+{
+    internal int currentTech;
+    internal int[] techQueue = new int[32];
+    internal Dictionary<int, int> techStates = new();
+}
 internal sealed partial class Player { internal PlanetFactory? factory; internal int planetId = 201; }
 internal sealed partial class PlayerController { internal TestMotion actionWalk = new(), actionDrift = new(); }
 internal sealed class TestMotion { internal UnityEngine.Vector3 rtsVelocity, moveVelocity; }

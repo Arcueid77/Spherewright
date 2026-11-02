@@ -361,6 +361,8 @@ public sealed class CommitNormalActionRequest
 
 public sealed class PreparedNormalAction
 {
+    public VoyagerMechaWorkSnapshot? VoyagerMechaWork { get; set; }
+
     public bool PreservesQuarantine { get; set; }
 
     public long? PreservationGameTick { get; set; }

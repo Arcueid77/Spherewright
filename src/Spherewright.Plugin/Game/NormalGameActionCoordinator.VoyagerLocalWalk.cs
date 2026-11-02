@@ -328,8 +328,7 @@ internal sealed partial class NormalGameActionCoordinator
         try
         {
             var m = player.mecha; var c = player.controller; var history = GameMain.history;
-            result.StableCostInputs = history is not null && history.currentTech == 0
-                && history.techQueue is { Length: 32 } && history.techQueue.All(id => id == 0)
+            result.StableCostInputs = history?.techQueue is { Length: 32 } && VoyagerMechaWorkIdle(player)
                 && LocalRawMovementInputIdle()
                 && c.input0.sqrMagnitude == 0f && c.input1.sqrMagnitude == 0f;
             result.CoreEnergyJoules = m.coreEnergy; result.CoreCapacityJoules = m.coreEnergyCap;

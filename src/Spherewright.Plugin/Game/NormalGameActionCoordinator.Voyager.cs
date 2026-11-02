@@ -36,7 +36,9 @@ internal sealed partial class NormalGameActionCoordinator
         var budget = refreshed.Value;
         if (!budget.BudgetSufficient) return InvalidPlan(budget.Blockers.FirstOrDefault()?.Message ?? "The fresh route budget is insufficient.");
         var player = GameMain.mainPlayer;
-        if (!VoyagerMechaWorkIdle(player)) return InvalidPlan("Finish the native mecha replicator/research queues before reserving a finite flight.");
+        var mechaWork = CaptureVoyagerMechaWork(player);
+        var mechaWorkDecision = VoyagerMechaWorkQuiescencePolicy.Evaluate(mechaWork);
+        if (!mechaWorkDecision.Proved) return InvalidPlan("Finite flight requires idle native mecha work. Queued factory research is supported only with a proved empty mecha research buffer, no carried required research items, and complete recipe-only/no-award technology metadata.");
         var journey = _flightCheckpoints.VoyagerJourney;
         var returning = !string.IsNullOrWhiteSpace(request.JourneyId);
         if (returning != budget.IsReturnLeg || request.JourneyId != inspectedRequest!.JourneyId)
@@ -58,8 +60,16 @@ internal sealed partial class NormalGameActionCoordinator
         var payload = NormalActionPlanPayload.VoyagerFlight(requestedSessionId!, request.PlanetId, journeyId,
             returning, budget, GameStateReader.CopyVoyagerRequest(inspectedRequest!), playerHash,
             VoyagerNativePrerequisiteHash(player), new VoyagerNativeBinding(GameMain.data, player));
-        return AddPreparedPlan(payload, common.Session!, returning ? journey!.ReturnReserveGameTicks : budget.OutboundMaximumGameTicks,
+        var result = AddPreparedPlan(payload, common.Session!, returning ? journey!.ReturnReserveGameTicks : budget.OutboundMaximumGameTicks,
             "The exact bounded native flight consumes one real mecha warper, exits warp, approaches the legally visible solid landing target and verifies 600 grounded ticks; the original home/return reserve survives outbound landing.");
+        if (result.Success && result.Value is not null)
+            result.Value.VoyagerMechaWork = new VoyagerMechaWorkSnapshot
+            {
+                QuiescenceProved = true, FactoryOnlyResearch = mechaWorkDecision.FactoryOnlyResearch,
+                QueuedTechnologyIds = mechaWork.QueuedTechnologyIds!.ToList(),
+                NativeResearchOrInventoryMutationPerformed = false,
+            };
+        return result;
     }
 
     private BridgeError? RevalidateVoyagerFlightOnMainThread(NormalActionPlanPayload plan)
@@ -644,9 +654,6 @@ internal sealed partial class NormalGameActionCoordinator
         && ReferenceEquals(GameMain.mainPlayer, plan.VoyagerBinding.Player)
         && ReferenceEquals(GameMain.mainPlayer?.controller, plan.VoyagerBinding.Controller)
         && ReferenceEquals(GameMain.mainPlayer?.mecha, plan.VoyagerBinding.Mecha);
-
-    private static bool VoyagerMechaWorkIdle(Player player) => player?.mecha?.forge is not null
-        && player.mecha.forge.tasks.Count == 0 && GameMain.history is not null && !GameMain.history.techQueue.Any(id => id > 0);
 
     private static string VoyagerNativePrerequisiteHash(Player player) => CanonicalStateHash.Combine(
         "voyager-native-flight-inputs-v1", player.mecha.thrusterLevel, player.mecha.maxSailSpeed, player.mecha.maxWarpSpeed,

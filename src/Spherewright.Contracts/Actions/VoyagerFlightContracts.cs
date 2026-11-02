@@ -2,6 +2,15 @@ using Spherewright.Contracts.Players;
 
 namespace Spherewright.Contracts.Actions;
 
+// Informational copied proof, not a separate execution capability or research receipt.
+public sealed class VoyagerMechaWorkSnapshot
+{
+    public bool QuiescenceProved { get; set; }
+    public bool FactoryOnlyResearch { get; set; }
+    public List<int> QueuedTechnologyIds { get; set; } = new();
+    public bool NativeResearchOrInventoryMutationPerformed { get; set; }
+}
+
 public sealed class PrepareVoyagerFlightRequest
 {
     public int PlanetId { get; set; }

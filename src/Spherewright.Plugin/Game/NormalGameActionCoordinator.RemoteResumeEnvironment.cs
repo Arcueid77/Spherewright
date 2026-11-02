@@ -13,8 +13,8 @@ internal sealed partial class NormalGameActionCoordinator
         if (p.controller.actionWalk.rtsVelocity.sqrMagnitude != 0f || p.controller.actionWalk.moveVelocity.sqrMagnitude != 0f
             || p.controller.actionDrift.rtsVelocity.sqrMagnitude != 0f || p.controller.actionDrift.moveVelocity.sqrMagnitude != 0f)
             return "remote_resume_charge_rts_or_manual_velocity_nonzero";
-        if (h is null || h.currentTech != 0 || h.techQueue is null || h.techQueue.Length != 32 || h.techQueue.Any(id => id != 0))
-            return "remote_resume_charge_global_research_active";
+        if (h?.techQueue is not { Length: 32 } || !VoyagerMechaWorkIdle(p))
+            return "remote_resume_charge_mecha_work_not_quiescent";
         if (factory is null
             || module.buildTargetTotalCount != 0 || module.repairTargetTotalCount != 0 || module.autoReconstructTargetTotalCount != 0
             || module.buildTargets is { } bt && (bt.Length > 256 || bt.Any(t => t.objectId != 0))

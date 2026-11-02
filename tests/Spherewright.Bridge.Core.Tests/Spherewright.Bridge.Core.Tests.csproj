@@ -34,6 +34,7 @@
     <Compile Include="..\..\src\Spherewright.Plugin\Game\NormalGameActionCoordinator.RemoteResumeContactState.cs" Link="PluginGame\NormalGameActionCoordinator.RemoteResumeContactState.cs" />
     <Compile Include="..\..\src\Spherewright.Plugin\Game\NormalGameActionCoordinator.RemoteResumeDecision.cs" Link="PluginGame\NormalGameActionCoordinator.RemoteResumeDecision.cs" />
     <Compile Include="..\..\src\Spherewright.Plugin\Game\NormalGameActionCoordinator.RemoteResumeEnvironment.cs" Link="PluginGame\NormalGameActionCoordinator.RemoteResumeEnvironment.cs" />
+    <Compile Include="..\..\src\Spherewright.Plugin\Game\NormalGameActionCoordinator.MechaWork.cs" Link="PluginGame\NormalGameActionCoordinator.MechaWork.cs" />
     <Compile Include="..\..\src\Spherewright.Plugin\Game\NormalGameActionCoordinator.SavedFactorySite.cs" Link="PluginGame\NormalGameActionCoordinator.SavedFactorySite.cs" />
     <Compile Include="..\..\src\Spherewright.Plugin\Game\NormalGameActionCoordinator.SavedUnpoweredPoles.cs" Link="PluginGame\NormalGameActionCoordinator.SavedUnpoweredPoles.cs" />
     <Compile Include="..\..\src\Spherewright.Plugin\Game\NormalGameActionCoordinator.SavedUnpoweredBeltChain.cs" Link="PluginGame\NormalGameActionCoordinator.SavedUnpoweredBeltChain.cs" />
