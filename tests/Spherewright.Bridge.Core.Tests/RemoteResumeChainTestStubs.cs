@@ -8,6 +8,8 @@ namespace Spherewright.Plugin.Game;
 // policies, persistence/lease Store and completion method are linked production.
 internal sealed class VoyagerRemoteResumeAdoption
 {
+    internal VoyagerRemoteResumeEvidence? Evidence { get; set; }
+    internal FlightStartTestPlayer Player { get; set; } = new();
     internal PausedSaveTestWorld? World;
     internal string SessionId = "";
     internal string ResumeActionId = "";
@@ -20,6 +22,8 @@ internal sealed class VoyagerRemoteResumeAdoption
 
 internal sealed partial class NormalGameActionCoordinator
 {
+    internal bool FailedLandingBindingForTest(VoyagerRemoteResumeAdoption adoption, VoyagerJourneyRecord journey)
+        => FailedLandingResumeBindingMatches(adoption, journey);
     internal static string? AdvanceContactForTest(VoyagerRemoteResumeAdoption adoption,
         NativeResumeContactPolicy policy, NativeResumeContactFacts facts, bool atPhysics)
         => AdvanceRemoteResumeContact(adoption, policy, facts, atPhysics);

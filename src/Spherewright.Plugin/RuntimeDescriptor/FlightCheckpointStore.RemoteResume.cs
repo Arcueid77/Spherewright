@@ -350,7 +350,8 @@ internal sealed partial class FlightCheckpointStore
     }
 
     public bool RemoteResumeEvidenceStillMatches(VoyagerRemoteResumeEvidence evidence) =>
-        (evidence.ReturnOnlyContinuation ? ReturnOnlyNativeEvidenceMatches(evidence)
+        (evidence.FailedLandingRecovery ? FailedLandingNativeEvidenceMatches(evidence)
+            : evidence.ReturnOnlyContinuation ? ReturnOnlyNativeEvidenceMatches(evidence)
             : PluginJson.Serialize(_voyagerJourney) == evidence.JourneyJson)
         && PluginJson.Serialize(_currentTicket) == evidence.CheckpointJson;
 
@@ -376,7 +377,7 @@ internal sealed partial class FlightCheckpointStore
     // VoyagerJourney returns a detached copy; bind all persisted contents instead of object identity.
     public bool RemoteResumeRetainedJourneyStillMatches(VoyagerJourneyRecord retained,
         VoyagerRemoteResumeEvidence evidence) => RemoteResumeEvidenceStillMatches(evidence)
-        && PluginJson.Serialize(retained) == (evidence.ReturnOnlyContinuation
+        && PluginJson.Serialize(retained) == (evidence.ReturnOnlyContinuation || evidence.FailedLandingRecovery
             ?PluginJson.Serialize(_voyagerJourney):evidence.JourneyJson);
 
     private static T? ReadBoundedResumeRecord<T>(FileStream stream)
@@ -403,6 +404,12 @@ internal sealed class VoyagerRemoteResumeEvidence : IDisposable
         result.FailedLandingSource = source;
         result.Fingerprint = CanonicalStateHash.Combine("failed-landing-admission-evidence-v1", result.Fingerprint, source.Fingerprint);
         return result;
+    }
+    internal void BindRegisteredFailedLandingJourney(string journeyJson)
+    {
+        if (IsDisposed || FailedLandingSource is null) throw new InvalidOperationException("No current failed landing admission source.");
+        JourneyJson = journeyJson;
+        Fingerprint = CanonicalStateHash.Combine("failed-landing-native-registered-v1", FailedLandingSource.Fingerprint, journeyJson);
     }
     public VoyagerRemoteResumeEvidence(string journeyJson, string checkpointJson, string sourceFingerprint,
         string primaryFingerprint, long sourceGameTick, long primaryGameTick, OwnedWorldGameplayJournalCheckpoint journal,

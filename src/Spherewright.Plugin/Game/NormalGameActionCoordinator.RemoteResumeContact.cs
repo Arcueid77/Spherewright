@@ -113,7 +113,8 @@ internal sealed partial class NormalGameActionCoordinator
         if (blocker is not null) return blocker;
         if (ground is null || ground.CapturedAtGameTick != GameMain.gameTick || ground.CheckSphereHit != support.ActualGroundSphereHit)
             return "remote_resume_contact_ground_queries_changed";
-        blocker = RemoteResumeChargeEnvironmentBlocker(adoption.Player, journey.JourneyId, adoption.CurrentDecisionEvidence);
+        blocker = RemoteResumeChargeEnvironmentBlocker(adoption.Player, journey.JourneyId, adoption.CurrentDecisionEvidence,
+            completedPaidLandingOnly: adoption.Evidence.FailedLandingRecovery);
         if (blocker is not null) return blocker;
         // Preserve the already-started Native charge cap and original floor;
         // this is a numeric check, never an idle=true projection.
@@ -122,7 +123,8 @@ internal sealed partial class NormalGameActionCoordinator
             :VoyagerRecoveryWindowPolicy.ChargeBlocker(adoption.Player.mecha.coreEnergy, adoption.Player.mecha.coreEnergyCap,
             CalculateAvailableFlightEnergy(adoption.Player.mecha), journey.ReturnEnergyFloorJoules,
             currentFacts.MovementReserve!.PerNativeTickEnergyJoules ?? double.NaN, journey.ReturnCoreEnergyMinimumJoules,
-            _sessions.EffectiveVoyagerSpentGameTicks(journey) ?? -1, GameMain.gameTick - journey.LastLandedGameTick!.Value, _sessions.EffectiveVoyagerMaximumGameTicks(journey),
+            _sessions.EffectiveVoyagerSpentGameTicks(journey) ?? -1,
+            GameMain.gameTick - (RemoteResumeAccountingAnchor(adoption, journey) ?? long.MaxValue), _sessions.EffectiveVoyagerMaximumGameTicks(journey),
             journey.ReturnReserveGameTicks, GameMain.gameTick - adoption.ChargeStartedGameTick!.Value,
             authorization.Proposal.MaximumChargeGameTicks, (DateTimeOffset.UtcNow - adoption.ChargeStartedUtc!.Value).TotalSeconds,
             authorization.Proposal.MaximumChargeWallSeconds, DateTimeOffset.UtcNow, _sessions.EffectiveVoyagerDeadline(journey),

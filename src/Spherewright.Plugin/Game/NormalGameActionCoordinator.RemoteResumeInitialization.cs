@@ -48,7 +48,8 @@ internal sealed partial class NormalGameActionCoordinator
             NativePaused = GameMain.isPaused,
             NativeStateUnchanged = hold.State.MatchesDuringNativeInitializationPause(p) && hold.MaterialsMatch(p)
                 && hold.CostEnvelope == RemoteResumeChargeCostEnvelope(p) && VoyagerMechaWorkIdle(p)
-                && RemoteResumeChargeEnvironmentBlocker(p, hold.Journey.JourneyId, adoption.CurrentDecisionEvidence) is null && !GameMain.data.disableController
+                && RemoteResumeChargeEnvironmentBlocker(p, hold.Journey.JourneyId, adoption.CurrentDecisionEvidence,
+                    completedPaidLandingOnly: adoption.Evidence.FailedLandingRecovery) is null && !GameMain.data.disableController
                 && !GameMain.data.guideRunning && BuildUiIsIdle(p),
             RegisteredCount = count,
             ColliderRefreshPending = colliderRefreshPending,
@@ -114,14 +115,15 @@ internal sealed partial class NormalGameActionCoordinator
     private string? InitializationFundingBlocker(RemoteResumeInitializationHold hold)
     {
         var adoption = hold.Adoption; var p = adoption.Player; var journey = hold.Journey;
-        if (adoption.Authorization is not { } authorization || journey.LastLandedGameTick is null
+        var anchor = RemoteResumeAccountingAnchor(adoption, journey);
+        if (adoption.Authorization is not { } authorization || anchor is null
             || CountVoyagerWarpers(p.mecha.warpStorage) < 1 + journey.ExtraWarperReserve)
             return "remote_resume_initialization_original_reserve_unproved";
         if(adoption.Evidence.ReturnOnlyContinuation)return ReturnOnlyNativeFundingBlocker(adoption,journey,hold.PerTickEnergy);
         return VoyagerRecoveryWindowPolicy.ChargeBlocker(p.mecha.coreEnergy, p.mecha.coreEnergyCap,
             CalculateAvailableFlightEnergy(p.mecha), journey.ReturnEnergyFloorJoules, hold.PerTickEnergy,
             journey.ReturnCoreEnergyMinimumJoules, _sessions.EffectiveVoyagerSpentGameTicks(journey) ?? -1,
-            GameMain.gameTick - journey.LastLandedGameTick.Value,
+            GameMain.gameTick - anchor.Value,
             _sessions.EffectiveVoyagerMaximumGameTicks(journey), journey.ReturnReserveGameTicks, 0, authorization.Proposal.MaximumChargeGameTicks,
             0d, authorization.Proposal.MaximumChargeWallSeconds, DateTimeOffset.UtcNow, _sessions.EffectiveVoyagerDeadline(journey),
             adoption.CurrentDecisionEvidence);

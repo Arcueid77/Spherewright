@@ -74,6 +74,8 @@ public sealed class VoyagerFailedLandingRecoveryPolicyTests
     [Fact]
     public void UnaccountedBoundaryAndExhaustedOrOverflowedOriginalBudgetStayBlocked()
     {
+        var undercounted = Facts(); undercounted.SpentGameTicks--;
+        Assert.False(VoyagerFailedLandingRecoveryPolicy.Evaluate(Request(), undercounted).Proved);
         var f = Facts(); f.LastAccountedGameTick--;
         Assert.False(VoyagerFailedLandingRecoveryPolicy.Evaluate(Request(), f).Proved);
         f = Facts(); f.SpentGameTicks = f.MaximumGameTicks - f.ReturnReserveGameTicks;

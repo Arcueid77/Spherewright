@@ -8,6 +8,8 @@ public sealed class VoyagerLocalActionBudgetFacts
     public bool NativePlayerIdle { get; set; }
     public long CurrentGameTick { get; set; }
     public long? LastLandedGameTick { get; set; }
+    public long? SavedLandingAccountingAnchorGameTick { get; set; }
+    public bool SavedLandingSourceBindingProved { get; set; }
     public long SpentGameTicks { get; set; }
     public long MaximumGameTicks { get; set; }
     public long ReturnReserveGameTicks { get; set; }
@@ -32,6 +34,13 @@ public sealed class VoyagerLocalActionBudgetDecision
 
 public static class VoyagerLocalActionBudgetPolicy
 {
+    // A failed outbound has no LastLanded witness. Its freshly proved saved
+    // boundary may supply accounting only; mixed/partial sources stay unknown.
+    public static long? AccountingAnchorGameTick(VoyagerLocalActionBudgetFacts f) =>
+        f.SavedLandingAccountingAnchorGameTick.HasValue || f.SavedLandingSourceBindingProved
+            ? f.SavedLandingSourceBindingProved && !f.LastLandedGameTick.HasValue
+                && f.SavedLandingAccountingAnchorGameTick >= 0 ? f.SavedLandingAccountingAnchorGameTick : null
+            : f.LastLandedGameTick;
     // A committed local action receives only its original work allowance. A
     // paused/slow game must not consume the wall time already owed to return.
     public static DateTimeOffset? WorkDeadlineUtc(DateTimeOffset nowUtc, DateTimeOffset journeyDeadlineUtc,
@@ -69,14 +78,15 @@ public static class VoyagerLocalActionBudgetPolicy
     {
         if (f is null) throw new ArgumentNullException(nameof(f));
         if (!f.ExactRemoteBinding || !f.NativePlayerIdle) return Blocked("remote_local_binding_or_idle_unproved");
-        if (!f.LastLandedGameTick.HasValue || f.LastLandedGameTick < 0 || f.CurrentGameTick < f.LastLandedGameTick
+        var anchor = AccountingAnchorGameTick(f);
+        if (!anchor.HasValue || anchor < 0 || f.CurrentGameTick < anchor
             || f.SpentGameTicks < 0 || f.MaximumGameTicks < 1 || f.ReturnReserveGameTicks < 3600
             || f.WorkGameTicks < 1 || f.WorkGameTicks > 7200 || f.TailGameTicks < 0 || f.TailGameTicks > 7200
             || f.OriginalExtraWarperReserve < 0 || f.OriginalExtraWarperReserve > 100)
             return Blocked("remote_local_bounds_invalid");
         if (!f.NativeWarperCount.HasValue || f.NativeWarperCount < 1 + f.OriginalExtraWarperReserve)
             return Blocked("remote_local_original_warper_reserve_missing");
-        var requiredTicks = (decimal)f.SpentGameTicks + f.CurrentGameTick - f.LastLandedGameTick.Value
+        var requiredTicks = (decimal)f.SpentGameTicks + f.CurrentGameTick - anchor.Value
             + f.WorkGameTicks + f.TailGameTicks + f.ReturnReserveGameTicks;
         var wallSeconds = (f.JourneyDeadlineUtc - f.NowUtc).TotalSeconds;
         if (requiredTicks > f.MaximumGameTicks

@@ -76,7 +76,8 @@ public static class VoyagerFailedLandingRecoveryPolicy
             || f.SourceGameTick < f.PrimaryGameTick || f.SourceGameTick != f.LastAccountedGameTick
             || f.LastAccountedGameTick < f.CheckpointGameTick)
             return Reject("failed_landing_current_boundary_not_preserved");
-        if (f.SpentGameTicks < 0 || f.MaximumGameTicks < 7200 || f.MaximumGameTicks > 108000
+        if (f.SpentGameTicks < 0 || f.SpentGameTicks < (decimal)f.SourceGameTick - f.CheckpointGameTick
+            || f.MaximumGameTicks < 7200 || f.MaximumGameTicks > 108000
             || f.ReturnReserveGameTicks < 3600 || f.ReturnReserveGameTicks > f.MaximumGameTicks - 3600)
             return Reject("failed_landing_original_budget_unproved");
         var spent = (decimal)f.SpentGameTicks;

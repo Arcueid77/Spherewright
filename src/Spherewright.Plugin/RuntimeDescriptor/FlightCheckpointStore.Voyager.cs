@@ -21,7 +21,8 @@ internal sealed partial class FlightCheckpointStore
         => TryPersistVoyagerJourneyCore(record, out rejection, exactRecovery, normalSaveProof, unstartedFlightProof, false);
 
     private bool TryPersistVoyagerJourneyCore(VoyagerJourneyRecord record, out string rejection, bool exactRecovery,
-        bool normalSaveProof, bool unstartedFlightProof, bool newReturnOnlyProof, bool returnContinuationProof = false)
+        bool normalSaveProof, bool unstartedFlightProof, bool newReturnOnlyProof, bool returnContinuationProof = false,
+        bool failedLandingAdmissionProof = false)
     {
         rejection = string.Empty;
         if (_voyagerJourneyHardReadError)
@@ -47,7 +48,7 @@ internal sealed partial class FlightCheckpointStore
             }
             else if (File.Exists(VoyagerJourneyPath))
                 throw new InvalidDataException("An unexamined journey already exists.");
-            if (!ValidVoyagerTransition(_voyagerJourney, record, exactRecovery, normalSaveProof, unstartedFlightProof, newReturnOnlyProof, returnContinuationProof))
+            if (!ValidVoyagerTransition(_voyagerJourney, record, exactRecovery, normalSaveProof, unstartedFlightProof, newReturnOnlyProof, returnContinuationProof, failedLandingAdmissionProof))
             {
                 rejection = "A live journey cannot be replaced, extend its deadline, undo spent time or reduce its original return reserve.";
                 return false;
@@ -229,12 +230,15 @@ internal sealed partial class FlightCheckpointStore
     }
 
     private static bool ValidVoyagerTransition(VoyagerJourneyRecord? old, VoyagerJourneyRecord next, bool exactRecovery,
-        bool normalSaveProof, bool unstartedFlightProof, bool newReturnOnlyProof, bool returnContinuationProof)
+        bool normalSaveProof, bool unstartedFlightProof, bool newReturnOnlyProof, bool returnContinuationProof,
+        bool failedLandingAdmissionProof)
     {
         if (old is null) return next.Phase == "outbound" && !next.ReturnLeg && next.SpentGameTicks == 0;
         if (old.JourneyId != next.JourneyId)
             return (old.Phase == "completed" || old.Phase == "recovered_closed" || old.Phase == "prelaunch_failed")
                 && next.Phase == "outbound" && !next.ReturnLeg && next.SpentGameTicks == 0;
+        var landingChanged = PluginJson.Serialize(old.FailedLandingAdmissions) != PluginJson.Serialize(next.FailedLandingAdmissions);
+        if (landingChanged && (!failedLandingAdmissionProof || !ValidFailedLandingAdmissionTransition(old, next))) return false;
         if (PluginJson.Serialize(old.ReturnOnlyTask) != PluginJson.Serialize(next.ReturnOnlyTask)
             && !(newReturnOnlyProof && old.ReturnOnlyTask is null && next.ReturnOnlyTask is not null)
             && !(returnContinuationProof && ValidReturnOnlyContinuationTransition(old.ReturnOnlyTask,next.ReturnOnlyTask))) return false;
@@ -247,6 +251,8 @@ internal sealed partial class FlightCheckpointStore
             || (normalSaveProof && old.Phase == "home_awaiting_save" && next.Phase == "completed")
             || (unstartedFlightProof && old.Phase == "outbound" && next.Phase == "prelaunch_failed" && !next.ReturnLeg)
             || (unstartedFlightProof && old.Phase == "return" && next.Phase == "remote_landed" && next.ReturnLeg)
+            || (landingChanged && failedLandingAdmissionProof && old.Phase == "recovery_required" && !old.ReturnLeg
+                && next.Phase == "remote_landed" && next.FailedLandingAdmissions.LastOrDefault()?.State == "completed_health")
             || (exactRecovery && (old.Phase == "recovery_required" || old.Phase == "outcome_unknown" || old.Phase == "outbound" || old.Phase == "return")
                 && (next.Phase == "remote_landed" && old.ReturnLeg || next.Phase == "recovered_closed" && !old.ReturnLeg));
         if (!phaseAllowed || old.ReturnLeg && !next.ReturnLeg) return false;
@@ -267,7 +273,7 @@ internal sealed partial class FlightCheckpointStore
         && r.GameVersion == _gameVersion && r.HomePlanetId > 0 && r.HomeStarId > 0 && r.DestinationStarId > 0
         && r.HomeStarId != r.DestinationStarId && r.MaximumGameTicks >= 7200 && r.MaximumGameTicks <= 108000
         && r.ReturnReserveGameTicks >= 3600 && r.ReturnReserveGameTicks < r.MaximumGameTicks
-        && r.SpentGameTicks >= 0 && ValidReturnOnlyTask(r)
+        && r.SpentGameTicks >= 0 && ValidReturnOnlyTask(r) && ValidFailedLandingAdmissions(r)
         && r.StartedAtGameTick >= 0 && r.DeadlineUtc > r.IssuedAtUtc && r.IssuedAtUtc != default
         && r.DeadlineUtc - r.IssuedAtUtc <= TimeSpan.FromHours(2)
         && FinitePositive(r.ReturnEnergyFloorJoules) && FinitePositive(r.WithdrawalReserveJoules)

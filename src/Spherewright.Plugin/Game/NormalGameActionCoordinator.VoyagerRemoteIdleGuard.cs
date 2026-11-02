@@ -22,7 +22,8 @@ internal sealed partial class NormalGameActionCoordinator
     {
         var b = owner?.Binding;
         return owner is not null && b is not null && journey is not null
-            && (prospectiveRemotePlanetId.HasValue || journey.Phase == "remote_landed")
+            && (prospectiveRemotePlanetId.HasValue || journey.Phase == "remote_landed"
+                || owner.ResumeAdoption is { } admission && FailedLandingResumeBindingMatches(admission, journey))
             && journey.JourneyId == owner.JourneyId && VoyagerRemoteIdleRuntimeMatches(owner)
             && VoyagerLocalActionBudgetPolicy.MatchesOwnedJourneyIdentity(journey.OwnedSaveName, journey.GameVersion,
                 _sessions.IsCurrentSessionOwned, _sessions.OwnedSaveName, b.World.gameName, _sessions.CurrentNativeGameVersion)

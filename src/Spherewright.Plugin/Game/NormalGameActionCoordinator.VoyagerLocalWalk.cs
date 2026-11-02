@@ -60,6 +60,8 @@ internal sealed partial class NormalGameActionCoordinator
                 return Blocked("remote_idle_actual_speed_not_at_rest");
             stage = "energy_and_journey";
             var now = DateTimeOffset.UtcNow;
+            var savedAnchor = owner.ResumeAdoption is { } savedAdoption && FailedLandingResumeBindingMatches(savedAdoption, journey)
+                ? savedAdoption.Evidence.FailedLandingAccountingAnchorGameTick : null;
             var facts = new VoyagerRemoteIdleAdmissionFacts
             {
                 MovementReserve = reserve, CoreEnergyJoules = player.mecha.coreEnergy,
@@ -67,6 +69,8 @@ internal sealed partial class NormalGameActionCoordinator
                 {
                     ExactRemoteBinding = true, NativePlayerIdle = !groundMiss && physicallyAtRest, CurrentGameTick = GameMain.gameTick,
                     LastLandedGameTick = lastLandedGameTick, SpentGameTicks = _sessions.EffectiveVoyagerSpentGameTicks(journey, spentGameTicks) ?? -1,
+                    SavedLandingAccountingAnchorGameTick = savedAnchor,
+                    SavedLandingSourceBindingProved = savedAnchor.HasValue,
                     MaximumGameTicks = _sessions.EffectiveVoyagerMaximumGameTicks(journey), ReturnReserveGameTicks = journey.ReturnReserveGameTicks,
                     WorkGameTicks = 1, TailGameTicks = VoyagerLocalWalkReservePolicy.StopGameTicks,
                     NowUtc = now, JourneyDeadlineUtc = _sessions.EffectiveVoyagerDeadline(journey),
@@ -126,7 +130,13 @@ internal sealed partial class NormalGameActionCoordinator
             || !ReferenceEquals(GameMain.data, adoption.World) || !ReferenceEquals(GameMain.mainPlayer, adoption.Player))
             return "remote_resume_adopted_runtime_binding_unproved";
         var journey = _flightCheckpoints.VoyagerJourney;
-        if (journey is null || journey.Phase != "remote_landed") return "remote_resume_original_remote_journey_unproved";
+        if (journey is null || journey.Phase != "remote_landed" && !FailedLandingResumeBindingMatches(adoption, journey))
+            return "remote_resume_original_remote_journey_unproved";
+        var accountingAnchor = RemoteResumeAccountingAnchor(adoption, journey);
+        if (!accountingAnchor.HasValue) return "remote_resume_accounting_anchor_unproved";
+        if (adoption.Evidence.FailedLandingRecovery
+            && RemoteResumeChargeEnvironmentBlocker(adoption.Player, journey.JourneyId, adoption.CurrentDecisionEvidence,
+                completedPaidLandingOnly: true) is { } failedLandingSite) return failedLandingSite;
         var existing = _voyagerRemoteIdleOwner;
         var sameOwner = existing is not null && ReferenceEquals(existing.ResumeAdoption, adoption);
         if (!sameOwner && adoption.Evidence.CompletedRemoteContinuation
@@ -212,7 +222,8 @@ internal sealed partial class NormalGameActionCoordinator
         var originalBudgetBlocker = VoyagerRecoveryWindowPolicy.ChargeBudgetBlocker(facts.JourneyBudget, now, effectiveDeadline,
             adoption.CurrentDecisionEvidence);
         if (originalBudgetBlocker is not null) return originalBudgetBlocker;
-        var environment = RemoteResumeChargeEnvironmentBlocker(p, journey.JourneyId, adoption.CurrentDecisionEvidence);
+        var environment = RemoteResumeChargeEnvironmentBlocker(p, journey.JourneyId, adoption.CurrentDecisionEvidence,
+            completedPaidLandingOnly: adoption.Evidence.FailedLandingRecovery);
         if (environment is not null) return environment;
         var reserve = facts.MovementReserve!;
         var perTick = reserve.PerNativeTickEnergyJoules ?? double.NaN;
@@ -223,7 +234,8 @@ internal sealed partial class NormalGameActionCoordinator
         var startUtc = adoption.ChargeStartedUtc ?? now;
         var blocker = VoyagerRecoveryWindowPolicy.ChargeBlocker(m.coreEnergy, m.coreEnergyCap, CalculateAvailableFlightEnergy(m),
             journey.ReturnEnergyFloorJoules, perTick, journey.ReturnCoreEnergyMinimumJoules, journey.SpentGameTicks,
-            GameMain.gameTick - journey.LastLandedGameTick!.Value, _sessions.EffectiveVoyagerMaximumGameTicks(journey), journey.ReturnReserveGameTicks,
+            GameMain.gameTick - (RemoteResumeAccountingAnchor(adoption, journey) ?? long.MaxValue),
+            _sessions.EffectiveVoyagerMaximumGameTicks(journey), journey.ReturnReserveGameTicks,
             GameMain.gameTick - startTick, authorization.Proposal.MaximumChargeGameTicks, (now - startUtc).TotalSeconds,
             authorization.Proposal.MaximumChargeWallSeconds, now, effectiveDeadline, adoption.CurrentDecisionEvidence);
         if (blocker is not null) return blocker;

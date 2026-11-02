@@ -65,12 +65,16 @@ internal sealed partial class FlightCheckpointStore
                     && j.LastAccountedFlightActionId == j.ActiveActionId && Guid.TryParse(j.ActiveActionId, out _)
                     && cp.OriginPlanetId == j.HomePlanetId && cp.OriginStarId == j.HomeStarId
                     && cp.DestinationStarId == j.DestinationStarId && !cp.ReloadPending
+                    && cp.LastAttemptStartedAtGameTick >= cp.SavedGameTick
+                    && cp.RecoveryRequiredAtGameTick >= cp.LastAttemptStartedAtGameTick
+                    && cp.RecoveryRequiredAtGameTick <= source.Prefix.GameTick
                     && checkpoint.Fingerprint == cp.CheckpointFileFingerprint && checkpoint.Prefix.GameTick == cp.SavedGameTick
                     && ticket.GameplayJournalCheckpoint is { Version: OwnedWorldGameplayJournalCheckpoint.CurrentVersion } jc
                     && !string.IsNullOrEmpty(jc.JournalId) && jc.MinimumDurableThroughSequence >= 0,
                 OriginalCheckpointRecoveryRequired = cp.LifecycleState == FlightCheckpointLifecycleStates.RecoveryRequired,
                 OriginalCheckpointFlightSucceeded = cp.SuccessfulFlightAtGameTick.HasValue,
-                OriginalOutboundFailureContext = j.Phase == "recovery_required" && !j.ReturnLeg && !j.LastLandedGameTick.HasValue,
+                OriginalOutboundFailureContext = j.Phase == "recovery_required" && !j.ReturnLeg && !j.LastLandedGameTick.HasValue
+                    && j.FailedLandingAdmissions.LastOrDefault()?.State is not ("pending_native_load" or "adopted" or "outcome_unknown"),
                 // The prefix does not certify the saved local planet. This binds
                 // the selected destination; Native must independently prove it after Load.
                 ExactSelectedRemotePlanet = j.RemotePlanetId > 0 && j.RemotePlanetId != j.HomePlanetId
@@ -87,7 +91,7 @@ internal sealed partial class FlightCheckpointStore
             { failure = e.Failure(decision.BlockerCode!); return false; }
             var proposal = new VoyagerRecoveryWindowProposal(request.RecoveryDeadlineUtc!.Value, request.RecoveryScope,
                 request.MaximumChargeGameTicks, request.MaximumChargeWallSeconds);
-            evidence = new(j, cp, ticket, provenance, source, primary, journal, proposal, decision, leases.ToArray());
+            evidence = new(j, cp, ticket, provenance, source, primary, journal, proposal, decision, jLease, leases.ToArray());
             leases.Clear();
             return true;
         }
@@ -106,10 +110,11 @@ internal sealed partial class FlightCheckpointStore
 internal sealed class VoyagerFailedLandingSource : IDisposable
 {
     private readonly IDisposable[] _leases;
+    private readonly FileStream _journeyLease;
     internal VoyagerFailedLandingSource(VoyagerJourneyRecord journey, FlightCheckpointTicket checkpoint,
         OwnedWorldResumeTicket ticket, string credentialProvenance, OwnedSaveRecoveryLease source,
         OwnedSaveRecoveryLease primary, FileStream journal, VoyagerRecoveryWindowProposal proposal,
-        VoyagerFailedLandingRecoveryDecision decision, params IDisposable[] leases)
+        VoyagerFailedLandingRecoveryDecision decision, FileStream journeyLease, params IDisposable[] leases)
     {
         JourneyJson = PluginJson.Serialize(journey); CheckpointJson = PluginJson.Serialize(checkpoint);
         Ticket = PluginJson.Deserialize<OwnedWorldResumeTicket>(PluginJson.Serialize(ticket))!;
@@ -119,7 +124,7 @@ internal sealed class VoyagerFailedLandingSource : IDisposable
         Fingerprint = CanonicalStateHash.Combine("failed-landing-source-v1", JourneyJson, CheckpointJson,
             PluginJson.Serialize(ticket.GameplayJournalCheckpoint), credentialProvenance, source.Fingerprint,
             primary.Fingerprint, SavedAccountingAnchorGameTick, ConservedSpentGameTicks, PluginJson.Serialize(proposal));
-        _leases = leases;
+        _leases = leases; _journeyLease = journeyLease;
     }
     internal string JourneyJson { get; }
     internal string CheckpointJson { get; }
@@ -134,6 +139,7 @@ internal sealed class VoyagerFailedLandingSource : IDisposable
     internal long ConservedSpentGameTicks { get; }
     internal string Fingerprint { get; }
     internal bool IsDisposed { get; private set; }
+    internal void ReleaseJourneyLeaseForRegistration() => _journeyLease.Dispose();
     public void Dispose()
     {
         if (IsDisposed) return;

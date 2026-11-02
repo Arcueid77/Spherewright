@@ -62,9 +62,12 @@ public static class VoyagerRecoveryWindowPolicy
             return true;
         }
         if (!All(("charge_journey_observed", f is not null))) return "remote_resume_charge_original_budget_unproved";
+        var anchor = VoyagerLocalActionBudgetPolicy.AccountingAnchorGameTick(f!);
+        var anchorPrefix = f!.SavedLandingSourceBindingProved ? "charge_saved_anchor" : "charge_landing";
         if (!All(("charge_journey_binding", f!.ExactRemoteBinding), ("charge_actual_idle", f.NativePlayerIdle),
-            ("charge_landing_known", f.LastLandedGameTick.HasValue), ("charge_landing_nonnegative", f.LastLandedGameTick >= 0),
-            ("charge_after_landing", f.CurrentGameTick >= f.LastLandedGameTick), ("charge_spent_valid", f.SpentGameTicks >= 0),
+            (anchorPrefix + "_known", anchor.HasValue), (anchorPrefix + "_nonnegative", anchor >= 0),
+            (f.SavedLandingSourceBindingProved ? "charge_after_saved_anchor" : "charge_after_landing", f.CurrentGameTick >= anchor),
+            ("charge_spent_valid", f.SpentGameTicks >= 0),
             ("charge_maximum_valid", f.MaximumGameTicks >= 1), ("charge_return_minimum", f.ReturnReserveGameTicks >= 3600),
             ("charge_return_maximum", f.ReturnReserveGameTicks <= 108000), ("charge_current_work", f.WorkGameTicks == 1),
             ("charge_original_tail", f.TailGameTicks == VoyagerLocalWalkReservePolicy.StopGameTicks),

@@ -13,9 +13,10 @@ internal sealed partial class NormalGameActionCoordinator
         // query failed, so this projection must retain NativePlayerIdle=false.
         var f = facts.JourneyBudget; var p = adoption.Player; var now = DateTimeOffset.UtcNow;
         var deadline = _sessions.EffectiveVoyagerDeadline(journey);
-        if (f is null || !f.ExactRemoteBinding || f.NativePlayerIdle || !f.LastLandedGameTick.HasValue
+        var anchor = f is null ? null : VoyagerLocalActionBudgetPolicy.AccountingAnchorGameTick(f);
+        if (f is null || !f.ExactRemoteBinding || f.NativePlayerIdle || !anchor.HasValue
             || f.CurrentGameTick != adoption.Evidence.SourceGameTick || f.CurrentGameTick != GameMain.gameTick
-            || f.CurrentGameTick < f.LastLandedGameTick || f.SpentGameTicks < 0
+            || f.CurrentGameTick < anchor || f.SpentGameTicks < 0
             || f.MaximumGameTicks < 1 || f.ReturnReserveGameTicks < 3600 || f.ReturnReserveGameTicks > 108000
             || f.WorkGameTicks != 1 || f.TailGameTicks != VoyagerLocalWalkReservePolicy.StopGameTicks
             || f.OriginalExtraWarperReserve < 0 || f.OriginalExtraWarperReserve > 100
@@ -25,7 +26,8 @@ internal sealed partial class NormalGameActionCoordinator
             return "remote_resume_ground_sync_original_budget_unproved";
         if (!f.NativeWarperCount.HasValue || f.NativeWarperCount < 1 + f.OriginalExtraWarperReserve)
             return "remote_resume_charge_original_warper_reserve_insufficient";
-        var environment = RemoteResumeChargeEnvironmentBlocker(p, journey.JourneyId, adoption.CurrentDecisionEvidence);
+        var environment = RemoteResumeChargeEnvironmentBlocker(p, journey.JourneyId, adoption.CurrentDecisionEvidence,
+            completedPaidLandingOnly: adoption.Evidence.FailedLandingRecovery);
         if (environment is not null) return environment;
         if(adoption.Evidence.ReturnOnlyContinuation)
             return ReturnOnlyNativeFundingBlocker(adoption,journey,reserve.PerNativeTickEnergyJoules??double.NaN);
@@ -33,7 +35,7 @@ internal sealed partial class NormalGameActionCoordinator
         return VoyagerRecoveryWindowPolicy.ChargeBlocker(p.mecha.coreEnergy, p.mecha.coreEnergyCap,
             CalculateAvailableFlightEnergy(p.mecha), journey.ReturnEnergyFloorJoules,
             reserve.PerNativeTickEnergyJoules ?? double.NaN, journey.ReturnCoreEnergyMinimumJoules,
-            _sessions.EffectiveVoyagerSpentGameTicks(journey) ?? -1, GameMain.gameTick - journey.LastLandedGameTick!.Value,
+            _sessions.EffectiveVoyagerSpentGameTicks(journey) ?? -1, GameMain.gameTick - anchor.Value,
             _sessions.EffectiveVoyagerMaximumGameTicks(journey), journey.ReturnReserveGameTicks, 0, authorization.Proposal.MaximumChargeGameTicks,
             0d, authorization.Proposal.MaximumChargeWallSeconds, now, deadline, adoption.CurrentDecisionEvidence);
     }
