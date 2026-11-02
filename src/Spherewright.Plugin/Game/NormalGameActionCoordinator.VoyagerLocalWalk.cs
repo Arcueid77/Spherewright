@@ -448,7 +448,8 @@ internal sealed partial class NormalGameActionCoordinator
         if (gap.Rejected || gap.StopLatched || gap.GapStartedGameTick.HasValue) return true;
         // Update is not a Native501 certificate and cannot clear/start a gap.
         var p = action.Plan.VoyagerLocalBinding!.Player;
-        return !Physics.CheckSphere(p.position + p.position.normalized * .15f, .35f, 15873);
+        return p.movementState != EMovementState.Walk || p.controller.movementStateInFrame != EMovementState.Walk
+            || !Physics.CheckSphere(p.position + p.position.normalized * .15f, .35f, 15873);
     }
 
     private VoyagerActiveMoveGroundGapFacts CaptureVoyagerMoveGroundGapFacts(ActionRecord action, bool stopping,
@@ -459,7 +460,7 @@ internal sealed partial class NormalGameActionCoordinator
         blocker = NativeWalkModeBlocker(p, false, action.Plan.VoyagerLocalWalkScene, true, true, true,
             captureSphere: hit => ground = hit);
         // Native Drift skips Walk's sphere. A mode switch is not positive
-        // contact evidence and cannot reset the same original eight-tick gap.
+        // contact evidence and cannot reset the same original gap.
         if (blocker is null && !ground.HasValue)
             ground = Physics.CheckSphere(p.position + p.position.normalized * .15f, .35f, 15873);
         var exactOrder = stopping ? p.currentOrder is null
@@ -483,6 +484,8 @@ internal sealed partial class NormalGameActionCoordinator
                 && action.VoyagerMoveGroundGap is not null && exactJourney && VoyagerLocalReferencesMatch(action),
             NonGroundNativePremisesProved = subset && reserve.Proved,
             GroundSphereHit = ground,
+            NativeDriftModeObserved = p.movementState == EMovementState.Drift
+                || p.controller.movementStateInFrame == EMovementState.Drift,
             ControlLeaseOpen = now >= action.Plan.VoyagerLocalStartedAtUtc
                 && now < action.VoyagerLocalObservationLeaseExpiresAtUtc && VoyagerLocalPrePlayerTickAvailable
                 && now >= VoyagerLocalPrePlayerObservedAtUtc

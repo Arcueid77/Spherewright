@@ -16,6 +16,9 @@ public sealed class VoyagerActiveMoveGroundGapFacts
     public bool ExactActiveStrictMove { get; set; }
     public bool NonGroundNativePremisesProved { get; set; }
     public bool? GroundSphereHit { get; set; }
+    // Supplied only after all actual/frame modes are proved Walk or Drift.
+    // A sphere hit while Native still reports Drift is not strict Walk idle.
+    public bool NativeDriftModeObserved { get; set; }
     public bool ControlLeaseOpen { get; set; }
     public bool OriginalWorkWindowOpen { get; set; }
     public double? CoreEnergyJoules { get; set; }
@@ -28,6 +31,12 @@ public sealed class VoyagerActiveMoveGroundGapFacts
 public sealed class VoyagerActiveMoveGroundGapPolicy
 {
     public const int MaximumGapWorkGameTicks = 8;
+    // Native DetermineDrift requires >.8 seconds in float1/60 increments
+    // outside water before restoring Walk (48 ticks from a fresh transition).
+    // Retain the original eight-tick contact-only bound; a proved Drift mode
+    // may use at most64 consecutive work ticks of the SAME finite Move.
+    // This is bounded work, not a promise of landing or a longer stop tail.
+    public const int MaximumDriftTransitionWorkGameTicks = 64;
     public const double MaximumStopWallPatienceSeconds = 5d;
     // Native logic ticks and Unity's scheduling/physics cadence need not run
     // at60 wall frames/s. This is bounded patience for the SAME13 paid ticks.
@@ -59,17 +68,19 @@ public sealed class VoyagerActiveMoveGroundGapPolicy
             return Reject("voyager_move_ground_gap_native_premises_unproved");
         var tick = facts.OriginalJourney.CurrentGameTick;
         if (tick == LastObservedGameTick) return VoyagerMoveGroundGapStep.Duplicate;
-        if (tick < LastObservedGameTick || ((GapStartedGameTick.HasValue || !facts.GroundSphereHit.Value)
+        if (tick < LastObservedGameTick || ((GapStartedGameTick.HasValue || !facts.GroundSphereHit.Value || facts.NativeDriftModeObserved)
             && (LastObservedGameTick == long.MaxValue || tick != LastObservedGameTick + 1)))
             return Reject("voyager_move_ground_gap_sequence_unproved");
         LastObservedGameTick = tick;
-        if (facts.GroundSphereHit.Value)
+        if (facts.GroundSphereHit.Value && !facts.NativeDriftModeObserved)
         {
             GapStartedGameTick = null; // Only an actual fresh query clears it.
             return VoyagerMoveGroundGapStep.Grounded;
         }
         GapStartedGameTick ??= tick;
-        if (tick - GapStartedGameTick.Value >= MaximumGapWorkGameTicks
+        var maximumWorkTicks = facts.NativeDriftModeObserved
+            ? MaximumDriftTransitionWorkGameTicks : MaximumGapWorkGameTicks;
+        if (tick - GapStartedGameTick.Value >= maximumWorkTicks
             || !facts.OriginalWorkWindowOpen || !OriginalBudgetAllows(facts, 1,
                 VoyagerLocalWalkReservePolicy.StopGameTicks, facts.StopWallPatienceSeconds + 1d / 60d)
             || !CanFund(facts, 1 + VoyagerLocalWalkReservePolicy.StopGameTicks))

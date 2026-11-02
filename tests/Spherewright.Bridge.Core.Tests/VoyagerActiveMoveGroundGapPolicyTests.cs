@@ -6,6 +6,81 @@ namespace Spherewright.Bridge.Core.Tests;
 public sealed class VoyagerActiveMoveGroundGapPolicyTests
 {
     [Fact]
+    public void NativeDriftDryTransitionCannotBorrowGroundedIdleFromItsSphereHit()
+    {
+        var state = new VoyagerActiveMoveGroundGapPolicy(100);
+        var f = Good();
+        // An admitted Walk first loses contact, then Native itself selects
+        // Drift. DetermineDrift needs48 dry ticks before restoring Walk.
+        for (var tick = 101L; tick <= 154; tick++)
+        {
+            f.OriginalJourney!.CurrentGameTick = tick;
+            f.NativeDriftModeObserved = tick >= 106;
+            f.GroundSphereHit = tick >= 107;
+            Assert.Equal(VoyagerMoveGroundGapStep.ContinueGap, state.Observe(f));
+            Assert.Equal(101L, state.GapStartedGameTick);
+            Assert.False(f.OriginalJourney.NativePlayerIdle);
+        }
+        f.NativeDriftModeObserved = false;
+        f.OriginalJourney!.CurrentGameTick = 155;
+        Assert.Equal(VoyagerMoveGroundGapStep.Grounded, state.Observe(f));
+        Assert.Null(state.GapStartedGameTick);
+        Assert.Equal(13, VoyagerLocalWalkReservePolicy.StopGameTicks);
+        Assert.Equal(8, VoyagerActiveMoveGroundGapPolicy.MaximumGapWorkGameTicks);
+    }
+
+    [Fact]
+    public void ContinuousNativeDriftUsesOneFiniteWorkCapAndNeverRenewsAfterStop()
+    {
+        var state = new VoyagerActiveMoveGroundGapPolicy(100);
+        var f = Good(); f.NativeDriftModeObserved = true;
+        for (var tick = 101L; tick <= 164; tick++)
+        {
+            f.OriginalJourney!.CurrentGameTick = tick;
+            Assert.Equal(VoyagerMoveGroundGapStep.ContinueGap, state.Observe(f));
+            Assert.Equal(VoyagerMoveGroundGapStep.Duplicate, state.Observe(f));
+        }
+        f.OriginalJourney!.CurrentGameTick = 165;
+        Assert.Equal(VoyagerMoveGroundGapStep.Stop, state.Observe(f));
+        f.NativeDriftModeObserved = false; f.GroundSphereHit = true;
+        f.OriginalJourney.CurrentGameTick++;
+        Assert.Equal(VoyagerMoveGroundGapStep.Stop, state.Observe(f));
+        Assert.Equal(64, VoyagerActiveMoveGroundGapPolicy.MaximumDriftTransitionWorkGameTicks);
+    }
+
+    [Fact]
+    public void DriftModeWithoutAMissingSphereCannotBorrowASkippedObservation()
+    {
+        var f = Good(); f.NativeDriftModeObserved = true; f.GroundSphereHit = true;
+        f.OriginalJourney!.CurrentGameTick = 102;
+        Assert.Equal(VoyagerMoveGroundGapStep.Rejected, new VoyagerActiveMoveGroundGapPolicy(100).Observe(f));
+    }
+
+    [Theory]
+    [InlineData("core")][InlineData("loaded")][InlineData("ticks")][InlineData("wall")][InlineData("work")][InlineData("lease")]
+    public void ExtendedDriftWorkRechecksOriginalFundingAndBoundsOnEveryTick(string fault)
+    {
+        var state = new VoyagerActiveMoveGroundGapPolicy(100);
+        var f = Good(); f.NativeDriftModeObserved = true;
+        for (var tick = 101L; tick <= 148; tick++)
+        {
+            f.OriginalJourney!.CurrentGameTick = tick;
+            Assert.Equal(VoyagerMoveGroundGapStep.ContinueGap, state.Observe(f));
+        }
+        f.OriginalJourney!.CurrentGameTick = 149;
+        switch (fault)
+        {
+            case "core": f.CoreEnergyJoules = 130; break;
+            case "loaded": f.OriginalJourney.AvailableLoadedEnergyJoules = 1130; break;
+            case "ticks": f.OriginalJourney.MaximumGameTicks = 100; break;
+            case "wall": f.OriginalJourney.JourneyDeadlineUtc = f.OriginalJourney.NowUtc; break;
+            case "work": f.OriginalWorkWindowOpen = false; break;
+            case "lease": f.ControlLeaseOpen = false; break;
+        }
+        Assert.Equal(fault == "lease" ? VoyagerMoveGroundGapStep.Rejected : VoyagerMoveGroundGapStep.Stop, state.Observe(f));
+    }
+
+    [Fact]
     public void SlowNativeCadenceRetainsTheSameThirteenTicksPastTheOldOneSecondCutoff()
     {
         var patience = VoyagerActiveMoveGroundGapPolicy.StopWallPatience(.12427807599306107)!.Value;

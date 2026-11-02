@@ -430,7 +430,7 @@ Codex、MCP Host 关闭、重启、断连、上下文压缩、回合结束，均
 
 按[协议固定八字段顺序](https://github.com/Arcueid77/Spherewright/blob/main/docs/protocol.zh-CN.md#%E5%8F%97%E4%BF%9D%E6%8A%A4%E6%81%A2%E5%A4%8D%E4%B8%8E%E5%AF%BC%E5%85%A5)从独立保护基线计算该承诺；复制本次 Plugin 预览回显不是独立证据。
 
-仅严格接地起步的活动 Move 可在单独接触缺失时保原订单最多8个真实 Native tick，每 tick fresh 核全部非接地守卫及覆盖当前 tick 加原13 tick尾部的14P储备。真实 sphere 命中才清 gap，越界停止；尾部缺地保持任务失败，只有 fresh 接地 Walk 且真实零速度才可报已知失败，否则保持 unknown。不可将此许可用于 idle/施工/Harvest/飞行，也不续原期限或返程储备。
+仅严格接地起步的活动 Move 可在单独接触缺失时保原订单最多8个真实 Native tick。若 fresh 实际/帧 Walk或Drift守卫证明原生Drift，同一连续 gap 可在原工作窗内最多运行64个工作tick：Native DetermineDrift需要48个干燥的float1/60 tick才转回Walk。每tick仍须保留原工作/UTC/控制期限、全部非接地守卫及当前tick加不变13tick停止尾部的14P储备，不新增Journey额度。只有真实sphere命中且实际/帧均为Walk才清gap；Drift期间sphere命中不是空闲或到达证明，耗尽、守卫丢失或储备不足均停止原订单。尾部缺地保持任务失败，只有 fresh 接地 Walk 且真实零速度才可报已知失败，否则保持 unknown。不可将此许可用于 idle/施工/Harvest/飞行，也不续原期限或返程储备。
 
 独立旧本地 Move `outcome_unknown` 输入须在正常关闭前保护原公开 action/session 响应文本及完整票据/journey/checkpoint/Journal 文件字节。两项有界 JSON/哈希输入依[协议 carrier schema](https://github.com/Arcueid77/Spherewright/blob/main/docs/protocol.zh-CN.md#protected-resume-and-import)；种类/失败/源码版本仍为调用方断言，不是 Native 认证。核精确哈希/断言回显、明确披露及 `nativeOriginalOutcomeProved=false`。保原 Move 未知，仅用 fresh 精确票据绑定 LastExit 及原当前授权/digest 门，不换成功 checkpoint、旧 primary、失败恢复 witness 或已关闭调用预算。当前 Native 证明与首帧/接触/能量准入仍可拒绝，此输入不保证恢复。
 
