@@ -250,7 +250,7 @@ public sealed partial class VoyagerRemoteResumeCoordinatorIntegrationTests
         internal IEnumerable<string> ProtectedEvidencePaths => new[] { GameSave.SavePath(GameSave.LastExit), GameSave.SavePath(Identity),
             GameSave.SavePath(CheckpointSaveName), JournalPath, Path.Combine(Handoff, "flight-checkpoint.json"), Path.Combine(Handoff, "voyager-journey.json") };
 
-        internal Scenario(bool expiredJourney = false, bool currentNative = false)
+        internal Scenario(bool expiredJourney = false, bool currentNative = false, bool failedLanding = false)
         {
             _currentNativePrefix = currentNative;
             Version = currentNative ? "0.10.35.29151" : "0.10.34.28529";
@@ -276,9 +276,13 @@ public sealed partial class VoyagerRemoteResumeCoordinatorIntegrationTests
             };
             OriginalDeadline = journey.DeadlineUtc;
             Assert.True(Checkpoints.TryPersistVoyagerJourney(journey, out _));
-            Assert.True(Checkpoints.TryMarkFlightSucceeded(cp.CheckpointId, actionId, 12500, out _));
-            journey.Phase = "remote_landed"; journey.RemotePlanetId = 201; journey.SpentGameTicks = 155;
-            journey.LastAccountedGameTick = 12500; journey.LastAccountedFlightActionId = actionId; journey.LastLandedGameTick = 12500;
+            Assert.True(failedLanding
+                ? Checkpoints.TryMarkRecoveryRequired(cp.CheckpointId, actionId, 12510, out _)
+                : Checkpoints.TryMarkFlightSucceeded(cp.CheckpointId, actionId, 12500, out _));
+            journey.Phase = failedLanding ? "recovery_required" : "remote_landed";
+            journey.RemotePlanetId = 201; journey.SpentGameTicks = failedLanding ? 165 : 155;
+            journey.LastAccountedGameTick = failedLanding ? 12510 : 12500;
+            journey.LastAccountedFlightActionId = actionId; journey.LastLandedGameTick = failedLanding ? null : 12500;
             Assert.True(Checkpoints.TryPersistVoyagerJourney(journey, out _));
             var journalId = GameplayJournalIdentity.HashOwnedSaveIdentity(Identity);
             var checkpoint = new OwnedWorldGameplayJournalCheckpoint { Version = 1, JournalId = journalId,
@@ -290,7 +294,8 @@ public sealed partial class VoyagerRemoteResumeCoordinatorIntegrationTests
                 TrackingStartedAtGameTick = checkpoint.TrackingStartedAtGameTick, HistoricalCoverageComplete = true,
                 Entries = new List<GameplayJournalEntry> { new() { Sequence = 1 } } }));
             Tickets = new OwnedWorldResumeTicketStore(Runtime, Handoff, "test-bridge", Version, new ManualLogSource());
-            Tickets.ArmFromQuarantinedOwnedSession(Identity, "synthetic-session", 201, 12500, actionId, checkpoint);
+            if (failedLanding) Tickets.ArmFromHealthySavedOwnedSession(Identity, "synthetic-session", 104, 12345, checkpoint);
+            else Tickets.ArmFromQuarantinedOwnedSession(Identity, "synthetic-session", 201, 12500, actionId, checkpoint);
             Token = Tickets.CurrentResumeToken!; WriteSave(GameSave.LastExit, 12510);
             Sessions = new GameSessionTracker { RequiresRemoteResumeEvidence = true, RemoteResumeCheckpoints = Checkpoints };
             Coordinator = new OwnedWorldResumeCoordinator(true, 30, 30, 16, Sessions, Tickets);

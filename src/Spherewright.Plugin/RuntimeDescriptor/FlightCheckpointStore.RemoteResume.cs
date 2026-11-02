@@ -391,6 +391,19 @@ internal sealed class VoyagerRemoteResumeEvidence : IDisposable
 {
     private readonly IDisposable[] _leases;
     public bool IsDisposed { get; private set; }
+    internal VoyagerFailedLandingSource? FailedLandingSource { get; private set; }
+    internal bool FailedLandingRecovery => FailedLandingSource is not null;
+    internal long? FailedLandingAccountingAnchorGameTick => FailedLandingSource?.SavedAccountingAnchorGameTick;
+    internal static VoyagerRemoteResumeEvidence CreateFailedLandingRecovery(VoyagerFailedLandingSource source)
+    {
+        if (source.IsDisposed) throw new InvalidOperationException("The failed landing source lease has ended.");
+        var result = new VoyagerRemoteResumeEvidence(source.JourneyJson, source.CheckpointJson,
+            source.Source.Fingerprint, source.Primary.Fingerprint, source.Source.Prefix.GameTick,
+            source.Primary.Prefix.GameTick, source.Ticket.GameplayJournalCheckpoint!, source.Proposal, source);
+        result.FailedLandingSource = source;
+        result.Fingerprint = CanonicalStateHash.Combine("failed-landing-admission-evidence-v1", result.Fingerprint, source.Fingerprint);
+        return result;
+    }
     public VoyagerRemoteResumeEvidence(string journeyJson, string checkpointJson, string sourceFingerprint,
         string primaryFingerprint, long sourceGameTick, long primaryGameTick, OwnedWorldGameplayJournalCheckpoint journal,
         VoyagerRecoveryWindowProposal? recoveryProposal, params IDisposable[] leases)

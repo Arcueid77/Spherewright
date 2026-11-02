@@ -54,5 +54,6 @@
     <Compile Include="..\..\src\Spherewright.Plugin\RuntimeDescriptor\FlightCheckpointStore.ReturnOnlyContinuation.cs" Link="PluginRuntimeDescriptor\FlightCheckpointStore.ReturnOnlyContinuation.cs" />
     <Compile Include="..\..\src\Spherewright.Plugin\Game\GameSessionTracker.ReturnOnlyRecovery.cs" Link="PluginGame\GameSessionTracker.ReturnOnlyRecovery.cs" />
     <Compile Include="..\..\src\Spherewright.Plugin\RuntimeDescriptor\FlightCheckpointStore.RemoteResume.cs" Link="PluginRuntimeDescriptor\FlightCheckpointStore.RemoteResume.cs" />
+    <Compile Include="..\..\src\Spherewright.Plugin\RuntimeDescriptor\FlightCheckpointStore.FailedLandingSource.cs" Link="PluginRuntimeDescriptor\FlightCheckpointStore.FailedLandingSource.cs" />
   </ItemGroup>
 </Project>
