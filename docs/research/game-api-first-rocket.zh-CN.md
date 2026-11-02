@@ -19,3 +19,5 @@
 固定原生版本的`DysonSphere.ResetNew`正常通过`QueryLayerRadius`和`AddLayer`创建默认层；观察仍须证明该已有层存在，不调用初始化。`UIDysonBrush_Node`既接受绘图网格吸附，也接受输入面板显式位置；先检查节点碰撞、`CheckCondition`中的附近框架/壳层及当前`GameMain.history.dysonNodeLatitude`应力界限，再调用一次`layer.NewDysonNode(nodeProtoId, position)`。赤道纬度为零，但已有层、当前科技/应力和原生笔刷原型仍须准确绑定。
 
 `NewDysonNode`创建的是已送达结构点为零、需要30点的未建规划节点，并刷新原生自动节点选择和渲染；不建成节点、不注入火箭。后续最小适配可绑定一个准确已有**空层**、有效原生节点原型及一个赤道位置，保留零节点基线，提交前重新检查并只调用一次正常业务方法。不猜笔刷序列化原型、不初始化缺失球体/层、不写`sp`/`spOrdered`、不手调模拟，也不扩成通用结构设计。这份研究尚未提供该公开写入或证明实机验收。
+
+固定版本的`DysonSphereSegmentRenderer.LoadStatic`从索引0连续载入节点资产，只有网格/材质成功载入后才增加`nodeProtoCount`；`GetNodeProtoMesh`和`GetNodeProtoMaterial`拒绝超出已观测数量的索引。因此后续主线程适配可要求原生已载入数量大于零，且索引0的两个只读getter均非空，绑定确实存在的原生原型，无需读取或改变编辑器笔刷。观察期间不能调用`LoadStatic`或初始化缺失渲染状态。这只是源码证据，实机准入与公开写入仍未实现。
