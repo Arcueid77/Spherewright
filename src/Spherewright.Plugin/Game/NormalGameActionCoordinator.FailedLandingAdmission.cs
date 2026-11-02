@@ -26,7 +26,17 @@ internal sealed partial class NormalGameActionCoordinator
     }
 
     private long? RemoteResumeAccountingAnchor(VoyagerRemoteResumeAdoption adoption, VoyagerJourneyRecord j)
-        => adoption.Evidence?.FailedLandingRecovery == true
-            ? FailedLandingResumeBindingMatches(adoption, j) ? adoption.Evidence.FailedLandingAccountingAnchorGameTick : null
-            : j.LastLandedGameTick;
+    {
+        if (adoption.Evidence?.FailedLandingRecovery != true) return j.LastLandedGameTick;
+        if (FailedLandingResumeBindingMatches(adoption, j)) return adoption.Evidence.FailedLandingAccountingAnchorGameTick;
+        var run = j.FailedLandingAdmissions.LastOrDefault();
+        // A fresh strict resave may follow the NEW persisted healthy admission.
+        // It uses that landing, never the failed outbound's absent witness.
+        return j.Phase == "remote_landed" && run is { State: "completed_health" }
+            && run.ActionId == adoption.ResumeActionId && run.SessionId == adoption.SessionId
+            && run.SourceFingerprint == adoption.Evidence.SourceFingerprint && run.TerminalAtGameTick == j.LastLandedGameTick
+            && _sessions.IsCurrentSessionOwned && _sessions.SessionId == adoption.SessionId
+            && ReferenceEquals(GameMain.data, adoption.World) && ReferenceEquals(GameMain.mainPlayer, adoption.Player)
+                ? j.LastLandedGameTick : null;
+    }
 }

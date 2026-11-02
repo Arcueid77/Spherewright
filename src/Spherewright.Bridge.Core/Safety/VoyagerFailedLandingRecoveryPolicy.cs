@@ -37,8 +37,27 @@ public sealed class VoyagerFailedLandingRecoveryDecision
 
 public static class VoyagerFailedLandingRecoveryPolicy
 {
-    public const string Mode = "authorize_failed_landing_last_exit";
+    public const string Mode = OwnedWorldResumeModes.AuthorizeFailedLandingLastExit;
     public const int EvidenceVersion = 1;
+
+    public static bool HasMatchingEcho(PrepareOwnedWorldResumeRequest r, PreparedOwnedWorldResumePlan? p) =>
+        p is not null && ValidateRequest(r) is null && p.Prepared && p.RecoveryMode == Mode
+        && p.RecoveryEvidenceVersion == EvidenceVersion && p.FailedLandingRecoveryAuthorizationUsed
+        && !string.IsNullOrEmpty(p.SourceGameVersion) && p.SourceGameVersion == p.TargetGameVersion
+        && p.SavedLandingAccountingAnchorGameTick == r.ExpectedRecoveryGameTick
+        && p.CandidateGameTick == r.ExpectedRecoveryGameTick && p.MinimumGameTick == r.ExpectedRecoveryGameTick
+        && p.ExpectedPlanetId > 0 && Guid.TryParse(p.OriginalFailedFlightActionId, out _)
+        && p.PriorActionTerminalFailureAttested && !p.PriorActionTerminalCompletionAttested
+        && p.ExactEmbeddedIdentityVerified && p.UserConfirmationRequired && !p.CommitAllowedNow
+        && OwnedWorldRecoveryPolicy.IsCanonicalFingerprint(p.ConfirmationDigest)
+        && p.EffectiveRecoveryDeadlineUtc == r.RecoveryDeadlineUtc && p.RecoveryScope == r.RecoveryScope
+        && p.MaximumChargeGameTicks == r.MaximumChargeGameTicks && p.MaximumChargeWallSeconds == r.MaximumChargeWallSeconds
+        && p.NativeChargeFeasibilityRequiresFreshCapture && !p.NewChargingProhibited
+        && p.AdditionalVoyagerGameTicks == 0 && p.OriginalJourneyMaximumGameTicks.HasValue
+        && p.EffectiveJourneyMaximumGameTicks == p.OriginalJourneyMaximumGameTicks
+        && p.SuccessfulFlightWitnessRetiredAtGameTick is null && !p.RemotePrimaryRecoveryAuthorizationUsed
+        && !p.FailedRemoteLastExitReauthorizationUsed && !p.CompletedRemoteLastExitContinuationUsed
+        && p.ReturnOnlyContinuation is null && !p.OpensSavedWorldOnly && !p.NativeOriginalOutcomeProved;
 
     public static string? ValidateRequest(PrepareOwnedWorldResumeRequest r)
     {

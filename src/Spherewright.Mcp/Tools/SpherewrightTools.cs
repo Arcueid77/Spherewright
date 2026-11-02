@@ -1524,7 +1524,7 @@ public static partial class SpherewrightTools
         Destructive = false,
         Idempotent = false,
         OpenWorld = false)]
-    [Description("Ordinary opening defaults to open_saved_primary: verify the saved world independently of old automation expiry, load paused, and keep old tasks stopped. No automatic save, charging or task renewal. Explicit authorize_remote_primary_recovery instead requires a NEW separately owner-authorized finite window for the current remote normal save, exact digest confirmation and unchanged original Journey reserves/outcomes. An existing return-only task can instead use resume_return_only_task with the exact current fixed LastExit, recover_and_return_only scope, unchanged remaining ticks and no charging; a proposed new finite wall window needs separate owner authority. Prepare from an idle main menu: gameLoaded=false is expected, not a load failure. Use the current restartResumeAvailable/restartResumeToken; prepare checks native preload/menu/no-loader readiness, protected ticket and durable Journal. Do not wait for gameLoaded=true before prepare. The explicit legacy default healthy restart mode selects the exact ticket-bound primary; real quarantine selects a qualifying fixed LastExit. Only after explicit user conversation confirmation may verified_newer_lastexit bind a newer fixed LastExit to an exact approved tick and known progress floor. It verifies embedded full identity, current version, peaceful mode and bounded full-file evidence; commit rechecks and adoption must cover the candidate tick. No automatic fallback, arbitrary names, autosave selection, enumeration, ticket consumption or load during prepare.")]
+    [Description("Ordinary opening defaults to open_saved_primary: verify the saved world independently of old automation expiry, load paused, and keep old tasks stopped. No automatic save, charging or task renewal. For an initial outbound already observed terminally failed at the selected remote world, authorize_failed_landing_last_exit requires the exact accounted LastExit boundary, known-failure attestation, unchanged original tick budget and a new bounded Native safety admission; it never rewrites the old failure. Explicit authorize_remote_primary_recovery instead requires a NEW separately owner-authorized finite window for the current remote normal save, exact digest confirmation and unchanged original Journey reserves/outcomes. An existing return-only task can instead use resume_return_only_task with the exact current fixed LastExit, recover_and_return_only scope, unchanged remaining ticks and no charging; a proposed new finite wall window needs separate owner authority. Prepare from an idle main menu: gameLoaded=false is expected, not a load failure. Use the current restartResumeAvailable/restartResumeToken; prepare checks native preload/menu/no-loader readiness, protected ticket and durable Journal. Do not wait for gameLoaded=true before prepare. The explicit legacy default healthy restart mode selects the exact ticket-bound primary; real quarantine selects a qualifying fixed LastExit. Only after explicit user conversation confirmation may verified_newer_lastexit bind a newer fixed LastExit to an exact approved tick and known progress floor. It verifies embedded full identity, current version, peaceful mode and bounded full-file evidence; commit rechecks and adoption must cover the candidate tick. No automatic fallback, arbitrary names, autosave selection, enumeration, ticket consumption or load during prepare.")]
     public static async Task<CallToolResult> PrepareOwnedWorldResumeAsync(
         IBridgeClient bridgeClient,
         string resumeToken,
@@ -1591,6 +1591,11 @@ public static partial class SpherewrightTools
             result = BridgeCallResult<PreparedOwnedWorldResumePlan>.Failed(BridgeError.Create(BridgeErrorCodes.BridgeNotReady,
                 "The Plugin did not echo the exact newly authorized remote-primary recovery, finite window and approved progress loss; no token is exposed.",
                 false, "Use matching Plugin/MCP bytes and confirm this fresh disclosure. Ordinary file access does not grant automatic execution."));
+        if (recoveryMode == OwnedWorldResumeModes.AuthorizeFailedLandingLastExit && result.Success
+            && !VoyagerFailedLandingRecoveryPolicy.HasMatchingEcho(request, result.Value))
+            result = BridgeCallResult<PreparedOwnedWorldResumePlan>.Failed(BridgeError.Create(BridgeErrorCodes.BridgeNotReady,
+                "The Plugin did not echo the exact failed-landing saved boundary and unchanged original budget; no token is exposed.",
+                false, "Use matching Plugin/MCP bytes. The old outbound failure is retained; a new Native admission must still be proved."));
         if (recoveryMode == OwnedWorldResumeModes.ResumeReturnOnlyTask && result.Success
             && VoyagerReturnOnlyContinuationPolicy.EchoFailure(request, result.Value, DateTimeOffset.UtcNow) is { } returnEchoFailure)
         {
@@ -1616,6 +1621,7 @@ public static partial class SpherewrightTools
                 "The Plugin did not echo the exact fresh failed-remote-LastExit mode and owner context; no plan token is exposed.", false,
                 "Use matching Plugin/MCP bytes. Prior consumption is not a Native terminal certificate or an opened legacy commitment."));
         if (recoveryMode != OwnedWorldResumeModes.ReauthorizeFailedRemoteLastExit
+            && recoveryMode != OwnedWorldResumeModes.AuthorizeFailedLandingLastExit
             && recoveryMode != OwnedWorldResumeModes.ContinueCompletedRemoteLastExit
             && OwnedWorldRecoveryPolicy.HasPriorFailedResumeWitness(request) && result.Success
             && (result.Value is not { } prior || !prior.Prepared || prior.RecoveryMode != OwnedWorldResumeModes.Default
@@ -1642,7 +1648,8 @@ public static partial class SpherewrightTools
             || window.MaximumChargeWallSeconds != maximumChargeWallSeconds || !window.NativeChargeFeasibilityRequiresFreshCapture
             || !window.Prepared || window.RecoveryMode != recoveryMode
             || (recoveryMode != OwnedWorldResumeModes.Default && recoveryMode != OwnedWorldResumeModes.ReauthorizeFailedRemoteLastExit
-                && recoveryMode != OwnedWorldResumeModes.AuthorizeRemotePrimaryRecovery)
+                && recoveryMode != OwnedWorldResumeModes.AuthorizeRemotePrimaryRecovery
+                && recoveryMode != OwnedWorldResumeModes.AuthorizeFailedLandingLastExit)
             || window.CommitAllowedNow
             || string.IsNullOrEmpty(window.ConfirmationDigest) || !window.UserConfirmationRequired
             || !window.ExactEmbeddedIdentityVerified || window.RecoveryEvidenceVersion < 1))

@@ -425,6 +425,7 @@ internal sealed partial class GameSessionTracker
         }
         _resumeAdoptionError ??= reason;
         ReleaseFailedRemotePrimaryEvidenceForExit();
+        PreserveFailedLandingAdmission(code);
         ReleaseFailedReturnOnlyEvidenceForPreservation();
         return false;
     }

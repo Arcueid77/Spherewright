@@ -369,6 +369,8 @@ internal sealed partial class GameSessionTracker : IDisposable
         _lastPlanetId = localPlanetId;
         if(!BindLoadedReturnOnlyContinuation())
         {FailRemoteResumeAdmission("return_only_loaded_session_binding_unproved");return;}
+        if (!BindLoadedFailedLandingAdmission())
+        { FailRemoteResumeAdmission("failed_landing_loaded_session_binding_unproved"); return; }
         GuardReturnOnlyTaskOnMainThread();
         TrySaveOwnedWorldOnMainThread(currentData);
     }
@@ -1235,7 +1237,7 @@ internal sealed partial class GameSessionTracker : IDisposable
         return true;
     }
 
-    private static bool TryValidateResumeCandidate(
+    private bool TryValidateResumeCandidate(
         GameData currentData,
         OwnedWorldResumeTicket ticket,
         long? recoveryCandidateGameTick,
@@ -1280,7 +1282,7 @@ internal sealed partial class GameSessionTracker : IDisposable
             return false;
         }
 
-        if (localPlanet.id != ticket.ExpectedPlanetId)
+        if (localPlanet.id != ExpectedResumePlanet(ticket))
         {
             rejection = "The resumed local planet does not match the authenticated source-session ticket.";
             return false;

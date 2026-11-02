@@ -23,6 +23,11 @@ internal sealed partial class GameSessionTracker
                             && evidence.KnownPrimaryProgressTick-source.Prefix.GameTick==evidence.AcceptedProgressLossGameTicks)))
             && Guid.TryParse(actionId, out _) && source is not null && primary is not null && journal is not null
             && ticket.GameplayJournalCheckpoint is not null
-            && (evidence.RemotePrimaryRecovery || !string.IsNullOrEmpty(ticket.QuarantineActionId))
+            && (evidence.RemotePrimaryRecovery || evidence.FailedLandingSource is { IsDisposed: false } failed
+                && sourceKind == OwnedWorldResumeSourceKind.LastExit && failed.Ticket.ResumeToken == ticket.ResumeToken
+                && failed.Ticket.SourceSessionId == ticket.SourceSessionId && failed.Ticket.OwnedSaveName == ticket.OwnedSaveName
+                && failed.Ticket.GameVersion == ticket.GameVersion && ReferenceEquals(source, failed.Source)
+                && ReferenceEquals(primary, failed.Primary) && ReferenceEquals(journal, failed.Journal)
+                || !evidence.FailedLandingRecovery && !string.IsNullOrEmpty(ticket.QuarantineActionId))
             && source.Fingerprint == evidence.SourceFingerprint && primary.Fingerprint == evidence.PrimaryFingerprint;
 }

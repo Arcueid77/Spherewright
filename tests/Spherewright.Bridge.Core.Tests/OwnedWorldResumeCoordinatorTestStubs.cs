@@ -63,7 +63,7 @@ internal sealed partial class GameSessionTracker : IDisposable
     internal void RecordRemotePrimarySourceFailure(string code, string predicate, string? exceptionType = null) =>
         RemoteResumeCheckpoints?.RecordRemotePrimarySourceFailure(code, predicate, exceptionType);
     internal void BeginCompletedContinuationDecision() => RemoteResumeCheckpoints?.BeginCompletedContinuationDecision();
-    internal FlightCheckpointStore? RemoteResumeCheckpoints { get; set; }
+    internal FlightCheckpointStore? RemoteResumeCheckpoints { get => _flightCheckpoints; set => _flightCheckpoints = value!; }
     internal VoyagerRemoteResumeEvidence? RemoteEvidence { get; private set; }
     internal string? RemoteResumeActionId { get; private set; }
     internal OwnedWorldResumeSourceKind ResumeSource { get; private set; }

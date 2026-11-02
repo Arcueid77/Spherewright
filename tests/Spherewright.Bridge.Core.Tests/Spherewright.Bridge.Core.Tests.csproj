@@ -21,6 +21,8 @@
     <Compile Include="..\..\src\Spherewright.Plugin\Game\BlueprintBuildStore.cs" Link="PluginGame\BlueprintBuildStore.cs" />
     <Compile Include="..\..\src\Spherewright.Plugin\Game\OwnedWorldResumeCoordinator.cs" Link="PluginGame\OwnedWorldResumeCoordinator.cs" />
     <Compile Include="..\..\src\Spherewright.Plugin\Game\OwnedWorldResumeCoordinator.ReturnOnly.cs" Link="PluginGame\OwnedWorldResumeCoordinator.ReturnOnly.cs" />
+    <Compile Include="..\..\src\Spherewright.Plugin\Game\OwnedWorldResumeCoordinator.FailedLanding.cs" Link="PluginGame\OwnedWorldResumeCoordinator.FailedLanding.cs" />
+    <Compile Include="..\..\src\Spherewright.Plugin\Game\GameSessionTracker.FailedLandingAdmission.cs" Link="PluginGame\GameSessionTracker.FailedLandingAdmission.cs" />
     <Compile Include="..\..\src\Spherewright.Plugin\Game\GameSessionTracker.ReturnOnlyContinuation.cs" Link="PluginGame\GameSessionTracker.ReturnOnlyContinuation.cs" />
     <Compile Include="..\..\src\Spherewright.Plugin\Game\NativeLoadCompletionSubscription.cs" Link="PluginGame\NativeLoadCompletionSubscription.cs" />
     <Compile Include="..\..\src\Spherewright.Plugin\Game\FlightCheckpointReloadCoordinator.cs" Link="PluginGame\FlightCheckpointReloadCoordinator.cs" />

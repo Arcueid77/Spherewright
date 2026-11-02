@@ -18,6 +18,8 @@ internal sealed partial class GameSessionTracker
         // loaded world has a separate exit-preservation release below.
         ReleaseResumeSourceLease();
         evidence.Dispose();
+        if (CompleteFailedLandingAdmission(evidence) is { } landingPersistenceFailure)
+            return FailRemoteResumeAdmission(landingPersistenceFailure);
         if(CompleteReturnOnlyContinuationAdmission(evidence) is { } taskPersistenceFailure)
             return FailRemoteResumeAdmission(taskPersistenceFailure);
         if (PersistRemoteResumeProgressDebit(evidence) is { } persistenceFailure)

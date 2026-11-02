@@ -40,6 +40,7 @@ internal sealed partial class FlightCheckpointStore
             ActionId = actionId, OriginalFlightActionId = next.ActiveActionId,
             CheckpointId = next.ActiveCheckpointId,
             OriginalCheckpointStateHash = CanonicalStateHash.Combine("failed-landing-original-checkpoint-v1", source.CheckpointJson),
+            OriginalCheckpointJson = source.CheckpointJson,
             SourceFingerprint = source.Source.Fingerprint, PrimaryFingerprint = source.Primary.Fingerprint,
             ContextFingerprint = source.Fingerprint, SourceGameTick = source.SavedAccountingAnchorGameTick,
             ConservedSpentGameTicks = source.ConservedSpentGameTicks, ConfirmationDigest = confirmationDigest,
@@ -78,7 +79,7 @@ internal sealed partial class FlightCheckpointStore
         {
             var elapsed = (decimal)observedOwnedTick.Value - r.SourceGameTick;
             if (elapsed < 0 || observedOwnedTick < r.AdoptedAtGameTick
-                || elapsed > r.MaximumChargeGameTicks + VoyagerLocalWalkReservePolicy.StopGameTicks
+                || healthProved && elapsed > r.MaximumChargeGameTicks + VoyagerLocalWalkReservePolicy.StopGameTicks
                 || r.ConservedSpentGameTicks + elapsed > long.MaxValue) return false;
             if (healthProved && (DateTimeOffset.UtcNow >= r.DeadlineUtc
                 || r.ConservedSpentGameTicks + elapsed + j.ReturnReserveGameTicks + 1 + VoyagerLocalWalkReservePolicy.StopGameTicks > j.MaximumGameTicks)) return false;
@@ -127,6 +128,8 @@ internal sealed partial class FlightCheckpointStore
                 || !OwnedWorldRecoveryPolicy.IsCanonicalFingerprint(r.PrimaryFingerprint)
                 || !OwnedWorldRecoveryPolicy.IsCanonicalFingerprint(r.ContextFingerprint)
                 || !OwnedWorldRecoveryPolicy.IsCanonicalFingerprint(r.OriginalCheckpointStateHash)
+                || string.IsNullOrEmpty(r.OriginalCheckpointJson)
+                || r.OriginalCheckpointStateHash != CanonicalStateHash.Combine("failed-landing-original-checkpoint-v1", r.OriginalCheckpointJson)
                 || !OwnedWorldRecoveryPolicy.IsCanonicalFingerprint(r.ConfirmationDigest)
                 || r.MaximumChargeGameTicks < 1 || r.MaximumChargeGameTicks > 18000
                 || string.IsNullOrEmpty(r.SourceSessionId) || r.ConfirmedAtUtc.Offset != TimeSpan.Zero || r.DeadlineUtc.Offset != TimeSpan.Zero
@@ -215,6 +218,7 @@ internal sealed class VoyagerFailedLandingAdmissionRun
     public string OriginalFlightActionId { get; set; } = "";
     public string CheckpointId { get; set; } = "";
     public string OriginalCheckpointStateHash { get; set; } = "";
+    public string OriginalCheckpointJson { get; set; } = "";
     public long SourceGameTick { get; set; }
     public long ConservedSpentGameTicks { get; set; }
     public string SourceFingerprint { get; set; } = "";

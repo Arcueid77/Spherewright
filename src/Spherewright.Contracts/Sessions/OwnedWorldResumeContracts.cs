@@ -13,6 +13,7 @@ public static class OwnedWorldResumeModes
     public const string OpenSavedPrimary = "open_saved_primary";
     public const string AuthorizeRemotePrimaryRecovery = "authorize_remote_primary_recovery";
     public const string ResumeReturnOnlyTask = "resume_return_only_task";
+    public const string AuthorizeFailedLandingLastExit = "authorize_failed_landing_last_exit";
 }
 
 public sealed class PrepareOwnedWorldResumeRequest
@@ -88,6 +89,9 @@ public sealed class PreparedOwnedWorldResumePlan
     public bool FailedRemoteLastExitReauthorizationUsed { get; set; }
     public bool CompletedRemoteLastExitContinuationUsed { get; set; }
     public bool RemotePrimaryRecoveryAuthorizationUsed { get; set; }
+    public bool FailedLandingRecoveryAuthorizationUsed { get; set; }
+    public long? SavedLandingAccountingAnchorGameTick { get; set; }
+    public string OriginalFailedFlightActionId { get; set; } = string.Empty;
     public bool PriorActionTerminalCompletionAttested { get; set; }
     public bool NewChargingProhibited { get; set; }
     public ReturnOnlyContinuationPreview? ReturnOnlyContinuation { get; set; }
