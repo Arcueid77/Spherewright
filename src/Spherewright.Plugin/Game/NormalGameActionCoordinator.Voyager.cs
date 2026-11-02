@@ -1,4 +1,5 @@
 using Spherewright.Bridge.Core.Safety;
+using Spherewright.Bridge.Core.Factory;
 using Spherewright.Contracts.Actions;
 using Spherewright.Contracts.Celestial;
 using Spherewright.Contracts.Errors;
@@ -698,11 +699,9 @@ internal sealed partial class NormalGameActionCoordinator
         if (plan.ActionKind == NormalActionKinds.Refuel || NormalActionKinds.IsSaveLifecycle(plan.ActionKind)) return null;
         var immediate = plan.ActionKind == NormalActionKinds.Transfer || plan.ActionKind == NormalActionKinds.LogisticsStationFleetTransfer
             || plan.ActionKind == NormalActionKinds.ConfigureBuilding
-                && (plan.ConfigureMode == BuildingConfigurationModes.LogisticsStationStorage
-                    || plan.ConfigureMode == BuildingConfigurationModes.LogisticsStationBelt
-                    || plan.ConfigureMode == BuildingConfigurationModes.LogisticsStationCharge);
+                && VoyagerFactoryConfigurationPolicy.IsImmediateMode(plan.ConfigureMode);
         if (!immediate && plan.ActionKind != NormalActionKinds.Move && plan.ActionKind != NormalActionKinds.Harvest)
-            return Stale("The remote reserve admits finite move/harvest, exact station configuration, ordinary package/storage or fleet transfer, native refuel and save only; construction needs its separately proved native drone lease.");
+            return Stale("The remote reserve admits finite move/harvest, exact normal factory/station configuration, ordinary package/storage or fleet transfer, native refuel and save only; construction needs its separately proved native drone lease.");
         var player = GameMain.mainPlayer;
         var upperPower = (Math.Max(0d, player.mecha.walkPower) * Math.Max(2d, player.mecha.walkSpeed)
             + Math.Max(0d, player.mecha.miningPower) + Math.Max(0d, player.mecha.replicatePower) + Math.Max(0d, player.mecha.researchPower))

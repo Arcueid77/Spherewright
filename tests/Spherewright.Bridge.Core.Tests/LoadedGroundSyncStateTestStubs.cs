@@ -8,12 +8,16 @@ namespace UnityEngine
         internal float sqrMagnitude => x * x + y * y + z * z;
         internal Vector3 normalized => magnitude > 0f ? new(x / magnitude, y / magnitude, z / magnitude) : default;
         internal static float Dot(Vector3 a, Vector3 b) => a.x * b.x + a.y * b.y + a.z * b.z;
+        internal static float Distance(Vector3 a, Vector3 b) => (a - b).magnitude;
         public static Vector3 operator +(Vector3 a, Vector3 b) => new(a.x + b.x, a.y + b.y, a.z + b.z);
         public static Vector3 operator -(Vector3 a, Vector3 b) => new(a.x - b.x, a.y - b.y, a.z - b.z);
         public static Vector3 operator *(Vector3 a, float b) => new(a.x * b, a.y * b, a.z * b);
     }
     internal record struct Vector4(float x, float y, float z, float w);
-    internal record struct Quaternion(float x, float y, float z, float w);
+    internal record struct Quaternion(float x, float y, float z, float w)
+    {
+        internal static float Angle(Quaternion a, Quaternion b) => a == b ? 0f : 180f;
+    }
     internal sealed class Transform
     {
         internal Transform? parent;

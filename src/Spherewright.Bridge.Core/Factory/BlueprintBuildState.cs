@@ -22,6 +22,7 @@ public sealed class BlueprintBuildState
     public FoundryConstructionIntent? FoundryIntent { get; set; }
     public StructuredConstructionBinding? StructuredConstruction { get; set; }
     public StructuredConstructionControlState? ConstructionControl { get; set; }
+    public List<StructuredConstructionControlState> PreviousConstructionWindows { get; set; } = new();
 
     public static BlueprintBuildState Create(BlueprintSiteSnapshot site, FoundryConstructionPlan? foundryPlan = null,
         FoundryConstructionIntent? foundryIntent = null, StructuredConstructionBinding? structuredConstruction = null)
@@ -71,6 +72,16 @@ public sealed class BlueprintBuildState
             StructuredConstruction.Validate(Site);
             if (FoundryPlan is not null || FoundryIntent is not null) throw new InvalidDataException("Structured provenance is not blueprint/Foundry authority.");
             ConstructionControl?.Validate(Site.CapturedAtGameTick);
+            if (PreviousConstructionWindows is null || PreviousConstructionWindows.Count > 16
+                || PreviousConstructionWindows.Any(w => w is null) || PreviousConstructionWindows.Count > 0 && ConstructionControl is null)
+                throw new InvalidDataException("Invalid paid construction window history.");
+            for (var i = 0; i < PreviousConstructionWindows.Count; i++)
+            {
+                var old = PreviousConstructionWindows[i]; old.Validate(Site.CapturedAtGameTick);
+                var next = i + 1 < PreviousConstructionWindows.Count ? PreviousConstructionWindows[i + 1] : ConstructionControl!;
+                if (!next.IsNewWindowFor(old) || old.PhysicalIdleVerifiedAtGameTick > LastEvidenceGameTick)
+                    throw new InvalidDataException("A new finite window must retain a safely stopped paid predecessor.");
+            }
             if (ConstructionControl?.Phase == "completed_idle"
                 && (Phase != "completed" || Objects.Any(o => o.State != BlueprintObjectStates.Completed)))
                 throw new InvalidDataException("Completed-idle control requires a fully completed structured batch.");
@@ -83,7 +94,8 @@ public sealed class BlueprintBuildState
                 || ConstructionControl.Phase != "completed_idle"))
                 throw new InvalidDataException("A structured build is not complete before physical drone idle proof.");
         }
-        else if (ConstructionControl is not null) throw new InvalidDataException("A generic blueprint cannot inherit structured control authority.");
+        else if (ConstructionControl is not null || PreviousConstructionWindows is null || PreviousConstructionWindows.Count != 0)
+            throw new InvalidDataException("A generic blueprint cannot inherit structured control authority.");
         var visited = new HashSet<int>();
         while (visited.Count < Objects.Count)
         {
@@ -235,8 +247,11 @@ public sealed class BlueprintBuildState
             LastEvidenceGameTick, CanonicalStateHash.Combine("objects", Objects.Select(o => (object)CanonicalStateHash.Combine(
                 "object", o.Index, o.State, o.PrebuildId, o.EntityId, o.SubmittedAtGameTick, o.CompletedAtGameTick,
                 o.InventoryBefore, o.InventoryAfter, o.BeforeInventoryHash, o.AfterInventoryHash, o.FailureKind)).ToArray()));
-        return ConstructionControl is null ? original
+        var current = ConstructionControl is null ? original
             : CanonicalStateHash.Combine("structured-control-progress-v1", original, ConstructionControl.EvidenceHash());
+        return PreviousConstructionWindows.Count == 0 ? current
+            : CanonicalStateHash.Combine("structured-paid-continuation-progress-v1", current,
+                CanonicalStateHash.Combine("prior-windows", PreviousConstructionWindows.Select(w => (object)w.EvidenceHash()).ToArray()));
     }
 
     private static readonly HashSet<string> AllowedStates = new HashSet<string>(StringComparer.Ordinal)

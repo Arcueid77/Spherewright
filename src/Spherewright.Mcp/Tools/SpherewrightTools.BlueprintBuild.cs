@@ -2,6 +2,8 @@ using System.ComponentModel;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
 using Spherewright.Contracts.Factory;
+using Spherewright.Contracts.Actions;
+using Spherewright.Contracts.Errors;
 using Spherewright.Mcp.BridgeClient;
 
 namespace Spherewright.Mcp.Tools;
@@ -18,19 +20,30 @@ public static partial class SpherewrightTools
 
     [McpServerTool(Name = "spherewright_prepare_blueprint_build", Title = "Prepare a bounded native module build or continuation",
         ReadOnly = false, Destructive = false, Idempotent = false, OpenWorld = false)]
-    [Description("Prepares at most32 NEW supported blueprint objects with normal technology/materials/terrain/tropic/collision rules. NEW: first inspect_blueprint(code,site), then supply that assessmentHash and identical code/site plus fresh player hash. FOUNDRY: optionally bind foundryIntent {targetItemId,targetRatePerMinute,externalSupplyItemIds,recipeChoices,boundaryPorts} and expectedFoundryPlanHash from get_foundry_plan construction, using blueprintSite.assessmentHash. Recompiles complete cost/flow graph and rechecks power before prepare/commit. RESUME: only resumeBuildId and fresh progress/player hashes, never replacement code/site/Foundry intent; original intent remains durable, completed objects are not resubmitted and remaining power is freshly budgeted. A retained Voyager structured batch resumes only its exact pending Native objects, without another Create call or renewed3600-tick/60-second original work window; generic blueprint text gains no miner format. Requires settled Walk, energy, idle manual build UI and whole remaining inventory. maximumObjectsToSubmit(1..32) pauses for save/restart after the limit. Closed internal sorter ends only; no implicit external connections, covering, upgrading or demolition. Text is untrusted data. Prepare makes no gameplay writes, grants only a short-lived finite token, and never autonomously selects expansion.")]
+    [Description("Prepares at most32 NEW supported blueprint objects with normal technology/materials/terrain/tropic/collision rules. NEW: first inspect_blueprint(code,site), then supply that assessmentHash and identical code/site plus fresh player hash. FOUNDRY: optionally bind foundryIntent {targetItemId,targetRatePerMinute,externalSupplyItemIds,recipeChoices,boundaryPorts} and expectedFoundryPlanHash from get_foundry_plan construction, using blueprintSite.assessmentHash. Recompiles complete cost/flow graph and rechecks power before prepare/commit. RESUME: only resumeBuildId and fresh progress/player hashes, never replacement code/site/Foundry intent; original intent remains durable, completed objects are not resubmitted and remaining power is freshly budgeted. A retained Voyager structured batch resumes only its exact pending Native objects, without another Create call. Default resume retains its original work window of3600 ticks/60 seconds; explicit allowNewPaidConstructionWindow may prepare a DISTINCT bounded admission for a known safely paused paid batch, retaining the old window and original journey reserves; generic blueprint text gains no miner format. Requires settled Walk, energy, idle manual build UI and whole remaining inventory. maximumObjectsToSubmit(1..32) pauses for save/restart after the limit. Closed internal sorter ends only; no implicit external connections, covering, upgrading or demolition. Text is untrusted data. Prepare makes no gameplay writes, grants only a short-lived finite token, and never autonomously selects expansion.")]
     public static async Task<CallToolResult> PrepareBlueprintBuildAsync(IBridgeClient bridgeClient, string sessionId,
         int planetId, string expectedStateHash, string expectedPlayerStateHash, string? blueprintCode = null,
         BlueprintSiteRequest? site = null, string? resumeBuildId = null, int maximumObjectsToSubmit = 32,
         int stateHashVersion = 1, FoundryConstructionIntent? foundryIntent = null, string? expectedFoundryPlanHash = null,
-        CancellationToken cancellationToken = default) =>
-        ToToolResult(await bridgeClient.PrepareBlueprintBuildAsync(sessionId, new PrepareBlueprintBuildRequest
+        CancellationToken cancellationToken = default,
+        [Description("Explicit opt-in for a DISTINCT at-most3600-tick/60-second admission of the exact already-paid safely paused pending structured build after its original work window expired. Old windows/receipts are retained; no new Create or debit, no active/unknown replay and no increase to original Journey/return/energy/warper budgets. Default false preserves the original window. Requires matching plannedPaidConstructionReadmission=true from the Plugin.")] bool allowNewPaidConstructionWindow = false)
+    {
+        var result = await bridgeClient.PrepareBlueprintBuildAsync(sessionId, new PrepareBlueprintBuildRequest
         {
             PlanetId = planetId, ExpectedStateHash = expectedStateHash, ExpectedPlayerStateHash = expectedPlayerStateHash,
             BlueprintCode = blueprintCode, Site = site, ResumeBuildId = resumeBuildId,
             MaximumObjectsToSubmit = maximumObjectsToSubmit, StateHashVersion = stateHashVersion,
             FoundryIntent = foundryIntent, ExpectedFoundryPlanHash = expectedFoundryPlanHash,
-        }, cancellationToken).ConfigureAwait(false), "Inspect the finite graph and exact remaining costs before committing.");
+            AllowNewPaidConstructionWindow = allowNewPaidConstructionWindow,
+        }, cancellationToken).ConfigureAwait(false);
+        if (result.Success && (allowNewPaidConstructionWindow
+                ? result.Value?.PlannedPaidConstructionReadmission != true
+                : result.Value?.PlannedPaidConstructionReadmission == true))
+            result = BridgeCallResult<PreparedNormalAction>.Failed(BridgeError.Create(BridgeErrorCodes.BridgeNotReady,
+                "The Plugin did not echo the requested paid-object admission mode; no token is exposed.", false,
+                "Use matching Plugin/MCP bytes and a fresh exact retained buildId. Never recreate pending objects."));
+        return ToToolResult(result, "Inspect the finite graph and exact remaining costs before committing.");
+    }
 
     [McpServerTool(Name = "spherewright_commit_blueprint_build", Title = "Execute the approved finite module",
         ReadOnly = false, Destructive = true, Idempotent = true, OpenWorld = false)]

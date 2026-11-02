@@ -8,6 +8,8 @@ namespace Spherewright.Plugin.Game;
 
 internal sealed partial class NormalGameActionCoordinator
 {
+    private static bool SavedFactoryPlayerMatches(Player player) => ReferenceEquals(player, GameMain.mainPlayer);
+    private static bool SavedFactoryItemAvailable(int id) => LDB.items.Select(id) is not null && GameMain.history.ItemUnlocked(id);
     private static bool ConstructionPlayerIdle(Player player) => NativeWalkModeIsBounded(player, stationary: true,
             finiteWaterCostWithNativePause: true, allowBudgetedRecharge: true)
         && player.movementState == EMovementState.Walk && player.speed <= .1f
@@ -276,7 +278,8 @@ internal sealed partial class NormalGameActionCoordinator
         return errors;
     }
 
-    private static bool StructuredEntityMatches(PlanetFactory factory, int id, BlueprintBuildState build, BlueprintSiteObject spec)
+    private static bool StructuredEntityMatches(PlanetFactory factory, int id, BlueprintBuildState build, BlueprintSiteObject spec,
+        bool allowCurrentSorterFilter = false)
     {
         if (id <= 0 || id >= factory.entityCursor || id >= factory.entityPool.Length) return false;
         ref var e = ref factory.entityPool[id];
@@ -293,10 +296,12 @@ internal sealed partial class NormalGameActionCoordinator
             ref var pose = ref system.inserterPosePool[e.inserterId];
             var stack = spec.Parameters.Length == 1 ? spec.Parameters[0] : 1;
             var desc = LDB.items.Select(2011)?.prefabDesc;
+            var filter = allowCurrentSorterFilter ? sorter.filter : spec.FilterItemId;
             return desc is not null && stack >= 1 && stack <= 4 && sorter.id == e.inserterId && sorter.entityId == id
-                && sorter.stt == Math.Max(10000, desc.inserterSTT * stack) && sorter.filter == spec.FilterItemId
+                && sorter.stt == Math.Max(10000, desc.inserterSTT * stack) && sorter.filter == filter
+                && (filter == 0 || GameMain.history.ItemUnlocked(filter))
                 && sorter.pickOffset == spec.InputOffset && sorter.insertOffset == spec.OutputOffset
-                && IsSorterFilterApplied(id, spec.FilterItemId)
+                && IsSorterFilterApplied(id, filter)
                 && Vector3.Distance(pose.pos2, ToVector(spec.Position2)) <= .003f
                 && Quaternion.Angle(pose.rot2, BlueprintRotation(spec.Rotation2)) <= .1f;
         }
@@ -326,8 +331,84 @@ internal sealed partial class NormalGameActionCoordinator
             ref var node = ref factory.powerSystem.nodePool[e.powerNodeId];
             return node.id == e.powerNodeId && node.entityId == id;
         }
+        if (StructuredConstructionBinding.IsFactoryCoreItem(spec.ItemId))
+            return StructuredFactoryCoreComponentMatches(factory, id, spec.ItemId);
         return false;
     }
+
+    private static bool StructuredFactoryCoreComponentMatches(PlanetFactory factory, int id, int itemId)
+    {
+        ref var e = ref factory.entityPool[id];
+        var desc = LDB.items.Select(itemId)?.prefabDesc;
+        if (desc is null) return false;
+        // Recipes and inventories may evolve through normal operation after a
+        // build. The immutable construction receipt binds the component and
+        // geometry; later configuration/production must be observed separately.
+        if (itemId == 2302 || itemId == 2304 || itemId == 2309)
+        {
+            var system = factory.factorySystem;
+            if (!desc.isAssembler || system?.assemblerPool is null || e.assemblerId <= 0
+                || e.assemblerId >= system.assemblerCursor || e.assemblerId >= system.assemblerPool.Length) return false;
+            var assembler = system.assemblerPool[e.assemblerId];
+            var recipe = assembler.recipeId == 0 ? null : LDB.recipes.Select(assembler.recipeId);
+            return assembler.id == e.assemblerId && assembler.entityId == id
+                && (assembler.recipeId == 0 || recipe is not null && recipe.Type == desc.assemblerRecipeType
+                    && GameMain.history.RecipeUnlocked(recipe.ID))
+                && StructuredConsumerMatches(factory, id, e.powerConId, assembler.pcId);
+        }
+        if (itemId == 2101)
+        {
+            var system = factory.factoryStorage;
+            if (!desc.isStorage || system?.storagePool is null || e.storageId <= 0
+                || e.storageId >= system.storageCursor || e.storageId >= system.storagePool.Length) return false;
+            var storage = system.storagePool[e.storageId];
+            return storage is not null && storage.id == e.storageId && storage.entityId == id
+                && (long)desc.storageCol * desc.storageRow == storage.size;
+        }
+        if (itemId == 2106)
+        {
+            var system = factory.factoryStorage;
+            if (!desc.isTank || system?.tankPool is null || e.tankId <= 0
+                || e.tankId >= system.tankCursor || e.tankId >= system.tankPool.Length) return false;
+            var tank = system.tankPool[e.tankId];
+            return tank.id == e.tankId && tank.entityId == id;
+        }
+        if (itemId == 2211)
+        {
+            var system = factory.powerSystem;
+            if (!desc.isPowerGen || system?.genPool is null || e.powerGenId <= 0
+                || e.powerGenId >= system.genCursor || e.powerGenId >= system.genPool.Length) return false;
+            var generator = system.genPool[e.powerGenId];
+            return generator.id == e.powerGenId && generator.entityId == id && generator.fuelMask == 2;
+        }
+        if (itemId == 2311)
+        {
+            var system = factory.factorySystem;
+            if (!desc.isEjector || system?.ejectorPool is null || e.ejectorId <= 0
+                || e.ejectorId >= system.ejectorCursor || e.ejectorId >= system.ejectorPool.Length) return false;
+            var ejector = system.ejectorPool[e.ejectorId];
+            return ejector.id == e.ejectorId && ejector.entityId == id && ejector.planetId == factory.planetId
+                && ejector.bulletId == 1501 && ejector.chargeSpend > 0 && ejector.coldSpend > 0
+                && StructuredConsumerMatches(factory, id, e.powerConId, ejector.pcId);
+        }
+        if (itemId == 2312)
+        {
+            var system = factory.factorySystem;
+            if (!desc.isSilo || system?.siloPool is null || e.siloId <= 0
+                || e.siloId >= system.siloCursor || e.siloId >= system.siloPool.Length) return false;
+            var silo = system.siloPool[e.siloId];
+            return silo.id == e.siloId && silo.entityId == id && silo.planetId == factory.planetId
+                && silo.bulletId == 1503 && silo.chargeSpend > 0 && silo.coldSpend > 0
+                && StructuredConsumerMatches(factory, id, e.powerConId, silo.pcId);
+        }
+        return false;
+    }
+
+    private static bool StructuredConsumerMatches(PlanetFactory factory, int entityId, int entityConsumerId, int consumerId) =>
+        factory.powerSystem?.consumerPool is not null && consumerId > 0 && consumerId == entityConsumerId
+        && consumerId < factory.powerSystem.consumerCursor && consumerId < factory.powerSystem.consumerPool.Length
+        && factory.powerSystem.consumerPool[consumerId].id == consumerId
+        && factory.powerSystem.consumerPool[consumerId].entityId == entityId;
 
     private static bool StructuredConnectionsMatch(PlanetFactory factory, BlueprintBuildState build)
     {

@@ -379,6 +379,7 @@ public sealed class PreparedNormalAction
     public EjectorOrbitPlanSnapshot? PlannedEjectorOrbit { get; set; }
 
     public bool? PlannedMechaConstructionDronesEnabled { get; set; }
+    public bool? PlannedPaidConstructionReadmission { get; set; }
 
     public BlueprintBuildProgress? BlueprintBuild { get; set; }
     public bool Prepared { get; set; }

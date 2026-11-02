@@ -3,6 +3,8 @@
 
 [English](safety-model.md) | [简体中文](safety-model.zh-CN.md)
 
+外星工厂已付料续建保留原Create、扣料、对象身份与已停止窗口。只有物理闲置、旧窗口过期及新鲜Native/原旅程检查通过后，才可显式为已知待建对象另作有限准入，旧窗口只追加归档。活动/unknown提交不适用。已存现场恢复核对全部付料实体/待建体与双向连接并集，承认后来合法连接；被动多槽物流站不因此取得自身船队。既有世界身份/进度、首帧、接触及返航储备不放宽，也不增加资源。发射井/火箭/节点仅提供有界只读证据，单独不足以证明发射/抵达。
+
 Spherewright 提供有界的正常游戏能力。具备能力、预览通过、候选本地验收通过与获准执行是不同事实。本文不授予游戏、Save/Load、恢复或迁移、安装、部署、发布权限。游戏工作从当前 [Spherewright-Lab](https://github.com/Arcueid77/Spherewright-Lab) 检出目录开始，先读取其当前 [AGENTS.md](https://github.com/Arcueid77/Spherewright-Lab/blob/main/AGENTS.md) 与[活动交接](https://github.com/Arcueid77/Spherewright-Lab/blob/main/operations/active-handoff.md)。
 
 当前维护的兼容候选面向 `0.10.35.29151`，见[离线原生证据及待完成实机检查](validation/native-29151-preflight.zh-CN.md)。已验收 0.4.0 候选仍固定于 `2a7a98d1932c404e3a7abc2c11233d9c0b8780d9`，最新正式版本为 v0.3.3。更新文档不会安装新组件组合，也不会重新发布候选。参见[产品状态](project-status.zh-CN.md)。

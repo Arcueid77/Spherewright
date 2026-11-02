@@ -1,0 +1,168 @@
+using BepInEx.Logging;
+using Spherewright.Bridge.Core.Factory;
+using Spherewright.Bridge.Core.Safety;
+using Spherewright.Contracts.Factory;
+using Spherewright.Plugin.Game;
+using Xunit;
+
+namespace Spherewright.Bridge.Core.Tests;
+
+// Linked production admission/store/topology with the existing Native geometry
+// and pool substitutes. These tests do not prove Unity loading or construction.
+[Collection("Owned resume native substitutes")]
+public sealed class SavedFactorySiteTests
+{
+    [Fact]
+    public void PassiveStationKeepsMultipleNormalSupplyAndDemandSlotsOnRecovery()
+    {
+        using var f = new Fixture(false); f.AddStation();
+        Assert.Null(f.Guard());
+        var station = f.Factory.transport.stationPool[1]!;
+        Assert.Equal(1013, station.storage[0].itemId);
+        Assert.Equal(1301, station.storage[1].itemId);
+        Assert.Equal(12, station.storage[1].count);
+    }
+
+    [Theory]
+    [InlineData("own_fleet")]
+    [InlineData("negative_stock")]
+    [InlineData("invalid_inc")]
+    [InlineData("unknown_logic")]
+    [InlineData("wrong_station_identity")]
+    public void FactoryAdmissionCannotTurnThePassiveStationIntoAnUnprovedFleet(string fault)
+    {
+        using var f = new Fixture(false); f.AddStation(); var s = f.Factory.transport.stationPool[1]!;
+        switch (fault)
+        {
+            case "own_fleet": s.idleShipCount = 1; break;
+            case "negative_stock": s.storage[1].count = -1; break;
+            case "invalid_inc": s.storage[1].inc = 121; break;
+            case "unknown_logic": s.storage[1].remoteLogic = (ELogisticStorage)99; break;
+            case "wrong_station_identity": s.entityId = 1; break;
+        }
+        Assert.Equal("remote_resume_paid_factory_site_unproved", f.Guard());
+    }
+
+    [Theory]
+    [InlineData(false)] [InlineData(true)]
+    public void LaterPaidConnectionAndRetainedPendingPrebuildSurviveFreshStoreRead(bool pending)
+    {
+        using var f = new Fixture(pending);
+        var before = File.ReadAllBytes(f.StorePath);
+        Assert.Null(f.Guard());
+        Assert.Null(f.Guard());
+        Assert.Equal(before, File.ReadAllBytes(f.StorePath));
+        Assert.Equal(pending ? 1 : 0, f.Factory.prebuildCount);
+    }
+
+    [Theory]
+    [InlineData("extra_entity")]
+    [InlineData("one_sided")]
+    [InlineData("unreceipted_edge")]
+    [InlineData("missing_edge")]
+    [InlineData("geometry")]
+    [InlineData("unknown_batch")]
+    [InlineData("drone_busy")]
+    [InlineData("other_world")]
+    [InlineData("other_player")]
+    [InlineData("other_pending_journey")]
+    [InlineData("dispatch_live_with_pending")]
+    [InlineData("extra_prebuild")]
+    public void IncompleteForeignOrUnknownSiteNeverBorrowsFactoryRecovery(string fault)
+    {
+        using var f = new Fixture(true);
+        switch (fault)
+        {
+            case "extra_entity": f.Factory.entityPool[3] = new() { id = 3, protoId = 2304 }; f.Factory.entityCursor++; f.Factory.entityCount++; break;
+            case "one_sided": f.Factory.TestPorts.Remove((-1, 0)); break;
+            case "unreceipted_edge": f.Connect(1, 2, 2, 2); break;
+            case "missing_edge": f.Factory.TestPorts.Remove((1, 0)); f.Factory.TestPorts.Remove((-1, 0)); break;
+            case "geometry": f.Factory.TestGeometryMatches = false; break;
+            case "unknown_batch": f.MakeUnknown(); break;
+            case "drone_busy": f.Player.mecha.constructionModule.TestPhysicalIdle = false; break;
+            case "other_world": GameMain.data!.localLoadedPlanetFactory = new object(); break;
+            case "other_player": GameMain.SavedFactoryTestPlayer = new(); break;
+            case "other_pending_journey": f.Journey = Guid.NewGuid().ToString(); break;
+            case "dispatch_live_with_pending": f.Player.mecha.constructionModule.droneEnabled = true; break;
+            case "extra_prebuild": f.Factory.prebuildPool[2] = new() { id = 2 }; f.Factory.prebuildCursor++; f.Factory.prebuildCount++; break;
+        }
+        Assert.Equal("remote_resume_paid_factory_site_unproved", f.Guard());
+    }
+
+    private sealed class Fixture : IDisposable
+    {
+        private readonly string root = Path.Combine(Path.GetTempPath(), "Spherewright", "saved-factory", Guid.NewGuid().ToString("N"));
+        private readonly GameSessionTracker sessions = new() { IsCurrentSessionOwned = true, OwnedSaveName = "synthetic-factory-world", SessionId = "synthetic-session" };
+        internal readonly PlanetFactory Factory = new() { planetId = 402 };
+        internal readonly Player Player = new() { planetId = 402 };
+        internal string Journey = Guid.NewGuid().ToString();
+        internal BlueprintBuildStore Store() => new(root, "0.10.35.29151", sessions, new ManualLogSource());
+        internal string StorePath => Directory.GetFiles(Path.Combine(root, "foundry"), "blueprints-*.json").Single();
+        internal string? Guard() => new NormalGameActionCoordinator(Store(), sessions).MinerEnvironmentForTest(Player, Journey);
+        internal Fixture(bool pending)
+        {
+            GameMain.gameTick = 120; GameMain.history = new(); Player.factory = Factory; GameMain.SavedFactoryTestPlayer = Player;
+            GameMain.data = new() { localLoadedPlanetFactory = Factory }; GameMain.localPlanet = new() { id = 402, factory = Factory };
+            Factory.entityCount = pending ? 2 : 3; Factory.entityCursor = pending ? 3 : 4;
+            Factory.prebuildCount = pending ? 1 : 0; Factory.prebuildCursor = 2;
+            Factory.entityPool[1] = new() { id = 1, protoId = 2304, rot = new(0, 0, 0, 1) };
+            Factory.entityPool[2] = new() { id = 2, protoId = 2101, rot = new(0, 0, 0, 1) };
+            if (pending) Factory.prebuildPool[1] = new() { id = 1 };
+            else Factory.entityPool[3] = new() { id = 3, protoId = 2011, rot = new(0, 0, 0, 1) };
+            Add(2304, 1, false); Add(2101, 2, false); Add(2011, 3, pending);
+            Player.mecha.constructionModule.droneEnabled = !pending;
+            Connect(1, 0, pending ? -1 : 3, 0); Connect(pending ? -1 : 3, 1, 2, 0);
+        }
+        internal void Connect(int from, int fromSlot, int to, int toSlot)
+        {
+            Factory.TestPorts[(from, fromSlot)] = new() { ObjectId = from, Slot = fromSlot, IsOutput = true, OtherObjectId = to, OtherSlot = toSlot };
+            Factory.TestPorts[(to, toSlot)] = new() { ObjectId = to, Slot = toSlot, IsOutput = false, OtherObjectId = from, OtherSlot = fromSlot };
+        }
+        internal void AddStation()
+        {
+            Factory.entityPool[4] = new() { id = 4, protoId = 2104, stationId = 1, rot = new(0, 0, 0, 1) };
+            Factory.entityCursor = 5; Factory.entityCount++;
+            var s = Factory.transport.stationPool[1] = new() { id = 1, entityId = 4, planetId = 402, gid = 1 };
+            s.storage[0] = new() { itemId = 1013, count = 10, max = 100, remoteLogic = ELogisticStorage.Supply };
+            s.storage[1] = new() { itemId = 1301, count = 12, max = 100, remoteOrder = -10, remoteLogic = ELogisticStorage.Demand };
+            Add(2104, 4, false);
+        }
+        private void Add(int item, int entity, bool pending)
+        {
+            var site = new BlueprintSiteSnapshot { SessionId = "synthetic-session", PlanetId = 402, CapturedAtGameTick = 100,
+                BlueprintHash = "synthetic-approved-factory", NativeCheckPerformed = true, NativeCheckPassed = true,
+                InventorySufficient = true, TechnologySatisfied = true, Objects = [new() { Index = 0, ItemId = item, Rotation = new() { W = 1 } }] };
+            var step = new StructuredConstructionConnection();
+            var binding = new StructuredConstructionBinding { Kind = item == 2011 ? "inserter" : "core", JourneyId = Journey,
+                NativePlanHash = "sha256:" + new string('a', 64), Steps = [step] };
+            if (item == 2011)
+            {
+                binding.SourceObjectId = step.InputObjectId = 1; binding.DestinationObjectId = step.OutputObjectId = 2;
+                step.InputFromSlot = 0; step.InputToSlot = 0; step.OutputFromSlot = 1; step.OutputToSlot = 0;
+                binding.Endpoints = [new() { ObjectId = 1, ItemId = 2304, Rotation = new() { W = 1 } },
+                    new() { ObjectId = 2, ItemId = 2101, Rotation = new() { W = 1 } }];
+            }
+            var state = BlueprintBuildState.Create(site, structuredConstruction: binding);
+            var c = state.ConstructionControl = StructuredConstructionControlTests.Control();
+            var action = Guid.NewGuid().ToString(); c.NativeCreateActionId = action;
+            state.Begin("synthetic-session", action, 1, 100); state.BeforeStructuredSubmission(101, 1, "before");
+            state.ConfirmStructuredSubmission([1], 0, "after");
+            if (!pending) state.ConfirmCompletion(0, entity, 110);
+            c.RequestStop("explicit_structured_cancellation", 110, c.StartedAtUtc.AddSeconds(1), false); c.DispatchDisabled = true;
+            Assert.True(c.RecordDisabledNativeFactoryPass(111)); Assert.True(c.TryMarkPhysicalIdle(112, true, true));
+            c.Phase = pending ? "paused_idle" : "completed_idle"; state.LastEvidenceGameTick = 112; state.Stop(pending ? "paused" : "completed");
+            Assert.True(Store().TryPut(state));
+        }
+        internal void MakeUnknown()
+        {
+            Assert.True(Store().TryRead(out var states)); var state = states.Single(s => s.Site.Objects[0].ItemId == 2011);
+            state.Stop("outcome_unknown"); Assert.True(Store().TryPut(state));
+        }
+        public void Dispose()
+        {
+            var parent = Path.GetFullPath(Path.Combine(Path.GetTempPath(), "Spherewright", "saved-factory")) + Path.DirectorySeparatorChar;
+            if (!Path.GetFullPath(root).StartsWith(parent, StringComparison.OrdinalIgnoreCase)) throw new InvalidOperationException();
+            if (Directory.Exists(root)) Directory.Delete(root, true);
+        }
+    }
+}

@@ -25,6 +25,11 @@ internal sealed partial class NormalGameActionCoordinator
         // an exact journey; an ordinary landing cannot inherit this exception.
         if (factory.entityCount == 0 && factory.entityCursor <= 1
             && factory.prebuildCount == 0 && factory.prebuildCursor <= 1) return null;
+        if (_blueprints.TryRead(out var factorySaved) && factorySaved.Any(b => b.Site.PlanetId == factory.planetId
+                && b.StructuredConstruction is not null && b.Objects.Any(o => o.SubmittedAtGameTick.HasValue)
+                && b.Site.Objects.Any(o => StructuredConstructionBinding.IsFactoryCoreItem(o.ItemId))))
+            return SavedFactorySiteMatches(p, factory, journeyId, factorySaved, evidence)
+                ? null : "remote_resume_paid_factory_site_unproved";
         if (_blueprints.TryRead(out var saved) && saved.Any(b => b.Site.PlanetId == factory.planetId
                 && b.StructuredConstruction?.Kind == "belt"))
             return SavedUnpoweredBeltChainMatches(p, factory, journeyId, saved, evidence)

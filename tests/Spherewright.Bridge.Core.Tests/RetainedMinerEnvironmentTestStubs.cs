@@ -6,7 +6,11 @@ using Spherewright.Contracts.Factory;
 // durable store are linked production; geometry/drone helpers remain substitutes.
 #pragma warning disable CS0649
 namespace Spherewright.Plugin.Game;
-internal static partial class GameMain { internal static TestHistory? history = new(); }
+internal static partial class GameMain
+{
+    internal static TestHistory? history = new();
+    internal static Player? SavedFactoryTestPlayer;
+}
 internal sealed class TestHistory { internal int currentTech; internal int[] techQueue = new int[32]; }
 internal sealed partial class Player { internal PlanetFactory? factory; internal int planetId = 201; }
 internal sealed partial class PlayerController { internal TestMotion actionWalk = new(), actionDrift = new(); }
@@ -30,8 +34,22 @@ internal sealed class PlanetFactory
     internal TestCargoTraffic cargoTraffic = new();
     internal object cargoContainer = new();
     internal bool TestGeometryMatches = true, TestConnectionsMatch = true;
+    internal TestSiteConstructionSystem constructionSystem = new();
+    internal Dictionary<(int, int), SavedFactoryPort> TestPorts = new();
+    internal void ReadObjectConn(int id, int slot, out bool output, out int other, out int otherSlot)
+    {
+        TestPorts.TryGetValue((id, slot), out var value);
+        output = value?.IsOutput ?? false; other = value?.OtherObjectId ?? 0; otherSlot = value?.OtherSlot ?? 0;
+    }
 }
-internal struct TestEntity { internal int id, protoId, minerId, powerConId, powerNodeId, powerGenId, stationId, beltId; }
+internal sealed class TestSiteConstructionSystem { internal TestSiteCount constructionModules = new(), constructStats = new(); }
+internal sealed class TestSiteCount { internal int count; }
+internal struct TestEntity
+{
+    internal int id, protoId, minerId, powerConId, powerNodeId, powerGenId, stationId, beltId;
+    internal UnityEngine.Vector3 pos;
+    internal UnityEngine.Quaternion rot;
+}
 internal struct TestPrebuild { internal int id; }
 internal sealed class TestFactorySystem { internal int minerCursor = 2; internal TestMiner[] minerPool = new TestMiner[4]; }
 internal struct TestMiner { internal int id, entityId, pcId, productId, productCount; }
@@ -99,6 +117,8 @@ internal static class NativeBeltPathCapture
 }
 internal sealed partial class NormalGameActionCoordinator
 {
+    private static bool SavedFactoryPlayerMatches(Player player) => ReferenceEquals(player, GameMain.SavedFactoryTestPlayer);
+    private static bool SavedFactoryItemAvailable(int id) => id > 0;
     private readonly BlueprintBuildStore _blueprints = null!;
     internal NormalGameActionCoordinator(BlueprintBuildStore store, GameSessionTracker sessions)
     { _blueprints = store; _sessions = sessions; }
@@ -109,12 +129,19 @@ internal sealed partial class NormalGameActionCoordinator
     private BlueprintBuildState? RetainedUnpoweredRecoveryIls(Player p, PlanetFactory f, string? journeyId, NativeResumeDecisionEvidence? evidence) => null;
     private bool SavedConstructionTailMatches(Player p, string? journeyId) => false;
     internal static bool SavedTowerReceiptForTest(BlueprintBuildState b, string journeyId, long tick) => HasSavedPassiveTowerReceipt(b, journeyId, tick);
-    private static bool StructuredEntityMatches(PlanetFactory factory, int id, BlueprintBuildState build, BlueprintSiteObject spec)
+    private static bool StructuredEntityMatches(PlanetFactory factory, int id, BlueprintBuildState build, BlueprintSiteObject spec,
+        bool allowCurrentSorterFilter = false)
         => factory.TestGeometryMatches && id > 0 && id < factory.entityCursor && factory.entityPool[id].id == id
             && factory.entityPool[id].protoId == spec.ItemId
             && (spec.ItemId == 2301 ? factory.entityPool[id].minerId > 0
                 : spec.ItemId == 2104 ? factory.entityPool[id].stationId > 0
-                : spec.ItemId == 2001 ? factory.entityPool[id].beltId > 0 : factory.entityPool[id].powerNodeId > 0);
+                : spec.ItemId == 2001 ? factory.entityPool[id].beltId > 0
+                : StructuredConstructionBinding.IsFactoryCoreItem(spec.ItemId) || spec.ItemId == 2011 || factory.entityPool[id].powerNodeId > 0);
+    private static bool BlueprintPrebuildMatches(PlanetFactory f, int id, BlueprintSiteObject spec) =>
+        f.TestGeometryMatches && id > 0 && id < f.prebuildCursor && f.prebuildPool[id].id == id;
+    private static UnityEngine.Vector3 ToVector(Vector3Snapshot p) => new(p.X, p.Y, p.Z);
+    private static UnityEngine.Quaternion BlueprintRotation(QuaternionSnapshot p) => new(p.X, p.Y, p.Z, p.W);
+    private static bool ProvesNativeBeltRotation(PlanetFactory f, int id) => f.TestGeometryMatches;
     private static bool StructuredConnectionsMatch(PlanetFactory factory, BlueprintBuildState build) => factory.TestConnectionsMatch;
     private static bool TryObserveOwnedConstructionDrones(PlanetFactory factory, ConstructionModuleComponent module,
         out bool idle, out List<int> activeIds)

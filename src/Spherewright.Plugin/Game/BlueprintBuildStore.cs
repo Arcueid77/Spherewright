@@ -4,6 +4,7 @@ using BepInEx.Logging;
 using Spherewright.Bridge.Core.Factory;
 using Spherewright.Bridge.Core.Safety;
 using Spherewright.Contracts.Journals;
+using Spherewright.Contracts.Factory;
 using Spherewright.Plugin.RuntimeDescriptor;
 using Spherewright.Plugin.Security;
 using Spherewright.Plugin.Transport;
@@ -14,7 +15,7 @@ namespace Spherewright.Plugin.Game;
 // current registered identity selects this file; no save picker, prefix test or input path.
 internal sealed class BlueprintBuildStore
 {
-    private const int MaximumBuilds = 32;
+    internal const int MaximumBuilds = 128;
     private const int MaximumBytes = 4 * 1024 * 1024;
     private readonly string _directory;
     private readonly string _gameVersion;
@@ -60,9 +61,23 @@ internal sealed class BlueprintBuildStore
                     || proposed.Builds[index].Generation > state.Generation)
                     throw new InvalidDataException("Finite plan identity or generation regressed.");
                 var previous = proposed.Builds[index];
+                var historyUnchanged = previous.PreviousConstructionWindows.Count == state.PreviousConstructionWindows.Count
+                    && previous.PreviousConstructionWindows.Select(w => w.EvidenceHash())
+                        .SequenceEqual(state.PreviousConstructionWindows.Select(w => w.EvidenceHash()));
+                var readmitted = previous.StructuredConstruction is not null && previous.ConstructionControl is not null
+                    && state.ConstructionControl is not null && previous.ActionId != state.ActionId
+                    && previous.Phase == "paused" && previous.Objects.Any(o => o.State == BlueprintObjectStates.PendingConstruction)
+                    && previous.Objects.All(o => o.State == BlueprintObjectStates.PendingConstruction || o.State == BlueprintObjectStates.Completed)
+                    && state.PreviousConstructionWindows.Count == previous.PreviousConstructionWindows.Count + 1
+                    && state.PreviousConstructionWindows.Take(previous.PreviousConstructionWindows.Count).Select(w => w.EvidenceHash())
+                        .SequenceEqual(previous.PreviousConstructionWindows.Select(w => w.EvidenceHash()))
+                    && state.PreviousConstructionWindows.Last().EvidenceHash() == previous.ConstructionControl.EvidenceHash()
+                    && state.ConstructionControl.IsNewWindowFor(previous.ConstructionControl);
+                if (!historyUnchanged && !readmitted)
+                    throw new InvalidDataException("Construction history is append-only and cannot renew an active or unknown action.");
                 if (previous.StructuredConstruction is not null && previous.ConstructionControl is not null
                     && (state.ConstructionControl is null
-                        || !state.ConstructionControl.RetainsOriginalWindowAndSubmission(previous.ConstructionControl)
+                        || !readmitted && !state.ConstructionControl.RetainsOriginalWindowAndSubmission(previous.ConstructionControl)
                         || previous.ActionId == state.ActionId && previous.ConstructionControl.StopReason is not null
                             && (state.ConstructionControl.StopReason != previous.ConstructionControl.StopReason
                                 || state.ConstructionControl.DrainStartedAtGameTick != previous.ConstructionControl.DrainStartedAtGameTick

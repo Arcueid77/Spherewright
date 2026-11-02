@@ -18,7 +18,12 @@ public sealed class StructuredConstructionBinding
     public List<StructuredConstructionEndpoint> Endpoints { get; set; } = new List<StructuredConstructionEndpoint>();
 
     public static bool SupportsItem(int id) => id == 2301 || id == 2104 || id == 2201 || id == 2203
-        || id == 2205 || id == 2001 || id == 2011;
+        || id == 2205 || id == 2001 || id == 2011 || IsFactoryCoreItem(id);
+
+    // These ordinary core types still need current-version Native placement,
+    // paid drone work and exact component/pose/topology completion proof.
+    public static bool IsFactoryCoreItem(int id) => id == 2302 || id == 2304 || id == 2309
+        || id == 2101 || id == 2106 || id == 2211 || id == 2311 || id == 2312;
 
     public static int MaximumNewObjects(int itemId) => itemId == 2001 ? 12 : 8;
 
@@ -145,6 +150,21 @@ public sealed class StructuredConstructionControlState
         && WorkDeadlineGameTick == original.WorkDeadlineGameTick && WorkDeadlineUtc == original.WorkDeadlineUtc
         && OriginalDroneEnabled == original.OriginalDroneEnabled
         && (original.NativeCreateActionId is null || NativeCreateActionId == original.NativeCreateActionId)
+        && PreexistingEntityIds.SequenceEqual(original.PreexistingEntityIds);
+
+    // A new task window never revives the old one. It requires a known safely
+    // stopped paid batch; the caller archives this exact old record first and
+    // independently proves current Native idle and original Journey reserves.
+    public bool CanReadmitPaidPending(long tick, DateTimeOffset nowUtc) =>
+        Phase == "paused_idle" && DispatchDisabled && PhysicalIdleVerified && !BindingLost
+        && PhysicalIdleVerifiedAtGameTick.HasValue && tick >= PhysicalIdleVerifiedAtGameTick
+        && StopReason is not null && Guid.TryParse(NativeCreateActionId, out _)
+        && tick >= StartedAtGameTick && nowUtc >= StartedAtUtc
+        && (tick >= WorkDeadlineGameTick || nowUtc >= WorkDeadlineUtc);
+
+    public bool IsNewWindowFor(StructuredConstructionControlState original) =>
+        original.CanReadmitPaidPending(StartedAtGameTick, StartedAtUtc)
+        && NativeCreateActionId == original.NativeCreateActionId && OriginalDroneEnabled == original.OriginalDroneEnabled
         && PreexistingEntityIds.SequenceEqual(original.PreexistingEntityIds);
 
     public bool RenewObservationLease(DateTimeOffset nowUtc)

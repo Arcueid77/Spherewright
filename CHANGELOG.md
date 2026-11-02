@@ -4,6 +4,9 @@
 
 ## 0.5.0 — accepted Voyager baseline; first-sail/rocket extension in development
 
+- Adds bounded ordinary off-world factory cores and normal recipe/filter/storage/orbit configuration under the original Journey reserves. Saved-site admission proves all paid entity/prebuild receipts and their combined reciprocal graph. Explicit paid-pending readmission archives a safely stopped expired window without recreating objects or granting resources; default resume retains the old window.
+- Adds read-only silo, real rocket and receiving-node observations. Incomplete coverage stays unknown, animation is not a launch receipt, and inspection creates no structure or rocket. Source/fixture qualification remains separate from off-world runtime acceptance.
+
 - Cross-star travel, ordinary warper supply, bounded remote construction and active-vessel observations extend the original industrial foundation.
 - The original Voyager clauses are accepted at their recorded sources, including real remote mining, three delivery cycles, home consumption and save/recovery continuation. The accepted source is on main; baseline review archives remain immutable in Lab.
 - Owner direction of 2026-11-01 adds the first normally manufactured and actually launched solar sail. Ejector/swarm detail inspection and fixed-orbit configuration are under development; source checks are separate from installation and live launch evidence.

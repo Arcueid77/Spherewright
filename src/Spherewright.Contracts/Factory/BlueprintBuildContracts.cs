@@ -11,6 +11,7 @@ public sealed class PrepareBlueprintBuildRequest
     public string ExpectedPlayerStateHash { get; set; } = string.Empty;
     public int StateHashVersion { get; set; } = 1;
     public int MaximumObjectsToSubmit { get; set; } = 32;
+    public bool AllowNewPaidConstructionWindow { get; set; }
     public FoundryConstructionIntent? FoundryIntent { get; set; }
     public string? ExpectedFoundryPlanHash { get; set; }
 }
@@ -59,6 +60,7 @@ public sealed class BlueprintBuildProgress
     // Null for the original blueprint executor. A structured receipt does not
     // make mining parameters part of the generic blueprint input format.
     public ConstructionControlReadback? ConstructionControl { get; set; }
+    public int PreviousConstructionWindowCount { get; set; }
     public string BuildId { get; set; } = string.Empty;
     public string BlueprintHash { get; set; } = string.Empty;
     public string PlanHash { get; set; } = string.Empty;

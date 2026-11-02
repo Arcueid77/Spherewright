@@ -7,6 +7,35 @@ public sealed class StructuredConstructionControlTests
 {
     private static readonly DateTimeOffset Start = new(2025, 1, 1, 0, 0, 0, TimeSpan.Zero);
 
+    [Theory]
+    [InlineData("working")]
+    [InlineData("unknown")]
+    [InlineData("binding_lost")]
+    [InlineData("not_idle")]
+    [InlineData("dispatch_enabled")]
+    [InlineData("no_create_receipt")]
+    [InlineData("unexpired")]
+    public void NewWindowNeverReanimatesAnActiveUnknownOrUnprovedBatch(string failure)
+    {
+        var c = Control(); c.NativeCreateActionId = Guid.NewGuid().ToString();
+        c.RequestStop("explicit_structured_cancellation", 200, Start.AddSeconds(2), false);
+        c.DispatchDisabled = true; c.RecordDisabledNativeFactoryPass(201);
+        Assert.True(c.TryMarkPhysicalIdle(202, true, true)); c.Phase = "paused_idle";
+        var tick = 3800L; var now = Start.AddSeconds(61);
+        Assert.True(c.CanReadmitPaidPending(tick, now));
+        switch (failure)
+        {
+            case "working": c.Phase = "working"; break;
+            case "unknown": c.Phase = "quarantined"; break;
+            case "binding_lost": c.BindingLost = true; break;
+            case "not_idle": c.PhysicalIdleVerified = false; break;
+            case "dispatch_enabled": c.DispatchDisabled = false; break;
+            case "no_create_receipt": c.NativeCreateActionId = null; break;
+            case "unexpired": tick = 300; now = Start.AddSeconds(3); break;
+        }
+        Assert.False(c.CanReadmitPaidPending(tick, now));
+    }
+
     [Fact]
     public void FreshResumeRetainsOriginalWindowRatherThanGrantingAnotherMinute()
     {

@@ -13,6 +13,75 @@ namespace Spherewright.Bridge.Core.Tests;
 public sealed class StructuredConstructionStoreIntegrationTests
 {
     [Fact]
+    public void SafelyStoppedPaidBatchGetsDistinctWindowWithoutRewritingOldWindowOrDebit()
+    {
+        using var fixture = new Fixture();
+        var state = Pending(2);
+        ProvePhysicalDrain(state, 110, 112); state.ConstructionControl!.Phase = "paused_idle"; state.Stop("paused");
+        Assert.True(fixture.Store().TryPut(state));
+        var old = state.ConstructionControl; var oldHash = old.EvidenceHash();
+        var resumed = Clone(state);
+        resumed.PreviousConstructionWindows.Add(resumed.ConstructionControl!);
+        resumed.ConstructionControl = StructuredConstructionControlTests.Control();
+        resumed.ConstructionControl.StartedAtGameTick = 3800;
+        resumed.ConstructionControl.WorkDeadlineGameTick = 7400;
+        resumed.ConstructionControl.StartedAtUtc = old.WorkDeadlineUtc.AddSeconds(1);
+        resumed.ConstructionControl.WorkDeadlineUtc = old.WorkDeadlineUtc.AddSeconds(61);
+        resumed.ConstructionControl.ObservationLeaseExpiresAtUtc = old.WorkDeadlineUtc.AddSeconds(31);
+        resumed.ConstructionControl.NativeCreateActionId = old.NativeCreateActionId;
+        resumed.ConstructionControl.OriginalDroneEnabled = old.OriginalDroneEnabled;
+        resumed.ConstructionControl.PreexistingEntityIds = old.PreexistingEntityIds.ToList();
+        resumed.Begin("synthetic-new-session", Guid.NewGuid().ToString(), 2, 3800);
+        Assert.True(fixture.Store().TryPut(resumed));
+        var retained = Assert.Single(fixture.Read());
+        Assert.Equal(oldHash, Assert.Single(retained.PreviousConstructionWindows).EvidenceHash());
+        Assert.Equal(3800, retained.ConstructionControl!.StartedAtGameTick);
+        Assert.Equal(state.Objects.Select(o => o.PrebuildId), retained.Objects.Select(o => o.PrebuildId));
+        Assert.Equal(state.Objects.Select(o => o.AfterInventoryHash), retained.Objects.Select(o => o.AfterInventoryHash));
+        Assert.Throws<InvalidOperationException>(() => retained.BeforeStructuredSubmission(3801, 12, "replay"));
+        retained.PreviousConstructionWindows[0].WorkDeadlineGameTick++;
+        Assert.False(fixture.Store().TryPut(retained));
+    }
+
+    [Theory]
+    [InlineData(2302)] [InlineData(2304)] [InlineData(2309)] [InlineData(2101)]
+    [InlineData(2106)] [InlineData(2211)] [InlineData(2311)] [InlineData(2312)]
+    public void PaidFactoryCoreKeepsItsOriginalPrebuildAndDebitAcrossStoreRestart(int itemId)
+    {
+        using var fixture = new Fixture();
+        var state = BlueprintBuildState.Create(Site(1, itemId), structuredConstruction: Binding(1));
+        Start(state); state.BeforeStructuredSubmission(101, 1, "before-one-device");
+        state.ConfirmStructuredSubmission(new[] { 20 }, 0, "paid-once");
+        Assert.True(fixture.Store().TryPut(state));
+        var resumed = Assert.Single(fixture.Read());
+        Assert.Equal(state.BuildId, resumed.BuildId);
+        Assert.Equal(20, resumed.Objects[0].PrebuildId);
+        Assert.Equal(1, resumed.Objects[0].InventoryBefore);
+        Assert.Equal(0, resumed.Objects[0].InventoryAfter);
+        Assert.Throws<InvalidOperationException>(() => resumed.BeforeStructuredSubmission(102, 1, "replay"));
+        resumed.ConfirmCompletion(0, 100, 110); ProvePhysicalDrain(resumed, 110, 112);
+        resumed.ConstructionControl!.Phase = "completed_idle"; resumed.Stop("completed");
+        Assert.True(fixture.Store().TryPut(resumed));
+        var completed = Assert.Single(fixture.Read());
+        Assert.Equal(100, completed.Objects[0].EntityId);
+        Assert.Equal("paid-once", completed.Objects[0].AfterInventoryHash);
+        Assert.Throws<InvalidOperationException>(() => completed.BeforeStructuredSubmission(120, 1, "recreate"));
+    }
+
+    [Fact]
+    public void FactoryReceiptCapacityNeverEvictsAnOlderPaidBuild()
+    {
+        using var fixture = new Fixture();
+        var states = Enumerable.Range(0, BlueprintBuildStore.MaximumBuilds)
+            .Select(_ => BlueprintBuildState.Create(Site(1, 2304), structuredConstruction: Binding(1))).ToArray();
+        foreach (var state in states) Assert.True(fixture.Store().TryPut(state));
+        Assert.False(fixture.Store().TryPut(BlueprintBuildState.Create(Site(1, 2304), structuredConstruction: Binding(1))));
+        var retained = fixture.Read();
+        Assert.Equal(BlueprintBuildStore.MaximumBuilds, retained.Count);
+        Assert.Equal(states.Select(s => s.BuildId).OrderBy(s => s), retained.Select(s => s.BuildId).OrderBy(s => s));
+    }
+
+    [Fact]
     public void TwelveBeltBatchKeepsOneExactDebitTopologyAndPhysicalCompletionAcrossRestart()
     {
         using var fixture = new Fixture();

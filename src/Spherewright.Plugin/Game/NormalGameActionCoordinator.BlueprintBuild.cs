@@ -53,6 +53,8 @@ internal sealed partial class NormalGameActionCoordinator
         if ((request.FoundryIntent is null) != (request.ExpectedFoundryPlanHash is null))
             return InvalidPlan("Foundry intent and expectedFoundryPlanHash must be supplied together for a new finite construction.");
         if (_actions.ActiveValues.Any(a => !a.Terminal)) return GameCallResult<PreparedNormalAction>.Failed(BlueprintError("another_action_active"));
+        if (request.AllowNewPaidConstructionWindow && request.ResumeBuildId is null)
+            return InvalidPlan("A distinct paid construction window requires the exact retained buildId; it cannot authorize a new build.");
         var player = _reader.GetPlayerStateOnMainThread(sessionId, new LocalPlanetRequest { PlanetId = request.PlanetId });
         if (!player.Success) return GameCallResult<PreparedNormalAction>.Failed(player.Error!);
         if (player.Value!.StateHash != request.ExpectedPlayerStateHash) return StalePlan("Player state changed before blueprint preparation.");
@@ -69,6 +71,8 @@ internal sealed partial class NormalGameActionCoordinator
             if (build is null) return InvalidPlan("No such finite construction belongs to this owned planet.");
             if (build.StructuredConstruction is not null)
                 return PrepareStructuredConstructionResume(request, common.Session!, build, player.Value);
+            if (request.AllowNewPaidConstructionWindow)
+                return InvalidPlan("A distinct paid construction window is only for known safely paused structured Native objects.");
             if (playerError is not null) return GameCallResult<PreparedNormalAction>.Failed(BlueprintError(playerError));
             var generation = build.Generation;
             var blockers = ReconcileBlueprintState(build);
@@ -92,7 +96,7 @@ internal sealed partial class NormalGameActionCoordinator
             if (request.BlueprintCode is null || request.Site is null
                 || request.Site.ExpectedPlayerStateHash != request.ExpectedPlayerStateHash)
                 return InvalidPlan("A new module requires explicit code, placement and the same fresh player hash.");
-            if (!_blueprints.TryRead(out var builds) || builds.Count >= 32)
+            if (!_blueprints.TryRead(out var builds) || builds.Count >= BlueprintBuildStore.MaximumBuilds)
                 return GameCallResult<PreparedNormalAction>.Failed(BlueprintError("blueprint_progress_store_unavailable_or_full"));
             BlueprintSiteSnapshot site;
             FoundryConstructionPlan? foundryPlan = null;
@@ -346,6 +350,7 @@ internal sealed partial class NormalGameActionCoordinator
     {
         ConstructionControl = CaptureConstructionControl(build,
             _actions.ActiveValues.FirstOrDefault(a => a.BlueprintBuild?.BuildId == build.BuildId)),
+        PreviousConstructionWindowCount = build.PreviousConstructionWindows.Count,
         BuildId = build.BuildId, BlueprintHash = build.Site.BlueprintHash, PlanHash = build.PlanHash,
         SessionId = session.SessionId!, PlanetId = build.Site.PlanetId, Revision = session.Revision,
         CapturedAtGameTick = GameMain.gameTick, StateHash = build.ProgressHash(session.SessionId!, session.Revision),

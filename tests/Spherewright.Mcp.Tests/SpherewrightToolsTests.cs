@@ -3229,6 +3229,23 @@ public sealed partial class SpherewrightToolsTests
         Assert.Contains("No covering", tool.Description);
     }
 
+    [Theory]
+    [InlineData(true, null, true)]
+    [InlineData(true, false, true)]
+    [InlineData(true, true, false)]
+    [InlineData(false, true, true)]
+    [InlineData(false, null, false)]
+    public async Task PaidPendingReadmissionRequiresExplicitMatchingCohortEcho(bool requested, bool? echoed, bool error)
+    {
+        var client = new FakeBridgeClient(SuccessResult()) { BlueprintPreparedOverride = new()
+            { Prepared = true, CommitAllowedNow = true, PlanToken = "synthetic-plan", ActionKind = NormalActionKinds.BlueprintBuild,
+                PlannedPaidConstructionReadmission = echoed } };
+        var result = await SpherewrightTools.PrepareBlueprintBuildAsync(client, "session", 402, "progress", "player",
+            resumeBuildId: "synthetic-build", allowNewPaidConstructionWindow: requested);
+        Assert.Equal(error, result.IsError);
+        Assert.Equal(requested, client.LastBlueprintBuildRequest!.AllowNewPaidConstructionWindow);
+    }
+
     [Fact]
     public async Task BlueprintExecutionAndCancellationExposeFreshFiniteAuthority()
     {
@@ -3468,8 +3485,13 @@ public sealed partial class SpherewrightToolsTests
             LastBlueprintReadRequest = request;
             return Task.FromResult(BridgeCallResult<BlueprintBuildList>.Succeeded(new BlueprintBuildList()));
         }
+        public PreparedNormalAction? BlueprintPreparedOverride { get; set; }
         public Task<BridgeCallResult<PreparedNormalAction>> PrepareBlueprintBuildAsync(string sessionId, PrepareBlueprintBuildRequest request, CancellationToken cancellationToken)
-        { LastBlueprintBuildRequest = request; return Prepared(sessionId, NormalActionKinds.BlueprintBuild); }
+        {
+            LastBlueprintBuildRequest = request;
+            return BlueprintPreparedOverride is not null ? Task.FromResult(BridgeCallResult<PreparedNormalAction>.Succeeded(BlueprintPreparedOverride))
+                : Prepared(sessionId, NormalActionKinds.BlueprintBuild);
+        }
         public Task<BridgeCallResult<NormalActionCommitResult>> CommitBlueprintBuildAsync(string sessionId, CommitNormalActionRequest request, CancellationToken cancellationToken) =>
             Committed(sessionId, request, NormalActionKinds.BlueprintBuild);
         public Task<BridgeCallResult<PreparedNormalAction>> PrepareCancelBlueprintAsync(string sessionId, PrepareCancelBlueprintRequest request, CancellationToken cancellationToken)
