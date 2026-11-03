@@ -17,7 +17,7 @@ public sealed partial class SpherewrightToolsTests
         {
             Prepared = true, PlanToken = "synthetic-surface-recovery-plan",
             SurfaceRecoveryTarget = new Vector3Snapshot { X = 200, Y = 1, Z = 2 },
-            SurfaceRecoveryMaximumWorkGameTicks = 600, SurfaceRecoveryMaximumWallSeconds = 30,
+            SurfaceRecoveryMaximumWorkGameTicks = 600, SurfaceRecoveryMaximumWallSeconds = 20,
             RecoveryMode = OwnedWorldResumeModes.AuthorizeRemotePrimaryRecovery,
             RecoveryEvidenceVersion = VoyagerRemotePrimaryRecoveryPolicy.EvidenceVersion, RemotePrimaryRecoveryAuthorizationUsed = true,
             CompletedSavedLandingAdmissionUsed = true, OriginalFailedFlightActionId = Guid.NewGuid().ToString(),
@@ -34,7 +34,7 @@ public sealed partial class SpherewrightToolsTests
             case "missing_target": p.SurfaceRecoveryTarget = null; break;
             case "changed_target": p.SurfaceRecoveryTarget!.Z = 3; break;
             case "work_cap": p.SurfaceRecoveryMaximumWorkGameTicks = 601; break;
-            case "wall_cap": p.SurfaceRecoveryMaximumWallSeconds = 31; break;
+            case "wall_cap": p.SurfaceRecoveryMaximumWallSeconds = 21; break;
         }
         var bridge = new FakeBridgeClient(SuccessResult()) { ResumePlan = p };
         var result = await SpherewrightTools.PrepareOwnedWorldResumeAsync(bridge, "synthetic-saved-boundary-credential",

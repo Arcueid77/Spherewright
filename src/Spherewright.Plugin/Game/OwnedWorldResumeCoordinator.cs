@@ -201,7 +201,7 @@ internal sealed partial class OwnedWorldResumeCoordinator
             SourceGameVersion = ticket.GameVersion,
             TargetGameVersion = _tickets.CurrentGameVersion,
             ConfirmationPrompt = (payload.Request.SurfaceRecoveryTarget is { } surfaceTarget
-                ? $"This NEW resume task may issue one normal Native Move toward ({surfaceTarget.X}, {surfaceTarget.Y}, {surfaceTarget.Z}), at most600 work ticks/30 wall seconds inside the original budget, after fresh Native landing and cost proof. It does not replay or change any old unknown Move. General work and a covering Save still require strict grounded Walk and zero physical tails. " : string.Empty)
+                ? $"This NEW resume task may issue one normal Native Move toward ({surfaceTarget.X}, {surfaceTarget.Y}, {surfaceTarget.Z}), at most600 work ticks/20 wall seconds inside the original budget, after fresh Native landing and cost proof. It does not replay or change any old unknown Move. General work and a covering Save still require strict grounded Walk and zero physical tails. " : string.Empty)
                 + (payload.RemoteEvidence?.SuccessfulFlightWitnessRetiredAtGameTick is { } coveredTick
                 ? $"The original successful-flight checkpoint was retired by primary coverage at tick {coveredTick}. It is a bound historical witness only and will never be loaded. " : string.Empty)
                 + (payload.RemotePrimaryRecovery && payload.Request.AdditionalVoyagerGameTicks > 0

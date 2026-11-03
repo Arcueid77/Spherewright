@@ -29,7 +29,7 @@ public enum VoyagerSurfaceRecoveryStep { Continue, Complete, Rejected }
 public sealed class VoyagerSurfaceRecoveryPolicy
 {
     public const int MaximumWorkGameTicks = 600;
-    public const double MaximumWallSeconds = 30d;
+    public const double MaximumWallSeconds = 20d;
     public const double MaximumInitialBindingWallSeconds = 2d;
     public const double MaximumTargetDistanceMeters = 16d;
     public const double MaximumDisplacementMeters = 24d;
@@ -51,7 +51,7 @@ public sealed class VoyagerSurfaceRecoveryPolicy
             && Known(r.MaximumChargeWallSeconds) && r.MaximumChargeWallSeconds >= MaximumWallSeconds
             && Finite(p.X) && Finite(p.Y) && Finite(p.Z)
             && (double)p.X * p.X + (double)p.Y * p.Y + (double)p.Z * p.Z >= 1d
-            ? null : "Surface recovery requires explicit zero-addition current-world authorization, one finite target and charge caps at least600 ticks/30 seconds; no default fallback or replay.";
+            ? null : "Surface recovery requires explicit zero-addition current-world authorization, one finite target and charge caps at least600 ticks/20 seconds; no default fallback or replay.";
     }
 
     public static Vector3Snapshot? CopyTarget(Vector3Snapshot? p) => p is null ? null
