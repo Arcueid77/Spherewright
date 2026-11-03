@@ -446,7 +446,9 @@ internal sealed partial class NormalGameActionCoordinator
     public GameCallResult<PreparedNormalAction> PrepareTransferOnMainThread(
         string? requestedSessionId,
         PrepareTransferRequest request)
-        => request.Direction == TransferDirections.PlayerToGeneratorFuel
+        => request.Direction == TransferDirections.ProductionResetToPlayer
+            ? PrepareProductionResetOnMainThread(requestedSessionId,request)
+            : request.Direction == TransferDirections.PlayerToGeneratorFuel
             ? PrepareGeneratorColdStartFuelOnMainThread(requestedSessionId, request)
             : PrepareStorageTransferOnMainThread(requestedSessionId, request);
 
@@ -835,7 +837,8 @@ internal sealed partial class NormalGameActionCoordinator
                 CancelBlueprintBuildOnMainThread(action);
                 break;
             case NormalActionKinds.Transfer:
-                if (action.Plan.TransferDirection == TransferDirections.PlayerToGeneratorFuel) ExecuteGeneratorColdStartFuelOnMainThread(action);
+                if (action.Plan.TransferDirection == TransferDirections.ProductionResetToPlayer) ExecuteProductionResetOnMainThread(action);
+                else if (action.Plan.TransferDirection == TransferDirections.PlayerToGeneratorFuel) ExecuteGeneratorColdStartFuelOnMainThread(action);
                 else ExecuteStorageTransferOnMainThread(action);
                 break;
             case NormalActionKinds.LogisticsStationFleetTransfer:
@@ -1355,7 +1358,9 @@ internal sealed partial class NormalGameActionCoordinator
             case NormalActionKinds.CancelBlueprintBuild:
                 return RevalidateBlueprintCancelOnMainThread(plan);
             case NormalActionKinds.Transfer:
-                return plan.TransferDirection == TransferDirections.PlayerToGeneratorFuel
+                return plan.TransferDirection == TransferDirections.ProductionResetToPlayer
+                    ? RevalidateProductionResetOnMainThread(plan)
+                    : plan.TransferDirection == TransferDirections.PlayerToGeneratorFuel
                     ? RevalidateGeneratorColdStartFuelOnMainThread(plan) : RevalidateStorageTransferOnMainThread(plan);
             case NormalActionKinds.LogisticsStationFleetTransfer:
                 return RevalidateStationFleetTransferOnMainThread(plan);

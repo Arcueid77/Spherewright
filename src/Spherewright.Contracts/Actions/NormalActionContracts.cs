@@ -39,6 +39,7 @@ public static class NormalBuildKinds
 
 public static class TransferDirections
 {
+    public const string ProductionResetToPlayer = "production-reset-to-player";
     public const string PlayerToGeneratorFuel = "player-to-generator-fuel";
     public const string PlayerToStorage = "player-to-storage";
     public const string StorageToPlayer = "storage-to-player";
@@ -367,6 +368,7 @@ public sealed class PreparedNormalAction
 {
     public int? PlannedStationVesselDeliveryMinimumPercent { get; set; }
     public GeneratorColdStartFuelPlan? GeneratorColdStartFuel { get; set; }
+    public ProductionResetPlan? ProductionReset { get; set; }
     public VoyagerMechaWorkSnapshot? VoyagerMechaWork { get; set; }
 
     public bool PreservesQuarantine { get; set; }
@@ -456,6 +458,25 @@ public sealed class GeneratorColdStartFuelPlan
     public int Count { get; set; }
     public bool EmptyUnlitGenerator { get; set; }
     public string NativeOperation { get; set; } = string.Empty;
+}
+
+public sealed class ProductionResetPlan
+{
+    public int EvidenceVersion { get; set; }
+    public int EntityId { get; set; }
+    public int BuildingItemId { get; set; }
+    public int OriginalRecipeId { get; set; }
+    public string Kind { get; set; } = string.Empty;
+    public string NativeOperation { get; set; } = string.Empty;
+    public int DedicatedEmptyPackageSlots { get; set; }
+    public List<ProductionReturnItem> Returns { get; set; } = new();
+}
+
+public sealed class ProductionReturnItem
+{
+    public int ItemId { get; set; }
+    public int Count { get; set; }
+    public int Inc { get; set; }
 }
 
 public sealed class ActionItemBudget

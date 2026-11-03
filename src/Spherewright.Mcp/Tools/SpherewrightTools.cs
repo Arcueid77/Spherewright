@@ -750,7 +750,7 @@ public static partial class SpherewrightTools
         Destructive = false,
         Idempotent = false,
         OpenWorld = false)]
-    [Description("Re-reads the player and one exact storage, verifies source count, destination capacity, range, and bilateral conservation without moving any item. The separate player-to-generator-fuel direction accepts only a fully empty unlit thermal2204 or fusion2211 generator, exact zero-inc package fuel1..10, empty hand and fresh full generator stateHash. It binds Native fuelNeeds membership and PlanetFactory.InsertInto; require generatorColdStartFuel echo. It never removes hot fuel, refills a running generator, writes energy or advances simulation.")]
+    [Description("Re-reads the player and one exact storage, verifies source count, destination capacity, range, and bilateral conservation without moving any item. The separate production-reset-to-player direction uses storageEntityId for the exact idle assembler or unstacked lab, itemId=0/count=0, and fresh full player/device hashes. Review productionReset and all returned items/inc: Native TakeBackItems resets its recipe/function and returns every unconsumed whole item to proven dedicated package slots. Main/bonus work and fractional research points/inc are rejected; committed technology is unchanged. Remote active journeys cannot return research matrices. The separate player-to-generator-fuel direction accepts only a fully empty unlit thermal2204 or fusion2211 generator, exact zero-inc package fuel1..10, empty hand and fresh full generator stateHash. It binds Native fuelNeeds membership and PlanetFactory.InsertInto; require generatorColdStartFuel echo. It never removes hot fuel, refills a running generator, writes energy or advances simulation.")]
     public static async Task<CallToolResult> PrepareTransferAsync(
         IBridgeClient bridgeClient,
         string sessionId,
@@ -764,6 +764,13 @@ public static partial class SpherewrightTools
         int stateHashVersion = 1,
         CancellationToken cancellationToken = default)
     {
+        if (direction is not (TransferDirections.PlayerToStorage or TransferDirections.StorageToPlayer
+            or TransferDirections.PlayerToGeneratorFuel or TransferDirections.ProductionResetToPlayer))
+            return ToToolResult(BridgeCallResult<PreparedNormalAction>.Failed(BridgeError.Create(BridgeErrorCodes.InvalidRequest,
+                "Transfer direction must use an exact supported lower-case value.",false,"Use the documented transfer direction; do not normalize an unknown mode.")),"Unsupported transfer direction.");
+        if(direction==TransferDirections.ProductionResetToPlayer && (itemId!=0 || count!=0))
+            return ToToolResult(BridgeCallResult<PreparedNormalAction>.Failed(BridgeError.Create(BridgeErrorCodes.InvalidRequest,
+                "Production reset requires itemId=0/count=0 and its complete disclosed return plan.",false,"Fresh-inspect the exact idle device and package.")),"Invalid production reset.");
         var result = await bridgeClient.PrepareTransferAsync(
             sessionId,
             new PrepareTransferRequest
@@ -783,6 +790,11 @@ public static partial class SpherewrightTools
             result = BridgeCallResult<PreparedNormalAction>.Failed(BridgeError.Create(BridgeErrorCodes.BridgeNotReady,
                 "The Plugin did not bind the exact empty generator and Native fuel insertion; no transfer token is exposed.",
                 false, "Use matching Plugin/MCP bytes and inspect the actual unlit generator and package fuel."));
+        if (direction==TransferDirections.ProductionResetToPlayer && result.Success
+            && (itemId!=0 || count!=0 || !ProductionResetPolicy.HasMatchingEcho(storageEntityId,result.Value)))
+            result=BridgeCallResult<PreparedNormalAction>.Failed(BridgeError.Create(BridgeErrorCodes.BridgeNotReady,
+                "The Plugin did not disclose the exact idle production reset and whole Native package returns; no token is exposed.",false,
+                "Use matching Plugin/MCP bytes, itemId=0/count=0, an idle device with zero main/bonus progress and sufficient dedicated empty package slots."));
         return ToToolResult(result, "Exact transfer plan prepared without moving any item; cold-generator fuel requires its separate Native insertion echo.");
     }
 
@@ -793,7 +805,7 @@ public static partial class SpherewrightTools
         Destructive = true,
         Idempotent = true,
         OpenWorld = false)]
-    [Description("Moves the prepared exact count through StorageComponent's normal UI business operations and proves equal-and-opposite container deltas. For the explicitly prepared player-to-generator-fuel cold-start subset, the package debit and Native PlanetFactory.InsertInto instead prove exact same-tick fuel conservation; all unrelated generator fields and loaded energy stay unchanged. Poll the action to terminal. For a successful transfer, beforeTargetAmount/afterTargetAmount are the storage counts and itemDeltas are the player's changes at completedAtGameTick. Check these same-tick deltas, then inspect later logistics separately: an active storage may already have received or sent items, so do not require cross-tick equality. A later stock difference or reporting error does not undo the terminal result; never replay an accepted transfer. Missing proof or an unexplained flow still requires reconciliation, not assumed conservation.")]
+    [Description("Moves the prepared exact count through StorageComponent's normal UI business operations and proves equal-and-opposite container deltas. The separately disclosed production-reset-to-player subset calls Native TakeBackItems to return the complete planned idle-device contents and unconfigure its recipe/function. Its beforeTargetAmount/afterTargetAmount are whole returned device-item totals, with each exact positive package itemDelta captured at the same tick; later normal mecha auto-supply is separate. For the explicitly prepared player-to-generator-fuel cold-start subset, the package debit and Native PlanetFactory.InsertInto instead prove exact same-tick fuel conservation; all unrelated generator fields and loaded energy stay unchanged. Poll the action to terminal. For a successful transfer, beforeTargetAmount/afterTargetAmount are the storage counts and itemDeltas are the player's changes at completedAtGameTick. Check these same-tick deltas, then inspect later logistics separately: an active storage may already have received or sent items, so do not require cross-tick equality. A later stock difference or reporting error does not undo the terminal result; never replay an accepted transfer. Missing proof or an unexplained flow still requires reconciliation, not assumed conservation.")]
     public static async Task<CallToolResult> CommitTransferAsync(
         IBridgeClient bridgeClient,
         string sessionId,

@@ -549,3 +549,10 @@ Native Import 可将 double 宇宙坐标逆投影为 float 本地位置；普通
 有限跨星辅料包先核真实货船运量、最小装载、翘曲器、库存及两端。logistics-station-delivery模式绑定新鲜精确站配置哈希，仅对空闲星际站设置原生UI的1..100%货船最小装载。只改deliveryShips，同一回调完整核对站和玩家库存未变；Plugin必须回显plannedStationVesselDeliveryMinimumPercent后MCP才暴露令牌。该本地正常配置不代表运输/抵达，不授予物料或翘曲器；远端Voyager也不把此模式当无预算即时执行。
 
 当前原生物理观察额外复制帧移动模式、Walk/Drift RTS和手动速度、垂直速度、当前订单存在/targetReached及排队数量；它们不是动作凭据或可复用停稳证书。原生PlayerOrder到达采用随速度变化的水平测试，调用端arrivalTolerance则是三维条件。慢物理节奏下正常减速可停在更严终点之外；保留原停滞结果，选择不同的有界干燥落点并实读接地停稳，不重放原落点或改写速度。
+
+
+### 空闲生产设备重置与原生材料守恒退回
+
+使用 `prepare_transfer(direction=production-reset-to-player, storageEntityId=<准确设备>, itemId=0, count=0)`，绑定新鲜玩家与设备完整哈希。此独立披露动作调用正常界面的原生业务方法 `FactorySystem.TakeBackItems_Assembler` 或 `TakeBackItems_Lab`，退回全部已披露输入/产物，并将配方或功能重置为空。提交前核对 `productionReset` 及完整 `itemBudget`，只提交一次；后来物流或机甲自动补料导致数量变化不能作为重放理由。
+
+只准入已证明空闲、主进度及额外生产进度均为零的制造设备或独立未堆叠研究站。科研站材料点数与增产点数都须准确整除3600，零碎点数保留并拒绝，不能取整；完整科研材料是未消耗库存，不是已上传科研退款。必须以独立空白且无过滤的背包格保证全部退回空间，不依赖其他物品竞争的部分堆栈。相同tick核对完整背包总量/增产点、设备归属连接和科技不变；不使用背包、机器buffer、进度、科技、能源或模拟setter。活动远端旅程拒绝可能激活未核算机甲科研的矩阵退回。回显缺失或不符不暴露令牌；能力本身不证明新配方、制造或场景验收。
