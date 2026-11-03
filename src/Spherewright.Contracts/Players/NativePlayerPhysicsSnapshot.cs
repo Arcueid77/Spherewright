@@ -30,6 +30,15 @@ public sealed class NativePlayerPhysicsSnapshot
     /// <summary>Native controller universal gravity, metres per second squared; not Physics.gravity.</summary>
     public UniversalPositionSnapshot? NativeGravity { get; set; }
     public Vector3Snapshot? Velocity { get; set; }
+    public string? ControllerMovementStateInFrame { get; set; }
+    public Vector3Snapshot? WalkRtsVelocity { get; set; }
+    public Vector3Snapshot? DriftRtsVelocity { get; set; }
+    public Vector3Snapshot? WalkManualVelocity { get; set; }
+    public Vector3Snapshot? DriftManualVelocity { get; set; }
+    public float? ControllerVerticalSpeed { get; set; }
+    public bool? CurrentOrderPresent { get; set; }
+    public bool? CurrentOrderTargetReached { get; set; }
+    public int? QueuedOrderCount { get; set; }
     public bool? UseGravity { get; set; }
     public bool? IsKinematic { get; set; }
     public bool? DetectCollisions { get; set; }

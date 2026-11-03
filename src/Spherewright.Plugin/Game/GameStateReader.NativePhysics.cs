@@ -43,6 +43,15 @@ internal sealed partial class GameStateReader
             result.NativeGravity = new UniversalPositionSnapshot
             { X = NativePhysicsDouble(nativeGravity.x), Y = NativePhysicsDouble(nativeGravity.y), Z = NativePhysicsDouble(nativeGravity.z) };
             result.Velocity = NativePhysicsVector(body.velocity);
+            result.ControllerMovementStateInFrame=controller.movementStateInFrame.ToString();
+            result.WalkRtsVelocity=NativePhysicsVector(controller.actionWalk.rtsVelocity);
+            result.DriftRtsVelocity=NativePhysicsVector(controller.actionDrift.rtsVelocity);
+            result.WalkManualVelocity=NativePhysicsVector(controller.actionWalk.moveVelocity);
+            result.DriftManualVelocity=NativePhysicsVector(controller.actionDrift.moveVelocity);
+            result.ControllerVerticalSpeed=NativePhysicsFinite(controller.vertSpeed);
+            result.CurrentOrderPresent=player.currentOrder is not null;
+            result.CurrentOrderTargetReached=player.currentOrder?.targetReached;
+            result.QueuedOrderCount=player.orders.orderCount;
             result.UseGravity = body.useGravity;
             result.IsKinematic = body.isKinematic;
             result.DetectCollisions = body.detectCollisions;

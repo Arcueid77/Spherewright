@@ -2173,6 +2173,8 @@ internal sealed partial class NormalGameActionCoordinator
             return GameCallResult<PreparedNormalAction>.Failed(common.Error);
         }
 
+        if(request.Mode!=BuildingConfigurationModes.LogisticsStationDelivery && request.StationVesselDeliveryMinimumPercent!=-1)
+            return InvalidPlan("Vessel delivery percentage requires logistics-station-delivery mode.");
         if (request.Mode == BuildingConfigurationModes.EnableMechaConstructionDrones)
             return PrepareEnableMechaConstructionOnMainThread(requestedSessionId, request, common.Session!);
         if (request.Mode == BuildingConfigurationModes.MinimalDysonReceivingNode)
@@ -2191,9 +2193,10 @@ internal sealed partial class NormalGameActionCoordinator
             && request.Mode != BuildingConfigurationModes.SorterFilter
             && request.Mode != BuildingConfigurationModes.LogisticsStationStorage
             && request.Mode != BuildingConfigurationModes.LogisticsStationBelt
-            && request.Mode != BuildingConfigurationModes.LogisticsStationCharge)
+            && request.Mode != BuildingConfigurationModes.LogisticsStationCharge
+            && request.Mode != BuildingConfigurationModes.LogisticsStationDelivery)
         {
-            return InvalidPlan("Configuration mode must be production, research, sorter-filter, logistics-station-storage, logistics-station-belt, or logistics-station-charge.");
+            return InvalidPlan("Configuration mode must be production, research, sorter-filter, logistics-station-storage, logistics-station-belt, logistics-station-charge, or logistics-station-delivery.");
         }
 
         var stationLocalLogic = ELogisticStorage.None;
@@ -2233,7 +2236,8 @@ internal sealed partial class NormalGameActionCoordinator
 
         var stationMode = request.Mode == BuildingConfigurationModes.LogisticsStationStorage
                           || request.Mode == BuildingConfigurationModes.LogisticsStationBelt
-                          || request.Mode == BuildingConfigurationModes.LogisticsStationCharge;
+                          || request.Mode == BuildingConfigurationModes.LogisticsStationCharge
+                          || request.Mode == BuildingConfigurationModes.LogisticsStationDelivery;
         if (snapshot.ObjectKind != FactoryObjectKinds.Entity
             || (!stationMode && !sorterFilterMode && (snapshot.Progress != 0
                 || snapshot.IsWorking
@@ -2307,6 +2311,9 @@ internal sealed partial class NormalGameActionCoordinator
             {
                 return StalePlan("The logistics-station identity, storage-slot configuration, route settings, or belt topology changed after inspection.");
             }
+            if(request.Mode==BuildingConfigurationModes.LogisticsStationDelivery
+                && !LogisticsStationDeliveryPolicy.CanApply(request,snapshot.LogisticsStation))
+                return InvalidPlan("Station delivery requires one exact idle interstellar station and a different Native UI minimum vessel load from1 through100 percent; other setting arguments remain at defaults.");
 
             if (request.Mode == BuildingConfigurationModes.LogisticsStationStorage
                 && !CanConfigureLogisticsStationStorage(
@@ -2380,7 +2387,7 @@ internal sealed partial class NormalGameActionCoordinator
             request.StationMaximumCount,
             normalizedStationLocalLogic,
             normalizedStationRemoteLogic,
-            request.StationMaximumChargePowerWatts);
+            request.StationMaximumChargePowerWatts,request.StationVesselDeliveryMinimumPercent);
         var payload = NormalActionPlanPayload.Configure(
             _sessions.SessionId!,
             request.PlanetId,
@@ -2400,7 +2407,7 @@ internal sealed partial class NormalGameActionCoordinator
             request.StationMaximumCount,
             normalizedStationLocalLogic,
             normalizedStationRemoteLogic,
-            request.StationMaximumChargePowerWatts);
+            request.StationMaximumChargePowerWatts,request.StationVesselDeliveryMinimumPercent);
         var prepared = AddPreparedPlan(
             payload,
             common.Session!,
@@ -2415,11 +2422,15 @@ internal sealed partial class NormalGameActionCoordinator
                         ? "The exact connected station output port reports the selected storage slot after the current-version UI field path is applied once; station inventory, player inventory, port topology, and every unrelated selector remain unchanged."
                     : request.Mode == BuildingConfigurationModes.LogisticsStationCharge
                         ? "The exact station power consumer reports the requested UI-step maximum charging power after the current-version UI field path is applied once; station and player inventory remain unchanged."
+                    : request.Mode == BuildingConfigurationModes.LogisticsStationDelivery
+                        ? "The exact idle interstellar station reports the Native UI minimum vessel-load percentage; all cargo, fleet, energy, player inventory and unrelated configuration are preserved immediately."
                     : "The exact idle device reports the target recipe after the current-version UI/business setting path is called once.");
         if (prepared.Success && prepared.Value is not null && recipe is not null)
         {
             AddRecipeBudget(prepared.Value, recipe, 1);
         }
+        if(prepared.Success && prepared.Value is not null && request.Mode==BuildingConfigurationModes.LogisticsStationDelivery)
+            prepared.Value.PlannedStationVesselDeliveryMinimumPercent=request.StationVesselDeliveryMinimumPercent;
 
         return prepared;
     }
@@ -2461,7 +2472,8 @@ internal sealed partial class NormalGameActionCoordinator
 
         if (plan.ConfigureMode == BuildingConfigurationModes.LogisticsStationStorage
             || plan.ConfigureMode == BuildingConfigurationModes.LogisticsStationBelt
-            || plan.ConfigureMode == BuildingConfigurationModes.LogisticsStationCharge)
+            || plan.ConfigureMode == BuildingConfigurationModes.LogisticsStationCharge
+            || plan.ConfigureMode == BuildingConfigurationModes.LogisticsStationDelivery)
         {
             var snapshotResult = _reader.InspectFactoryEntityOnMainThread(
                 plan.SessionId,
@@ -2476,6 +2488,9 @@ internal sealed partial class NormalGameActionCoordinator
             {
                 return Stale("The exact station identity or configuration changed after preparation.");
             }
+            if(plan.ConfigureMode==BuildingConfigurationModes.LogisticsStationDelivery)
+                return LogisticsStationDeliveryPolicy.CanApply(StationDeliveryRequest(plan),stationSnapshot)?null
+                    :Stale("The exact idle station or Native vessel delivery minimum changed after prepare.");
 
             if (plan.ConfigureMode == BuildingConfigurationModes.LogisticsStationCharge)
             {
@@ -3092,6 +3107,7 @@ internal sealed partial class NormalGameActionCoordinator
             return action.Plan.ConfigureMode == BuildingConfigurationModes.LogisticsStationStorage
                    || action.Plan.ConfigureMode == BuildingConfigurationModes.LogisticsStationBelt
                    || action.Plan.ConfigureMode == BuildingConfigurationModes.LogisticsStationCharge
+                   || action.Plan.ConfigureMode == BuildingConfigurationModes.LogisticsStationDelivery
                 ? snapshot.Value?.LogisticsStation?.ConfigurationStateHash
                 : snapshot.Value?.StateHash;
         }

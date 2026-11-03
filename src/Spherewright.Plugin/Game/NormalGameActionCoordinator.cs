@@ -897,7 +897,9 @@ internal sealed partial class NormalGameActionCoordinator
                     || (plan.ConfigureMode == BuildingConfigurationModes.EjectorOrbit
                         && !IsEjectorOrbitApplied(configured.Value, plan))
                     || (plan.ConfigureMode == BuildingConfigurationModes.LogisticsStationCharge
-                        && !IsLogisticsStationChargeConfigurationApplied(configured.Value, plan)))
+                        && !IsLogisticsStationChargeConfigurationApplied(configured.Value, plan))
+                    || (plan.ConfigureMode == BuildingConfigurationModes.LogisticsStationDelivery
+                        && configured.Value.LogisticsStation?.VesselDeliverySetting!=plan.ConfigureStationVesselDeliveryMinimumPercent))
                 {
                     throw new InvalidOperationException("The configured device mode could not be proven by immediate readback.");
                 }
@@ -914,6 +916,8 @@ internal sealed partial class NormalGameActionCoordinator
                             ? "The current-version station UI field path selected the configured item for the exact output port; immediate topology and inventory readback matched."
                         : plan.ConfigureMode == BuildingConfigurationModes.LogisticsStationCharge
                             ? "The current-version station UI field path applied the maximum charge power once; immediate power-consumer readback matched and station/player inventory remained unchanged."
+                        : plan.ConfigureMode == BuildingConfigurationModes.LogisticsStationDelivery
+                            ? "The Native station UI minimum vessel load was applied once; complete station/player state except this percentage was preserved. This is not dispatch or arrival evidence."
                         : plan.ConfigureMode == BuildingConfigurationModes.EjectorOrbit
                             ? "Native EjectorComponent.SetOrbit selected the exact fixed orbit once; stock was preserved and immediate readback matched. This setting is not a launch receipt."
                         : "The current-version device configuration path applied the unlocked recipe and readback matched.");
@@ -2027,6 +2031,8 @@ internal sealed partial class NormalGameActionCoordinator
 
     private void ApplyBuildingConfigurationOnMainThread(NormalActionPlanPayload plan)
     {
+        if(plan.ConfigureMode==BuildingConfigurationModes.LogisticsStationDelivery)
+        {ApplyStationDeliveryOnMainThread(plan);return;}
         if (plan.ConfigureMode == BuildingConfigurationModes.MinimalDysonReceivingNode)
         {
             ApplyMinimalDysonTargetOnMainThread(plan);
@@ -2493,6 +2499,7 @@ internal sealed partial class NormalGameActionCoordinator
         public string ConfigureStationLocalLogic { get; private set; } = LogisticsStorageLogics.None;
         public string ConfigureStationRemoteLogic { get; private set; } = LogisticsStorageLogics.None;
         public long ConfigureStationMaximumChargePowerWatts { get; private set; }
+        public int ConfigureStationVesselDeliveryMinimumPercent { get; private set; } = -1;
         public string TransferDirection { get; private set; } = string.Empty;
         public int TransferStorageEntityId { get; private set; }
         public int TransferItemId { get; private set; }
@@ -2663,7 +2670,7 @@ internal sealed partial class NormalGameActionCoordinator
             int stationMaximumCount,
             string stationLocalLogic,
             string stationRemoteLogic,
-            long stationMaximumChargePowerWatts) => new NormalActionPlanPayload
+            long stationMaximumChargePowerWatts,int stationVesselDeliveryMinimumPercent=-1) => new NormalActionPlanPayload
             {
                 ActionKind = NormalActionKinds.ConfigureBuilding,
                 SessionId = sessionId,
@@ -2685,6 +2692,7 @@ internal sealed partial class NormalGameActionCoordinator
                 ConfigureStationLocalLogic = stationLocalLogic,
                 ConfigureStationRemoteLogic = stationRemoteLogic,
                 ConfigureStationMaximumChargePowerWatts = stationMaximumChargePowerWatts,
+                ConfigureStationVesselDeliveryMinimumPercent=stationVesselDeliveryMinimumPercent,
             };
     }
 }

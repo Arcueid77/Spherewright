@@ -66,6 +66,7 @@ public static class BuildingConfigurationModes
     public const string LogisticsStationStorage = "logistics-station-storage";
     public const string LogisticsStationBelt = "logistics-station-belt";
     public const string LogisticsStationCharge = "logistics-station-charge";
+    public const string LogisticsStationDelivery = "logistics-station-delivery";
     public const string EjectorOrbit = "ejector-orbit";
     public const string MinimalDysonReceivingNode = "dyson-minimal-receiving-node";
     public const string EnableMechaConstructionDrones = "enable-mecha-construction-drones";
@@ -238,6 +239,7 @@ public sealed class PrepareConfigureBuildingRequest
     public string StationRemoteLogic { get; set; } = LogisticsStorageLogics.None;
 
     public long StationMaximumChargePowerWatts { get; set; }
+    public int StationVesselDeliveryMinimumPercent { get; set; } = -1;
 
     public string ExpectedStationConfigurationStateHash { get; set; } = string.Empty;
 
@@ -363,6 +365,7 @@ public sealed class CommitNormalActionRequest
 
 public sealed class PreparedNormalAction
 {
+    public int? PlannedStationVesselDeliveryMinimumPercent { get; set; }
     public GeneratorColdStartFuelPlan? GeneratorColdStartFuel { get; set; }
     public VoyagerMechaWorkSnapshot? VoyagerMechaWork { get; set; }
 

@@ -435,7 +435,7 @@ public static partial class SpherewrightTools
         int recipeId,
         [Description("For mode=sorter-filter use the inspected root configurationStateHash, NOT stateHash, despite this parameter's name. For mode=storage-capacity use the full stateHash. Follow the documented hash domain for each other mode.")]
         string expectedFactoryStateHash,
-        [Description("production, research, sorter-filter, storage-capacity, logistics-station-storage, logistics-station-belt, logistics-station-charge, ejector-orbit, dyson-minimal-receiving-node, or enable-mecha-construction-drones. For the minimal receiving node use one empty local2312 silo, recipeId=0 and expectedFactoryStateHash=silo.minimalReceivingTarget.configurationStateHash; leave other arguments at defaults. It creates one equatorial planned node on an existing pristine Native layer, never delivered points or rockets. The enable-only mecha mode requires entityId=0, recipeId=0, expectedFactoryStateHash=the fresh player stateHash and all other arguments at defaults. It calls the normal native switch from OFF to ON and can schedule existing ordinary construction/repair; it does not create or instantly build anything. For ejector-orbit use recipeId=0, ejectorOrbitId and the detail ejector.configurationStateHash; leave the other mode parameters at defaults.")]
+        [Description("production, research, sorter-filter, storage-capacity, logistics-station-storage, logistics-station-belt, logistics-station-charge, logistics-station-delivery, ejector-orbit, dyson-minimal-receiving-node, or enable-mecha-construction-drones. For the minimal receiving node use one empty local2312 silo, recipeId=0 and expectedFactoryStateHash=silo.minimalReceivingTarget.configurationStateHash; leave other arguments at defaults. It creates one equatorial planned node on an existing pristine Native layer, never delivered points or rockets. The enable-only mecha mode requires entityId=0, recipeId=0, expectedFactoryStateHash=the fresh player stateHash and all other arguments at defaults. It calls the normal native switch from OFF to ON and can schedule existing ordinary construction/repair; it does not create or instantly build anything. For ejector-orbit use recipeId=0, ejectorOrbitId and the detail ejector.configurationStateHash; leave the other mode parameters at defaults.")]
         string mode = BuildingConfigurationModes.Production,
         int techId = 0,
         int filterItemId = 0,
@@ -447,6 +447,8 @@ public static partial class SpherewrightTools
         string stationLocalLogic = LogisticsStorageLogics.None,
         string stationRemoteLogic = LogisticsStorageLogics.None,
         long stationMaximumChargePowerWatts = 0,
+        [Description("Only logistics-station-delivery: Native UI minimum vessel load1..100 percent on one idle interstellar station; recipeId=0 and a fresh expectedStationConfigurationStateHash are required. Inventory, energy, fleet and unrelated configuration stay unchanged by this setting; dispatch and delivery need separate actual evidence.")]
+        int stationVesselDeliveryMinimumPercent = -1,
         string expectedStationConfigurationStateHash = "",
         int stateHashVersion = 1,
         string storageOperation = "",
@@ -474,11 +476,17 @@ public static partial class SpherewrightTools
                 StationLocalLogic = stationLocalLogic,
                 StationRemoteLogic = stationRemoteLogic,
                 StationMaximumChargePowerWatts = stationMaximumChargePowerWatts,
+                StationVesselDeliveryMinimumPercent=stationVesselDeliveryMinimumPercent,
                 ExpectedStationConfigurationStateHash = expectedStationConfigurationStateHash,
                 ExpectedFactoryStateHash = expectedFactoryStateHash,
                 StateHashVersion = stateHashVersion,
             };
         var result = await bridgeClient.PrepareConfigureBuildingAsync(sessionId, request, cancellationToken).ConfigureAwait(false);
+        if(mode==BuildingConfigurationModes.LogisticsStationDelivery && result.Success
+            && !Spherewright.Bridge.Core.Factory.LogisticsStationDeliveryPolicy.ConfirmsEcho(request,result.Value))
+            result=BridgeCallResult<PreparedNormalAction>.Failed(BridgeError.Create(BridgeErrorCodes.BridgeNotReady,
+                "The Plugin did not bind the exact Native vessel delivery percentage; no token is exposed.",false,
+                "Use a coherent Plugin/MCP and a fresh idle station inspection."));
         if(mode==BuildingConfigurationModes.MinimalDysonReceivingNode && result.Success
             && !Spherewright.Bridge.Core.Factory.MinimalDysonTargetPolicy.ConfirmsPreparedEcho(request,result.Value))
             result=BridgeCallResult<PreparedNormalAction>.Failed(BridgeError.Create(BridgeErrorCodes.BridgeNotReady,
