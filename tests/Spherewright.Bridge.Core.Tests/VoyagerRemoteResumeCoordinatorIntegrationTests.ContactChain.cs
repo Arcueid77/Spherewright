@@ -14,11 +14,12 @@ public sealed partial class VoyagerRemoteResumeCoordinatorIntegrationTests
     // and the audited151->501->601 ordering. No PhysX, loader, real Save, terrain
     // registration, Native energy generator or whole GameSessionTracker is run.
     [Theory]
-    [InlineData(false, false, 0)]
-    [InlineData(true, false, 0)]
-    [InlineData(true, false, 18)]
-    [InlineData(true, true, 18)]
-    public void StoreBoundPausedDirtyProjectionContactAndStrictTakeoverComposeWithoutAReadyFlag(bool primary, bool openedFirst, long gap)
+    [InlineData(false, false, 0, false)]
+    [InlineData(true, false, 0, false)]
+    [InlineData(true, false, 18, false)]
+    [InlineData(true, true, 18, false)]
+    [InlineData(true, true, 18, true)]
+    public void StoreBoundPausedDirtyProjectionContactAndStrictTakeoverComposeWithoutAReadyFlag(bool primary, bool openedFirst, long gap,bool terrainSettling)
     {
         using var s = new Scenario(expiredJourney: primary, currentNative: primary);
         var prepared = primary ? s.Prepare(s.PrimaryRecoveryRequest(gap, openedFirst)) : s.Prepare();
@@ -50,7 +51,9 @@ public sealed partial class VoyagerRemoteResumeCoordinatorIntegrationTests
         Assert.True(init.TryAuthorizeResume(ready));
         Assert.Equal(source, GameMain.gameTick); // Paused host pumps spent zero Native ticks.
         GameMain.isPaused = false;
-        var contact = new NormalGameActionCoordinator.ContactStateProbe(player, source);
+        var capturedTerrain=NativeTerrainSettlingReplayTests.Cut()["sourceSupport"]!.ToObject<NativeNearGroundSupportSnapshot>()!;
+        var profile=terrainSettling?NativeResumeContactPolicy.ForNativeSupport(source,DateTimeOffset.UtcNow,capturedTerrain,.125):null;
+        var contact = new NormalGameActionCoordinator.ContactStateProbe(player, source,profile);
         var support = FixtureSupport(source);
         var idle = ChainIdleFacts(s, player, support);
         Assert.Equal(journey.SpentGameTicks + gap, idle.JourneyBudget!.SpentGameTicks);

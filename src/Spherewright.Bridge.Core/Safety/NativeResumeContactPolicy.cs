@@ -67,6 +67,8 @@ public sealed class NativeResumeContactPolicy
     public double CastDistanceLimit { get; }
     public double SpeedLimit { get; }
     public double InwardLimit { get; }
+    public double WallSecondsLimit { get; }
+    public bool UsesTerrainSettling { get; }
     public long SourceGameTick { get; }
     public long LastObservedGameTick { get; private set; }
     public long LastUniverseGameTick { get; private set; }
@@ -78,8 +80,20 @@ public sealed class NativeResumeContactPolicy
     public NativeResumeFailureSnapshot? LastDecisionEvidence { get; private set; }
     private NativeResumeDecisionEvidence? _decision;
 
-    public NativeResumeContactPolicy(long sourceGameTick, DateTimeOffset startedUtc, bool initializedTerrain = false)
+    // A loaded current-terrain31 cast and its normal151 conversion to9 are
+    // the same bounded settling route. Object-pool contacts keep the smaller
+    // legacy envelope. A collision layer alone cannot select this profile.
+    public static NativeResumeContactPolicy ForNativeSupport(long sourceTick,DateTimeOffset started,
+        NativeNearGroundSupportSnapshot source,double nativeFixedDeltaSeconds)
     {
+        var terrain=LoadedTerrainCastProved(source)||InitializedTerrainCastProved(source);
+        return new(sourceTick,started,terrain,nativeFixedDeltaSeconds);
+    }
+
+    public NativeResumeContactPolicy(long sourceGameTick, DateTimeOffset startedUtc, bool initializedTerrain = false,
+        double? nativeFixedDeltaSeconds = null)
+    {
+        UsesTerrainSettling=initializedTerrain;
         WorkTickLimit=initializedTerrain?32:MaximumNativeWorkTicks;
         CastDistanceLimit=initializedTerrain ? .5d : MaximumCastDistanceMeters;
         // Only the closed, actual-support initialized-terrain subset may use
@@ -87,6 +101,9 @@ public sealed class NativeResumeContactPolicy
         // and paid tick is rechecked; this promises no gravity or landing result.
         SpeedLimit=initializedTerrain?8d:MaximumSpeedMetersPerSecond;
         InwardLimit=initializedTerrain ? .5d : MaximumInwardDisplacementMeters;
+        WallSecondsLimit=nativeFixedDeltaSeconds.HasValue
+            ? NativeConstructionCadencePolicy.WallBudget(WorkTickLimit,nativeFixedDeltaSeconds.Value)??double.NaN
+            :MaximumWallSeconds;
         if (sourceGameTick < 0 || sourceGameTick > long.MaxValue - WorkTickLimit - 1 || startedUtc == default)
             throw new ArgumentOutOfRangeException(nameof(sourceGameTick));
         SourceGameTick = LastObservedGameTick = LastUniverseGameTick = sourceGameTick;
@@ -100,7 +117,7 @@ public sealed class NativeResumeContactPolicy
         return _decision!.Require("preflight_source_tick", f.OriginalJourney!.CurrentGameTick == SourceGameTick)
             && _decision.Require("preflight_no_ground", f.NativeGroundSphereHit == false)
             && _decision.Require("preflight_not_idle", f.StrictPhysicalIdleProved == false)
-            && _decision.Require("preflight_no_foot_overlap", f.FootOverlapCount == 0)
+            && _decision.Require("preflight_foot_cut", f.FootOverlapCount == 0 || UsesTerrainSettling && f.AllFootHitsOwned==true)
             && _decision.Require("preflight_at_rest", f.SpeedMetersPerSecond <= .1d)
             && _decision.Require("preflight_zero_inward", f.InwardDisplacementMeters == 0d)
             && _decision.Require("preflight_zero_tangent", f.TangentialDisplacementMeters == 0d)
@@ -181,7 +198,7 @@ public sealed class NativeResumeContactPolicy
             : !R("contact_foot_query_incomplete", f.FootQueryComplete) ? "contact_foot_query_incomplete"
             : !R("contact_native_ground_query_unavailable", f.NativeGroundSphereHit.HasValue ? true : null) ? "contact_native_ground_query_unavailable"
             : !R("contact_foot_count_unproved", f.FootOverlapCount.HasValue ? f.FootOverlapCount >= 0 && f.FootOverlapCount <= NativeTerrainObservationPolicy.MaximumSurfaceColliders : null) ? "contact_foot_count_unproved"
-            : f.NativeGroundSphereHit == false && !R("contact_airborne_foot_overlap", f.FootOverlapCount == 0) ? "contact_airborne_foot_overlap"
+            : f.NativeGroundSphereHit == false && !R("contact_airborne_foot_overlap", f.FootOverlapCount == 0 || UsesTerrainSettling && f.AllFootHitsOwned==true) ? "contact_airborne_foot_overlap"
             : f.NativeGroundSphereHit == true && !R("contact_grounded_foot_count", f.FootOverlapCount >= 1) ? "contact_grounded_foot_count"
             : f.NativeGroundSphereHit == true && !R("contact_grounded_foot_owner_unproved", f.AllFootHitsOwned) ? "contact_grounded_foot_owner_unproved"
             : !R("contact_idle_observation", f.StrictPhysicalIdleProved.HasValue ? true : null) ? "contact_idle_observation"
@@ -195,7 +212,7 @@ public sealed class NativeResumeContactPolicy
             return true;
         }
         if (!All(("clock_present", f.NowUtc != default), ("clock_after_start", f.NowUtc >= StartedUtc),
-            ("contact_wall_remaining", (f.NowUtc - StartedUtc).TotalSeconds < MaximumWallSeconds)))
+            ("contact_wall_remaining", (f.NowUtc - StartedUtc).TotalSeconds < WallSecondsLimit)))
             return DecisionFailure("remote_resume_contact_wall_exhausted");
         if (f.NativeGroundSphereHit == false && !All(
             ("cast_distance_known", Known(f.CastDistanceMeters)), ("cast_distance_bounded", f.CastDistanceMeters <= CastDistanceLimit),
@@ -258,6 +275,7 @@ public sealed class NativeResumeContactPolicy
         e.Number("tangential_displacement_m", f?.TangentialDisplacementMeters); e.Number("speed_mps", f?.SpeedMetersPerSecond);
         e.Number("core_j", f?.CoreEnergyJoules); e.Number("per_tick_j", f?.PerNativeTickEnergyJoules);
         e.Number("funded_ticks", FundedTicks); e.Number("maximum_contact_ticks", WorkTickLimit);
+        e.Number("maximum_contact_wall_seconds",WallSecondsLimit);e.Number("maximum_contact_speed_mps",SpeedLimit);
         var j = f?.OriginalJourney;
         e.Number("spent_ticks", j?.SpentGameTicks); e.Number("last_landed_tick", j?.LastLandedGameTick);
         e.Number("maximum_journey_ticks", j?.MaximumGameTicks); e.Number("return_ticks", j?.ReturnReserveGameTicks);

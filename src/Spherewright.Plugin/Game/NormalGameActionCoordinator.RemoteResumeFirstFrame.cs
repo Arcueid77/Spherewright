@@ -186,7 +186,8 @@ internal sealed partial class NormalGameActionCoordinator
         adoption.NearSupportPostUniverse=snapshot.Copy();adoption.NearSupportLatest=snapshot.Copy();
         if (blocker is not null || binding is null || !NativeResumeContactPolicy.InitializedTerrainCastProved(snapshot))
             return blocker??"remote_resume_terrain_contact_actual_support_unproved";
-        _firstFrameContact=new RemoteResumeContactState(adoption.Player,binding,GameMain.gameTick,initializedTerrain:true);
+        _firstFrameContact=new RemoteResumeContactState(adoption.Player,binding,GameMain.gameTick,
+            policy:NativeResumeContactPolicy.ForNativeSupport(GameMain.gameTick,DateTimeOffset.UtcNow,snapshot,Time.fixedDeltaTime));
         adoption.NativeContactPending=true;
         return null;
     }

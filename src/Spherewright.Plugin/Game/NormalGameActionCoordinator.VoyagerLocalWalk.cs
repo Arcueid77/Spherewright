@@ -55,7 +55,13 @@ internal sealed partial class NormalGameActionCoordinator
             if (!reserve.Proved) return Blocked(reserve.BlockerCode ?? "remote_idle_movement_cost_unproved");
             stage = "walk_at_rest";
             if (player.movementState != EMovementState.Walk) return Blocked("remote_idle_actual_walk_required");
-            var physicallyAtRest = player.speed <= .1f;
+            // Broad foot contact during a gravity step is not idle. Preserve
+            // actual Walk and zero controller/body/RTS tails at both layers.
+            var physicallyAtRest = player.speed <= .1f && player.movementState==EMovementState.Walk
+                && player.controller.movementStateInFrame==EMovementState.Walk
+                && player.controller.velocity.sqrMagnitude==0f && player.controller.rigid.velocity.sqrMagnitude==0f
+                && player.controller.rigid.angularVelocity.sqrMagnitude==0f && player.controller.vertSpeed==0f
+                && player.controller.actionWalk.rtsVelocity.sqrMagnitude==0f && player.controller.actionDrift.rtsVelocity.sqrMagnitude==0f;
             if (!physicallyAtRest && (!collectNaturalContact || !(player.speed <= (_firstFrameContact?.Policy.SpeedLimit ?? NativeResumeContactPolicy.MaximumSpeedMetersPerSecond))))
                 return Blocked("remote_idle_actual_speed_not_at_rest");
             stage = "energy_and_journey";
@@ -190,6 +196,14 @@ internal sealed partial class NormalGameActionCoordinator
             _sessions.RecordRemoteResumeTerrain(adoption, terrainAfter, true, ground);
         if (naturalContact)
         {
+            // Preserve the actual capture refusal before the contact adapter
+            // sees a missing DTO; never replace its first premise after Pause.
+            if(captured is null)
+            {
+                var premise="native_idle_capture:"+decision.CaptureStage+":"+decision.BlockerCode;
+                adoption.CurrentDecisionEvidence!.Require(premise,false);
+                return decision.BlockerCode??"remote_resume_contact_native_capture_unproved";
+            }
             var contact = ObserveVerifiedRemoteNaturalContact(adoption, journey, captured, ground, admit);
             if (contact is not null) return contact;
             // A151 observation is not idle admission. In particular a truthful

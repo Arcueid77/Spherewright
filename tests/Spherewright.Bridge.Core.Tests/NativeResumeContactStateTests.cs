@@ -11,6 +11,38 @@ namespace Spherewright.Bridge.Core.Tests;
 [Collection("Owned resume native substitutes")]
 public sealed class NativeResumeContactStateTests
 {
+    [Theory]
+    [InlineData(false)][InlineData(true)]
+    public void ProductionFactsKeepObservedGravityContactPendingAndRequireNewCompleteZeroTailCut(bool missingFootCut)
+    {
+        var cut=NativeTerrainSettlingReplayTests.Cut();
+        var source=cut["sourceSupport"]!.ToObject<NativeNearGroundSupportSnapshot>()!;
+        var player=new Player();GameMain.gameTick=100;
+        var policy=NativeResumeContactPolicy.ForNativeSupport(100,DateTimeOffset.UtcNow,source,cut.Value<double>("fixedDeltaTimeSeconds"));
+        var state=new NormalGameActionCoordinator.ContactStateProbe(player,100,policy);
+        var idle=IdleFacts();source.CapturedAtGameTick=100;
+        Assert.Null(policy.PreflightBlocker(state.Facts(player,idle,source)));
+        // Replay the real failure speed against a newly supplied complete
+        // Native cut, or leave the original missing ownership unproved.
+        GameMain.gameTick=101;idle.JourneyBudget!.CurrentGameTick=101;
+        var support=Support(true);support.NormalDotUp=.9999987f;
+        if(missingFootCut)support.FootOverlapComplete=null;
+        var speed=cut["failure"]!.Value<float>("speedMetersPerSecond");
+        player.speed=speed;player.controller.vertSpeed=-speed;
+        player.controller.velocity=player.controller.rigid.velocity=new(0,-speed,0);
+        var falling=state.Facts(player,idle,support);
+        Assert.False(falling.StrictPhysicalIdleProved);
+        if(missingFootCut){Assert.NotNull(policy.ObserveUniverse(falling));Assert.False(policy.Retired);return;}
+        Assert.Null(policy.ObserveUniverse(falling));Assert.Equal(NativeResumeContactStep.Pending,policy.Observe(falling));
+        GameMain.gameTick=102;idle.JourneyBudget.CurrentGameTick=102;support.CapturedAtGameTick=102;
+        player.speed=0;player.controller.vertSpeed=0;player.controller.velocity=player.controller.rigid.velocity=default;
+        player.controller.actionDrift.rtsVelocity=new(.01f,0,0);idle.JourneyBudget.NativePlayerIdle=true;
+        Assert.False(state.Facts(player,idle,support).StrictPhysicalIdleProved);
+        player.controller.actionDrift.rtsVelocity=default;
+        var settled=state.Facts(player,idle,support);
+        Assert.Null(policy.ObserveUniverse(settled));Assert.Equal(NativeResumeContactStep.Ready,policy.Observe(settled));
+    }
+
     [Fact]
     public void ActualFactsKeepContactPendingUntilGroundedStrictIdleThenUseTheOriginalChargeAndIdleGates()
     {

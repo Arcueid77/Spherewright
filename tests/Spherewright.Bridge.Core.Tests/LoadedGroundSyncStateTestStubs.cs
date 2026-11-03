@@ -100,8 +100,8 @@ namespace Spherewright.Plugin.Game
         internal sealed class ContactStateProbe
         {
             private readonly RemoteResumeContactState _state;
-            internal ContactStateProbe(Player player, long tick)
-            { _state = new RemoteResumeContactState(player, new GameStateReader.NativeNearGroundSupportBinding(), tick); }
+            internal ContactStateProbe(Player player, long tick,Spherewright.Bridge.Core.Safety.NativeResumeContactPolicy? policy=null)
+            { _state = new RemoteResumeContactState(player, new GameStateReader.NativeNearGroundSupportBinding(), tick,policy:policy); }
             internal Spherewright.Bridge.Core.Safety.NativeResumeContactPolicy Policy => _state.Policy;
             internal Spherewright.Bridge.Core.Safety.NativeResumeContactFacts Facts(Player player,
                 Spherewright.Bridge.Core.Safety.VoyagerRemoteIdleAdmissionFacts facts,

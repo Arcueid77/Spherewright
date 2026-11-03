@@ -20,14 +20,15 @@ internal sealed partial class NormalGameActionCoordinator
         private readonly NativeContactTransformBinding? _transformScale;
         private readonly bool _autoSync, _triggers, _kinematic, _useGravity;
         private readonly RigidbodyConstraints _constraints;
-        public RemoteResumeContactState(Player p, GameStateReader.NativeNearGroundSupportBinding support, long sourceTick, bool initializedTerrain = false)
+        public RemoteResumeContactState(Player p, GameStateReader.NativeNearGroundSupportBinding support, long sourceTick, bool initializedTerrain = false,
+            NativeResumeContactPolicy? policy=null)
         {
             _player = p; _controller = p.controller; _mecha = p.mecha; _body = p.controller.rigid;
             _transform = p.transform; _parent = p.transform.parent; _position = p.position; _up = p.position.normalized;
             _transformScale = NativeContactTransformBinding.Capture(_transform);
             _autoSync = Physics.autoSyncTransforms; _triggers = Physics.queriesHitTriggers;
             _kinematic = _body.isKinematic; _useGravity = _body.useGravity; _constraints = _body.constraints;
-            Support = support; Policy = new NativeResumeContactPolicy(sourceTick, DateTimeOffset.UtcNow, initializedTerrain);
+            Support = support; Policy = policy??new NativeResumeContactPolicy(sourceTick, DateTimeOffset.UtcNow, initializedTerrain);
         }
         public NativeResumeContactFacts Facts(Player p, VoyagerRemoteIdleAdmissionFacts facts,
             NativeNearGroundSupportSnapshot support, bool exactBinding)
@@ -44,6 +45,10 @@ internal sealed partial class NormalGameActionCoordinator
                 && Finite(_controller.vertSpeed) && Math.Abs(_controller.vertSpeed) <= Policy.SpeedLimit
                 && _controller.velocity.magnitude <= Policy.SpeedLimit
                 && _body.velocity.magnitude <= Policy.SpeedLimit;
+            var strictMotion=_controller.velocity.sqrMagnitude==0f && _body.velocity.sqrMagnitude==0f
+                && _body.angularVelocity.sqrMagnitude==0f && _controller.vertSpeed==0f
+                && _controller.actionWalk.rtsVelocity.sqrMagnitude==0f && _controller.actionDrift.rtsVelocity.sqrMagnitude==0f
+                && p.movementState==EMovementState.Walk && _controller.movementStateInFrame==EMovementState.Walk;
             return new NativeResumeContactFacts
             {
                 CapturedAtGameTick = GameMain.gameTick,
@@ -55,7 +60,7 @@ internal sealed partial class NormalGameActionCoordinator
                 AllFootHitsOwned = support.AllFootHitsCurrentSupportOrTerrain,
                 NativeGroundSphereHit = support.ActualGroundSphereHit,
                 StrictPhysicalIdleProved = facts.JourneyBudget is null || support.ActualGroundSphereHit is null
-                    ? null : facts.JourneyBudget.NativePlayerIdle && support.ActualGroundSphereHit == true,
+                    ? null : facts.JourneyBudget.NativePlayerIdle && support.ActualGroundSphereHit == true && strictMotion,
                 CastDistanceMeters = support.CastDistance, CastNormalDotUp = support.NormalDotUp,
                 InwardDisplacementMeters = inward, TangentialDisplacementMeters = tangential, SpeedMetersPerSecond = p.speed,
                 CoreEnergyJoules = facts.CoreEnergyJoules, PerNativeTickEnergyJoules = facts.MovementReserve?.PerNativeTickEnergyJoules,

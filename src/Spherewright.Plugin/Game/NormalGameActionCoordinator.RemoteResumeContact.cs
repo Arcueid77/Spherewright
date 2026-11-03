@@ -21,7 +21,8 @@ internal sealed partial class NormalGameActionCoordinator
             return HoldRemoteResumeForNativeInitialization(adoption, journey, new FirstFrameSurfaceState(scene, null),
                 playerState, binding, facts);
         if (blocker is not null || binding is null) return blocker ?? "remote_resume_near_support_binding_unproved";
-        var contact = new RemoteResumeContactState(adoption.Player, binding, adoption.Evidence.SourceGameTick);
+        var contact = new RemoteResumeContactState(adoption.Player, binding, adoption.Evidence.SourceGameTick,
+            policy:NativeResumeContactPolicy.ForNativeSupport(adoption.Evidence.SourceGameTick,DateTimeOffset.UtcNow,support,Time.fixedDeltaTime));
         blocker = contact.Policy.PreflightBlocker(contact.Facts(adoption.Player, facts, support,
             ExactRemoteContactBinding(adoption, journey, scene)));
         if (blocker is not null) { adoption.RetainFailure(contact.Policy.LastDecisionEvidence); return blocker; }

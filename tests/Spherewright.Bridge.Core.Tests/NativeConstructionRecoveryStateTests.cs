@@ -29,6 +29,8 @@ public sealed class NativeConstructionRecoveryStateTests
     {
         Assert.False(NativeConstructionStandstillPolicy.SupportProved(true,-.23366366,.99));
         Assert.True(NativeConstructionStandstillPolicy.SupportProved(true,-.02,.99));
+        Assert.True(NativeConstructionStandstillPolicy.SupportProved(true,-.14,.99));
+        Assert.False(NativeConstructionStandstillPolicy.SupportProved(true,-.211,.99));
         Assert.False(NativeConstructionStandstillPolicy.StableProved(3,0,0));
         Assert.True(NativeConstructionStandstillPolicy.StableProved(4,0,0));
         Assert.False(NativeConstructionStandstillPolicy.StableProved(4,0,.2585055));
