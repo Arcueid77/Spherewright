@@ -94,8 +94,12 @@ internal sealed partial class NormalGameActionCoordinator
         if (!atPhysics) return null;
         var player = a.Player;
         var firstTick = s.Policy.LastPhysicsTick == s.Policy.SourceGameTick;
-        var exact = SurfaceRecoveryBinding(s) && (!firstTick
-            || s.Source.CurrentBlockerAtNativePhysicsTick(player, GameMain.gameTick) is null);
+        // Preserve the FIRST comparison used by this decision. Do not run
+        // another Native comparison after Pause to infer a different cause.
+        var bindingBlocker = SurfaceRecoveryBindingBlocker(s);
+        var sourceStateBlocker = bindingBlocker is null && firstTick
+            ? s.Source.CurrentBlockerAtNativePhysicsTick(player, GameMain.gameTick) : null;
+        var exact = bindingBlocker is null && sourceStateBlocker is null;
         var order = s.Order is null ? firstTick && player.currentOrder is null
             : s.Draining ? player.currentOrder is null
             : ReferenceEquals(player.currentOrder, s.Order) || player.currentOrder is null && s.Order.targetReached;
@@ -124,6 +128,10 @@ internal sealed partial class NormalGameActionCoordinator
         };
         var e = a.CurrentDecisionEvidence!;
         e.Stage("surface_recovery_native501"); e.Observe("surface_exact_source_scene", f.ExactSourceWorldAndScene);
+        e.Require(bindingBlocker is null ? "surface_runtime_binding" : "surface_" + bindingBlocker, bindingBlocker is null);
+        if (bindingBlocker is null)
+            e.Require(sourceStateBlocker is null ? "surface_first_physics_player_state" : "surface_first_physics_" + sourceStateBlocker,
+                sourceStateBlocker is null);
         e.Observe("surface_native_modes_costs_order", f.NativeModesCostsAndOrderProved);
         e.Observe("surface_current_owned_support", f.CurrentTerrainSupportProved);
         e.Observe("surface_dry_landing_patch", f.DryLandingPatchProved);
@@ -171,16 +179,32 @@ internal sealed partial class NormalGameActionCoordinator
         LockedReturnFloorJoules = j.ReturnEnergyFloorJoules,
     };
 
-    private bool SurfaceRecoveryBinding(SurfaceRecoveryState s) => _sessions.IsCurrentSessionOwned
-        && _sessions.SessionId == s.Adoption.SessionId && ReferenceEquals(GameMain.data, s.Adoption.World)
-        && ReferenceEquals(GameMain.mainPlayer, s.Adoption.Player) && !GameMain.isPaused
-        && ReferenceEquals(s.Binding.Player.controller, s.Binding.Controller) && ReferenceEquals(s.Binding.Player.mecha, s.Binding.Mecha)
-        && ReferenceEquals(s.Binding.Controller.rigid, s.Body) && ReferenceEquals(s.Binding.Player.transform, s.ActorTransform)
-        && ReferenceEquals(s.ActorTransform.parent, s.Parent) && s.ActorTransform.lossyScale.Equals(s.Scale)
-        && s.Body.isKinematic == s.Kinematic && s.Body.useGravity == s.UseGravity && s.Body.constraints == s.Constraints
-        && !s.Body.isKinematic && s.Body.detectCollisions
-        && Physics.simulationMode == SimulationMode.FixedUpdate && Physics.autoSyncTransforms == s.AutoSync && Physics.queriesHitTriggers == s.QueriesHitTriggers
-        && _flightCheckpoints.RemoteResumeEvidenceStillMatches(s.Adoption.Evidence) && s.Scene.Matches();
+    private bool SurfaceRecoveryBinding(SurfaceRecoveryState s) => SurfaceRecoveryBindingBlocker(s) is null;
+
+    private string? SurfaceRecoveryBindingBlocker(SurfaceRecoveryState s)
+    {
+        if (!_sessions.IsCurrentSessionOwned) return "session_not_owned";
+        if (_sessions.SessionId != s.Adoption.SessionId) return "session_changed";
+        if (!ReferenceEquals(GameMain.data, s.Adoption.World)) return "world_changed";
+        if (!ReferenceEquals(GameMain.mainPlayer, s.Adoption.Player)) return "player_changed";
+        if (GameMain.isPaused) return "native_paused";
+        if (!ReferenceEquals(s.Binding.Player.controller, s.Binding.Controller)) return "controller_changed";
+        if (!ReferenceEquals(s.Binding.Player.mecha, s.Binding.Mecha)) return "mecha_changed";
+        if (!ReferenceEquals(s.Binding.Controller.rigid, s.Body)) return "rigidbody_changed";
+        if (!ReferenceEquals(s.Binding.Player.transform, s.ActorTransform)) return "transform_changed";
+        if (!ReferenceEquals(s.ActorTransform.parent, s.Parent)) return "parent_changed";
+        if (!s.ActorTransform.lossyScale.Equals(s.Scale)) return "scale_changed";
+        if (s.Body.isKinematic != s.Kinematic) return "kinematic_changed";
+        if (s.Body.useGravity != s.UseGravity) return "gravity_mode_changed";
+        if (s.Body.constraints != s.Constraints) return "constraints_changed";
+        if (s.Body.isKinematic) return "body_kinematic";
+        if (!s.Body.detectCollisions) return "collisions_disabled";
+        if (Physics.simulationMode != SimulationMode.FixedUpdate) return "simulation_mode_changed";
+        if (Physics.autoSyncTransforms != s.AutoSync) return "auto_sync_changed";
+        if (Physics.queriesHitTriggers != s.QueriesHitTriggers) return "trigger_query_changed";
+        if (!_flightCheckpoints.RemoteResumeEvidenceStillMatches(s.Adoption.Evidence)) return "durable_evidence_changed";
+        return s.Scene.CurrentBlocker();
+    }
 
     private string? ObserveSurfaceRecoveryUniverse(VoyagerRemoteResumeAdoption a)
     {
