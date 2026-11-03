@@ -110,7 +110,7 @@ public sealed class VoyagerFailedRemoteReauthorizationPolicyTests
             case "checkpoint": f.ExactDurableJourneyAndCheckpoint = false; break;
             case "journal": f.OriginalJournalCheckpointPresent = false; break;
             case "expired": f.RecoveryProposal = new(f.NowUtc, prior.Scope, 9000, 240); break;
-            case "larger_window": f.RecoveryProposal = new(f.NowUtc.AddHours(2), prior.Scope, 9000, 240); break;
+            case "larger_window": f.RecoveryProposal = new(f.NowUtc.AddHours(25), prior.Scope, 9000, 240); break;
             case "files": f.FullSourceAndPrimaryEvidence = false; break;
         }
         Assert.NotNull(VoyagerFailedRemoteReauthorizationPolicy.Blocker(f, expected, Context, pair, ack, success, prior));
