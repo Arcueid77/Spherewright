@@ -37,7 +37,8 @@ internal sealed partial class NormalGameActionCoordinator
                 || s.BeltPathMode == BeltPathModes.NativeElevatedGrid))
             return Stale($"Remote construction requires an original-journey native-validated batch of1..{StructuredConstructionBinding.MaximumNewObjects(plan.BuildingItemId)} supported NEW objects without elevated paths or belt-cover reuse; observed NEW count={plan.BuildSteps.Count}, item={plan.BuildingItemId}, journey phase={journey.Phase}.");
         if (!_blueprints.TryRead(out var old) || old.Count >= BlueprintBuildStore.MaximumBuilds
-            || old.Any(b => b.StructuredConstruction is not null && b.Phase != "completed"))
+            || old.Any(b => b.StructuredConstruction is not null && b.Phase != "completed"
+                && b.SavedTailCompletion?.Matches(b,GameMain.gameTick)!=true))
             return BlueprintError("Read and fresh-resume the exact existing structured build; do not submit a replacement batch.");
 
         var binding = new StructuredConstructionBinding
@@ -221,6 +222,9 @@ internal sealed partial class NormalGameActionCoordinator
         var reserve = action.Plan.ConstructionReserve!;
         var oldControl = build.ConstructionControl;
         var nowUtc = DateTimeOffset.UtcNow;
+        var cadence=Time.fixedDeltaTime;
+        var workWall=NativeConstructionCadencePolicy.WallBudget(StructuredConstructionWorkTicks,cadence);
+        if(!workWall.HasValue) {Fail(action,"The Native construction scheduling cadence is unproved; no create occurred.");return;}
         var submit = build.Objects.All(o => o.State == BlueprintObjectStates.NotSubmitted);
         var readmit = !submit && oldControl is not null
             && !oldControl.RemainingWorkGameTicks(GameMain.gameTick, nowUtc).HasValue;
@@ -241,9 +245,10 @@ internal sealed partial class NormalGameActionCoordinator
             StartedAtGameTick = readmit ? GameMain.gameTick : oldControl?.StartedAtGameTick ?? GameMain.gameTick,
             StartedAtUtc = readmit ? nowUtc : oldControl?.StartedAtUtc ?? nowUtc,
             WorkDeadlineGameTick = readmit ? GameMain.gameTick + StructuredConstructionWorkTicks : oldControl?.WorkDeadlineGameTick ?? GameMain.gameTick + StructuredConstructionWorkTicks,
-            WorkDeadlineUtc = readmit ? nowUtc.AddSeconds(StructuredConstructionWorkTicks / 60d) : oldControl?.WorkDeadlineUtc ?? nowUtc.AddSeconds(StructuredConstructionWorkTicks / 60d),
+            WorkDeadlineUtc = readmit ? nowUtc.AddSeconds(workWall.Value) : oldControl?.WorkDeadlineUtc ?? nowUtc.AddSeconds(workWall.Value),
             ObservationLeaseExpiresAtUtc = nowUtc.AddSeconds(StructuredConstructionLeaseSeconds),
             TailGameTicks = reserve.TailGameTicks, TailAndNextTickEnergyJoules = reserve.TailAndNextTickEnergyJoules,
+            NativeFixedDeltaTimeSeconds = readmit || oldControl is null ? cadence : oldControl.NativeFixedDeltaTimeSeconds,
             NativePowerUpperWatts = reserve.PowerUpperWatts, OriginalDroneEnabled = oldControl?.OriginalDroneEnabled ?? player.mecha.constructionModule.droneEnabled,
             NativeCreateActionId = oldControl?.NativeCreateActionId,
             PreexistingEntityIds = oldControl?.PreexistingEntityIds.ToList() ?? CaptureConstructionExistingEntities(factory, build),
@@ -393,7 +398,7 @@ internal sealed partial class NormalGameActionCoordinator
                     && control.NativeDrainBarrierPassed(tick, ConstructionOwnPrelaunchCacheClear(factory, build)))
                 { FinishStructuredConstructionIdle(action); return; }
                 if (control.StopOutcomeUnknown(tick, DateTimeOffset.UtcNow))
-                { FinishStructuredConstructionUnknown(action); return; }
+                { RecordConstructionDrainClockFailure(action);FinishStructuredConstructionUnknown(action); return; }
             }
         }
         catch (Exception exception)
@@ -567,9 +572,8 @@ internal sealed partial class NormalGameActionCoordinator
                 || DateTimeOffset.UtcNow - VoyagerLocalPrePlayerObservedAtUtc > TimeSpan.FromSeconds(1)
                 || DateTimeOffset.UtcNow - VoyagerLastNativeTickObservedAtUtc > TimeSpan.FromSeconds(1))
                 RequestStructuredConstructionStop(action, "construction_host_clock_or_native_hook_stopped", true, !ConstructionReferencesMatch(action));
-            if (control.DrainStartedAtUtc.HasValue
-                && DateTimeOffset.UtcNow >= control.DrainStartedAtUtc.Value.AddSeconds(control.TailGameTicks / 60d))
-                FinishStructuredConstructionUnknown(action);
+            if (control.StopOutcomeUnknown(GameMain.gameTick,DateTimeOffset.UtcNow))
+            {RecordConstructionDrainClockFailure(action);FinishStructuredConstructionUnknown(action);}
         }
     }
 
@@ -608,20 +612,45 @@ internal sealed partial class NormalGameActionCoordinator
         var reserve = CaptureConstructionReserve(action.BlueprintBuild, player, out var hash);
         var remainingEnergy = reserve.PowerUpperWatts * (remaining + 2d) / 60d
             + player.mecha.constructionModule.droneCount * Configs.freeMode.droneEjectEnergy;
-        var valid = ConstructionHoldOwned(action) && !player.mecha.constructionModule.droneEnabled
-            && reserve.Proved && hash == control.NativeCostHash && ConstructionDronesStayInEnvelope(action)
-            && journey is not null && journey.JourneyId == action.BlueprintBuild.StructuredConstruction!.JourneyId
-            && VoyagerOwnedJourneyMatchesCurrentSession(journey, action.SessionId)
-            && journey.Phase == "remote_landed" && DateTimeOffset.UtcNow < _sessions.EffectiveVoyagerDeadline(journey)
-            && NativeConstructionDroneReservePolicy.CanFundNativeTail(player.mecha.coreEnergy,
-                CalculateAvailableFlightEnergy(player.mecha), journey.ReturnEnergyFloorJoules, remainingEnergy)
-            && CountVoyagerWarpers(player.mecha.warpStorage) >= 1 + journey.ExtraWarperReserve;
+        var e=new NativeResumeDecisionEvidence("construction_native_drain",GameMain.gameTick,DateTimeOffset.UtcNow,true);
+        var checks=new[] {
+            ("construction_owned_hold",ConstructionHoldOwned(action)),
+            ("construction_dispatch_disabled",!player.mecha.constructionModule.droneEnabled),
+            ("construction_reserve_geometry",reserve.Proved),
+            ("construction_native_cost_hash",hash==control.NativeCostHash),
+            ("construction_drone_envelope",ConstructionDronesStayInEnvelope(action)),
+            ("construction_original_journey",journey is not null && journey.JourneyId==action.BlueprintBuild.StructuredConstruction!.JourneyId
+                && VoyagerOwnedJourneyMatchesCurrentSession(journey,action.SessionId) && journey.Phase=="remote_landed"),
+            ("construction_wall_reserve",journey is not null && DateTimeOffset.UtcNow<_sessions.EffectiveVoyagerDeadline(journey)),
+            ("construction_funded_remaining_tail",journey is not null && NativeConstructionDroneReservePolicy.CanFundNativeTail(player.mecha.coreEnergy,
+                CalculateAvailableFlightEnergy(player.mecha),journey.ReturnEnergyFloorJoules,remainingEnergy)),
+            ("construction_warper_reserve",journey is not null && CountVoyagerWarpers(player.mecha.warpStorage)>=1+journey.ExtraWarperReserve)};
+        var valid=true;foreach(var check in checks)valid=e.Require(check.Item1,check.Item2)&&valid;
+        e.Number("construction_remaining_tail_ticks",remaining);e.Number("construction_remaining_tail_j",remainingEnergy);
+        e.Number("construction_core_j",player.mecha.coreEnergy);
         if (!valid)
         {
+            action.StructuredConstructionFirstFailure??=e.Failure("construction_drain_native_premise_unproved");
             action.ConstructionStopUnknown = true; control.BindingLost = true;
             FinishStructuredConstructionUnknown(action);
         }
         action.ConstructionReserveProofValid &= valid;
+    }
+
+    private static void RecordConstructionDrainClockFailure(ActionRecord action)
+    {
+        if(action.StructuredConstructionFirstFailure is not null || action.BlueprintBuild?.ConstructionControl is not {} c)return;
+        var now=DateTimeOffset.UtcNow;var tick=GameMain.gameTick;
+        var e=new NativeResumeDecisionEvidence("construction_native_drain_clock",tick,now,true);
+        e.Require("construction_drain_tick_open",c.DrainStartedAtGameTick.HasValue && tick>=c.DrainStartedAtGameTick
+            && (decimal)tick<c.DrainStartedAtGameTick.Value+c.TailGameTicks);
+        e.Require("construction_drain_wall_open",c.DrainStartedAtUtc.HasValue && now>=c.DrainStartedAtUtc
+            && c.DrainWallSeconds()>0 && now<c.DrainStartedAtUtc.Value.AddSeconds(c.DrainWallSeconds()));
+        e.Number("construction_tail_ticks",c.TailGameTicks);e.Number("construction_latched_fixed_delta_s",c.NativeFixedDeltaTimeSeconds);
+        e.Number("construction_actual_fixed_delta_s",Time.fixedDeltaTime);e.Number("construction_drain_wall_s",c.DrainWallSeconds());
+        e.Number("construction_elapsed_tail_ticks",c.DrainStartedAtGameTick.HasValue?tick-c.DrainStartedAtGameTick.Value:null);
+        e.Number("construction_elapsed_tail_wall_s",c.DrainStartedAtUtc.HasValue?(now-c.DrainStartedAtUtc.Value).TotalSeconds:null);
+        action.StructuredConstructionFirstFailure=e.Failure("construction_drain_clock_exhausted");
     }
 
     private static bool ConstructionBatchDebit(Dictionary<int, int> before, Dictionary<int, int> after, int itemId, int count) =>
@@ -651,6 +680,7 @@ internal sealed partial class NormalGameActionCoordinator
         public StructuredNativeBinding? ConstructionBinding { get; set; }
         public long ConstructionLastNativeTick { get; set; }
         public bool ConstructionReserveProofValid { get; set; }
+        public Spherewright.Contracts.Players.NativeResumeFailureSnapshot? StructuredConstructionFirstFailure {get;set;}
         public bool ConstructionStopUnknown { get; set; }
     }
 

@@ -21,3 +21,7 @@
 `NewDysonNode`创建的是已送达结构点为零、需要30点的未建规划节点，并刷新原生自动节点选择和渲染；不建成节点、不注入火箭。后续最小适配可绑定一个准确已有**空层**、有效原生节点原型及一个赤道位置，保留零节点基线，提交前重新检查并只调用一次正常业务方法。不猜笔刷序列化原型、不初始化缺失球体/层、不写`sp`/`spOrdered`、不手调模拟，也不扩成通用结构设计。这份研究尚未提供该公开写入或证明实机验收。
 
 固定版本的`DysonSphereSegmentRenderer.LoadStatic`从索引0连续载入节点资产，只有网格/材质成功载入后才增加`nodeProtoCount`；`GetNodeProtoMesh`和`GetNodeProtoMaterial`拒绝超出已观测数量的索引。因此后续主线程适配可要求原生已载入数量大于零，且索引0的两个只读getter均非空，绑定确实存在的原生原型，无需读取或改变编辑器笔刷。观察期间不能调用`LoadStatic`或初始化缺失渲染状态。这只是源码证据，实机准入与公开写入仍未实现。
+
+## 有界最小原生接收目标
+
+当前维护源码只在已存在且完整绑定的原生球/层、发射井科技已解锁、原型0资产已加载、完整空结构覆盖、零飞行火箭及该恒星仅一座空发射井时提供 `silo.minimalReceivingTarget`。调用 `prepare_configure_building(mode=dyson-minimal-receiving-node, recipeId=0, expectedFactoryStateHash=silo.minimalReceivingTarget.configurationStateHash)`，其他模式参数保持默认。准备回显必须为layer1赤道半径位置、一个计划节点及零已交付点。提交重核同一世界/层/原型，仅调用一次正常 `NewDysonNode`，再读取唯一节点0/30点。不初始化缺失状态、不写结构点、不注入火箭、不推进模拟。此源码能力尚未安装或实机验收；前文未来适配器描述为历史研究。

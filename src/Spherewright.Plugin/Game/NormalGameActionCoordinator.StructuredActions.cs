@@ -2175,6 +2175,8 @@ internal sealed partial class NormalGameActionCoordinator
 
         if (request.Mode == BuildingConfigurationModes.EnableMechaConstructionDrones)
             return PrepareEnableMechaConstructionOnMainThread(requestedSessionId, request, common.Session!);
+        if (request.Mode == BuildingConfigurationModes.MinimalDysonReceivingNode)
+            return PrepareMinimalDysonTargetOnMainThread(requestedSessionId, request, common.Session!);
         if (request.Mode == BuildingConfigurationModes.EjectorOrbit)
             return PrepareEjectorOrbitOnMainThread(requestedSessionId, request, common.Session!);
         if (request.EjectorOrbitId != -1)

@@ -529,3 +529,7 @@ Native Import 可将 double 宇宙坐标逆投影为 float 本地位置；普通
 新resume任务在准确来源/世界/actor/地形绑定及当tick资金通过后，独占一笔普通原生订单。初次Drift绑定两秒失效，查询和重复生命周期观察不续期。即使独立的旧first-frame锁尚未armed，真实151分发入口也须服务此pending控制器，不伪造旧锁或501观察。移动中复用原生变换绑定，冻结准确localScale输入及完整父链；不将旋转派生lossyScale的舍入微变误判为缩放。实际改尺寸、换父级、非均匀祖先缩放或无效姿态仍拒绝。目标须在1–16m内，以fresh原生射线检查3.5m落点缓冲，而不要求整段路径干燥。真实151/501、准确自有订单、有界Walk/Drift模式、当前地形支撑、每步能源/tick/UTC/翘曲器/返航储备，以及下一完整601加13tick尾部资金均不可缺失。最多600tick（含失败帧）、20秒墙钟及距来源24m，全部计入原Journey。不写姿态/速度，不手动模拟，不注入资源，不提前放行普通写入。原生Drift转Walk时，只有最后的sphere接地项未命中且fresh准确当前地形支撑、其他模式/费用/订单/储备全部通过，才可继续有界工作，绝不视为空闲。接触边界的完整自有足部重叠不是“空中必须零命中”：Native ground为false时，须从重叠外侧发射下行射线，以同一2m/.5法线界限fresh证明准确当前地形平面；Native ground仍保持false。不完整/饱和/外来命中或无支撑平面仍拒绝，并保留原截点数量/归属/投射事实。原生到达/AbortOrder后继续付费停稳，成功仍要求实际/帧接地Walk、速度归零且手动/RTS尾部全零；失败则停止/Pause并隔离新任务，不自动重试。`nativePhysics.resumeSurfaceRecoveryMove`仅是新resume动作的离体观察，不改旧unknown、不增加tick。恢复绑定失败由`nativeFirstFailure.firstFailedPredicate`标出当刻首个实际runtime或first-physics玩家比较项，后来的暂停观测不替换原截点。源码/CI/离线通过不能冒充真实恢复或施工。
 
 原活动Move耗尽原有接触丢失停止预算时，`nativeFirstFailure`记录原pre-player当刻复制值：地面查询、实际/帧移动模式、速度、RTS/手动尾部、能量、停止起止tick及订单状态。该截点中的post-player停稳、后续Pause、序列化及Resume保持not_reached；后来的Walk/speed0观测不覆盖首个失败、不认证旧任务成功或续发停止预算。
+
+## 施工cadence与已保存返回中无人机尾程
+
+新施工控制记录原生固定步长、独立有限工作/收尾时钟及同决策首错。游戏tick、完整帧能源、准确归属、固定锚点、停止派遣、原生工厂屏障与物理闲置仍必须证明。轮询仅可延续观察租约，不能延续已锁定收尾期限；旧控制保留旧时钟和序列化。新的显式owned恢复仅可为一份完整已付且已建批次收束尾程：原停止原因必须为 `construction_complete_draining`，派遣关闭、原绑定未丢失、完整站点成员/拓扑准确，所有活动机甲无人机均为无目标的原生stage4返回状态。新来源按自己的有限准入逐tick计费；后续追加的保存尾程证明绑定未改的原控制/动作以及真实更晚工厂pass和物理闲置。旧unknown/失败结果不改写、不重放；新建对象仍须独立fresh prepare。当前维护源码不等于已安装或实机验收。

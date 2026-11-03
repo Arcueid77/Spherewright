@@ -8,6 +8,12 @@ namespace Spherewright.Plugin.Game;
 internal sealed partial class NormalGameActionCoordinator
 {
     private SavedConstructionTail? _savedConstructionTail;
+    private bool HasCurrentSavedFactoryTail(Player p,string? journeyId)=>_savedConstructionTail is {GenericPaidSite:true}
+        && SavedConstructionTailMatches(p,journeyId);
+    private bool HasCurrentSavedFactoryTailBuild(Player p,string? journeyId,BlueprintBuildState build)
+        =>_savedConstructionTail is {GenericPaidSite:true,Sealed:false} t && t.Build.BuildId==build.BuildId
+            && HasCurrentSavedFactoryTail(p,journeyId) && journeyId is not null
+            && HasSavedStoppedPaidBatchReceipt(build,journeyId,GameMain.gameTick);
 
     // This certificate accepts only the already-built, unconfigured passive
     // tower next to the sealed unpowered miner. It never authorizes a create,
@@ -64,13 +70,25 @@ internal sealed partial class NormalGameActionCoordinator
         if (!TryObserveOwnedConstructionDrones(f, p.mecha.constructionModule, out var idle, out var ids))
             return "remote_resume_saved_drone_pool_unproved";
         if (idle) return null;
+        BlueprintBuildState? generic=null;
+        if(_sessions.ExactRemoteResumeLoadPreflight(adoption) && adoption.Evidence.RemotePrimaryRecovery
+            && adoption.Evidence.CompletedSavedLandingAdmissionUsed && adoption.Authorization is not null
+            && !p.mecha.constructionModule.droneEnabled && _blueprints.TryRead(out var genericSaved))
+        {
+            var candidates=genericSaved.Where(b=>b.Site.PlanetId==f.planetId
+                && HasSavedStoppedPaidBatchReceipt(b,journeyId,GameMain.gameTick)).ToArray();
+            if(candidates.Length==1)generic=CloneBlueprintState(candidates[0]);
+        }
         if (!_sessions.ExactRemoteResumeLoadPreflight(adoption) || adoption.Authorization is null
             || adoption.Evidence.ReturnOnlyContinuation || adoption.Evidence.CompletedRemoteContinuation
-            || RetainedUnpoweredRecoveryIls(p, f, journeyId, adoption.CurrentDecisionEvidence) is not { } build
+            || (generic??RetainedUnpoweredRecoveryIls(p, f, journeyId, adoption.CurrentDecisionEvidence)) is not { } build
             || !SavedConstructionTail.TryPower(p, out var power)) return "remote_resume_saved_drone_tail_source_unproved";
-        var tail = new SavedConstructionTail(adoption, f, build, ids, power);
+        var tail = new SavedConstructionTail(adoption, f, build, ids, power) {GenericPaidSite=generic is not null};
         _savedConstructionTail = tail;
         if (!SavedConstructionTailMatches(p, journeyId)) return "remote_resume_saved_drone_tail_motion_unproved";
+        if(tail.GenericPaidSite && (!_blueprints.TryRead(out var allSaved)
+            || !SavedFactorySiteMatches(p,f,journeyId,allSaved,adoption.CurrentDecisionEvidence)))
+        {_savedConstructionTail=null;return "remote_resume_saved_factory_tail_full_site_unproved";}
         return null;
     }
 
@@ -83,7 +101,8 @@ internal sealed partial class NormalGameActionCoordinator
             || !SavedConstructionTail.TryPower(p, out var power) || power != t.Power
             || GameMain.gameTick < t.Adoption.Evidence.SourceGameTick
             || GameMain.gameTick - t.Adoption.Evidence.SourceGameTick > NativeSavedConstructionTailPolicy.MaximumGameTicks
-            || DateTimeOffset.UtcNow < t.StartedUtc || (DateTimeOffset.UtcNow - t.StartedUtc).TotalSeconds >= NativeSavedConstructionTailPolicy.MaximumWallSeconds
+            || double.IsNaN(t.WallSeconds) || double.IsInfinity(t.WallSeconds) || t.WallSeconds<=0d
+            || DateTimeOffset.UtcNow < t.StartedUtc || (DateTimeOffset.UtcNow - t.StartedUtc).TotalSeconds >= t.WallSeconds
             || !TryObserveOwnedConstructionDrones(t.Factory, p.mecha.constructionModule, out _, out var ids)
             || ids.Any(id => !t.DroneIds.Contains(id)) || t.Factory.constructionSystem.drones.count != ids.Count) return false;
         var live = p.position.normalized * (p.position.magnitude + 2.8f);
@@ -153,6 +172,16 @@ internal sealed partial class NormalGameActionCoordinator
         var b = t.Build; var c = b.ConstructionControl!;
         if (ReconcileStructuredConstructionState(b).Count != 0 || b.Objects.Any(o => o.State != BlueprintObjectStates.Completed))
             return "remote_resume_saved_drone_tail_entity_changed";
+        if(t.GenericPaidSite)
+        {
+            b.SavedTailCompletion=new SavedFactoryTailCertificate {
+                OriginalActionId=c.NativeCreateActionId!,OriginalControlHash=c.EvidenceHash(),BuildPlanHash=b.PlanHash,
+                SourceGameTick=adoption.Evidence.SourceGameTick,SourceFingerprint=adoption.Evidence.SourceFingerprint,
+                NativeFactoryPassGameTick=t.NativeFactoryPass.Value,PhysicalIdleGameTick=GameMain.gameTick };
+            b.LastEvidenceGameTick=GameMain.gameTick;b.Generation++;
+            if(!_blueprints.TryPut(b))return "remote_resume_saved_factory_tail_certificate_persistence_failed";
+            t.Sealed=true;return null;
+        }
         c.RecordDisabledNativeFactoryPass(t.NativeFactoryPass.Value);
         if (!c.TryMarkPhysicalIdle(GameMain.gameTick, ConstructionOwnPrelaunchCacheClear(t.Factory, b), true))
             return "remote_resume_saved_drone_tail_physical_idle_unproved";
@@ -188,6 +217,8 @@ internal sealed partial class NormalGameActionCoordinator
         internal bool AnchorHeld;internal long? LastPosePass;internal int StablePosePasses;
         internal readonly DateTimeOffset StartedUtc = DateTimeOffset.UtcNow;
         internal long? NativeFactoryPass; internal bool Sealed;
+        internal bool GenericPaidSite;
+        internal readonly double WallSeconds=NativeConstructionCadencePolicy.WallBudget(NativeSavedConstructionTailPolicy.MaximumGameTicks,Time.fixedDeltaTime)??double.NaN;
         internal SavedConstructionTail(VoyagerRemoteResumeAdoption a, PlanetFactory f, BlueprintBuildState b, List<int> ids, double power)
         { Adoption=a; Factory=f; Build=b; DroneIds=new HashSet<int>(ids); Power=power; SourceAnchor=Anchor=a.Player.position; Eject=Anchor.normalized*(Anchor.magnitude+2.8f); }
         internal static bool TryPower(Player p, out double power)

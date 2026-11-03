@@ -13,6 +13,23 @@ namespace Spherewright.Bridge.Core.Tests;
 public sealed class SavedFactorySiteTests
 {
     [Fact]
+    public void LaterNativeIdleCertificateAdmitsPaidObjectsWhileOriginalUnknownControlRemainsByteIdentical()
+    {
+        using var f=new Fixture(false,unknownTail:true);
+        Assert.NotNull(f.SavedLandingGuard());
+        Assert.True(f.Store().TryRead(out var builds));var b=builds.Single(x=>x.Phase=="outcome_unknown");
+        var original=Newtonsoft.Json.JsonConvert.SerializeObject(b.ConstructionControl);var action=b.ActionId;
+        b.SavedTailCompletion=new() {OriginalActionId=action!,OriginalControlHash=b.ConstructionControl!.EvidenceHash(),
+            BuildPlanHash=b.PlanHash,SourceGameTick=120,NativeFactoryPassGameTick=121,PhysicalIdleGameTick=122,
+            SourceFingerprint="sha256:"+new string('b',64)};
+        b.LastEvidenceGameTick=122;b.Generation++;GameMain.gameTick=130;
+        Assert.True(f.Store().TryPut(b));Assert.Null(f.SavedLandingGuard());
+        Assert.True(f.Store().TryRead(out var reopened));var saved=reopened.Single(x=>x.BuildId==b.BuildId);
+        Assert.Equal("outcome_unknown",saved.Phase);Assert.Equal(action,saved.ActionId);
+        Assert.Equal(original,Newtonsoft.Json.JsonConvert.SerializeObject(saved.ConstructionControl));
+        f.Factory.TestPorts.Remove((1,0));Assert.NotNull(f.SavedLandingGuard());
+    }
+    [Fact]
     public void NewSavedLandingWitnessCanRecoverAnEntirePaidMiningSiteWithoutRelaxingDefaultRecovery()
     {
         using var f = new Fixture(false, miningOnly: true);
@@ -160,7 +177,7 @@ public sealed class SavedFactorySiteTests
         internal string? Guard() => new NormalGameActionCoordinator(Store(), sessions).MinerEnvironmentForTest(Player, Journey);
         internal string? LandingGuard() => new NormalGameActionCoordinator(Store(), sessions).CompletedLandingEnvironmentForTest(Player, Journey);
         internal string? SavedLandingGuard() => new NormalGameActionCoordinator(Store(), sessions).SavedLandingRecoveryEnvironmentForTest(Player, Journey);
-        internal Fixture(bool pending, bool miningOnly = false)
+        internal Fixture(bool pending, bool miningOnly = false,bool unknownTail=false)
         {
             sourceItem = miningOnly ? 2301 : 2304; destinationItem = miningOnly ? 2203 : 2101;
             GameMain.gameTick = 120; GameMain.history = new(); Player.factory = Factory; GameMain.SavedFactoryTestPlayer = Player;
@@ -171,7 +188,7 @@ public sealed class SavedFactorySiteTests
             Factory.entityPool[2] = new() { id = 2, protoId = destinationItem, powerNodeId = miningOnly ? 1 : 0, rot = new(0, 0, 0, 1) };
             if (pending) Factory.prebuildPool[1] = new() { id = 1 };
             else Factory.entityPool[3] = new() { id = 3, protoId = 2011, rot = new(0, 0, 0, 1) };
-            Add(sourceItem, 1, false); Add(destinationItem, 2, false); Add(2011, 3, pending);
+            Add(sourceItem, 1, false); Add(destinationItem, 2, false); Add(2011, 3, pending,unknownTail);
             Player.mecha.constructionModule.droneEnabled = !pending;
             Connect(1, 0, pending ? -1 : 3, 0); Connect(pending ? -1 : 3, 1, 2, 0);
         }
@@ -189,7 +206,7 @@ public sealed class SavedFactorySiteTests
             s.storage[1] = new() { itemId = 1301, count = 12, max = 100, remoteOrder = -10, remoteLogic = ELogisticStorage.Demand };
             Add(2104, 4, false);
         }
-        private void Add(int item, int entity, bool pending)
+        private void Add(int item, int entity, bool pending,bool unknownTail=false)
         {
             var site = new BlueprintSiteSnapshot { SessionId = "synthetic-session", PlanetId = 402, CapturedAtGameTick = 100,
                 BlueprintHash = "synthetic-approved-factory", NativeCheckPerformed = true, NativeCheckPassed = true,
@@ -215,7 +232,9 @@ public sealed class SavedFactorySiteTests
             state.Begin("synthetic-session", action, 1, 100); state.BeforeStructuredSubmission(101, 1, "before");
             state.ConfirmStructuredSubmission([1], 0, "after");
             if (!pending) state.ConfirmCompletion(0, entity, 110);
-            c.RequestStop("explicit_structured_cancellation", 110, c.StartedAtUtc.AddSeconds(1), false); c.DispatchDisabled = true;
+            c.RequestStop(unknownTail?"construction_complete_draining":"explicit_structured_cancellation", 110, c.StartedAtUtc.AddSeconds(1), false); c.DispatchDisabled = true;
+            if(unknownTail)
+            {c.Phase="quarantined";state.LastEvidenceGameTick=112;state.Stop("outcome_unknown");Assert.True(Store().TryPut(state));return;}
             Assert.True(c.RecordDisabledNativeFactoryPass(111)); Assert.True(c.TryMarkPhysicalIdle(112, true, true));
             c.Phase = pending ? "paused_idle" : "completed_idle"; state.LastEvidenceGameTick = 112; state.Stop(pending ? "paused" : "completed");
             Assert.True(Store().TryPut(state));

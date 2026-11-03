@@ -25,6 +25,7 @@ public sealed class SiloStateSnapshot
     public List<DysonReceivingNodeSnapshot> Nodes { get; set; } = new();
     public bool StarSiloCoverageComplete { get; set; }
     public int? StarSiloCount { get; set; }
+    public MinimalDysonTargetSnapshot? MinimalReceivingTarget { get; set; }
 }
 
 public sealed class DysonRocketSnapshot

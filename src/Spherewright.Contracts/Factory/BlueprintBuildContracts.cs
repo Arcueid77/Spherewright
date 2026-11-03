@@ -96,6 +96,8 @@ public sealed class ConstructionControlReadback
     public bool ReserveProofStillValid { get; set; }
     public DateTimeOffset ObservationLeaseExpiresAtUtc { get; set; }
     public long TailGameTicks { get; set; }
+    public double? NativeFixedDeltaTimeSeconds {get;set;}
+    public double? DrainWallSeconds {get;set;}
     public double TailAndNextTickEnergyJoules { get; set; }
     public string? StopReason { get; set; }
     public bool WholeBatchDebitSharedByObjectReceipts { get; set; } = true;

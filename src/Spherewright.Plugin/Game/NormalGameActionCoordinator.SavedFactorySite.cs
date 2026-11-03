@@ -25,24 +25,26 @@ internal sealed partial class NormalGameActionCoordinator
                 && factory.constructionSystem?.constructionModules is not null && factory.constructionSystem.constructStats is not null
                 && factory.constructionSystem.constructionModules.count == 0 && factory.constructionSystem.constructStats.count == 0)
             || !Require("saved_factory_site_physical_idle", TryObserveOwnedConstructionDrones(factory, player.mecha.constructionModule,
-                out var idle, out _) && idle)) return false;
+                out var idle, out _) && (idle || HasCurrentSavedFactoryTail(player,journeyId)))) return false;
         var ids = new HashSet<int>(); var entities = new HashSet<int>(); var pending = new HashSet<int>();
         var edges = new List<SavedFactoryEdge>();
         foreach (var build in local)
         {
             var binding = build.StructuredConstruction;
             var control = build.ConstructionControl;
-            var complete = build.Phase == "completed";
+            var tailCertified=build.SavedTailCompletion?.Matches(build,GameMain.gameTick)==true;
+            var currentTail=HasCurrentSavedFactoryTailBuild(player,journeyId,build);
+            var complete = build.Phase == "completed" || tailCertified || currentTail;
             var legacyTower = binding is not null && build.Site.Objects.Count == 1 && build.Site.Objects[0].ItemId == 2104
                 && HasSavedPassiveTowerReceipt(build, binding.JourneyId, GameMain.gameTick);
             if (!Require("saved_factory_site_paid_idle_receipts", binding is not null && control is not null
                     && build.LastEvidenceGameTick <= GameMain.gameTick && build.Objects.Count == build.Site.Objects.Count
-                    && control.PhysicalIdleVerified && control.PhysicalIdleVerifiedAtGameTick <= GameMain.gameTick
+                    && (tailCertified || currentTail || control.PhysicalIdleVerified && control.PhysicalIdleVerifiedAtGameTick <= GameMain.gameTick
                     && control.DisabledNativeFactoryPassGameTick <= GameMain.gameTick && (!control.BindingLost || legacyTower)
                     && Guid.TryParse(control.NativeCreateActionId, out _)
                     && (complete && control.Phase == "completed_idle"
                         || build.Phase == "paused" && control.Phase == "paused_idle" && control.DispatchDisabled
-                            && binding.JourneyId == journeyId && !player.mecha.constructionModule.droneEnabled)
+                            && binding.JourneyId == journeyId && !player.mecha.constructionModule.droneEnabled))
                     && build.Objects.All(o => o.State == BlueprintObjectStates.Completed || o.State == BlueprintObjectStates.PendingConstruction))) return false;
             var first = build.Objects[0]; var count = build.Objects.Count;
             if (!first.InventoryBefore.HasValue || first.InventoryBefore < count || first.InventoryAfter != first.InventoryBefore - count

@@ -892,6 +892,8 @@ internal sealed partial class NormalGameActionCoordinator
                         && !IsLogisticsStationStorageConfigurationApplied(configured.Value, plan))
                     || (plan.ConfigureMode == BuildingConfigurationModes.LogisticsStationBelt
                         && !IsLogisticsStationBeltConfigurationApplied(configured.Value, plan))
+                    || (plan.ConfigureMode == BuildingConfigurationModes.MinimalDysonReceivingNode
+                        && !IsMinimalDysonTargetApplied(configured.Value, plan))
                     || (plan.ConfigureMode == BuildingConfigurationModes.EjectorOrbit
                         && !IsEjectorOrbitApplied(configured.Value, plan))
                     || (plan.ConfigureMode == BuildingConfigurationModes.LogisticsStationCharge
@@ -900,7 +902,9 @@ internal sealed partial class NormalGameActionCoordinator
                     throw new InvalidOperationException("The configured device mode could not be proven by immediate readback.");
                 }
 
-                Complete(action, plan.ConfigureMode == BuildingConfigurationModes.SorterFilter
+                Complete(action, plan.ConfigureMode == BuildingConfigurationModes.MinimalDysonReceivingNode
+                    ? "Native NewDysonNode created one equatorial receiving plan with zero delivered points. Inspect the silo node for its exact ID; this is not rocket launch or arrival proof."
+                    : plan.ConfigureMode == BuildingConfigurationModes.SorterFilter
                     ? "The current-version sorter UI setting path applied the item filter and component/sign readback matched."
                     : plan.ConfigureMode == BuildingConfigurationModes.Research
                         ? "The current-version lab setting path applied research mode and active-technology readback matched."
@@ -1364,6 +1368,8 @@ internal sealed partial class NormalGameActionCoordinator
                     return RevalidateStorageConfigurationOnMainThread(plan);
                 if (plan.ConfigureMode == BuildingConfigurationModes.EnableMechaConstructionDrones)
                     return RevalidateEnableMechaConstructionOnMainThread(plan);
+                if (plan.ConfigureMode == BuildingConfigurationModes.MinimalDysonReceivingNode)
+                    return RevalidateMinimalDysonTargetOnMainThread(plan);
                 if (plan.ConfigureMode == BuildingConfigurationModes.EjectorOrbit)
                     return RevalidateEjectorOrbitOnMainThread(plan);
                 var configureSnapshot = _reader.InspectFactoryEntityOnMainThread(
@@ -1612,7 +1618,7 @@ internal sealed partial class NormalGameActionCoordinator
             SessionId = action.SessionId,
             PlanetId = action.PlanetId,
             Message = action.Message,
-            NativeFirstFailure = action.VoyagerLocalStopFailure?.Copy() ?? action.Plan.SavePreservation?.FirstFailure ?? (action.Plan.ReturnOnlyTaskCancellation
+            NativeFirstFailure = action.StructuredConstructionFirstFailure?.Copy() ?? action.VoyagerLocalStopFailure?.Copy() ?? action.Plan.SavePreservation?.FirstFailure ?? (action.Plan.ReturnOnlyTaskCancellation
                 ? _sessions.ReturnOnlyFailureForTask(action.Plan.CancelVoyagerActionId!) : null),
             IdempotencyKey = action.IdempotencyKey,
             StartedAtGameTick = action.StartedAtGameTick,
@@ -2021,6 +2027,11 @@ internal sealed partial class NormalGameActionCoordinator
 
     private void ApplyBuildingConfigurationOnMainThread(NormalActionPlanPayload plan)
     {
+        if (plan.ConfigureMode == BuildingConfigurationModes.MinimalDysonReceivingNode)
+        {
+            ApplyMinimalDysonTargetOnMainThread(plan);
+            return;
+        }
         if (plan.ConfigureMode == BuildingConfigurationModes.EjectorOrbit)
         {
             ApplyEjectorOrbitOnMainThread(plan);

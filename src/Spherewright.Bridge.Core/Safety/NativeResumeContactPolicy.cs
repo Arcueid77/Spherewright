@@ -45,7 +45,7 @@ public sealed class NativeResumeContactPolicy
         && s.NormalDotUp >= MinimumNormalDotUp && s.NormalDotUp <= 1.001f
         && s.Enabled == true && s.ActiveInHierarchy == true && s.IsTrigger == false && s.SameDefaultPhysicsScene == true
         && s.CurrentPoolReference == true && s.LiveObject == true && s.ColliderChain == true && s.NativeLiveFlag is null
-        && s.FootOverlapComplete == true && s.FootOverlapCount == 0 && s.AllFootHitsCurrentSupportOrTerrain == true;
+        && s.FootOverlapComplete == true && s.FootOverlapCount is >=0 and <=256 && s.AllFootHitsCurrentSupportOrTerrain == true;
     public static bool InitializedTerrainCastProved(NativeNearGroundSupportSnapshot s) => s.State == "observed"
         && s.ActualGroundSphereHit == false && s.CastAttempted == true && s.CastHit == true
         && s.CastLayerMask == 15873 && s.Layer == 9 && s.Shape == "mesh" && s.OwnerType == "current_terrain"
@@ -53,7 +53,7 @@ public sealed class NativeResumeContactPolicy
         && s.NormalDotUp.HasValue && !float.IsNaN(s.NormalDotUp.Value) && s.NormalDotUp >= MinimumNormalDotUp && s.NormalDotUp <= 1.001f
         && s.Enabled == true && s.ActiveInHierarchy == true && s.IsTrigger == false && s.SameDefaultPhysicsScene == true
         && s.CurrentPoolReference == true && s.LiveObject == true && s.ColliderChain == true && s.NativeLiveFlag is null
-        && s.FootOverlapComplete == true && s.FootOverlapCount == 0 && s.AllFootHitsCurrentSupportOrTerrain == true;
+        && s.FootOverlapComplete == true && s.FootOverlapCount is >=0 and <=256 && s.AllFootHitsCurrentSupportOrTerrain == true;
     public const string GroundingPending = "remote_resume_native_contact_pending";
     public const int MaximumNativeWorkTicks = 8;
     public const double MaximumWallSeconds = 2d;

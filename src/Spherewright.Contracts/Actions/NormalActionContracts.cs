@@ -67,6 +67,7 @@ public static class BuildingConfigurationModes
     public const string LogisticsStationBelt = "logistics-station-belt";
     public const string LogisticsStationCharge = "logistics-station-charge";
     public const string EjectorOrbit = "ejector-orbit";
+    public const string MinimalDysonReceivingNode = "dyson-minimal-receiving-node";
     public const string EnableMechaConstructionDrones = "enable-mecha-construction-drones";
 }
 
@@ -381,6 +382,7 @@ public sealed class PreparedNormalAction
 
     public StorageConfigurationSnapshot? PlannedStorageConfiguration { get; set; }
     public EjectorOrbitPlanSnapshot? PlannedEjectorOrbit { get; set; }
+    public MinimalDysonTargetSnapshot? PlannedMinimalDysonTarget { get; set; }
 
     public bool? PlannedMechaConstructionDronesEnabled { get; set; }
     public bool? PlannedPaidConstructionReadmission { get; set; }

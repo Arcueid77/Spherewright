@@ -137,6 +137,8 @@ internal sealed partial class NormalGameActionCoordinator
     // or stop-only stage4 controller. Its motion/cost proof has separate tests.
     private BlueprintBuildState? RetainedUnpoweredRecoveryIls(Player p, PlanetFactory f, string? journeyId, NativeResumeDecisionEvidence? evidence) => null;
     private bool SavedConstructionTailMatches(Player p, string? journeyId) => false;
+    private bool HasCurrentSavedFactoryTail(Player p,string? journeyId)=>false;
+    private bool HasCurrentSavedFactoryTailBuild(Player p,string? journeyId,BlueprintBuildState build)=>false;
     internal static bool SavedTowerReceiptForTest(BlueprintBuildState b, string journeyId, long tick) => HasSavedPassiveTowerReceipt(b, journeyId, tick);
     private static bool StructuredEntityMatches(PlanetFactory factory, int id, BlueprintBuildState build, BlueprintSiteObject spec,
         bool allowCurrentSorterFilter = false)

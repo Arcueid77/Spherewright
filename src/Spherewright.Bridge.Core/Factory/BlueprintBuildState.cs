@@ -23,6 +23,8 @@ public sealed class BlueprintBuildState
     public StructuredConstructionBinding? StructuredConstruction { get; set; }
     public StructuredConstructionControlState? ConstructionControl { get; set; }
     public List<StructuredConstructionControlState> PreviousConstructionWindows { get; set; } = new();
+    public SavedFactoryTailCertificate? SavedTailCompletion {get;set;}
+    public bool ShouldSerializeSavedTailCompletion() => SavedTailCompletion is not null;
 
     public static BlueprintBuildState Create(BlueprintSiteSnapshot site, FoundryConstructionPlan? foundryPlan = null,
         FoundryConstructionIntent? foundryIntent = null, StructuredConstructionBinding? structuredConstruction = null)
@@ -72,6 +74,8 @@ public sealed class BlueprintBuildState
             StructuredConstruction.Validate(Site);
             if (FoundryPlan is not null || FoundryIntent is not null) throw new InvalidDataException("Structured provenance is not blueprint/Foundry authority.");
             ConstructionControl?.Validate(Site.CapturedAtGameTick);
+            if(SavedTailCompletion is not null && !SavedTailCompletion.Matches(this,LastEvidenceGameTick))
+                throw new InvalidDataException("Saved tail completion must bind the original unchanged control and later Native idle pass.");
             if (PreviousConstructionWindows is null || PreviousConstructionWindows.Count > 16
                 || PreviousConstructionWindows.Any(w => w is null) || PreviousConstructionWindows.Count > 0 && ConstructionControl is null)
                 throw new InvalidDataException("Invalid paid construction window history.");
@@ -249,9 +253,11 @@ public sealed class BlueprintBuildState
                 o.InventoryBefore, o.InventoryAfter, o.BeforeInventoryHash, o.AfterInventoryHash, o.FailureKind)).ToArray()));
         var current = ConstructionControl is null ? original
             : CanonicalStateHash.Combine("structured-control-progress-v1", original, ConstructionControl.EvidenceHash());
-        return PreviousConstructionWindows.Count == 0 ? current
+        var windows=PreviousConstructionWindows.Count == 0 ? current
             : CanonicalStateHash.Combine("structured-paid-continuation-progress-v1", current,
                 CanonicalStateHash.Combine("prior-windows", PreviousConstructionWindows.Select(w => (object)w.EvidenceHash()).ToArray()));
+        return SavedTailCompletion is null ? windows
+            : CanonicalStateHash.Combine("later-native-tail-state-v1",windows,SavedTailCompletion.EvidenceHash());
     }
 
     private static readonly HashSet<string> AllowedStates = new HashSet<string>(StringComparer.Ordinal)

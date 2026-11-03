@@ -10,5 +10,6 @@ public static class VoyagerFactoryConfigurationPolicy
     public static bool IsImmediateMode(string mode) => mode == BuildingConfigurationModes.LogisticsStationStorage
         || mode == BuildingConfigurationModes.LogisticsStationBelt || mode == BuildingConfigurationModes.LogisticsStationCharge
         || mode == BuildingConfigurationModes.Production || mode == BuildingConfigurationModes.SorterFilter
-        || mode == BuildingConfigurationModes.StorageCapacity || mode == BuildingConfigurationModes.EjectorOrbit;
+        || mode == BuildingConfigurationModes.StorageCapacity || mode == BuildingConfigurationModes.EjectorOrbit
+        || mode == BuildingConfigurationModes.MinimalDysonReceivingNode;
 }

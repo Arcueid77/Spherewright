@@ -122,6 +122,11 @@ public sealed class StructuredConstructionControlState
     public DateTimeOffset WorkDeadlineUtc { get; set; }
     public DateTimeOffset ObservationLeaseExpiresAtUtc { get; set; }
     public long TailGameTicks { get; set; }
+    public double? NativeFixedDeltaTimeSeconds { get; set; }
+    public bool ShouldSerializeNativeFixedDeltaTimeSeconds() => NativeFixedDeltaTimeSeconds.HasValue;
+    public double DrainWallSeconds() => NativeFixedDeltaTimeSeconds.HasValue
+        ? NativeConstructionCadencePolicy.WallBudget(TailGameTicks,NativeFixedDeltaTimeSeconds.Value) ?? double.NaN
+        : TailGameTicks/60d;
     public double TailAndNextTickEnergyJoules { get; set; }
     public double NativePowerUpperWatts { get; set; }
     public long? DrainStartedAtGameTick { get; set; }
@@ -140,7 +145,9 @@ public sealed class StructuredConstructionControlState
     {
         if (tick < StartedAtGameTick || tick >= WorkDeadlineGameTick || nowUtc == default
             || nowUtc < StartedAtUtc || nowUtc >= WorkDeadlineUtc) return null;
-        var wallTicks = Math.Floor((WorkDeadlineUtc - nowUtc).TotalSeconds * 60d);
+        var wallTicks = NativeFixedDeltaTimeSeconds.HasValue
+            ? Math.Floor((WorkDeadlineUtc-nowUtc).TotalSeconds/Math.Max(1d/60d,NativeFixedDeltaTimeSeconds.Value))
+            : Math.Floor((WorkDeadlineUtc-nowUtc).TotalSeconds*60d);
         if (wallTicks < 1d) return null;
         return (long)Math.Min(WorkDeadlineGameTick - tick, wallTicks);
     }
@@ -148,6 +155,7 @@ public sealed class StructuredConstructionControlState
     public bool RetainsOriginalWindowAndSubmission(StructuredConstructionControlState original) =>
         StartedAtGameTick == original.StartedAtGameTick && StartedAtUtc == original.StartedAtUtc
         && WorkDeadlineGameTick == original.WorkDeadlineGameTick && WorkDeadlineUtc == original.WorkDeadlineUtc
+        && NativeFixedDeltaTimeSeconds == original.NativeFixedDeltaTimeSeconds
         && OriginalDroneEnabled == original.OriginalDroneEnabled
         && (original.NativeCreateActionId is null || NativeCreateActionId == original.NativeCreateActionId)
         && PreexistingEntityIds.SequenceEqual(original.PreexistingEntityIds);
@@ -169,8 +177,12 @@ public sealed class StructuredConstructionControlState
 
     public bool RenewObservationLease(DateTimeOffset nowUtc)
     {
-        if (StopReason is not null || Phase != "working" || nowUtc == default || nowUtc < StartedAtUtc || nowUtc >= WorkDeadlineUtc) return false;
-        ObservationLeaseExpiresAtUtc = nowUtc.AddSeconds(30) < WorkDeadlineUtc ? nowUtc.AddSeconds(30) : WorkDeadlineUtc;
+        var deadline=StopReason is null ? WorkDeadlineUtc
+            : Phase=="stop_draining" && DrainStartedAtUtc.HasValue && Finite(DrainWallSeconds())
+                ? DrainStartedAtUtc.Value.AddSeconds(DrainWallSeconds()) : default;
+        if ((Phase!="working" && (Phase!="stop_draining" || !NativeFixedDeltaTimeSeconds.HasValue))
+            || nowUtc==default || nowUtc<StartedAtUtc || nowUtc>=deadline) return false;
+        ObservationLeaseExpiresAtUtc = nowUtc.AddSeconds(30) < deadline ? nowUtc.AddSeconds(30) : deadline;
         return true;
     }
 
@@ -194,7 +206,7 @@ public sealed class StructuredConstructionControlState
             || TailGameTicks < 1 || TailGameTicks > 7200 || currentGameTick < DrainStartedAtGameTick
             || nowUtc < DrainStartedAtUtc
             || (decimal)currentGameTick.Value >= (decimal)DrainStartedAtGameTick.Value + TailGameTicks
-            || nowUtc.Value >= DrainStartedAtUtc.Value.AddSeconds(TailGameTicks / 60d);
+            || !Finite(DrainWallSeconds()) || nowUtc.Value >= DrainStartedAtUtc.Value.AddSeconds(DrainWallSeconds());
     }
 
     public bool MayRestoreOriginalDroneSetting(bool allObjectsComplete, bool originalOutcomeKnown,
@@ -237,7 +249,10 @@ public sealed class StructuredConstructionControlState
             || string.IsNullOrWhiteSpace(NativeCostHash) || StartedAtGameTick < capturedTick
             || WorkDeadlineGameTick <= StartedAtGameTick || WorkDeadlineGameTick - (decimal)StartedAtGameTick > 3600
             || StartedAtUtc == default || WorkDeadlineUtc <= StartedAtUtc
-            || (WorkDeadlineUtc - StartedAtUtc).TotalSeconds > 60d || ObservationLeaseExpiresAtUtc == default
+            || (WorkDeadlineUtc - StartedAtUtc).TotalSeconds > (NativeFixedDeltaTimeSeconds.HasValue
+                ? NativeConstructionCadencePolicy.WallBudget(3600,NativeFixedDeltaTimeSeconds.Value)??0d : 60d)
+            || NativeFixedDeltaTimeSeconds.HasValue && NativeConstructionCadencePolicy.WallBudget(TailGameTicks,NativeFixedDeltaTimeSeconds.Value) is null
+            || ObservationLeaseExpiresAtUtc == default
             || TailGameTicks < 1 || TailGameTicks > 7200 || !Finite(TailAndNextTickEnergyJoules)
             || !Finite(NativePowerUpperWatts) || PreexistingEntityIds is null || PreexistingEntityIds.Count > 1024
             || (NativeCreateActionId is not null && !Guid.TryParse(NativeCreateActionId, out _))
@@ -254,12 +269,16 @@ public sealed class StructuredConstructionControlState
             throw new InvalidDataException("Invalid finite structured construction control record.");
     }
 
-    public string EvidenceHash() => CanonicalStateHash.Combine("structured-control-evidence-v1", Phase,
+    public string EvidenceHash()
+    {
+        var old=CanonicalStateHash.Combine("structured-control-evidence-v1", Phase,
         Anchor.X, Anchor.Y, Anchor.Z, NativeCostHash, StartedAtGameTick, StartedAtUtc, WorkDeadlineGameTick, WorkDeadlineUtc,
         TailGameTicks, TailAndNextTickEnergyJoules, NativePowerUpperWatts, DrainStartedAtGameTick, DrainStartedAtUtc,
         DispatchDisabled, PhysicalIdleVerified, PhysicalIdleVerifiedAtGameTick, DisabledNativeFactoryPassGameTick,
         BindingLost, OriginalDroneEnabled, NativeCreateActionId, StopReason,
         CanonicalStateHash.Combine("old-entities", PreexistingEntityIds.Cast<object>().ToArray()));
+        return NativeFixedDeltaTimeSeconds.HasValue ? CanonicalStateHash.Combine("structured-control-cadence-v1",old,NativeFixedDeltaTimeSeconds) : old;
+    }
 
     private static bool Finite(double x) => !double.IsNaN(x) && !double.IsInfinity(x) && x >= 0d;
     private static readonly HashSet<string> Phases = new HashSet<string>(StringComparer.Ordinal)

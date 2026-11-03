@@ -197,6 +197,13 @@ internal sealed partial class GameStateReader
                         hit = Physics.SphereCast(new Ray(p + up * .35f, -up), .35f, out info,
                             (float)Spherewright.Bridge.Core.Safety.NativeResumeContactPolicy.MaximumCastDistanceMeters, 1 << 31);
                         snapshot.CastLayerMask = 1 << 31;
+                        // Contact-boundary overlaps can exclude a sphere cast
+                        // beginning in the foot cut. Query from just outside
+                        // that cut; preserve its actual distance and Native
+                        // ground=false, with the same tight finite bound.
+                        if(!hit)hit=Physics.SphereCast(new Ray(p+up*.5f,-up),.35f,out info,
+                            (float)Spherewright.Bridge.Core.Safety.NativeResumeContactPolicy.MaximumCastDistanceMeters,1<<31,
+                            QueryTriggerInteraction.Ignore);
                     }
                     var queried = info.collider;
                     snapshot.CastHit = hit;
@@ -233,9 +240,12 @@ internal sealed partial class GameStateReader
                     var c = hits[i];
                     var sameSupport = c != null && ReferenceEquals(c, _support) && c == _support;
                     var currentTerrain = c is MeshCollider mesh && mesh != null && mesh.sharedMesh != null
-                        && c.gameObject.layer == 9 && _terrain.Count(t => ReferenceEquals(t, c) && t == c) == 1;
+                        && (c.gameObject.layer == 9 || initial && _loadedTerrainSupport is not null && c.gameObject.layer==31)
+                        && _terrain.Count(t => ReferenceEquals(t, c) && t == c) == 1;
+                    var otherOwned=!sameSupport && !currentTerrain && c!=null
+                        && GameStateReader.CurrentOwnedContactOwnerBlocker(player,_terrain,c) is null;
                     if (c == null || !c.enabled || !c.gameObject.activeInHierarchy || c.isTrigger || !Scene(c.gameObject)
-                        || (!sameSupport && !currentTerrain)) all = false;
+                        || (!sameSupport && !currentTerrain && !otherOwned)) all = false;
                     supportHit |= sameSupport; terrainHit |= currentTerrain;
                 }
                 snapshot.AllFootHitsCurrentSupportOrTerrain = all; snapshot.CurrentSupportFootHit = supportHit; snapshot.TerrainFootHit = terrainHit;

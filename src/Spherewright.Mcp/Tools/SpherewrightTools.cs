@@ -435,7 +435,7 @@ public static partial class SpherewrightTools
         int recipeId,
         [Description("For mode=sorter-filter use the inspected root configurationStateHash, NOT stateHash, despite this parameter's name. For mode=storage-capacity use the full stateHash. Follow the documented hash domain for each other mode.")]
         string expectedFactoryStateHash,
-        [Description("production, research, sorter-filter, storage-capacity, logistics-station-storage, logistics-station-belt, logistics-station-charge, ejector-orbit, or enable-mecha-construction-drones. The enable-only mecha mode requires entityId=0, recipeId=0, expectedFactoryStateHash=the fresh player stateHash and all other arguments at defaults. It calls the normal native switch from OFF to ON and can schedule existing ordinary construction/repair; it does not create or instantly build anything. For ejector-orbit use recipeId=0, ejectorOrbitId and the detail ejector.configurationStateHash; leave the other mode parameters at defaults.")]
+        [Description("production, research, sorter-filter, storage-capacity, logistics-station-storage, logistics-station-belt, logistics-station-charge, ejector-orbit, dyson-minimal-receiving-node, or enable-mecha-construction-drones. For the minimal receiving node use one empty local2312 silo, recipeId=0 and expectedFactoryStateHash=silo.minimalReceivingTarget.configurationStateHash; leave other arguments at defaults. It creates one equatorial planned node on an existing pristine Native layer, never delivered points or rockets. The enable-only mecha mode requires entityId=0, recipeId=0, expectedFactoryStateHash=the fresh player stateHash and all other arguments at defaults. It calls the normal native switch from OFF to ON and can schedule existing ordinary construction/repair; it does not create or instantly build anything. For ejector-orbit use recipeId=0, ejectorOrbitId and the detail ejector.configurationStateHash; leave the other mode parameters at defaults.")]
         string mode = BuildingConfigurationModes.Production,
         int techId = 0,
         int filterItemId = 0,
@@ -479,6 +479,11 @@ public static partial class SpherewrightTools
                 StateHashVersion = stateHashVersion,
             };
         var result = await bridgeClient.PrepareConfigureBuildingAsync(sessionId, request, cancellationToken).ConfigureAwait(false);
+        if(mode==BuildingConfigurationModes.MinimalDysonReceivingNode && result.Success
+            && !Spherewright.Bridge.Core.Factory.MinimalDysonTargetPolicy.ConfirmsPreparedEcho(request,result.Value))
+            result=BridgeCallResult<PreparedNormalAction>.Failed(BridgeError.Create(BridgeErrorCodes.BridgeNotReady,
+                "The Plugin did not confirm one existing empty Native receiving layer and a zero-delivery node plan; no token is exposed.",
+                false,"Install a matching cohort and fresh-inspect the silo target evidence."));
         if (mode == BuildingConfigurationModes.StorageCapacity && result.Success
             && (result.Value?.PlannedStorageOperation != storageOperation
                 || result.Value?.PlannedStorageConfiguration is null))

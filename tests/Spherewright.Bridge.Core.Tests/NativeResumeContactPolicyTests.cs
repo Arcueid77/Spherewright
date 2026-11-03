@@ -57,6 +57,15 @@ public sealed class NativeResumeContactPolicyTests
         var p=new NativeResumeContactPolicy(100,Now);Assert.Null(p.PreflightBlocker(Good()));
         Assert.False(p.Retired);Assert.Equal(100,p.LastObservedGameTick);
     }
+    [Fact]
+    public void LoadedTerrainOwnedOverlapStillNeedsTheIndependentCastAndNeverBecomesNativeGround()
+    {
+        var s=LoadedTerrain();s.FootOverlapCount=2;
+        Assert.True(NativeResumeContactPolicy.LoadedTerrainCastProved(s));Assert.False(s.ActualGroundSphereHit);
+        s.CastHit=false;Assert.False(NativeResumeContactPolicy.LoadedTerrainCastProved(s));
+        s.CastHit=true;s.AllFootHitsCurrentSupportOrTerrain=false;
+        Assert.False(NativeResumeContactPolicy.LoadedTerrainCastProved(s));
+    }
     [Theory]
     [InlineData("mask")] [InlineData("layer")] [InlineData("normal")] [InlineData("gap")]
     [InlineData("owner")] [InlineData("reference")] [InlineData("mesh")] [InlineData("native_ground")]
@@ -70,7 +79,7 @@ public sealed class NativeResumeContactPolicyTests
             case "normal":s.NormalDotUp=.49f;break;case "gap":s.CastDistance=.251f;break;
             case "owner":s.OwnerType="foreign_terrain";break;case "reference":s.CurrentPoolReference=null;break;
             case "mesh":s.Shape="box";break;case "native_ground":s.ActualGroundSphereHit=true;break;
-            case "foot":s.FootOverlapCount=1;break;case "live_mark":s.NativeLiveFlag=true;break;
+            case "foot":s.FootOverlapCount=257;break;case "live_mark":s.NativeLiveFlag=true;break;
             case "trigger":s.IsTrigger=true;break;case "pose":s.ColliderChain=false;break;
         }
         Assert.False(NativeResumeContactPolicy.LoadedTerrainCastProved(s));

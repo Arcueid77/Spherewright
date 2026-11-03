@@ -67,6 +67,7 @@ internal sealed partial class GameStateReader
         }
         result.StarSiloCoverageComplete = complete;
         if (complete) result.StarSiloCount = count;
+        result.MinimalReceivingTarget = CaptureMinimalDysonTarget(snapshot, result, sphere);
         return result;
     }
 
@@ -130,4 +131,38 @@ internal sealed partial class GameStateReader
     }
 
     private static bool SiloFinite(double value) => !double.IsNaN(value) && !double.IsInfinity(value);
+
+    private static MinimalDysonTargetSnapshot? CaptureMinimalDysonTarget(FactoryEntitySnapshot entity,
+        SiloStateSnapshot silo, DysonSphere? sphere)
+    {
+        // Existing Native objects only. Do not create a sphere/layer or load
+        // renderer assets to manufacture a preparation witness.
+        if (sphere is null || !silo.NodeCoverageComplete || silo.Nodes.Count!=0 || !silo.RocketCoverageComplete
+            || silo.InFlightRocketCount!=0 || !silo.StarSiloCoverageComplete || silo.StarSiloCount!=1
+            || silo.RocketCount!=0 || silo.RocketIncPoints!=0 || sphere.layersIdBased is not { Length:11 } layers
+            || layers[1] is not { } layer || layer.id!=1 || !ReferenceEquals(layer.dysonSphere,sphere)
+            || !ReferenceEquals(layer.gameData,GameMain.data) || !ReferenceEquals(layer.starData,sphere.starData)
+            || !SiloFinite(layer.orbitRadius) || layer.orbitRadius<=0 || GameMain.history is null
+            || !GameMain.history.TechUnlocked(1522) || !SiloFinite(GameMain.history.dysonNodeLatitude)
+            || GameMain.history.dysonNodeLatitude<0 || sphere.modelRenderer is null
+            || DysonSphereSegmentRenderer.nodeProtoCount<=0 || DysonSphereSegmentRenderer.GetNodeProtoMesh(0)==null
+            || DysonSphereSegmentRenderer.GetNodeProtoMaterial(0)==null) return null;
+        for(var i=1;i<layers.Length;i++)
+        {
+            var l=layers[i];if(l is null)continue;
+            if(l.id!=i || !ReferenceEquals(l.dysonSphere,sphere) || !ReferenceEquals(l.gameData,GameMain.data)
+                || !ReferenceEquals(l.starData,sphere.starData) || l.nodeCursor!=1 || l.nodeRecycleCursor!=0
+                || l.frameCursor!=1 || l.frameRecycleCursor!=0 || l.shellCursor!=1 || l.shellRecycleCursor!=0
+                || l.nodePool is null || l.nodePool.Length<2 || l.framePool is null || l.framePool.Length<2
+                || l.shellPool is null || l.shellPool.Length<2) return null;
+        }
+        var target=new MinimalDysonTargetSnapshot { StarId=silo.StarId,LayerId=1,Radius=layer.orbitRadius,
+            NodePrototypeId=0,ExactExistingLayerBinding=true,CompleteEmptyStructureCoverage=true,
+            NativePrototypeAlreadyLoaded=true,NativeLatitudeAllowsEquator=true };
+        // The enclosing entity receives silo after this capture returns.
+        var old=entity.Silo;entity.Silo=silo;
+        try {target.ConfigurationStateHash=Spherewright.Bridge.Core.Factory.MinimalDysonTargetPolicy.Hash(entity,target);}
+        finally {entity.Silo=old;}
+        return target;
+    }
 }
