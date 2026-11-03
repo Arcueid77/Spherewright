@@ -33,7 +33,8 @@ internal sealed partial class NormalGameActionCoordinator
         _sessions.RecordRemoteResumeTerrain(adoption, terrain, false);
         var terrainInitialization = ReferenceEquals(_terrainInitializationAdoption, adoption)
             && BoundedSavedTerrainInitialization(adoption, terrain);
-        if (blocker is not null && terrain.FootOverlapComplete == true && terrain.FootOverlapCount == 0
+        if (blocker is not null && (terrain.FootOverlapComplete == true && terrain.FootOverlapCount == 0
+                || NativeLoadedSolidContactRoutePolicy.MayProbe(terrain))
             && terrain.GuideComplete == true && NativeTerrainObservationPolicy.Blocker(terrain, 31) is null && !terrainInitialization)
             return ArmVerifiedRemoteNaturalContact(adoption, journey, scene, facts, playerState, terrain);
         if (blocker is not null && !terrainInitialization) return blocker;

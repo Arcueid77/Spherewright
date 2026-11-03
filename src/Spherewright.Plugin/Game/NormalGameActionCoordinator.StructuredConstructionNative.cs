@@ -30,13 +30,13 @@ internal sealed partial class NormalGameActionCoordinator
         && ReferenceEquals(GameMain.data.localLoadedPlanetFactory, b.Factory)
         && b.Player.planetId == action.PlanetId && b.Factory.planetId == action.PlanetId && b.Module.id == 0;
 
-    private bool ConstructionHoldOwned(ActionRecord action)
+    private bool ConstructionHoldOwned(ActionRecord action,bool modeAlreadyProved=false)
     {
         if (!ConstructionReferencesMatch(action)) return false;
         var player = action.ConstructionBinding!.Player;
         var order = player.currentOrder;
-        return NativeWalkModeIsBounded(player, stationary: true, action.Plan.VoyagerLocalWalkScene,
-                finiteWaterCostWithNativePause: true, allowBudgetedRecharge: true) && player.speed <= .1f
+        return (modeAlreadyProved || NativeWalkModeIsBounded(player, stationary: true, action.Plan.VoyagerLocalWalkScene,
+                finiteWaterCostWithNativePause: true, allowBudgetedRecharge: true)) && player.speed <= .1f
             && Vector3.Distance(player.position, ToVector(action.BlueprintBuild!.ConstructionControl!.Anchor))
                 <= (action.Plan.ConstructionReserve?.TallStationTarget == true
                     ? NativeConstructionDroneReservePolicy.MaximumTallStationAnchorDisplacementMeters

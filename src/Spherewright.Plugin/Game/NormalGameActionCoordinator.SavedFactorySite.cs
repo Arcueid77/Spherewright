@@ -34,7 +34,8 @@ internal sealed partial class NormalGameActionCoordinator
             var control = build.ConstructionControl;
             var tailCertified=build.SavedTailCompletion?.Matches(build,GameMain.gameTick)==true;
             var currentTail=HasCurrentSavedFactoryTailBuild(player,journeyId,build);
-            var complete = build.Phase == "completed" || tailCertified || currentTail;
+            var complete = build.Phase == "completed" || tailCertified
+                || currentTail && build.Objects.All(o=>o.State==BlueprintObjectStates.Completed);
             var legacyTower = binding is not null && build.Site.Objects.Count == 1 && build.Site.Objects[0].ItemId == 2104
                 && HasSavedPassiveTowerReceipt(build, binding.JourneyId, GameMain.gameTick);
             if (!Require("saved_factory_site_paid_idle_receipts", binding is not null && control is not null

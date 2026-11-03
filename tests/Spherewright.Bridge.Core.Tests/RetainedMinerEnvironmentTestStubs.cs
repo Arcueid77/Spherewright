@@ -140,6 +140,7 @@ internal sealed partial class NormalGameActionCoordinator
     private bool HasCurrentSavedFactoryTail(Player p,string? journeyId)=>false;
     private bool HasCurrentSavedFactoryTailBuild(Player p,string? journeyId,BlueprintBuildState build)=>false;
     internal static bool SavedTowerReceiptForTest(BlueprintBuildState b, string journeyId, long tick) => HasSavedPassiveTowerReceipt(b, journeyId, tick);
+    internal static bool SavedPaidWorkReceiptForTest(BlueprintBuildState b,string journeyId,long tick)=>HasSavedPaidWorkReceipt(b,journeyId,tick);
     private static bool StructuredEntityMatches(PlanetFactory factory, int id, BlueprintBuildState build, BlueprintSiteObject spec,
         bool allowCurrentSorterFilter = false)
         => factory.TestGeometryMatches && id > 0 && id < factory.entityCursor && factory.entityPool[id].id == id

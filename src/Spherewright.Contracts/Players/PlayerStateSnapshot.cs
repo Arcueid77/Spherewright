@@ -149,6 +149,8 @@ public sealed class ConstructionDroneSnapshot
     public int PendingBuildTargets { get; set; }
 
     public int PendingRepairTargets { get; set; }
+    public bool? ActiveObservationsComplete {get;set;}
+    public List<ActiveConstructionDroneObservation> ActiveObservations {get;set;}=new();
 
     // Copied Native observations only. Null is unavailable, never zero or permission.
     public double? NativeSpeedMetersPerSecond { get; set; }
@@ -157,4 +159,17 @@ public sealed class ConstructionDroneSnapshot
     // The Native per-tick repair debit; do not apply the 60-tick rate twice.
     public double? NativeRepairEnergyPerTickJoules { get; set; }
     public int? NativePendingJumpTicks { get; set; }
+}
+
+public sealed class ActiveConstructionDroneObservation
+{
+    public int DroneId {get;set;}
+    public int CraftId {get;set;}
+    public int Stage {get;set;}
+    public float Progress {get;set;}
+    public int TargetObjectId {get;set;}
+    public List<int> NextTargetObjectIds {get;set;}=new();
+    public Spherewright.Contracts.Celestial.UniversalPositionSnapshot Position {get;set;}=new();
+    public Vector3Snapshot TargetPosition {get;set;}=new();
+    public Vector3Snapshot InitialVector {get;set;}=new();
 }

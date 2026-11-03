@@ -112,6 +112,16 @@ internal sealed partial class NormalGameActionCoordinator
             || !idle || !ConstructionFactoryHasOnlyOwnedPending(factory, build))
             return Stale("Structured construction requires the exact idle owned remote player/factory, original journey and a fresh native before-construction tick hook.");
         var module = player.mecha.constructionModule;
+        if(!ConstructionStandstillProved(player))
+        {
+            ConstructionGroundSettled(player,out var height,out var normal);
+            var evidence=new NativeResumeDecisionEvidence("structured_construction_standstill",GameMain.gameTick,DateTimeOffset.UtcNow,true);
+            evidence.Require("construction_actual_support_and_stable501_frames",false);
+            evidence.Number("construction_support_height_from_actor",height);evidence.Number("construction_support_normal_dot_up",normal);
+            evidence.Number("construction_stable_physics_frames",_constructionStandstillFrames);
+            var error=Stale("The Native rigid body/support plane has not settled; no create/debit occurred. Fresh-prepare after natural physics.");
+            error.NativeFirstFailure=evidence.Failure("native_construction_anchor_not_settled");return error;
+        }
         if (build.ConstructionControl is { } retainedControl
             && !retainedControl.NativeDrainBarrierPassed(GameMain.gameTick, ConstructionOwnPrelaunchCacheClear(factory, build)))
             return Stale("The original disabled dispatch has not proved a later native factory pass and a drained owned prelaunch cache.");
@@ -320,12 +330,27 @@ internal sealed partial class NormalGameActionCoordinator
 
     public void UpdateStructuredConstructionPrePlayerTickOnMainThread()
     {
+        ObserveConstructionStandstill();
         foreach (var action in _actions.ActiveValues.Where(a => !a.Terminal && IsStructuredConstruction(a.Plan)
                      && a.Plan.ActionKind != NormalActionKinds.CancelBlueprintBuild).ToArray())
         {
-            if (ConstructionReferencesMatch(action) && NativeWalkModeIsBounded(action.ConstructionBinding!.Player, stationary: true, action.Plan.VoyagerLocalWalkScene,
-                    finiteWaterCostWithNativePause: true, allowBudgetedRecharge: true)
-                && ConstructionHoldOwned(action)) continue;
+            var exact=ConstructionReferencesMatch(action);
+            var modeBlocker=exact?NativeWalkModeBlocker(action.ConstructionBinding!.Player,true,action.Plan.VoyagerLocalWalkScene,true,false,true):"construction_reference_lost";
+            var hold=exact && modeBlocker is null && ConstructionHoldOwned(action,true);
+            if(hold)continue;
+            var e=new NativeResumeDecisionEvidence("construction_native_pre_player",GameMain.gameTick,DateTimeOffset.UtcNow,true);
+            e.Require("construction_exact_binding",exact);
+            e.Require(modeBlocker is null?"construction_native_mode":"construction_mode_"+modeBlocker,modeBlocker is null);
+            e.Require("construction_owned_fixed_anchor_order",hold);
+            if(exact)
+            {
+                var p=action.ConstructionBinding!.Player;
+                e.Number("construction_anchor_displacement_m",Vector3.Distance(p.position,ToVector(action.BlueprintBuild!.ConstructionControl!.Anchor)));
+                e.Number("construction_core_j",p.mecha.coreEnergy);e.Number("construction_speed_mps",p.speed);
+                e.Number("construction_vertical_mps",p.controller.vertSpeed);e.Number("construction_walk_rts_mps",p.controller.actionWalk.rtsVelocity.magnitude);
+                e.Observe("construction_cached_walk_grounded",p.controller.actionWalk.isGrounded);
+            }
+            action.StructuredConstructionFirstFailure??=e.Failure("construction_pre_player_stationary_binding_lost");
             // Catch an already scheduled jump before Player.GameTick can debit
             // it. Never clear user input/Native jump or claim that an external
             // takeover's movement costs still have this certificate.

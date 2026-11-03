@@ -294,6 +294,7 @@ internal sealed partial class GameStateReader
             }
             var pendingJump = player.controller?.actionWalk?.jumpDelayTick;
             snapshot.NativePendingJumpTicks = pendingJump.HasValue && pendingJump.Value >= 0 ? pendingJump : null;
+            CaptureActiveConstructionDroneObservations(snapshot,player);
         }
         catch
         {
@@ -303,6 +304,27 @@ internal sealed partial class GameStateReader
             snapshot.NativeRepairEnergyPerTickJoules = null;
             snapshot.NativePendingJumpTicks = null;
         }
+    }
+
+    private static void CaptureActiveConstructionDroneObservations(ConstructionDroneSnapshot snapshot,Player p)
+    {
+        snapshot.ActiveObservationsComplete=false;snapshot.ActiveObservations.Clear();
+        var f=p.factory;var pool=f?.constructionSystem?.drones;
+        if(pool?.buffer is null || pool.cursor<1 || pool.cursor>4096 || pool.cursor>pool.buffer.Length
+            || f!.craftPool is null || f.craftCursor<1 || f.craftCursor>f.craftPool.Length)return;
+        for(var i=1;i<pool.cursor;i++)
+        {
+            var d=pool.buffer[i];if(d.id!=i || d.owner!=0 || d.stage==0)continue;
+            if(d.stage<1 || d.stage>4 || d.craftId<=0 || d.craftId>=f.craftCursor || f.craftPool[d.craftId].id!=d.craftId
+                || snapshot.ActiveObservations.Count>=32 || float.IsNaN(d.progress) || float.IsInfinity(d.progress))return;
+            var pos=f.craftPool[d.craftId].pos;
+            if(double.IsNaN(pos.x) || double.IsNaN(pos.y) || double.IsNaN(pos.z)
+                || double.IsInfinity(pos.x) || double.IsInfinity(pos.y) || double.IsInfinity(pos.z))return;
+            snapshot.ActiveObservations.Add(new ActiveConstructionDroneObservation {DroneId=i,CraftId=d.craftId,Stage=d.stage,Progress=d.progress,
+                TargetObjectId=d.targetObjectId,NextTargetObjectIds=new(){d.nextTarget1ObjectId,d.nextTarget2ObjectId,d.nextTarget3ObjectId},
+                Position=new(){X=pos.x,Y=pos.y,Z=pos.z},TargetPosition=CaptureVector(d.targetPos),InitialVector=CaptureVector(d.initialVector)});
+        }
+        snapshot.ActiveObservationsComplete=snapshot.ActiveObservations.Count==snapshot.Working;
     }
 
     private static double? ConstructionNonnegativeObservation(double? value) => value.HasValue

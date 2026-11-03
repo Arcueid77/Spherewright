@@ -13,6 +13,26 @@ namespace Spherewright.Bridge.Core.Tests;
 public sealed class SavedFactorySiteTests
 {
     [Fact]
+    public void PaidPendingSourceCanGainLaterNativeCompletionWithoutChangingItsUnknownControlOrDebit()
+    {
+        using var f=new Fixture(true,unknownTail:true,workFailure:true);
+        Assert.True(f.Store().TryRead(out var rows));var b=rows.Single(x=>x.Phase=="outcome_unknown");
+        var original=Newtonsoft.Json.JsonConvert.SerializeObject(b.ConstructionControl);
+        Assert.True(NormalGameActionCoordinator.SavedPaidWorkReceiptForTest(b,f.Journey,120));
+        Assert.NotNull(f.SavedLandingGuard());
+        // Substitute only Native's already-paid prebuild->entity observation.
+        b.ConfirmCompletion(0,3,121);b.LastEvidenceGameTick=123;b.Generation++;
+        f.Factory.prebuildPool[1]=new();f.Factory.prebuildCount=0;f.Factory.entityPool[3]=new(){id=3,protoId=2011,rot=new(0,0,0,1)};
+        f.Factory.entityCount=3;f.Factory.entityCursor=4;
+        f.Factory.TestPorts.Clear();f.Connect(1,0,3,0);f.Connect(3,1,2,0);
+        b.SavedTailCompletion=new(){OriginalActionId=b.ActionId!,OriginalControlHash=b.ConstructionControl!.EvidenceHash(),BuildPlanHash=b.PlanHash,
+            SourceGameTick=120,NativeFactoryPassGameTick=122,PhysicalIdleGameTick=123,SourceFingerprint="sha256:"+new string('c',64)};
+        GameMain.gameTick=130;Assert.True(f.Store().TryPut(b));Assert.Null(f.SavedLandingGuard());
+        Assert.True(f.Store().TryRead(out var reopened));var saved=reopened.Single(x=>x.BuildId==b.BuildId);
+        Assert.Equal("outcome_unknown",saved.Phase);Assert.Equal(original,Newtonsoft.Json.JsonConvert.SerializeObject(saved.ConstructionControl));
+        Assert.Equal(1,saved.Objects[0].InventoryBefore);Assert.Equal(0,saved.Objects[0].InventoryAfter);
+    }
+    [Fact]
     public void LaterNativeIdleCertificateAdmitsPaidObjectsWhileOriginalUnknownControlRemainsByteIdentical()
     {
         using var f=new Fixture(false,unknownTail:true);
@@ -177,7 +197,7 @@ public sealed class SavedFactorySiteTests
         internal string? Guard() => new NormalGameActionCoordinator(Store(), sessions).MinerEnvironmentForTest(Player, Journey);
         internal string? LandingGuard() => new NormalGameActionCoordinator(Store(), sessions).CompletedLandingEnvironmentForTest(Player, Journey);
         internal string? SavedLandingGuard() => new NormalGameActionCoordinator(Store(), sessions).SavedLandingRecoveryEnvironmentForTest(Player, Journey);
-        internal Fixture(bool pending, bool miningOnly = false,bool unknownTail=false)
+        internal Fixture(bool pending, bool miningOnly = false,bool unknownTail=false,bool workFailure=false)
         {
             sourceItem = miningOnly ? 2301 : 2304; destinationItem = miningOnly ? 2203 : 2101;
             GameMain.gameTick = 120; GameMain.history = new(); Player.factory = Factory; GameMain.SavedFactoryTestPlayer = Player;
@@ -188,7 +208,7 @@ public sealed class SavedFactorySiteTests
             Factory.entityPool[2] = new() { id = 2, protoId = destinationItem, powerNodeId = miningOnly ? 1 : 0, rot = new(0, 0, 0, 1) };
             if (pending) Factory.prebuildPool[1] = new() { id = 1 };
             else Factory.entityPool[3] = new() { id = 3, protoId = 2011, rot = new(0, 0, 0, 1) };
-            Add(sourceItem, 1, false); Add(destinationItem, 2, false); Add(2011, 3, pending,unknownTail);
+            Add(sourceItem, 1, false); Add(destinationItem, 2, false); Add(2011, 3, pending,unknownTail,workFailure);
             Player.mecha.constructionModule.droneEnabled = !pending;
             Connect(1, 0, pending ? -1 : 3, 0); Connect(pending ? -1 : 3, 1, 2, 0);
         }
@@ -206,7 +226,7 @@ public sealed class SavedFactorySiteTests
             s.storage[1] = new() { itemId = 1301, count = 12, max = 100, remoteOrder = -10, remoteLogic = ELogisticStorage.Demand };
             Add(2104, 4, false);
         }
-        private void Add(int item, int entity, bool pending,bool unknownTail=false)
+        private void Add(int item, int entity, bool pending,bool unknownTail=false,bool workFailure=false)
         {
             var site = new BlueprintSiteSnapshot { SessionId = "synthetic-session", PlanetId = 402, CapturedAtGameTick = 100,
                 BlueprintHash = "synthetic-approved-factory", NativeCheckPerformed = true, NativeCheckPassed = true,
@@ -232,7 +252,7 @@ public sealed class SavedFactorySiteTests
             state.Begin("synthetic-session", action, 1, 100); state.BeforeStructuredSubmission(101, 1, "before");
             state.ConfirmStructuredSubmission([1], 0, "after");
             if (!pending) state.ConfirmCompletion(0, entity, 110);
-            c.RequestStop(unknownTail?"construction_complete_draining":"explicit_structured_cancellation", 110, c.StartedAtUtc.AddSeconds(1), false); c.DispatchDisabled = true;
+            c.RequestStop(workFailure?"construction_pre_player_stationary_binding_lost":unknownTail?"construction_complete_draining":"explicit_structured_cancellation", 110, c.StartedAtUtc.AddSeconds(1), workFailure); c.DispatchDisabled = true;
             if(unknownTail)
             {c.Phase="quarantined";state.LastEvidenceGameTick=112;state.Stop("outcome_unknown");Assert.True(Store().TryPut(state));return;}
             Assert.True(c.RecordDisabledNativeFactoryPass(111)); Assert.True(c.TryMarkPhysicalIdle(112, true, true));

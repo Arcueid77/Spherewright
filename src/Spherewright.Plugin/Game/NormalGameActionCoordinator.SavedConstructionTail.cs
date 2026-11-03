@@ -13,7 +13,8 @@ internal sealed partial class NormalGameActionCoordinator
     private bool HasCurrentSavedFactoryTailBuild(Player p,string? journeyId,BlueprintBuildState build)
         =>_savedConstructionTail is {GenericPaidSite:true,Sealed:false} t && t.Build.BuildId==build.BuildId
             && HasCurrentSavedFactoryTail(p,journeyId) && journeyId is not null
-            && HasSavedStoppedPaidBatchReceipt(build,journeyId,GameMain.gameTick);
+            && (HasSavedStoppedPaidBatchReceipt(build,journeyId,GameMain.gameTick)
+                || t.AllowExistingPaidWork && HasSavedPaidWorkReceipt(build,journeyId,GameMain.gameTick));
 
     // This certificate accepts only the already-built, unconfigured passive
     // tower next to the sealed unpowered miner. It never authorizes a create,
@@ -75,15 +76,17 @@ internal sealed partial class NormalGameActionCoordinator
             && adoption.Evidence.CompletedSavedLandingAdmissionUsed && adoption.Authorization is not null
             && !p.mecha.constructionModule.droneEnabled && _blueprints.TryRead(out var genericSaved))
         {
-            var candidates=genericSaved.Where(b=>b.Site.PlanetId==f.planetId
-                && HasSavedStoppedPaidBatchReceipt(b,journeyId,GameMain.gameTick)).ToArray();
+            var candidates=genericSaved.Where(b=>b.Site.PlanetId==f.planetId && b.SavedTailCompletion?.Matches(b,GameMain.gameTick)!=true
+                && (HasSavedStoppedPaidBatchReceipt(b,journeyId,GameMain.gameTick)
+                    || HasSavedPaidWorkReceipt(b,journeyId,GameMain.gameTick))).ToArray();
             if(candidates.Length==1)generic=CloneBlueprintState(candidates[0]);
         }
         if (!_sessions.ExactRemoteResumeLoadPreflight(adoption) || adoption.Authorization is null
             || adoption.Evidence.ReturnOnlyContinuation || adoption.Evidence.CompletedRemoteContinuation
             || (generic??RetainedUnpoweredRecoveryIls(p, f, journeyId, adoption.CurrentDecisionEvidence)) is not { } build
             || !SavedConstructionTail.TryPower(p, out var power)) return "remote_resume_saved_drone_tail_source_unproved";
-        var tail = new SavedConstructionTail(adoption, f, build, ids, power) {GenericPaidSite=generic is not null};
+        var tail = new SavedConstructionTail(adoption, f, build, ids, power) {GenericPaidSite=generic is not null,
+            AllowExistingPaidWork=generic is not null && HasSavedPaidWorkReceipt(generic,journeyId,GameMain.gameTick)};
         _savedConstructionTail = tail;
         if (!SavedConstructionTailMatches(p, journeyId)) return "remote_resume_saved_drone_tail_motion_unproved";
         if(tail.GenericPaidSite && (!_blueprints.TryRead(out var allSaved)
@@ -116,17 +119,32 @@ internal sealed partial class NormalGameActionCoordinator
         foreach (var id in ids)
         {
             var drone = t.Factory.constructionSystem.drones.buffer[id];
-            if (drone.stage != 4 || new[] { drone.targetObjectId, drone.nextTarget1ObjectId, drone.nextTarget2ObjectId, drone.nextTarget3ObjectId }.Any(n => n != 0)) return false;
+            var targets=new[] {drone.targetObjectId,drone.nextTarget1ObjectId,drone.nextTarget2ObjectId,drone.nextTarget3ObjectId};
+            var paid=t.Build.Objects.Select(o=>-o.PrebuildId.GetValueOrDefault()).Where(n=>n<0).ToHashSet();
+            if(t.AllowExistingPaidWork)
+            {
+                if(!NativeSavedPaidDroneTargetPolicy.Proved(drone.stage,drone.targetObjectId,targets.Skip(1).ToArray(),paid))return false;
+            }
+            else if(drone.stage!=4 || targets.Any(n=>n!=0))return false;
             var pos = t.Factory.craftPool[drone.craftId].pos;
+            var target=drone.stage==4?live:drone.targetPos;
             var motion = new NativeConstructionDroneMotionFacts { Stage = drone.stage, Progress = drone.progress,
                 SpeedMetersPerSecond = GameMain.history.constructionDroneSpeed, Initial = ConstructionVector(drone.initialVector),
-                Target = ConstructionVector(live), Eject = ConstructionVector(live),
+                Target = ConstructionVector(target), Eject = ConstructionVector(live),
                 Position = new Spherewright.Contracts.Celestial.UniversalPositionSnapshot { X = pos.x, Y = pos.y, Z = pos.z } };
             if (!t.AnchorHeld)
             {
                 var next=NativeConstructionDroneReservePolicy.PredictCopiedOrdinaryStep(motion);
                 if (next is null || Vector3.Distance((Vector3)pos,t.Eject)>NativeSavedConstructionTailPolicy.MaximumDistanceMeters
                     || Vector3.Distance(new Vector3((float)next.X,(float)next.Y,(float)next.Z),t.Eject)>NativeSavedConstructionTailPolicy.MaximumDistanceMeters) return false;
+            }
+            else if(t.AllowExistingPaidWork && drone.stage!=4)
+            {
+                var next=NativeConstructionDroneReservePolicy.PredictCopiedOrdinaryStep(motion);
+                if(next is null || !NativeConstructionDroneReservePolicy.CopiedDroneStepPreservesEnvelope(drone.stage,
+                    GameMain.history.constructionDroneSpeed,Vector3.Distance(p.position,t.Anchor),Vector3.Distance((Vector3)pos,t.Eject),
+                    Vector3.Distance(target,t.Eject),Vector3.Distance(new Vector3((float)next.X,(float)next.Y,(float)next.Z),t.Eject),
+                    NativeConstructionDroneReservePolicy.CopiedStepWouldNativeRecycle(motion),Vector3.Distance(live,t.Eject)))return false;
             }
             else if (!NativeSavedConstructionTailPolicy.CopiedReturnStepProved(motion, t.Anchor.magnitude,
                 Vector3.Distance(p.position, t.Anchor), Vector3.Distance(live, t.Eject), ConstructionVector(t.Eject))) return false;
@@ -141,6 +159,12 @@ internal sealed partial class NormalGameActionCoordinator
             || !world.factories.Take(world.factoryCount).Any(f => ReferenceEquals(f, t.Factory))
             || !SavedConstructionTailMatches(t.Adoption.Player, t.Build.StructuredConstruction!.JourneyId)) return;
         if (GameMain.gameTick > t.Adoption.Evidence.SourceGameTick) t.NativeFactoryPass = GameMain.gameTick;
+        if(t.AllowExistingPaidWork)
+        {
+            var generation=t.Build.Generation;
+            if(ReconcileStructuredConstructionState(t.Build).Count!=0)return;
+            if(t.Build.Generation!=generation && !_blueprints.TryPut(t.Build))return;
+        }
         if (!t.AnchorHeld && t.LastPosePass!=GameMain.gameTick)
         {
             var p=t.Adoption.Player;
@@ -218,6 +242,7 @@ internal sealed partial class NormalGameActionCoordinator
         internal readonly DateTimeOffset StartedUtc = DateTimeOffset.UtcNow;
         internal long? NativeFactoryPass; internal bool Sealed;
         internal bool GenericPaidSite;
+        internal bool AllowExistingPaidWork;
         internal readonly double WallSeconds=NativeConstructionCadencePolicy.WallBudget(NativeSavedConstructionTailPolicy.MaximumGameTicks,Time.fixedDeltaTime)??double.NaN;
         internal SavedConstructionTail(VoyagerRemoteResumeAdoption a, PlanetFactory f, BlueprintBuildState b, List<int> ids, double power)
         { Adoption=a; Factory=f; Build=b; DroneIds=new HashSet<int>(ids); Power=power; SourceAnchor=Anchor=a.Player.position; Eject=Anchor.normalized*(Anchor.magnitude+2.8f); }
