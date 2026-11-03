@@ -1,4 +1,5 @@
 using BepInEx.Logging;
+using Spherewright.Bridge.Core.Safety;
 using Spherewright.Contracts.Actions;
 using Spherewright.Contracts.Celestial;
 using Spherewright.Contracts.Sessions;
@@ -15,6 +16,26 @@ namespace Spherewright.Bridge.Core.Tests;
 [Collection("Owned resume native substitutes")]
 public sealed class FlightStartCoordinatorIntegrationTests
 {
+    [Fact]
+    public void LargeConfirmedTaskProjectionDoesNotReplaceOriginalJourneyOrReturnControllerLimit()
+    {
+        using var f=new Fixture(returning:true);var original=f.Store.VoyagerJourney!;
+        var maximum=original.MaximumGameTicks;var reserve=original.ReturnReserveGameTicks;
+        var deadline=original.DeadlineUtc;var spent=original.SpentGameTicks;
+        var elapsed=GameMain.gameTick-original.LastLandedGameTick!.Value;
+        var budget=f.Action.Plan.VoyagerBudget!;
+        budget.ProtectedRemainingJourneyGameTicks=1128000;
+        budget.MaximumFlightGameTicks=VoyagerReturnHorizonProjection.PlanTicks(1128000,reserve)!.Value;
+        budget.OutboundMaximumGameTicks=reserve;
+        f.Coordinator.StartVoyagerForTest(f.Action);
+        Assert.Equal(1,f.Coordinator.NativeFlightEntries);
+        Assert.Equal(maximum,f.Store.VoyagerJourney!.MaximumGameTicks);
+        Assert.Equal(reserve,f.Store.VoyagerJourney.ReturnReserveGameTicks);
+        Assert.Equal(deadline,f.Store.VoyagerJourney.DeadlineUtc);
+        Assert.Equal(spent+elapsed,f.Store.VoyagerJourney.SpentGameTicks);
+        Assert.Equal(GameMain.gameTick+reserve,f.Action.VoyagerDeadlineGameTick);
+    }
+
     [Theory]
     [InlineData(false)]
     [InlineData(true)]

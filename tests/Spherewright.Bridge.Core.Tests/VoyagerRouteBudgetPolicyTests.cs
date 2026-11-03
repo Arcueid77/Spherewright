@@ -554,6 +554,31 @@ public sealed class VoyagerRouteBudgetPolicyTests
         Assert.False(returning.Executable);
     }
 
+    [Fact]
+    public void CapturedExtendedTaskRemainderAllocatesOnlyItsOriginalSingleReturnLegWithoutRefund()
+    {
+        var input=ReturnFacts();var request=ReturnRequest();
+        // Sanitized rejected preview with rounded relative ledger values, not a fabricated green
+        // Native response: the old policy rejected the task horizon itself.
+        const long original=108000,addition=1080000,spent=60000,remaining=1128000,leg=54000;
+        Assert.Equal(remaining,original+addition-spent);
+        input.ReturnLegMaximumGameTicks=leg;input.RemainingJourneyGameTicks=remaining;
+        var oldCut=VoyagerRouteBudgetPolicy.Evaluate(input,request);
+        Assert.Contains(oldCut.Blockers,b=>b.Code=="return_journey_reserve_invalid");
+        input.ProtectedRemainingJourneyGameTicks=remaining;
+        input.RemainingJourneyGameTicks=VoyagerReturnHorizonProjection.PlanTicks(remaining,leg)!.Value;
+        var result=VoyagerRouteBudgetPolicy.Evaluate(input,request);
+        Assert.True(result.BudgetSufficient);Assert.Equal(leg,result.MaximumFlightGameTicks);
+        Assert.Equal(leg,result.OutboundMaximumGameTicks);Assert.Equal(remaining,result.ProtectedRemainingJourneyGameTicks);
+        Assert.Equal(input.LockedReturnEnergyFloorJoules,result.RequiredEnergyJoules);
+        Assert.Equal(2,result.RequiredWarpers);Assert.Equal(remaining,original+addition-spent);
+        var hash=result.RouteStateHash;input.ProtectedRemainingJourneyGameTicks--;
+        Assert.NotEqual(hash,VoyagerRouteBudgetPolicy.Evaluate(input,request).RouteStateHash);
+        input.ProtectedRemainingJourneyGameTicks=leg-1;
+        Assert.Contains(VoyagerRouteBudgetPolicy.Evaluate(input,request).Blockers,b=>b.Code=="return_journey_reserve_invalid");
+        Assert.Null(VoyagerReturnHorizonProjection.PlanTicks(remaining,108001));
+    }
+
     [Theory]
     [InlineData("not-verified")]
     [InlineData("expired-reader-proof")]

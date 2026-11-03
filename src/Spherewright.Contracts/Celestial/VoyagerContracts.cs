@@ -106,6 +106,9 @@ public sealed class PreviewVoyagerRouteRequest
 
 public sealed class VoyagerRouteBudgetSnapshot
 {
+    // Actual remaining confirmed task budget. MaximumFlightGameTicks on the
+    // return preview is only its bounded flight allocation, not a new grant.
+    public long? ProtectedRemainingJourneyGameTicks { get; set; }
     public DateTimeOffset? OriginalJourneyDeadlineUtc { get; set; }
     public DateTimeOffset? EffectiveJourneyDeadlineUtc { get; set; }
     public string Phase { get; set; } = "voyager_route_budget_preview_v1";

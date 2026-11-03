@@ -45,6 +45,7 @@ public sealed class VoyagerRouteBudgetInput
     public string ReturnJourneyId { get; set; } = string.Empty;
     public long ReturnLegMaximumGameTicks { get; set; }
     public long RemainingJourneyGameTicks { get; set; }
+    public long? ProtectedRemainingJourneyGameTicks { get; set; }
     public double LockedReturnEnergyFloorJoules { get; set; }
     public double LockedWithdrawalReserveJoules { get; set; }
     public double LockedReturnCoreMinimumJoules { get; set; }
@@ -112,6 +113,7 @@ public static class VoyagerRouteBudgetPolicy
             DestinationVisible = input.DestinationVisible,
             DestinationIsStarOnly = input.DestinationIsStarOnly,
             IsReturnLeg = isReturn,
+            ProtectedRemainingJourneyGameTicks=isReturn?input.ProtectedRemainingJourneyGameTicks:null,
             BudgetBasis = isReturn ? "finite_native_single_return_and_locked_journey_v3"
                 : "finite_native_warp_duration_and_explicit_return_recharge_v2",
             RequiresReturnCoreRecharge = !isReturn,
@@ -146,6 +148,8 @@ public static class VoyagerRouteBudgetPolicy
             if (input.ReturnLegMaximumGameTicks < MinimumLegGameTicks
                 || input.RemainingJourneyGameTicks < input.ReturnLegMaximumGameTicks
                 || input.RemainingJourneyGameTicks > MaximumFlightGameTicks
+                || input.ProtectedRemainingJourneyGameTicks is { } protectedRemaining
+                    && VoyagerReturnHorizonProjection.PlanTicks(protectedRemaining,input.ReturnLegMaximumGameTicks)!=input.RemainingJourneyGameTicks
                 || input.OriginalExtraWarperReserve < 0 || input.OriginalExtraWarperReserve > MaximumExtraWarperReserve
                 || !Positive(input.LockedReturnEnergyFloorJoules) || !Positive(input.LockedWithdrawalReserveJoules)
                 || !Positive(input.LockedReturnCoreMinimumJoules)
@@ -319,6 +323,7 @@ public static class VoyagerRouteBudgetPolicy
             HashNumber(input.EnergyConsumptionCoefficient), HashNumber(input.ThrustPowerPerAcceleration),
             input.NativeWarperCount, input.PackageWarperCount, input.AutoReplenishWarper,
             input.ReturnJourneyVerified, input.ReturnJourneyId, input.ReturnLegMaximumGameTicks, input.RemainingJourneyGameTicks,
+            input.ProtectedRemainingJourneyGameTicks,
             HashNumber(input.LockedReturnEnergyFloorJoules), HashNumber(input.LockedWithdrawalReserveJoules),
             HashNumber(input.LockedReturnCoreMinimumJoules), input.OriginalExtraWarperReserve,
             request.PlanetId, request.DestinationPlanetId, request.DestinationStarId, request.ExpectedPlayerStateHash, request.ExpectedCatalogStateHash,

@@ -308,6 +308,9 @@ internal sealed partial class GameStateReader
                     input.ReturnLegMaximumGameTicks = VoyagerReturnOnlyRecoveryPolicy.FlightTicks(
                         input.RemainingJourneyGameTicks, journey.ReturnReserveGameTicks);
                 }
+                input.ProtectedRemainingJourneyGameTicks=input.RemainingJourneyGameTicks;
+                input.RemainingJourneyGameTicks=VoyagerReturnHorizonProjection.PlanTicks(
+                    input.ProtectedRemainingJourneyGameTicks.Value,input.ReturnLegMaximumGameTicks)??-1;
                 input.LockedReturnEnergyFloorJoules = journey.ReturnEnergyFloorJoules;
                 input.LockedWithdrawalReserveJoules = journey.WithdrawalReserveJoules;
                 input.LockedReturnCoreMinimumJoules = journey.ReturnCoreEnergyMinimumJoules;
