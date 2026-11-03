@@ -8,6 +8,24 @@ namespace Spherewright.Bridge.Core.Tests;
 
 public sealed class MechaConstructionDronePolicyTests
 {
+    [Theory]
+    [InlineData("valid")][InlineData("working")][InlineData("pending_build")][InlineData("pending_repair")]
+    [InlineData("missing_alive")][InlineData("not_idle")][InlineData("enabled")][InlineData("disabled_build")]
+    public void RemoteEnableSnapshotRequiresTheObservedEmptyIdleThreeDroneState(string fault)
+    {
+        // Actual recovered DTO shape, with identifiers and world details omitted.
+        var d=new ConstructionDroneSnapshot {Enabled=false,ConstructionEnabled=true,Total=3,Alive=3,Idle=3,
+            Working=0,PendingBuildTargets=0,PendingRepairTargets=0};
+        if(fault=="working")d.Working=1;
+        if(fault=="pending_build")d.PendingBuildTargets=1;
+        if(fault=="pending_repair")d.PendingRepairTargets=1;
+        if(fault=="missing_alive")d.Alive=2;
+        if(fault=="not_idle")d.Idle=2;
+        if(fault=="enabled")d.Enabled=true;
+        if(fault=="disabled_build")d.ConstructionEnabled=false;
+        Assert.Equal(fault=="valid",MechaConstructionDronePolicy.RemoteEmptyTargetsProved(d));
+        Assert.False(VoyagerFactoryConfigurationPolicy.IsImmediateMode(BuildingConfigurationModes.EnableMechaConstructionDrones));
+    }
     [Fact]
     public void DisabledMasterCanBeEnabledWithExactIdlePlayerBinding()
     {

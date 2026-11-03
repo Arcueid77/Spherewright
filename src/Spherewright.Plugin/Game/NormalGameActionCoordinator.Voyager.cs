@@ -706,7 +706,8 @@ internal sealed partial class NormalGameActionCoordinator
         if (plan.ActionKind == NormalActionKinds.Refuel || NormalActionKinds.IsSaveLifecycle(plan.ActionKind)) return null;
         var immediate = plan.ActionKind == NormalActionKinds.Transfer || plan.ActionKind == NormalActionKinds.LogisticsStationFleetTransfer
             || plan.ActionKind == NormalActionKinds.ConfigureBuilding
-                && VoyagerFactoryConfigurationPolicy.IsImmediateMode(plan.ConfigureMode);
+                && (VoyagerFactoryConfigurationPolicy.IsImmediateMode(plan.ConfigureMode)
+                    || RemoteMechaDroneEnableHasNoTargets(plan));
         if (!immediate && plan.ActionKind != NormalActionKinds.Move && plan.ActionKind != NormalActionKinds.Harvest)
             return Stale("The remote reserve admits finite move/harvest, exact normal factory/station configuration, ordinary package/storage or fleet transfer, native refuel and save only; construction needs its separately proved native drone lease.");
         var player = GameMain.mainPlayer;

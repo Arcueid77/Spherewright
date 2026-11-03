@@ -33,7 +33,9 @@ internal sealed partial class NormalGameActionCoordinator
         var request = new PrepareConfigureBuildingRequest { PlanetId = plan.PlanetId, EntityId = 0, RecipeId = 0,
             Mode = BuildingConfigurationModes.EnableMechaConstructionDrones, ExpectedFactoryStateHash = plan.FactoryStateHash };
         var reason = MechaConstructionDronePolicy.ValidateEnable(request, inspected.Value);
-        return reason is null && GameMain.mainPlayer?.currentOrder is null && GameMain.localPlanet?.factory is not null
+        var remote=_flightCheckpoints.VoyagerJourney is {} journey && !IsVoyagerJourneyClosed(journey);
+        return reason is null && (!remote || RemoteMechaDroneEnableHasNoTargets(plan))
+            && GameMain.mainPlayer?.currentOrder is null && GameMain.localPlanet?.factory is not null
             ? null : Stale(reason ?? "Mecha controller or current local factory changed.");
     }
 
@@ -54,5 +56,25 @@ internal sealed partial class NormalGameActionCoordinator
             throw new InvalidOperationException("Enabled mecha construction drones could not be read back.");
         action.AfterStateHash = readback.Value.StateHash;
         Complete(action, "The native mecha construction-drone master switch changed from OFF to ON once; existing eligible work is scheduled normally, without another Create or instant completion.");
+    }
+
+    private bool RemoteMechaDroneEnableHasNoTargets(NormalActionPlanPayload plan)
+    {
+        if(plan.ConfigureMode!=BuildingConfigurationModes.EnableMechaConstructionDrones || plan.EntityId!=0
+            || _flightCheckpoints.VoyagerJourney is not {} j || j.Phase!="remote_landed"
+            || !VoyagerOwnedJourneyMatchesCurrentSession(j,plan.SessionId))return false;
+        var p=GameMain.mainPlayer;var f=GameMain.localPlanet?.factory;
+        if(p?.mecha?.constructionModule is not {} m || f is null || !ConstructionPlayerIdle(p)
+            || m.droneEnabled || m.buildTargetTotalCount!=0 || m.repairTargetTotalCount!=0 || m.autoReconstructTargetTotalCount!=0
+            || m.buildTargets is {} bt && (bt.Length>256 || bt.Any(t=>t.objectId!=0))
+            || m.repairTargets is {} rt && (rt.Length>256 || rt.Any(t=>t.objectId!=0))
+            || m.autoReconstructTargets is {} at && (at.Length>256 || at.Any(t=>t.objectId!=0))
+            || f.prebuildCount!=0 || f.prebuildCursor<1 || f.prebuildCursor>131072 || f.prebuildPool is null
+            || f.prebuildCursor>f.prebuildPool.Length || Enumerable.Range(1,f.prebuildCursor-1).Any(i=>f.prebuildPool[i].id!=0)
+            || !TryObserveOwnedConstructionDrones(f,m,out var idle,out _) || !idle || !_blueprints.TryRead(out var builds))return false;
+        var snapshot=_reader.GetPlayerStateOnMainThread(plan.SessionId,new LocalPlanetRequest {PlanetId=plan.PlanetId});
+        return snapshot.Success && snapshot.Value is not null
+            && MechaConstructionDronePolicy.RemoteEmptyTargetsProved(snapshot.Value.ConstructionDrones)
+            && SavedFactorySiteMatches(p,f,j.JourneyId,builds,null);
     }
 }

@@ -6,6 +6,11 @@ namespace Spherewright.Bridge.Core.Factory;
 
 public static class MechaConstructionDronePolicy
 {
+    // Snapshot half only; the Native coordinator additionally proves the
+    // complete paid factory, empty target arrays/pools and physical idle.
+    public static bool RemoteEmptyTargetsProved(ConstructionDroneSnapshot d) => !d.Enabled && d.ConstructionEnabled
+        && d.Total>0 && d.Alive==d.Total && d.Idle==d.Total && d.Working==0
+        && d.PendingBuildTargets==0 && d.PendingRepairTargets==0;
     public static string? BuildReadiness(PlayerStateSnapshot player) =>
         !player.ConstructionDrones.Enabled ? "construction_drone_master_switch_disabled"
         : !player.ConstructionDrones.ConstructionEnabled ? "construction_drone_building_switch_disabled"
