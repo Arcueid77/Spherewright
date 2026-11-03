@@ -36,6 +36,8 @@ public sealed class PrepareOwnedWorldResumeRequest
     public double MaximumChargeWallSeconds { get; set; }
     /// <summary>Separately confirmed allowance above the original journey cap; primary recovery only, never stacked.</summary>
     public long AdditionalVoyagerGameTicks { get; set; }
+    /// <summary>Opt-in new bounded Native Move during current-world recovery; never an old Move replay.</summary>
+    public Factory.Vector3Snapshot? SurfaceRecoveryTarget { get; set; }
     public string PriorConsumedResumeToken { get; set; } = string.Empty;
     public string PriorSourceFingerprint { get; set; } = string.Empty;
     public string PriorLegacySourceFingerprint { get; set; } = string.Empty;
@@ -60,6 +62,9 @@ public sealed class CommitOwnedWorldResumeRequest
 
 public sealed class PreparedOwnedWorldResumePlan
 {
+    public Factory.Vector3Snapshot? SurfaceRecoveryTarget { get; set; }
+    public int SurfaceRecoveryMaximumWorkGameTicks { get; set; }
+    public double SurfaceRecoveryMaximumWallSeconds { get; set; }
     public long AdditionalVoyagerGameTicks { get; set; }
     public long? OriginalJourneyMaximumGameTicks { get; set; }
     public long? EffectiveJourneyMaximumGameTicks { get; set; }

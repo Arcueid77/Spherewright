@@ -160,6 +160,11 @@ internal sealed partial class NormalGameActionCoordinator
             var tailBlocker = PrepareSavedConstructionTail(adoption, journey.JourneyId);
             if (tailBlocker is not null) return tailBlocker;
         }
+        if (!sameOwner && adoption.Authorization?.Proposal.SurfaceRecoveryTarget is not null)
+        {
+            var surface = HandleSurfaceRecovery(adoption, journey, loadBoundary, admit, out var surfaceComplete);
+            if (!surfaceComplete) return surface;
+        }
         adoption.CurrentDecisionEvidence!.Stage(loadBoundary ? "load_preflight_before_first_frame"
             : admit ? "native_physics_post501" : "native_universe_post151");
         var naturalContact = !sameOwner && ReferenceEquals(_firstFrameAdoption, adoption) && _firstFrameContact is { Policy.Retired: false };

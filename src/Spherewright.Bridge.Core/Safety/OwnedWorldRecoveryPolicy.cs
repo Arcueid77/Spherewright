@@ -10,6 +10,7 @@ public static class OwnedWorldRecoveryPolicy
 
     public static string? ValidateRequest(PrepareOwnedWorldResumeRequest request)
     {
+        if (VoyagerSurfaceRecoveryPolicy.ValidateRequest(request) is { } surfaceInvalid) return surfaceInvalid;
         if (request.RecoveryMode == OwnedWorldResumeModes.AuthorizeFailedLandingLastExit)
             return VoyagerFailedLandingRecoveryPolicy.ValidateRequest(request);
         if (request.AdditionalVoyagerGameTicks != 0 && request.RecoveryMode != OwnedWorldResumeModes.AuthorizeRemotePrimaryRecovery)

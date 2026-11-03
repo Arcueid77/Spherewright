@@ -1552,7 +1552,10 @@ public static partial class SpherewrightTools
         [Description("Lowercase64hex SHA256 of the exact UTF-8 legacyLocalMoveUnknownEvidenceJson, required together. A matching hash binds bytes, not their truth. MCP withholds a plan unless the Plugin echoes this exact hash and explicit caller-attestation disclosure; commit retains the original unknown result.")] string expectedLegacyLocalMoveUnknownEvidenceHash = "",
         [Description("Only for continue_completed_remote_last_exit: explicit caller attestation backed by the retained original Native receipt that the immediately prior resume terminally completed. It is never inferred from consumption or substituted for failed/unknown. This mode inherits the identical existing absolute window and original origin; it accepts no new deadline/caps and prohibits new charging.")] bool? priorActionKnownTerminalCompleted = null,
         [Description("Only with recoveryMode=open_saved_primary or authorize_remote_primary_recovery: the owner explicitly accepts losing the exact unstored progress between minimumRecoveryGameTick (the current known floor) and expectedRecoveryGameTick (the exact complete primary). No arbitrary older save, automatic fallback or task resumption. For open_saved_primary, days of absence or an expired automation credential/Journey never expire saved-world access; the exact world loads paused, old automation remains stopped and no automatic Save/charging occurs. Without this flag, the current primary must cover known progress, or the fixed LastExit must exactly equal the current credential minimum tick while the primary is older. Another progress boundary and arbitrary save selection remain forbidden.")] bool acceptUnstoredProgressLoss = false,
-        [Description("Only authorize_remote_primary_recovery: separately owner-approved game ticks above the immutable original journey cap, 0..108000. This amount is not stacked with a prior proposal. Original spent time, return ticks, energy and warpers remain charged/reserved. The prepared original/effective caps and this exact amount must match the conversation grant and confirmationDigest before commit.")] long additionalVoyagerGameTicks = 0)
+        [Description("Only authorize_remote_primary_recovery: separately owner-approved game ticks above the immutable original journey cap, 0..108000. This amount is not stacked with a prior proposal. Original spent time, return ticks, energy and warpers remain charged/reserved. The prepared original/effective caps and this exact amount must match the conversation grant and confirmationDigest before commit.")] long additionalVoyagerGameTicks = 0,
+        [Description("Optional NEW bounded native surface recovery target. Supply all three coordinates only with authorize_remote_primary_recovery and zero added ticks; requires exact fresh disclosure and grounded idle before general work. Never replay an unknown target.")] float? surfaceRecoveryTargetX = null,
+        [Description("Y coordinate of the same explicit new surface recovery target.")] float? surfaceRecoveryTargetY = null,
+        [Description("Z coordinate of the same explicit new surface recovery target.")] float? surfaceRecoveryTargetZ = null)
     {
         var request = new PrepareOwnedWorldResumeRequest
         {
@@ -1563,6 +1566,8 @@ public static partial class SpherewrightTools
             RecoveryDeadlineUtc = recoveryDeadlineUtc, RecoveryScope = recoveryScope,
             MaximumChargeGameTicks = maximumChargeGameTicks, MaximumChargeWallSeconds = maximumChargeWallSeconds,
             AdditionalVoyagerGameTicks = additionalVoyagerGameTicks,
+            SurfaceRecoveryTarget = surfaceRecoveryTargetX.HasValue || surfaceRecoveryTargetY.HasValue || surfaceRecoveryTargetZ.HasValue
+                ? new Vector3Snapshot { X = surfaceRecoveryTargetX ?? float.NaN, Y = surfaceRecoveryTargetY ?? float.NaN, Z = surfaceRecoveryTargetZ ?? float.NaN } : null,
             PriorConsumedResumeToken = priorConsumedResumeToken, PriorSourceFingerprint = priorSourceFingerprint,
             PriorActionKnownTerminalFailed = priorActionKnownTerminalFailed,
             PriorActionKnownTerminalCompleted = priorActionKnownTerminalCompleted,
@@ -1584,6 +1589,10 @@ public static partial class SpherewrightTools
         var result = await bridgeClient.PrepareOwnedWorldResumeAsync(
             request,
             cancellationToken).ConfigureAwait(false);
+        if (result.Success && !VoyagerSurfaceRecoveryPolicy.HasMatchingEcho(request, result.Value))
+            result = BridgeCallResult<PreparedOwnedWorldResumePlan>.Failed(BridgeError.Create(BridgeErrorCodes.BridgeNotReady,
+                "The Plugin did not echo the exact optional surface recovery target and unchanged finite caps; no token is exposed.",
+                false, "Use a coherent Plugin/MCP source and preserve the original unknown action."));
         if (recoveryMode == OwnedWorldResumeModes.OpenSavedPrimary && result.Success
             && (result.Value is null || !OwnedSavedWorldOpenPolicy.HasMatchingEcho(result.Value)
                 || result.Value.DiscardedUnstoredProgressGameTicks != (acceptUnstoredProgressLoss

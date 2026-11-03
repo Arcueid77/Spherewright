@@ -71,6 +71,7 @@ internal sealed partial class NormalGameActionCoordinator
     {
         if (adoption.FirstFrame.Failure is not null || _sessions.ResumeAdoptionError is not null)
             return "remote_resume_failed_adoption_is_terminal";
+        if (adoption.SurfaceRecoveryPending) return ObserveSurfaceRecoveryUniverse(adoption);
         // Contact attempts keep a real151 check on every pending frame; the
         // original one-frame latch is neither repeated nor borrowed as proof.
         if (adoption.NativeContactPending && adoption.FirstFrame.PhysicsObserved

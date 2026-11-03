@@ -307,6 +307,7 @@ internal sealed partial class GameSessionTracker
         result.ResumeNearSupportPostUniverse = a.NearSupportPostUniverse?.Copy();
         result.ResumeNearSupportLatest = a.NearSupportLatest?.Copy();
         result.ResumeFirstFailure = a.FirstFailure?.Copy();
+        result.ResumeSurfaceRecoveryMove = a.SurfaceRecoveryMove?.Copy();
     }
 
     internal void RecordRemoteResumeTerrain(VoyagerRemoteResumeAdoption adoption,
@@ -334,7 +335,7 @@ internal sealed partial class GameSessionTracker
     internal void StopPendingRemoteFirstFrameOnMainThread()
     {
         if (HasPendingRemoteResumeAdoption
-            && (_remoteResumeInitializationPending || _remoteResumeAdoption?.FirstFrame.Armed == true))
+            && (_remoteResumeInitializationPending || _remoteResumeAdoption?.FirstFrame.Armed == true || _remoteResumeAdoption?.SurfaceRecoveryPending == true))
             FailRemoteResumeAdmission("remote_resume_first_frame_native_observer_lost");
     }
 
@@ -487,6 +488,8 @@ internal sealed class VoyagerRemoteResumeAdoption
     public NativeNearGroundSupportSnapshot? NearSupportPostUniverse { get; set; }
     public NativeNearGroundSupportSnapshot? NearSupportLatest { get; set; }
     public bool NativeContactPending { get; set; }
+    public bool SurfaceRecoveryPending { get; set; }
+    public NativeSurfaceRecoveryMoveSnapshot? SurfaceRecoveryMove { get; set; }
     public NativeResumeDecisionEvidence? CurrentDecisionEvidence { get; set; }
     public NativeResumeFailureSnapshot? FirstFailure { get; private set; }
     public void RetainFailure(NativeResumeFailureSnapshot? evidence)

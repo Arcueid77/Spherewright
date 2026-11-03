@@ -91,6 +91,10 @@ internal sealed partial class OwnedWorldResumeCoordinator
         payload!.RemoteEvidence?.Dispose();
         payload.RemoteJournalLease?.Dispose();
         payload.RemoteCredentialLease?.Dispose();
+        if (payload.Request.SurfaceRecoveryTarget is not null && payload.RemoteEvidence?.CompletedSavedLandingAdmissionUsed != true)
+            return GameCallResult<PreparedOwnedWorldResumePlan>.Failed(BridgeError.Create(BridgeErrorCodes.InvalidRequest,
+                "Surface recovery requires a separately completed saved landing admission for this exact source.", false,
+                "Retain the original action and use only a supported fresh owned-world recovery plan."));
         PreparedPlan<OwnedWorldResumePlanPayload> plan;
         try
         {
@@ -149,6 +153,9 @@ internal sealed partial class OwnedWorldResumeCoordinator
             MaximumChargeGameTicks = payload.RemoteEvidence?.RecoveryProposal?.MaximumChargeGameTicks ?? payload.Request.MaximumChargeGameTicks,
             MaximumChargeWallSeconds = payload.RemoteEvidence?.RecoveryProposal?.MaximumChargeWallSeconds ?? payload.Request.MaximumChargeWallSeconds,
             AdditionalVoyagerGameTicks = payload.RemoteEvidence?.RecoveryProposal?.AdditionalVoyagerGameTicks ?? 0,
+            SurfaceRecoveryTarget = VoyagerSurfaceRecoveryPolicy.CopyTarget(payload.Request.SurfaceRecoveryTarget),
+            SurfaceRecoveryMaximumWorkGameTicks = payload.Request.SurfaceRecoveryTarget is null ? 0 : VoyagerSurfaceRecoveryPolicy.MaximumWorkGameTicks,
+            SurfaceRecoveryMaximumWallSeconds = payload.Request.SurfaceRecoveryTarget is null ? 0d : VoyagerSurfaceRecoveryPolicy.MaximumWallSeconds,
             OriginalJourneyMaximumGameTicks = payload.RemoteEvidence?.Journey.MaximumGameTicks,
             EffectiveJourneyMaximumGameTicks = payload.RemoteEvidence is { } budgetEvidence
                 ? VoyagerRecoveryWindowPolicy.EffectiveMaximumGameTicks(budgetEvidence.Journey.MaximumGameTicks, budgetEvidence.RecoveryProposal) : null,
@@ -193,7 +200,9 @@ internal sealed partial class OwnedWorldResumeCoordinator
             UserConfirmationRequired = payload.RequiresConfirmation,
             SourceGameVersion = ticket.GameVersion,
             TargetGameVersion = _tickets.CurrentGameVersion,
-            ConfirmationPrompt = (payload.RemoteEvidence?.SuccessfulFlightWitnessRetiredAtGameTick is { } coveredTick
+            ConfirmationPrompt = (payload.Request.SurfaceRecoveryTarget is { } surfaceTarget
+                ? $"This NEW resume task may issue one normal Native Move toward ({surfaceTarget.X}, {surfaceTarget.Y}, {surfaceTarget.Z}), at most600 work ticks/30 wall seconds inside the original budget, after fresh Native landing and cost proof. It does not replay or change any old unknown Move. General work and a covering Save still require strict grounded Walk and zero physical tails. " : string.Empty)
+                + (payload.RemoteEvidence?.SuccessfulFlightWitnessRetiredAtGameTick is { } coveredTick
                 ? $"The original successful-flight checkpoint was retired by primary coverage at tick {coveredTick}. It is a bound historical witness only and will never be loaded. " : string.Empty)
                 + (payload.RemotePrimaryRecovery && payload.Request.AdditionalVoyagerGameTicks > 0
                 ? $"Separately authorize {payload.Request.AdditionalVoyagerGameTicks} additional game ticks above the original {payload.RemoteEvidence!.Journey.MaximumGameTicks}-tick journey cap. This addition is not stacked with a previous proposal; all observed spent time stays charged, the original deadline and cap remain recorded, and return ticks, energy and warpers stay reserved. " : string.Empty)
@@ -965,7 +974,7 @@ internal sealed partial class OwnedWorldResumeCoordinator
             journal = _tickets.OpenReauthorizationJournalLease(ticket, provenance, savedWorldOpenOnly: true);
             var journalHash = FlightCheckpointStore.HashResumeRecord(journal);
             var proposal = new VoyagerRecoveryWindowProposal(request.RecoveryDeadlineUtc!.Value, request.RecoveryScope,
-                request.MaximumChargeGameTicks, request.MaximumChargeWallSeconds, request.AdditionalVoyagerGameTicks);
+                request.MaximumChargeGameTicks, request.MaximumChargeWallSeconds, request.AdditionalVoyagerGameTicks, request.SurfaceRecoveryTarget);
             if (!_sessions.TryOpenRemoteResumeEvidence(ticket, source, primary, out evidence, out rejection, proposal,
                 validatedJournalHash: journalHash, remotePrimaryRequest: request, progressLastExit: progress)) return false;
             progress = null; // The fresh evidence holds any matching fixed LastExit through admission.
@@ -1092,6 +1101,7 @@ internal sealed partial class OwnedWorldResumeCoordinator
                 RecoveryDeadlineUtc = request.RecoveryDeadlineUtc, RecoveryScope = request.RecoveryScope,
                 MaximumChargeGameTicks = request.MaximumChargeGameTicks, MaximumChargeWallSeconds = request.MaximumChargeWallSeconds,
                 AdditionalVoyagerGameTicks = request.AdditionalVoyagerGameTicks,
+                SurfaceRecoveryTarget = VoyagerSurfaceRecoveryPolicy.CopyTarget(request.SurfaceRecoveryTarget),
                 PriorConsumedResumeToken = request.PriorConsumedResumeToken, PriorSourceFingerprint = request.PriorSourceFingerprint,
                 PriorLegacySourceFingerprint = request.PriorLegacySourceFingerprint,
                 PriorIntermediateSourceFingerprint = request.PriorIntermediateSourceFingerprint,
@@ -1157,6 +1167,10 @@ internal sealed partial class OwnedWorldResumeCoordinator
             if (LegacyLocalMoveUnknown)
                 Fingerprint = CanonicalStateHash.Combine("resume-owned-world-legacy-local-move-unknown-v1", Fingerprint,
                     Request.ExpectedLegacyLocalMoveUnknownEvidenceHash);
+            if (Request.SurfaceRecoveryTarget is { } surfaceTarget)
+                Fingerprint = CanonicalStateHash.Combine("resume-owned-world-surface-recovery-v1", Fingerprint,
+                    surfaceTarget.X, surfaceTarget.Y, surfaceTarget.Z, VoyagerSurfaceRecoveryPolicy.MaximumWorkGameTicks,
+                    VoyagerSurfaceRecoveryPolicy.MaximumWallSeconds);
         }
 
         public OwnedWorldResumeTicket Ticket { get; }

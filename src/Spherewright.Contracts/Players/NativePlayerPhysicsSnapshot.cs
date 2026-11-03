@@ -24,6 +24,7 @@ public sealed class NativePlayerPhysicsSnapshot
     public NativeNearGroundSupportSnapshot? ResumeNearSupportPostUniverse { get; set; }
     public NativeNearGroundSupportSnapshot? ResumeNearSupportLatest { get; set; }
     public NativeResumeFailureSnapshot? ResumeFirstFailure { get; set; }
+    public NativeSurfaceRecoveryMoveSnapshot? ResumeSurfaceRecoveryMove { get; set; }
     public string? SimulationMode { get; set; }
     public Vector3Snapshot? Gravity { get; set; }
     /// <summary>Native controller universal gravity, metres per second squared; not Physics.gravity.</summary>
@@ -45,6 +46,34 @@ public sealed class NativePlayerPhysicsSnapshot
     public bool? CollidersComplete { get; set; }
     public bool? CollidersTruncated { get; set; }
     public List<NativePlayerColliderPhysicsSnapshot>? Colliders { get; set; }
+}
+
+/// <summary>Copied observations of one new native recovery order, never a reusable execution credential.</summary>
+public sealed class NativeSurfaceRecoveryMoveSnapshot
+{
+    public string ResumeActionId { get; set; } = string.Empty;
+    public string State { get; set; } = string.Empty;
+    public string NativeOperation => "OrderNode.MoveTo/Player.Order";
+    public long SourceGameTick { get; set; }
+    public long CapturedAtGameTick { get; set; }
+    public int MaximumWorkGameTicks { get; set; }
+    public double MaximumWallSeconds { get; set; }
+    public bool NativeOrderAccepted { get; set; }
+    public bool StrictPhysicalIdleProved { get; set; }
+    public string? Failure { get; set; }
+    public Vector3Snapshot SourcePosition { get; set; } = new();
+    public Vector3Snapshot TargetPosition { get; set; } = new();
+    public Vector3Snapshot CurrentPosition { get; set; } = new();
+    public bool NewGameTicksGranted => false;
+    public bool OriginalUnknownOutcomeChanged => false;
+    public NativeSurfaceRecoveryMoveSnapshot Copy()
+    {
+        var copy = (NativeSurfaceRecoveryMoveSnapshot)MemberwiseClone();
+        copy.SourcePosition = new Vector3Snapshot { X = SourcePosition.X, Y = SourcePosition.Y, Z = SourcePosition.Z };
+        copy.TargetPosition = new Vector3Snapshot { X = TargetPosition.X, Y = TargetPosition.Y, Z = TargetPosition.Z };
+        copy.CurrentPosition = new Vector3Snapshot { X = CurrentPosition.X, Y = CurrentPosition.Y, Z = CurrentPosition.Z };
+        return copy;
+    }
 }
 
 /// <summary>Copied Native query evidence; cached fields are not admission evidence.</summary>

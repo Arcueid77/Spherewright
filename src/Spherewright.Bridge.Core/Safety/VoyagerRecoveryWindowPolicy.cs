@@ -4,14 +4,18 @@ public sealed class VoyagerRecoveryWindowProposal
 {
     public const string TaskScope = "continue_original_finite_task";
     public VoyagerRecoveryWindowProposal(DateTimeOffset deadlineUtc, string scope, long maximumChargeGameTicks, double maximumChargeWallSeconds,
-        long additionalVoyagerGameTicks = 0)
+        long additionalVoyagerGameTicks = 0, Spherewright.Contracts.Factory.Vector3Snapshot? surfaceRecoveryTarget = null)
     { DeadlineUtc = deadlineUtc; Scope = scope; MaximumChargeGameTicks = maximumChargeGameTicks; MaximumChargeWallSeconds = maximumChargeWallSeconds;
-      AdditionalVoyagerGameTicks = additionalVoyagerGameTicks; }
+      AdditionalVoyagerGameTicks = additionalVoyagerGameTicks;
+      _surfaceRecoveryTarget = VoyagerSurfaceRecoveryPolicy.CopyTarget(surfaceRecoveryTarget); }
     public DateTimeOffset DeadlineUtc { get; }
     public string Scope { get; }
     public long MaximumChargeGameTicks { get; }
     public double MaximumChargeWallSeconds { get; }
     public long AdditionalVoyagerGameTicks { get; }
+    private readonly Spherewright.Contracts.Factory.Vector3Snapshot? _surfaceRecoveryTarget;
+    public Spherewright.Contracts.Factory.Vector3Snapshot? SurfaceRecoveryTarget => VoyagerSurfaceRecoveryPolicy.CopyTarget(_surfaceRecoveryTarget);
+    public bool ShouldSerializeSurfaceRecoveryTarget() => _surfaceRecoveryTarget is not null;
     // Preserve the byte shape of all previously committed zero-addition proposals.
     public bool ShouldSerializeAdditionalVoyagerGameTicks() => AdditionalVoyagerGameTicks != 0;
 }

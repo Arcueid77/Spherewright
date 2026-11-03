@@ -8,11 +8,14 @@ internal sealed partial class NormalGameActionCoordinator
 {
     private string? RemoteResumeChargeEnvironmentBlocker(Player p, string? journeyId = null,
         NativeResumeDecisionEvidence? evidence = null, bool completedPaidLandingOnly = false,
-        bool provedSavedLandingAdmission = false)
+        bool provedSavedLandingAdmission = false, bool allowBoundedSurfaceRts = false)
     {
         var h = GameMain.history; var factory = p.factory; var module = p.mecha.constructionModule;
-        if (p.controller.actionWalk.rtsVelocity.sqrMagnitude != 0f || p.controller.actionWalk.moveVelocity.sqrMagnitude != 0f
-            || p.controller.actionDrift.rtsVelocity.sqrMagnitude != 0f || p.controller.actionDrift.moveVelocity.sqrMagnitude != 0f)
+        // Only the separately bound surface controller may retain its own RTS
+        // tail. Manual input, site provenance and every other check remain.
+        if (p.controller.actionWalk.moveVelocity.sqrMagnitude != 0f || p.controller.actionDrift.moveVelocity.sqrMagnitude != 0f
+            || !allowBoundedSurfaceRts && (p.controller.actionWalk.rtsVelocity.sqrMagnitude != 0f
+                || p.controller.actionDrift.rtsVelocity.sqrMagnitude != 0f))
             return "remote_resume_charge_rts_or_manual_velocity_nonzero";
         if (h?.techQueue is not { Length: 32 } || !VoyagerMechaWorkIdle(p))
             return "remote_resume_charge_mecha_work_not_quiescent";
