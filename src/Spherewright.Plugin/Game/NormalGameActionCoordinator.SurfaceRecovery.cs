@@ -53,10 +53,12 @@ internal sealed partial class NormalGameActionCoordinator
                 return SurfaceFailure(a, "surface_recovery_exact_new_source_unproved");
             if (_surfaceRecovery is { Policy.Completed: false }) return SurfaceFailure(a, "surface_recovery_previous_task_unsettled");
             var p = a.Player; var target = ToVector(proposed); var scene = CaptureNativeLocalWalkScene();
+            var sourceModeBlocker = scene is null ? "surface_scene_missing" : NativeWalkModeBlocker(p, true, scene, true, true, true);
+            var sourceModeProved = p.movementState == EMovementState.Drift && sourceModeBlocker is null
+                || p.movementState == EMovementState.Walk && sourceModeBlocker == "remote_idle_ground_contact_unproved";
             if (scene is null || !scene.MatchesCurrent() || GameMain.gameTick != a.Evidence.SourceGameTick
-                || p.movementState != EMovementState.Drift || p.speed > .15f || p.currentOrder is not null
+                || !sourceModeProved || p.speed > .15f || p.currentOrder is not null
                 || p.orders.orderCount != 0 || !VoyagerMechaWorkIdle(p) || !BuildUiIsIdle(p)
-                || NativeWalkModeBlocker(p, true, scene, true, true, true) is not null
                 || p.controller.velocity.sqrMagnitude != 0f || p.controller.rigid.velocity.sqrMagnitude != 0f
                 || p.controller.rigid.isKinematic || !p.controller.rigid.detectCollisions
                 || p.controller.actionWalk.rtsVelocity.sqrMagnitude != 0f || p.controller.actionDrift.rtsVelocity.sqrMagnitude != 0f
@@ -103,11 +105,16 @@ internal sealed partial class NormalGameActionCoordinator
         var order = s.Order is null ? firstTick && player.currentOrder is null
             : s.Draining ? player.currentOrder is null
             : ReferenceEquals(player.currentOrder, s.Order) || player.currentOrder is null && s.Order.targetReached;
+        var modeBlocker = NativeWalkModeBlocker(player, false, s.Scene.Scene, true, true, true);
+        // Ground is the LAST predicate in that Native guard. Only this sole
+        // miss can continue under the independently proved owned support,
+        // per-tick14P and original finite controller; it is never idle.
+        var modeProved = modeBlocker is null || modeBlocker == "remote_idle_ground_contact_unproved";
+        var environmentBlocker = RemoteResumeChargeEnvironmentBlocker(player, j.JourneyId, a.CurrentDecisionEvidence,
+            provedSavedLandingAdmission: true, allowBoundedSurfaceRts: true);
         var native = order && player.orders.orderCount == 0 && BuildUiIsIdle(player) && VoyagerMechaWorkIdle(player)
-            && NativeWalkModeBlocker(player, false, s.Scene.Scene, true, true, true) is null
-            && TryObserveOwnedConstructionDrones(player.factory, player.mecha.constructionModule, out var dronesIdle, out _) && dronesIdle
-            && RemoteResumeChargeEnvironmentBlocker(player, j.JourneyId, a.CurrentDecisionEvidence,
-                provedSavedLandingAdmission: true, allowBoundedSurfaceRts: true) is null;
+            && modeProved && environmentBlocker is null
+            && TryObserveOwnedConstructionDrones(player.factory, player.mecha.constructionModule, out var dronesIdle, out _) && dronesIdle;
         var reserve = EvaluateNativeLocalMovementCost(player, native);
         var now = DateTimeOffset.UtcNow;
         var grounded = Physics.CheckSphere(player.position + player.position.normalized * .15f, .35f, 15873);
@@ -118,7 +125,7 @@ internal sealed partial class NormalGameActionCoordinator
         var f = new VoyagerSurfaceRecoveryFacts
         {
             GameTick = GameMain.gameTick, NowUtc = now, ExactSourceWorldAndScene = exact,
-            NativeModesCostsAndOrderProved = native && reserve.Proved,
+            NativeModesCostsAndOrderProved = native && reserve.Proved, NativeModeBlocker = modeBlocker,
             CurrentTerrainSupportProved = SurfaceRecoveryTerrain(s, grounded), DryLandingPatchProved = SurfaceRecoveryLandingPatch(s),
             StrictGroundedWalkWithZeroTail = strict, OriginalOrderAbsent = s.Order is not null && player.currentOrder is null,
             DistanceFromSourceMeters = Vector3.Distance(player.position, s.Origin), DistanceToTargetMeters = Vector3.Distance(player.position, s.Target),
@@ -128,6 +135,10 @@ internal sealed partial class NormalGameActionCoordinator
         };
         var e = a.CurrentDecisionEvidence!;
         e.Stage("surface_recovery_native501"); e.Observe("surface_exact_source_scene", f.ExactSourceWorldAndScene);
+        e.Require("surface_owned_order", order);
+        e.Require(modeProved ? "surface_mode_bounded" : "surface_mode_" + modeBlocker, modeProved);
+        e.Require(environmentBlocker is null ? "surface_environment" : "surface_environment_" + environmentBlocker, environmentBlocker is null);
+        e.Require(reserve.Proved ? "surface_tick_cost" : "surface_tick_cost_" + reserve.BlockerCode, reserve.Proved);
         e.Require(bindingBlocker is null ? "surface_runtime_binding" : "surface_" + bindingBlocker, bindingBlocker is null);
         if (bindingBlocker is null)
             e.Require(sourceStateBlocker is null ? "surface_first_physics_player_state" : "surface_first_physics_" + sourceStateBlocker,

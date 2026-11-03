@@ -12,6 +12,7 @@ public sealed class VoyagerSurfaceRecoveryFacts
     public DateTimeOffset NowUtc { get; set; }
     public bool ExactSourceWorldAndScene { get; set; }
     public bool NativeModesCostsAndOrderProved { get; set; }
+    public string? NativeModeBlocker { get; set; }
     public bool CurrentTerrainSupportProved { get; set; }
     public bool DryLandingPatchProved { get; set; }
     public bool StrictGroundedWalkWithZeroTail { get; set; }
@@ -98,6 +99,8 @@ public sealed class VoyagerSurfaceRecoveryPolicy
         if (Completed) { Reject("surface_recovery_already_completed"); return VoyagerSurfaceRecoveryStep.Rejected; }
         string? blocker = f is null ? "surface_recovery_facts_missing"
             : !f.ExactSourceWorldAndScene || !f.NativeModesCostsAndOrderProved ? "surface_recovery_native_binding_unproved"
+            : f.NativeModeBlocker is not null && f.NativeModeBlocker != "remote_idle_ground_contact_unproved"
+                ? "surface_recovery_native_mode_unproved"
             : !f.CurrentTerrainSupportProved || !f.DryLandingPatchProved ? "surface_recovery_surface_unproved"
             : !ClockOpen(f.NowUtc) || !InitialBindingOpen(f.NowUtc) ? "surface_recovery_wall_exhausted"
             : LastPhysicsTick == long.MaxValue || f.GameTick != LastPhysicsTick + 1 || LastUniverseTick != f.GameTick
@@ -109,7 +112,7 @@ public sealed class VoyagerSurfaceRecoveryPolicy
         if (blocker is not null) { Reject(blocker); return VoyagerSurfaceRecoveryStep.Rejected; }
         LastPhysicsTick = f!.GameTick;
         _lastUtc = f.NowUtc;
-        if (f.StrictGroundedWalkWithZeroTail && f.OriginalOrderAbsent && f.DistanceToTargetMeters <= MaximumArrivalDistanceMeters)
+        if (f.NativeModeBlocker is null && f.StrictGroundedWalkWithZeroTail && f.OriginalOrderAbsent && f.DistanceToTargetMeters <= MaximumArrivalDistanceMeters)
         { Completed = true; return VoyagerSurfaceRecoveryStep.Complete; }
         return VoyagerSurfaceRecoveryStep.Continue;
     }

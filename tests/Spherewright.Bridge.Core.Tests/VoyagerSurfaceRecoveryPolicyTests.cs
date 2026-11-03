@@ -15,6 +15,35 @@ public sealed class VoyagerSurfaceRecoveryPolicyTests
     private static readonly DateTimeOffset Now = new(2025, 1, 1, 0, 0, 0, TimeSpan.Zero);
 
     [Fact]
+    public void NativeWalkTransitionCanFinishItsFundedFallWithoutPretendingToBeGrounded()
+    {
+        var p = new VoyagerSurfaceRecoveryPolicy(100, Now); var f = Good();
+        f.NativeModeBlocker = "remote_idle_ground_contact_unproved";
+        f.StrictGroundedWalkWithZeroTail = true; f.OriginalOrderAbsent = true; f.DistanceToTargetMeters = 1;
+        Assert.Null(p.ObserveUniverse(101, Now, true));
+        Assert.Equal(VoyagerSurfaceRecoveryStep.Continue, p.ObservePhysics(f));
+        Assert.False(p.Completed); Assert.False(f.OriginalJourney!.NativePlayerIdle);
+        f.GameTick = f.OriginalJourney.CurrentGameTick = 102; f.NativeModeBlocker = null;
+        Assert.Null(p.ObserveUniverse(102, Now, true));
+        Assert.Equal(VoyagerSurfaceRecoveryStep.Complete, p.ObservePhysics(f));
+    }
+
+    [Theory]
+    [InlineData("support")][InlineData("funding")][InlineData("mode")][InlineData("independent_guard")]
+    public void GroundMissCannotHideAnyOtherMissingNativeProof(string fault)
+    {
+        var p = new VoyagerSurfaceRecoveryPolicy(100, Now); var f = Good();
+        f.NativeModeBlocker = "remote_idle_ground_contact_unproved";
+        if (fault == "support") f.CurrentTerrainSupportProved = false;
+        if (fault == "funding") f.CoreEnergyJoules = 139;
+        if (fault == "mode") f.NativeModeBlocker = "remote_idle_movement_mode_unproved";
+        if (fault == "independent_guard") f.NativeModesCostsAndOrderProved = false;
+        Assert.Null(p.ObserveUniverse(101, Now, true));
+        Assert.Equal(VoyagerSurfaceRecoveryStep.Rejected, p.ObservePhysics(f));
+        Assert.False(p.Completed);
+    }
+
+    [Fact]
     public void NewTaskNeedsReal151BeforeEach501AndOnlyStrictGroundedIdleCompletes()
     {
         var p = new VoyagerSurfaceRecoveryPolicy(100, Now);
