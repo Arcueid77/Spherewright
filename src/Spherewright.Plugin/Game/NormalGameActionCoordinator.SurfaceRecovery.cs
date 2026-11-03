@@ -16,7 +16,7 @@ internal sealed partial class NormalGameActionCoordinator
             Adoption = adoption; Scene = new FirstFrameSurfaceState(scene, null); Target = target;
             Origin = adoption.Player.position; Binding = new VoyagerNativeBinding(adoption.World, adoption.Player);
             Body = adoption.Player.controller.rigid; ActorTransform = adoption.Player.transform; Parent = ActorTransform.parent;
-            Scale = ActorTransform.lossyScale; AutoSync = Physics.autoSyncTransforms; QueriesHitTriggers = Physics.queriesHitTriggers;
+            TransformBinding = NativeContactTransformBinding.Capture(ActorTransform); AutoSync = Physics.autoSyncTransforms; QueriesHitTriggers = Physics.queriesHitTriggers;
             Kinematic = Body.isKinematic; UseGravity = Body.useGravity; Constraints = Body.constraints;
             Source = LoadedGroundSyncState.FromNativeFrame(adoption.Player, GameMain.data.relativePos, GameMain.data.relativeRot);
             Policy = new VoyagerSurfaceRecoveryPolicy(adoption.Evidence.SourceGameTick, DateTimeOffset.UtcNow);
@@ -29,7 +29,7 @@ internal sealed partial class NormalGameActionCoordinator
         public Rigidbody Body { get; }
         public Transform ActorTransform { get; }
         public Transform? Parent { get; }
-        public Vector3 Scale { get; }
+        public NativeContactTransformBinding? TransformBinding { get; }
         public bool AutoSync { get; }
         public bool QueriesHitTriggers { get; }
         public bool Kinematic { get; }
@@ -79,7 +79,7 @@ internal sealed partial class NormalGameActionCoordinator
                 OriginalJourney = SurfaceRecoveryJourneyBudget(a, j, armedUtc),
             })) return SurfaceFailure(a, "surface_recovery_source14_reserve_unproved");
             s = _surfaceRecovery = new SurfaceRecoveryState(a, scene, target);
-            if (!s.Source.Finite || !s.Source.Matches(p)) return SurfaceFailure(a, "surface_recovery_source_state_unproved");
+            if (s.TransformBinding is null || !s.Source.Finite || !s.Source.Matches(p)) return SurfaceFailure(a, "surface_recovery_source_state_unproved");
             a.ChargeStartedGameTick = a.Evidence.SourceGameTick;
             a.ChargeStartedUtc = s.Policy.StartedUtc;
             a.SurfaceRecoveryPending = true;
@@ -191,7 +191,7 @@ internal sealed partial class NormalGameActionCoordinator
         if (!ReferenceEquals(s.Binding.Controller.rigid, s.Body)) return "rigidbody_changed";
         if (!ReferenceEquals(s.Binding.Player.transform, s.ActorTransform)) return "transform_changed";
         if (!ReferenceEquals(s.ActorTransform.parent, s.Parent)) return "parent_changed";
-        if (!s.ActorTransform.lossyScale.Equals(s.Scale)) return "scale_changed";
+        if (s.TransformBinding?.Matches(s.ActorTransform) != true) return "scale_input_or_parent_chain_changed";
         if (s.Body.isKinematic != s.Kinematic) return "kinematic_changed";
         if (s.Body.useGravity != s.UseGravity) return "gravity_mode_changed";
         if (s.Body.constraints != s.Constraints) return "constraints_changed";
