@@ -243,4 +243,3 @@ internal sealed partial class NormalGameActionCoordinator
             TargetPosition = Snapshot(s.Target), CurrentPosition = Snapshot(s.Adoption.Player.position),
         };
 }
-
