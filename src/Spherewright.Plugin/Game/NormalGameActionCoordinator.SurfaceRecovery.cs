@@ -126,7 +126,7 @@ internal sealed partial class NormalGameActionCoordinator
         {
             GameTick = GameMain.gameTick, NowUtc = now, ExactSourceWorldAndScene = exact,
             NativeModesCostsAndOrderProved = native && reserve.Proved, NativeModeBlocker = modeBlocker,
-            CurrentTerrainSupportProved = SurfaceRecoveryTerrain(s, grounded), DryLandingPatchProved = SurfaceRecoveryLandingPatch(s),
+            CurrentTerrainSupportProved = SurfaceRecoveryTerrain(s, grounded, a.CurrentDecisionEvidence!), DryLandingPatchProved = SurfaceRecoveryLandingPatch(s),
             StrictGroundedWalkWithZeroTail = strict, OriginalOrderAbsent = s.Order is not null && player.currentOrder is null,
             DistanceFromSourceMeters = Vector3.Distance(player.position, s.Origin), DistanceToTargetMeters = Vector3.Distance(player.position, s.Target),
             CoreEnergyJoules = player.mecha.coreEnergy, PerNativeTickEnergyJoules = reserve.PerNativeTickEnergyJoules,
@@ -237,14 +237,52 @@ internal sealed partial class NormalGameActionCoordinator
         return null;
     }
 
-    private static bool SurfaceRecoveryTerrain(SurfaceRecoveryState s, bool grounded)
+    private static bool SurfaceRecoveryTerrain(SurfaceRecoveryState s, bool grounded, NativeResumeDecisionEvidence evidence)
     {
-        var p = s.Adoption.Player; var up = p.position.normalized;
-        var hits = new Collider[257]; var count = Physics.OverlapSphereNonAlloc(p.position + up * .15f, .35f, hits, 15873);
-        if (count >= hits.Length || Enumerable.Range(0, count).Any(i => !s.Scene.Surface.Any(c => ReferenceEquals(c, hits[i])))) return false;
-        if (grounded) return count > 0;
-        return count == 0 && Physics.SphereCast(new Ray(p.position + up * .35f, -up), .35f, out var hit, 2f, 15873)
-            && s.Scene.Surface.Any(c => ReferenceEquals(c, hit.collider)) && Vector3.Dot(hit.normal, up) >= .5f;
+        var p = s.Adoption.Player; var position = p.position; var up = position.normalized;
+        var hits = new Collider[257];
+        var count = Physics.OverlapSphereNonAlloc(position + up * .15f, .35f, hits, 15873, QueryTriggerInteraction.Ignore);
+        var complete = count >= 0 && count < hits.Length;
+        evidence.Number("surface_support_foot_count", count); evidence.Observe("surface_support_native_ground", grounded);
+        if (!evidence.Require("surface_support_complete_foot_query", complete)) return false;
+        var owned = true;
+        for (var i = 0; i < count; i++)
+        {
+            var c = hits[i];
+            var current = c is MeshCollider mesh && mesh.sharedMesh != null && c.enabled && c.gameObject.activeInHierarchy
+                && !c.isTrigger && c.gameObject.layer == 9 && s.Scene.Surface.Count(t => ReferenceEquals(t, c)) == 1;
+            if (!current)
+            {
+                owned = false; evidence.Number("surface_support_foreign_layer", c == null ? null : c.gameObject.layer);
+                evidence.Observe("surface_support_foreign_is_trigger", c == null ? null : c.isTrigger);
+                evidence.Observe("surface_support_foreign_is_current_ocean", c != null && ReferenceEquals(c, s.Scene.Scene.Ocean));
+                evidence.Observe("surface_support_foreign_is_current_sphere", c != null && ReferenceEquals(c, s.Scene.Scene.Simulator.sphereCollider));
+                break;
+            }
+        }
+        if (!evidence.Require("surface_support_exact_current_foot_owners", owned)) return false;
+        if (grounded)
+        {
+            evidence.Require("surface_support_grounded_foot_count", count > 0);
+            return NativeSurfaceRecoverySupportPolicy.Proved(true, count, complete, owned, false);
+        }
+        RaycastHit hit;
+        bool cast;
+        if (count == 0)
+            cast = Physics.SphereCast(new Ray(position + up * .35f, -up), .35f, out hit, 2f, 15873, QueryTriggerInteraction.Ignore);
+        else
+            // A sphere cast starting in an existing contact can legitimately
+            // miss. The downward ray starts outside the complete foot cut.
+            cast = Physics.Raycast(new Ray(position + up * 2f, -up), out hit, 4f, 15873, QueryTriggerInteraction.Ignore);
+        evidence.Observe("surface_support_downward_cast_hit", cast);
+        evidence.Number("surface_support_overlap_branch", count > 0 ? 1 : 0);
+        var normal = cast ? Vector3.Dot(hit.normal, up) : (float?)null;
+        var height = cast ? Vector3.Dot(hit.point - position, up) : (float?)null;
+        evidence.Number("surface_support_normal_dot_up", normal); evidence.Number("surface_support_height_from_actor", height);
+        var supporting = cast && s.Scene.Surface.Count(t => ReferenceEquals(t, hit.collider)) == 1
+            && normal >= .5f && height >= -2f && height <= .2f;
+        evidence.Require("surface_support_owned_downward_plane", supporting);
+        return NativeSurfaceRecoverySupportPolicy.Proved(false, count, complete, owned, supporting);
     }
 
     private static bool SurfaceRecoveryLandingPatch(SurfaceRecoveryState s)
