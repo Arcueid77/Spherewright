@@ -493,6 +493,7 @@ internal sealed partial class NormalGameActionCoordinator
             AnchorHeld = exact && ConstructionHoldOwned(action!), ReserveProofStillValid = action?.ConstructionReserveProofValid == true,
             ObservationLeaseExpiresAtUtc = control.ObservationLeaseExpiresAtUtc,
             TailGameTicks = control.TailGameTicks, TailAndNextTickEnergyJoules = control.TailAndNextTickEnergyJoules,
+            NativeFixedDeltaTimeSeconds=control.NativeFixedDeltaTimeSeconds,DrainWallSeconds=control.DrainWallSeconds(),
             StopReason = control.StopReason,
         };
     }
