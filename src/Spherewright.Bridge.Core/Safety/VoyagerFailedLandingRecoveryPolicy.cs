@@ -105,7 +105,8 @@ public static class VoyagerFailedLandingRecoveryPolicy
             return Reject("failed_landing_original_return_reserve_insufficient");
         var seconds = (request.RecoveryDeadlineUtc!.Value - f.NowUtc).TotalSeconds;
         if (f.NowUtc == default || f.NowUtc.Offset != TimeSpan.Zero || request.RecoveryDeadlineUtc.Value.Offset != TimeSpan.Zero
-            || seconds > 3600 || seconds <= f.ReturnReserveGameTicks / 60d + VoyagerRemoteIdleAdmissionPolicy.StopWallSeconds + 1d / 60d)
+            || seconds > VoyagerRecoveryWindowPolicy.MaximumConfirmedWindow.TotalSeconds
+            || seconds <= f.ReturnReserveGameTicks / 60d + VoyagerRemoteIdleAdmissionPolicy.StopWallSeconds + 1d / 60d)
             return Reject("failed_landing_new_owner_window_unproved");
         return new() { Proved = true, SavedAccountingAnchorGameTick = f.SourceGameTick, ConservedSpentGameTicks = (long)spent };
     }

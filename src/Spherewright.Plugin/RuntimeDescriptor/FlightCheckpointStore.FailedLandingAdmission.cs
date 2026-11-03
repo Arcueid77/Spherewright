@@ -59,7 +59,7 @@ internal sealed partial class FlightCheckpointStore
         if (source.IsDisposed || !confirmed || !Guid.TryParse(actionId, out _)
             || !OwnedWorldRecoveryPolicy.IsCanonicalFingerprint(confirmationDigest)
             || now == default || now.Offset != TimeSpan.Zero || now >= source.Proposal.DeadlineUtc
-            || source.Proposal.DeadlineUtc - now > TimeSpan.FromHours(1)) return false;
+            || source.Proposal.DeadlineUtc - now > VoyagerRecoveryWindowPolicy.MaximumConfirmedWindow) return false;
         if (PluginJson.Serialize(VoyagerJourney) != source.JourneyJson)
         { rejection = "failed_landing_registration_memory_journey_changed"; return false; }
         if (!FailedLandingJourneyMatchesDisk(source.JourneyJson))
@@ -169,7 +169,7 @@ internal sealed partial class FlightCheckpointStore
                 || r.MaximumChargeGameTicks < 1 || r.MaximumChargeGameTicks > 18000
                 || string.IsNullOrEmpty(r.SourceSessionId) || r.ConfirmedAtUtc.Offset != TimeSpan.Zero || r.DeadlineUtc.Offset != TimeSpan.Zero
                 || r.ConfirmedAtUtc == default || r.DeadlineUtc <= r.ConfirmedAtUtc
-                || r.DeadlineUtc - r.ConfirmedAtUtc > TimeSpan.FromHours(1)) return false;
+                || r.DeadlineUtc - r.ConfirmedAtUtc > VoyagerRecoveryWindowPolicy.MaximumConfirmedWindow) return false;
             if (i < runs.Count - 1 && r.State is not ("completed_health" or "failed_health")) return false;
             switch (r.State)
             {

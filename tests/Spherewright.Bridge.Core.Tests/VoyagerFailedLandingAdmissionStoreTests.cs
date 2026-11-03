@@ -26,7 +26,8 @@ public sealed partial class VoyagerRemoteResumeCoordinatorIntegrationTests
     {
         using var s = new Scenario(currentNative: true, failedLanding: true);
         var cpPath = s.ProtectedEvidencePaths.ElementAt(4); var cpBefore = File.ReadAllBytes(cpPath);
-        Assert.True(s.Checkpoints.TryOpenFailedLandingSource(s.Tickets, s.Token, FailedLandingRequest(), out var source, out _));
+        var request=FailedLandingRequest();request.RecoveryDeadlineUtc=DateTimeOffset.UtcNow.AddHours(12);
+        Assert.True(s.Checkpoints.TryOpenFailedLandingSource(s.Tickets, s.Token, request, out var source, out _));
         using var evidence = VoyagerRemoteResumeEvidence.CreateFailedLandingRecovery(source!);
         var action = Guid.NewGuid().ToString(); var session = Guid.NewGuid().ToString();
         Assert.True(s.Checkpoints.TryRegisterFailedLandingAdmission(source!, action, true, LandingDigest, DateTimeOffset.UtcNow, out var error), error);

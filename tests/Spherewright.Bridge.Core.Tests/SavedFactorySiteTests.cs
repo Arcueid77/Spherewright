@@ -13,6 +13,28 @@ namespace Spherewright.Bridge.Core.Tests;
 public sealed class SavedFactorySiteTests
 {
     [Fact]
+    public void CapturedLandingFailureReplaysAcrossReceiptCompletionRecoveryAndFreshLandingWithoutReplayingFlight()
+    {
+        var raw=File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"Fixtures","native-paid-site-landing-cut.json"));
+        var result=Newtonsoft.Json.JsonConvert.DeserializeObject<Spherewright.Contracts.Actions.ActionResultSnapshot>(raw)!;
+        Assert.True(result.Terminal);Assert.False(result.Succeeded);Assert.Equal("recovery_required",result.State);
+        using var f=new Fixture(false,unknownTail:true);
+        Assert.Equal("landing_charge_completed_paid_site_required",f.LandingGuard());Assert.NotNull(f.SavedLandingGuard());
+        Assert.Contains("["+f.LandingGuard()+"]",result.Message);
+        Assert.True(f.Store().TryRead(out var states));var b=states.Single(x=>x.Phase=="outcome_unknown");
+        Assert.False(PaidFactoryCompletionPolicy.HasCompletedIdleProof(b,130));
+        var original=Newtonsoft.Json.JsonConvert.SerializeObject(b.ConstructionControl);
+        b.SavedTailCompletion=new(){OriginalActionId=b.ActionId!,OriginalControlHash=b.ConstructionControl!.EvidenceHash(),BuildPlanHash=b.PlanHash,
+            SourceGameTick=120,NativeFactoryPassGameTick=121,PhysicalIdleGameTick=122,SourceFingerprint="synthetic-later-native"};
+        b.LastEvidenceGameTick=122;b.Generation++;GameMain.gameTick=130;Assert.True(f.Store().TryPut(b));
+        Assert.True(PaidFactoryCompletionPolicy.HasCompletedIdleProof(b,130));Assert.Null(f.SavedLandingGuard());Assert.Null(f.LandingGuard());
+        Assert.Equal(original,Newtonsoft.Json.JsonConvert.SerializeObject(b.ConstructionControl));
+        b.SavedTailCompletion.OriginalControlHash="unbound";
+        Assert.False(PaidFactoryCompletionPolicy.HasCompletedIdleProof(b,130));
+        Assert.Equal("recovery_required",result.State);Assert.False(result.Succeeded);
+    }
+
+    [Fact]
     public void PaidPendingSourceCanGainLaterNativeCompletionWithoutChangingItsUnknownControlOrDebit()
     {
         using var f=new Fixture(true,unknownTail:true,workFailure:true);
@@ -27,7 +49,7 @@ public sealed class SavedFactorySiteTests
         f.Factory.TestPorts.Clear();f.Connect(1,0,3,0);f.Connect(3,1,2,0);
         b.SavedTailCompletion=new(){OriginalActionId=b.ActionId!,OriginalControlHash=b.ConstructionControl!.EvidenceHash(),BuildPlanHash=b.PlanHash,
             SourceGameTick=120,NativeFactoryPassGameTick=122,PhysicalIdleGameTick=123,SourceFingerprint="sha256:"+new string('c',64)};
-        GameMain.gameTick=130;Assert.True(f.Store().TryPut(b));Assert.Null(f.SavedLandingGuard());
+        GameMain.gameTick=130;Assert.True(f.Store().TryPut(b));Assert.Null(f.SavedLandingGuard());Assert.Null(f.LandingGuard());
         Assert.True(f.Store().TryRead(out var reopened));var saved=reopened.Single(x=>x.BuildId==b.BuildId);
         Assert.Equal("outcome_unknown",saved.Phase);Assert.Equal(original,Newtonsoft.Json.JsonConvert.SerializeObject(saved.ConstructionControl));
         Assert.Equal(1,saved.Objects[0].InventoryBefore);Assert.Equal(0,saved.Objects[0].InventoryAfter);
@@ -43,11 +65,11 @@ public sealed class SavedFactorySiteTests
             BuildPlanHash=b.PlanHash,SourceGameTick=120,NativeFactoryPassGameTick=121,PhysicalIdleGameTick=122,
             SourceFingerprint="sha256:"+new string('b',64)};
         b.LastEvidenceGameTick=122;b.Generation++;GameMain.gameTick=130;
-        Assert.True(f.Store().TryPut(b));Assert.Null(f.SavedLandingGuard());
+        Assert.True(f.Store().TryPut(b));Assert.Null(f.SavedLandingGuard());Assert.Null(f.LandingGuard());
         Assert.True(f.Store().TryRead(out var reopened));var saved=reopened.Single(x=>x.BuildId==b.BuildId);
         Assert.Equal("outcome_unknown",saved.Phase);Assert.Equal(action,saved.ActionId);
         Assert.Equal(original,Newtonsoft.Json.JsonConvert.SerializeObject(saved.ConstructionControl));
-        f.Factory.TestPorts.Remove((1,0));Assert.NotNull(f.SavedLandingGuard());
+        f.Factory.TestPorts.Remove((1,0));Assert.NotNull(f.SavedLandingGuard());Assert.NotNull(f.LandingGuard());
     }
     [Fact]
     public void NewSavedLandingWitnessCanRecoverAnEntirePaidMiningSiteWithoutRelaxingDefaultRecovery()

@@ -95,7 +95,7 @@ public sealed class VoyagerFailedLandingRecoveryPolicyTests
         Assert.NotNull(VoyagerFailedLandingRecoveryPolicy.ValidateRequest(r));
         r = Request(); r.RecoveryDeadlineUtc = Now.AddMinutes(-1);
         Assert.False(VoyagerFailedLandingRecoveryPolicy.Evaluate(r, Facts()).Proved);
-        r = Request(); r.RecoveryDeadlineUtc = Now.AddHours(1).AddSeconds(1);
+        r = Request(); r.RecoveryDeadlineUtc = Now.Add(VoyagerRecoveryWindowPolicy.MaximumConfirmedWindow).AddSeconds(1);
         Assert.False(VoyagerFailedLandingRecoveryPolicy.Evaluate(r, Facts()).Proved);
     }
 
@@ -106,5 +106,13 @@ public sealed class VoyagerFailedLandingRecoveryPolicyTests
         Assert.False(VoyagerFailedLandingRecoveryPolicy.Evaluate(r, Facts()).Proved);
         r.RecoveryDeadlineUtc = Now.AddMinutes(55);
         Assert.True(VoyagerFailedLandingRecoveryPolicy.Evaluate(r, Facts()).Proved);
+    }
+    [Fact]
+    public void ExplicitFiniteLongerWindowPreservesOriginalSpentTickCapAndReturnReserve()
+    {
+        var r=Request();r.RecoveryDeadlineUtc=Now.AddHours(12);var f=Facts();
+        var d=VoyagerFailedLandingRecoveryPolicy.Evaluate(r,f);Assert.True(d.Proved);
+        Assert.Equal(200,d.ConservedSpentGameTicks);Assert.Equal(108000,f.MaximumGameTicks);Assert.Equal(54000,f.ReturnReserveGameTicks);
+        r.AdditionalVoyagerGameTicks=1;Assert.NotNull(VoyagerFailedLandingRecoveryPolicy.ValidateRequest(r));
     }
 }

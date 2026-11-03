@@ -37,8 +37,8 @@ internal sealed partial class NormalGameActionCoordinator
                 || s.BeltPathMode == BeltPathModes.NativeElevatedGrid))
             return Stale($"Remote construction requires an original-journey native-validated batch of1..{StructuredConstructionBinding.MaximumNewObjects(plan.BuildingItemId)} supported NEW objects without elevated paths or belt-cover reuse; observed NEW count={plan.BuildSteps.Count}, item={plan.BuildingItemId}, journey phase={journey.Phase}.");
         if (!_blueprints.TryRead(out var old) || old.Count >= BlueprintBuildStore.MaximumBuilds
-            || old.Any(b => b.StructuredConstruction is not null && b.Phase != "completed"
-                && b.SavedTailCompletion?.Matches(b,GameMain.gameTick)!=true))
+            || old.Any(b => b.StructuredConstruction is not null
+                && !PaidFactoryCompletionPolicy.HasCompletedIdleProof(b,GameMain.gameTick)))
             return BlueprintError("Read and fresh-resume the exact existing structured build; do not submit a replacement batch.");
 
         var binding = new StructuredConstructionBinding

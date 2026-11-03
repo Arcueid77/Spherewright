@@ -36,9 +36,8 @@ internal sealed partial class NormalGameActionCoordinator
                 && b.Objects.Any(o => o.SubmittedAtGameTick.HasValue)).ToArray();
             var hasFactoryCore = local.Any(b => b.StructuredConstruction is not null
                 && b.Site.Objects.Any(o => StructuredConstructionBinding.IsFactoryCoreItem(o.ItemId)));
-            var completePaidSite = local.Length > 0 && local.All(b => b.StructuredConstruction is not null
-                && b.Phase == "completed" && b.Objects.Count > 0
-                && b.Objects.All(o => o.State == BlueprintObjectStates.Completed));
+            var completePaidSite = local.Length > 0
+                && local.All(b => PaidFactoryCompletionPolicy.HasCompletedIdleProof(b, GameMain.gameTick));
             if (completedPaidLandingOnly && !completePaidSite)
                 return "landing_charge_completed_paid_site_required";
             if (hasFactoryCore || completedPaidLandingOnly || provedSavedLandingAdmission)

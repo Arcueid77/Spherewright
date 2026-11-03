@@ -1,0 +1,9 @@
+{
+  "scope": "Actual public terminal response; identities, coordinates, paths, ticks and hashes removed. Original outcome and physical idle uncertainty retained.",
+  "actionKind": "interplanetary-flight",
+  "state": "recovery_required",
+  "terminal": true,
+  "succeeded": false,
+  "recoveryRequired": true,
+  "message": "The original landing cannot continue its bounded Native recharge. [landing_charge_completed_paid_site_required] Native Pause is verified; this LogicFrame may finish, then further Native energy is frozen. Physical idle remains unproved; do not automatically Resume or replay."
+}
