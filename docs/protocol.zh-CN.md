@@ -8,7 +8,7 @@
 <a id="framing-and-authentication"></a>
 ## 帧与认证
 
-`prepare_resume_owned_game` 的 `recoveryMode=authorize_remote_primary_recovery` 接受可选 `additionalVoyagerGameTicks`（默认0、最大108000），请求在不可变原行程上限之上另行确认新增额度。准备响应回显 `additionalVoyagerGameTicks`、`originalJourneyMaximumGameTicks` 和 `effectiveJourneyMaximumGameTicks`；准确新增额度绑定既有披露/digest及持久授权。它不跨提案累加，原已耗时间和返航储备继续计费；其他请求模式拒绝非零新增额度。执行核验见 [Agent 指南](agent-playbook.zh-CN.md)。
+`prepare_resume_owned_game` 的 `recoveryMode=authorize_remote_primary_recovery` 接受可选 `additionalVoyagerGameTicks`（默认0、最大5184000），请求在不可变原行程上限之上另行确认新增额度。准备响应回显 `additionalVoyagerGameTicks`、`originalJourneyMaximumGameTicks` 和 `effectiveJourneyMaximumGameTicks`；准确新增额度绑定既有披露/digest及持久授权。它不跨提案累加，原已耗时间和返航储备继续计费；其他请求模式拒绝非零新增额度。执行核验见 [Agent 指南](agent-playbook.zh-CN.md)。
 
 每条 Pipe 消息由四字节小端有符号长度加 UTF-8 JSON 组成。负长度及超过 1 MiB 的负载在分配内存前拒绝；零长度帧进入 JSON 校验后拒绝。
 

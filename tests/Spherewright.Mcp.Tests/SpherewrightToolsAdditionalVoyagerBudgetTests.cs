@@ -20,7 +20,7 @@ public sealed partial class SpherewrightToolsTests
             SourceGameVersion = "0.10.35.29151", TargetGameVersion = "0.10.35.29151",
             OriginalJourneyDeadlineUtc = deadline.AddDays(-1), EffectiveRecoveryDeadlineUtc = deadline,
             RecoveryScope = VoyagerRecoveryWindowProposal.TaskScope, MaximumChargeGameTicks = 18000, MaximumChargeWallSeconds = 300,
-            AdditionalVoyagerGameTicks = 54000, OriginalJourneyMaximumGameTicks = 108000, EffectiveJourneyMaximumGameTicks = 162000,
+            AdditionalVoyagerGameTicks = 432000, OriginalJourneyMaximumGameTicks = 108000, EffectiveJourneyMaximumGameTicks = 540000,
             NativeChargeFeasibilityRequiresFreshCapture = true, CandidateGameTick = 77, MinimumGameTick = 77,
             DiscardedUnstoredProgressGameTicks = 0, ConservedObservedProgressDebitGameTicks = 0,
             ExactEmbeddedIdentityVerified = true, UserConfirmationRequired = true,
@@ -36,9 +36,9 @@ public sealed partial class SpherewrightToolsTests
         var result = await SpherewrightTools.PrepareOwnedWorldResumeAsync(bridge, "synthetic-current-primary-token",
             recoveryMode: OwnedWorldResumeModes.AuthorizeRemotePrimaryRecovery, recoveryDeadlineUtc: deadline,
             recoveryScope: VoyagerRecoveryWindowProposal.TaskScope, maximumChargeGameTicks: 18000, maximumChargeWallSeconds: 300,
-            additionalVoyagerGameTicks: 54000);
+            additionalVoyagerGameTicks: 432000);
         Assert.Equal(fault != "valid", result.IsError);
-        Assert.Equal(54000, bridge.LastResumePrepareRequest!.AdditionalVoyagerGameTicks);
+        Assert.Equal(432000, bridge.LastResumePrepareRequest!.AdditionalVoyagerGameTicks);
         if (fault != "valid") Assert.DoesNotContain("synthetic-additional-budget-plan", result.StructuredContent!.Value.GetRawText());
     }
 }

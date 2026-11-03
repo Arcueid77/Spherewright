@@ -33,6 +33,21 @@ internal sealed partial class GameStateReader
     private static string NearSupportReason(Exception exception) => exception is NativeNearSupportException known
         ? known.Code : "native_near_support_capture_unavailable:" + exception.GetType().Name;
 
+    // A fresh read-only witness for one current foot contact. Ownership alone
+    // is not ground: callers separately prove the downward plane and Native
+    // Walk/zero-tail completion. Reuse the exact registered/pool/object-chain/
+    // geometry/free-pool proof rather than trusting a collision layer.
+    internal static string? CurrentOwnedContactOwnerBlocker(Player player, Collider[] terrain, Collider contact)
+    {
+        try
+        {
+            var snapshot = new NativeNearGroundSupportSnapshot();
+            var binding = new NativeNearGroundSupportBinding(player, terrain, snapshot, true);
+            return binding.CurrentContactOwnerBlocker(contact);
+        }
+        catch (Exception exception) { return NearSupportReason(exception); }
+    }
+
     private sealed class NativeNearSupportException : Exception
     {
         public NativeNearSupportException(string code) { Code = "remote_resume_near_support_" + code; }
@@ -64,6 +79,7 @@ internal sealed partial class GameStateReader
         private NativeNearSupportPose? _supportPose;
         private LoadedTerrainSupportPose? _loadedTerrainSupport;
         private readonly bool _allowInitializedTerrain;
+        private bool _allowFactoryContact;
         private ColliderData _supportData;
         private int _supportId;
         private int _objectId;
@@ -113,6 +129,23 @@ internal sealed partial class GameStateReader
 
         internal string? Recheck(Player player, string stage, Collider[] currentTerrainSurface,
             out NativeNearGroundSupportSnapshot snapshot) => Capture(player, stage, currentTerrainSurface, false, out snapshot);
+
+        internal string? CurrentContactOwnerBlocker(Collider contact)
+        {
+            try
+            {
+                Require(System.Threading.Thread.CurrentThread.ManagedThreadId == _threadId, "thread_changed");
+                Require(ContextMatches(_player, _terrain), "context_changed");
+                Require(contact != null && !contact.isTrigger && contact.enabled && contact.gameObject.activeInHierarchy
+                    && Scene(contact.gameObject), "contact_collider_unproved");
+                _allowFactoryContact = true;
+                BindSupport(contact!);
+                VerifySupport(new NativeNearGroundSupportSnapshot(), false);
+                Require(ContextMatches(_player, _terrain), "context_changed_during_query");
+                return null;
+            }
+            catch (Exception exception) { return NearSupportReason(exception); }
+        }
 
         internal bool TryObserveInitialization(Player player, Collider[] surface, out int? count,
             out bool? colliderRefreshPending)
@@ -284,7 +317,8 @@ internal sealed partial class GameStateReader
             var cell = Cell(_supportId);
             Require(_physics.GetColliderData(hit, out var data) && Same(data, cell.Data), "native_pool_lookup_unproved");
             Require(data.idType != 0 && data.objId > 0 && data.usage == EColliderUsage.Physics
-                && (data.objType == EObjectType.Vein || data.objType == EObjectType.Vegetable), "support_kind_unproved");
+                && (data.objType == EObjectType.Vein || data.objType == EObjectType.Vegetable
+                    || _allowFactoryContact && (data.objType == EObjectType.Entity || data.objType == EObjectType.Prebuild)), "support_kind_unproved");
             _supportData = data; _objectType = data.objType; _objectId = data.objId;
             (_objectPool, _chainRoot) = ObjectRoot();
             _chain = Chain(_chainRoot);
@@ -323,7 +357,8 @@ internal sealed partial class GameStateReader
             snapshot.Layer = _support!.gameObject.layer; snapshot.Shape = _support is CapsuleCollider ? "capsule" : _support is SphereCollider ? "sphere" : "box";
             snapshot.IsTrigger = _support.isTrigger; snapshot.Enabled = _support.enabled;
             snapshot.ActiveInHierarchy = _support.gameObject.activeInHierarchy; snapshot.SameDefaultPhysicsScene = Scene(_support.gameObject);
-            snapshot.OwnerType = _objectType == EObjectType.Vein ? "vein" : "vegetable"; snapshot.ObjectId = _objectId;
+            snapshot.OwnerType = _objectType == EObjectType.Vein ? "vein" : _objectType == EObjectType.Vegetable ? "vegetable"
+                : _objectType == EObjectType.Entity ? "entity" : "prebuild"; snapshot.ObjectId = _objectId;
             snapshot.CurrentPoolReference = true; snapshot.LiveObject = true; snapshot.ColliderChain = true;
             // This mark is not object existence: Native501 intentionally clears it.
             snapshot.NativeLiveFlag = _registeredObject!.live;
@@ -360,6 +395,22 @@ internal sealed partial class GameStateReader
 
         private (Array Pool, int Root) ObjectRoot()
         {
+            if (_allowFactoryContact && _objectType == EObjectType.Entity)
+            {
+                var pool = _factory.entityPool;
+                Require(pool is not null && _objectId > 0 && _objectId < pool.Length && _objectId < _factory.entityCursor
+                    && pool[_objectId].id == _objectId && pool[_objectId].protoId > 0 && pool[_objectId].colliderId > 0,
+                    "entity_object_unproved");
+                return (pool!, pool![_objectId].colliderId);
+            }
+            if (_allowFactoryContact && _objectType == EObjectType.Prebuild)
+            {
+                var pool = _factory.prebuildPool;
+                Require(pool is not null && _objectId > 0 && _objectId < pool.Length && _objectId < _factory.prebuildCursor
+                    && pool[_objectId].id == _objectId && pool[_objectId].protoId > 0 && pool[_objectId].colliderId > 0,
+                    "prebuild_object_unproved");
+                return (pool!, pool![_objectId].colliderId);
+            }
             if (_objectType == EObjectType.Vein)
             {
                 var pool = _factory.veinPool;
@@ -494,7 +545,8 @@ internal sealed partial class GameStateReader
                 _layer = c.gameObject.layer;
                 Require(Finite(_position) && Finite(_rotation) && Finite(_scale) && _scale.x > 0 && _scale.y > 0 && _scale.z > 0
                     && _position.Equals(data.pos) && ReferenceEquals(_parent, pool.transform)
-                    && _layer == (data.objType == EObjectType.Vegetable ? 10 : 11), "support_pose_unproved");
+                    && _layer == (data.objType == EObjectType.Vegetable ? 10 : data.objType == EObjectType.Vein ? 11
+                        : data.objType == EObjectType.Prebuild ? 1 : data.objType == EObjectType.Entity ? 0 : -1), "support_pose_unproved");
                 for (var i = 0; i < 16; i++) Require(Finite(_matrix[i]), "support_matrix_nonfinite");
                 if (c is CapsuleCollider capsule && data.shape == EColliderShape.Capsule)
                 { _center = capsule.center; _radius = capsule.radius; _height = capsule.height; _direction = capsule.direction;

@@ -34,6 +34,7 @@ public sealed class NativeSurfaceRecoverySupportPolicyTests
         Assert.False(NativeSurfaceRecoverySupportPolicy.Proved(null, 1, true, true, true));
         Assert.False(NativeSurfaceRecoverySupportPolicy.Proved(true, null, true, true, true));
         Assert.False(NativeSurfaceRecoverySupportPolicy.Proved(true, 0, true, true, true));
-        Assert.True(NativeSurfaceRecoverySupportPolicy.Proved(true, 1, true, true, false));
+        Assert.False(NativeSurfaceRecoverySupportPolicy.Proved(true, 1, true, true, false));
+        Assert.True(NativeSurfaceRecoverySupportPolicy.Proved(true, 1, true, true, true));
     }
 }

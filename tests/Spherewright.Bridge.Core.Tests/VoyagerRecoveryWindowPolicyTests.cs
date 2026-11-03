@@ -7,7 +7,7 @@ public sealed class VoyagerRecoveryWindowPolicyTests
 {
     private static readonly DateTimeOffset Now = new(2025, 1, 2, 0, 0, 0, TimeSpan.Zero);
     [Fact]
-    public void OneAbsoluteWindowIsBoundedByOriginalSpanAndCannotRenewByLaterValidation()
+    public void NewConfirmedFiniteWindowCanExceedHistoricalSpanButNeverRenewsDuringValidation()
     {
         var p = new VoyagerRecoveryWindowProposal(Now.AddMinutes(30), VoyagerRecoveryWindowProposal.TaskScope, 9000, 240);
         var issued = Now.AddHours(-3); var original = issued.AddHours(1);
@@ -15,7 +15,8 @@ public sealed class VoyagerRecoveryWindowPolicyTests
         Assert.Null(VoyagerRecoveryWindowPolicy.ProposalBlocker(p, Now.AddMinutes(1), issued, original, 54000));
         Assert.Equal(Now.AddMinutes(30), p.DeadlineUtc);
         Assert.NotNull(VoyagerRecoveryWindowPolicy.ProposalBlocker(p, p.DeadlineUtc, issued, original, 54000));
-        Assert.NotNull(VoyagerRecoveryWindowPolicy.ProposalBlocker(new(Now.AddHours(2), p.Scope, 1, 1), Now, issued, original, 54000));
+        Assert.Null(VoyagerRecoveryWindowPolicy.ProposalBlocker(new(Now.AddHours(2), p.Scope, 1, 1), Now, issued, original, 54000));
+        Assert.NotNull(VoyagerRecoveryWindowPolicy.ProposalBlocker(new(Now.AddHours(24).AddTicks(1), p.Scope, 1, 1), Now, issued, original, 54000));
     }
     [Theory]
     [InlineData(0, 1)] [InlineData(18001, 1)] [InlineData(1, 0)] [InlineData(1, 301)] [InlineData(1, double.NaN)]

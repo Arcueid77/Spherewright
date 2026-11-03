@@ -44,7 +44,10 @@ public sealed class VoyagerRecoveryAuthorization
 public static class VoyagerRecoveryWindowPolicy
 {
     public const string ChargingPending = "remote_resume_charging_pending";
-    public const long MaximumAdditionalVoyagerGameTicks = 108000;
+    // Explicitly confirmed finite work allowance, not an automatic grant.
+    // Original spending/reserves and per-action stop/charge caps stay intact.
+    public const long MaximumAdditionalVoyagerGameTicks = 5184000;
+    public static readonly TimeSpan MaximumConfirmedWindow = TimeSpan.FromHours(24);
 
     // Each proposal names its total addition above the immutable original cap.
     // An earlier proposal is never added again; observed spent ticks are separate.
@@ -94,7 +97,7 @@ public static class VoyagerRecoveryWindowPolicy
         if (p.AdditionalVoyagerGameTicks < 0 || p.AdditionalVoyagerGameTicks > MaximumAdditionalVoyagerGameTicks
             || p.Scope != VoyagerRecoveryWindowProposal.TaskScope || now == default || originalIssued == default
             || originalDeadline <= originalIssued || p.DeadlineUtc <= now
-            || p.DeadlineUtc - now > originalDeadline - originalIssued
+            || p.DeadlineUtc - now > MaximumConfirmedWindow
             || returnTicks < 3600 || (p.DeadlineUtc - now).TotalSeconds <= returnTicks / 60d + 1d + 1d / 60d
             || p.MaximumChargeGameTicks < 1 || p.MaximumChargeGameTicks > 18000
             || !Finite(p.MaximumChargeWallSeconds) || p.MaximumChargeWallSeconds <= 0d || p.MaximumChargeWallSeconds > 300d)

@@ -246,26 +246,29 @@ internal sealed partial class NormalGameActionCoordinator
         evidence.Number("surface_support_foot_count", count); evidence.Observe("surface_support_native_ground", grounded);
         if (!evidence.Require("surface_support_complete_foot_query", complete)) return false;
         var owned = true;
+        var terrainCount = 0; var objectCount = 0;
         for (var i = 0; i < count; i++)
         {
             var c = hits[i];
             var current = c is MeshCollider mesh && mesh.sharedMesh != null && c.enabled && c.gameObject.activeInHierarchy
                 && !c.isTrigger && c.gameObject.layer == 9 && s.Scene.Surface.Count(t => ReferenceEquals(t, c)) == 1;
+            if (current) { terrainCount++; continue; }
+            var ownerBlocker = c == null ? "contact_missing"
+                : GameStateReader.CurrentOwnedContactOwnerBlocker(p, s.Scene.Surface, c);
+            if (ownerBlocker is null) { objectCount++; continue; }
             if (!current)
             {
                 owned = false; evidence.Number("surface_support_foreign_layer", c == null ? null : c.gameObject.layer);
                 evidence.Observe("surface_support_foreign_is_trigger", c == null ? null : c.isTrigger);
                 evidence.Observe("surface_support_foreign_is_current_ocean", c != null && ReferenceEquals(c, s.Scene.Scene.Ocean));
                 evidence.Observe("surface_support_foreign_is_current_sphere", c != null && ReferenceEquals(c, s.Scene.Scene.Simulator.sphereCollider));
+                evidence.Require("surface_support_owner_" + ownerBlocker, false);
                 break;
             }
         }
         if (!evidence.Require("surface_support_exact_current_foot_owners", owned)) return false;
-        if (grounded)
-        {
-            evidence.Require("surface_support_grounded_foot_count", count > 0);
-            return NativeSurfaceRecoverySupportPolicy.Proved(true, count, complete, owned, false);
-        }
+        evidence.Number("surface_support_current_terrain_count", terrainCount);
+        evidence.Number("surface_support_current_object_count", objectCount);
         RaycastHit hit;
         bool cast;
         if (count == 0)
@@ -279,10 +282,13 @@ internal sealed partial class NormalGameActionCoordinator
         var normal = cast ? Vector3.Dot(hit.normal, up) : (float?)null;
         var height = cast ? Vector3.Dot(hit.point - position, up) : (float?)null;
         evidence.Number("surface_support_normal_dot_up", normal); evidence.Number("surface_support_height_from_actor", height);
-        var supporting = cast && s.Scene.Surface.Count(t => ReferenceEquals(t, hit.collider)) == 1
+        var castOwned = cast && (s.Scene.Surface.Count(t => ReferenceEquals(t, hit.collider)) == 1
+            || GameStateReader.CurrentOwnedContactOwnerBlocker(p, s.Scene.Surface, hit.collider) is null);
+        var supporting = castOwned
             && normal >= .5f && height >= -2f && height <= .2f;
         evidence.Require("surface_support_owned_downward_plane", supporting);
-        return NativeSurfaceRecoverySupportPolicy.Proved(false, count, complete, owned, supporting);
+        return NativeSurfaceRecoverySupportPolicy.CutProved(grounded, count, complete, terrainCount, objectCount,
+            castOwned, normal, height);
     }
 
     private static bool SurfaceRecoveryLandingPatch(SurfaceRecoveryState s)

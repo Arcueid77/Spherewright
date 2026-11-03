@@ -1,0 +1,9 @@
+{
+  "scope": "Sanitized original same-decision failure; owner chain and downward cast were not reached. No saved identity, position, clock or action identifier retained.",
+  "nativeAssemblySha256": "EF314425DADE51F529F184F07BE136CD3C2660A6A81515603C7226FBE7AB1D8C",
+  "stage": "surface_recovery_native501",
+  "firstFailedPredicate": "surface_support_exact_current_foot_owners",
+  "predicates": {"surface_support_complete_foot_query": "true", "surface_support_exact_current_foot_owners": "false", "surface_runtime_binding": "true", "surface_mode_bounded": "true", "surface_tick_cost": "true", "surface_owned_order": "true"},
+  "observations": {"surface_support_native_ground": "true", "surface_support_foreign_is_trigger": "false", "surface_support_foreign_is_current_ocean": "false", "surface_support_foreign_is_current_sphere": "false", "surface_strict_grounded_walk_zero_tail": "false"},
+  "values": {"surface_support_foot_count": 2, "surface_support_foreign_layer": 11, "surface_support_normal_dot_up": null, "surface_support_height_from_actor": null}
+}

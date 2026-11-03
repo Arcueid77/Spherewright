@@ -165,7 +165,7 @@ public sealed class VoyagerSurfaceRecoveryPolicyTests
     }
 
     [Fact]
-    public void SurfaceRecoveryNeverBecomesADefaultFallbackOrATickGrant()
+    public void SurfaceRecoveryRequiresExplicitFiniteAuthorizationAndCannotDefaultOrGrantTicksItself()
     {
         var r = new PrepareOwnedWorldResumeRequest { SurfaceRecoveryTarget = new Vector3Snapshot { X = 200 } };
         Assert.NotNull(VoyagerSurfaceRecoveryPolicy.ValidateRequest(r));
@@ -173,6 +173,8 @@ public sealed class VoyagerSurfaceRecoveryPolicyTests
         r.MaximumChargeGameTicks = 600; r.MaximumChargeWallSeconds = 30;
         Assert.Null(VoyagerSurfaceRecoveryPolicy.ValidateRequest(r));
         r.AdditionalVoyagerGameTicks = 1;
+        Assert.Null(VoyagerSurfaceRecoveryPolicy.ValidateRequest(r));
+        r.AdditionalVoyagerGameTicks = VoyagerRecoveryWindowPolicy.MaximumAdditionalVoyagerGameTicks + 1;
         Assert.NotNull(VoyagerSurfaceRecoveryPolicy.ValidateRequest(r));
         r.AdditionalVoyagerGameTicks = 0; r.SurfaceRecoveryTarget.X = float.NaN;
         Assert.NotNull(VoyagerSurfaceRecoveryPolicy.ValidateRequest(r));

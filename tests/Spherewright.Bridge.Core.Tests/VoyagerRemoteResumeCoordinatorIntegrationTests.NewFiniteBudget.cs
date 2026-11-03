@@ -14,7 +14,7 @@ public sealed partial class VoyagerRemoteResumeCoordinatorIntegrationTests
     [InlineData("open_saved_primary", 54000)]
     [InlineData("resume_return_only_task", 54000)]
     [InlineData("authorize_remote_primary_recovery", -1)]
-    [InlineData("authorize_remote_primary_recovery", 108001)]
+    [InlineData("authorize_remote_primary_recovery", VoyagerRecoveryWindowPolicy.MaximumAdditionalVoyagerGameTicks + 1)]
     public void AdditionalBudgetRejectsImplicitModeAndInvalidAmount(string mode, long extra)
     {
         var request = WindowRequest(); request.RecoveryMode = mode; request.AdditionalVoyagerGameTicks = extra;
