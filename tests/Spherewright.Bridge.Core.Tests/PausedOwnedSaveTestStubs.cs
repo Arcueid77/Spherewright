@@ -52,7 +52,7 @@ namespace Spherewright.Plugin.Game
         private ManualLogSource _logger = new();
         private VoyagerRemoteResumeAdoption? _remoteResumeAdoption;
         private Func<VoyagerRemoteResumeAdoption, string?>? _remoteResumeAdmissionGuard = null;
-        internal bool HasPendingRemoteResumeAdoption => _pendingRemoteResumeEvidence is not null && !_remoteResumeAdmitted;
+        internal bool HasPendingRemoteResumeAdoption => _universeObserverPendingForTest || _pendingRemoteResumeEvidence is not null && !_remoteResumeAdmitted;
         private OwnedWorldGameplayJournalCheckpoint CaptureGameplayJournalCheckpointOnMainThread() =>
             Spherewright.Plugin.Transport.PluginJson.Deserialize<OwnedWorldGameplayJournalCheckpoint>(RemoteEvidence!.JournalJson)!;
 

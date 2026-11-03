@@ -179,8 +179,6 @@ internal sealed partial class NormalGameActionCoordinator
         LockedReturnFloorJoules = j.ReturnEnergyFloorJoules,
     };
 
-    private bool SurfaceRecoveryBinding(SurfaceRecoveryState s) => SurfaceRecoveryBindingBlocker(s) is null;
-
     private string? SurfaceRecoveryBindingBlocker(SurfaceRecoveryState s)
     {
         if (!_sessions.IsCurrentSessionOwned) return "session_not_owned";
@@ -209,13 +207,20 @@ internal sealed partial class NormalGameActionCoordinator
     private string? ObserveSurfaceRecoveryUniverse(VoyagerRemoteResumeAdoption a)
     {
         if (_surfaceRecovery is not { } s || !ReferenceEquals(s.Adoption, a)) return SurfaceFailure(a, "surface_recovery_controller_missing");
-        var exact = SurfaceRecoveryBinding(s);
+        var e = a.CurrentDecisionEvidence!; e.Stage("surface_recovery_native151");
+        var runtimeBlocker = SurfaceRecoveryBindingBlocker(s);
+        if (!e.Require(runtimeBlocker is null ? "surface151_runtime_binding" : "surface151_" + runtimeBlocker, runtimeBlocker is null))
+            return SurfaceFailure(a, "surface_recovery_native151_binding_unproved");
         var first = s.Policy.LastPhysicsTick == s.Policy.SourceGameTick;
         var observed = default(VectorLF3);
-        if (first) exact &= s.Source.CurrentBlockerAtNativeUniverseTick(a.Player, GameMain.gameTick, out observed) is null;
+        var sourceBlocker = first ? s.Source.CurrentBlockerAtNativeUniverseTick(a.Player, GameMain.gameTick, out observed) : null;
+        if (!e.Require(sourceBlocker is null ? "surface151_player_state" : "surface151_" + sourceBlocker, sourceBlocker is null))
+            return SurfaceFailure(a, "surface_recovery_native151_player_unproved");
         var terrain = GameStateReader.CaptureNativeTerrain(a.Player, "surface_recovery_native151");
-        exact &= NativeTerrainObservationPolicy.Blocker(terrain, 9) is null;
-        var failure = s.Policy.ObserveUniverse(GameMain.gameTick, DateTimeOffset.UtcNow, exact);
+        var terrainBlocker = NativeTerrainObservationPolicy.Blocker(terrain, 9);
+        if (!e.Require(terrainBlocker is null ? "surface151_terrain" : "surface151_" + terrainBlocker, terrainBlocker is null))
+            return SurfaceFailure(a, "surface_recovery_native151_terrain_unproved");
+        var failure = s.Policy.ObserveUniverse(GameMain.gameTick, DateTimeOffset.UtcNow, true);
         if (failure is not null) return SurfaceFailure(a, failure);
         if (first && !s.Source.TryPinNativeUniversePosition(observed)) return SurfaceFailure(a, "surface_recovery_first151_position_unproved");
         return null;

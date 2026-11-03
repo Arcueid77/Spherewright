@@ -42,6 +42,7 @@
     <Compile Include="..\..\src\Spherewright.Plugin\Game\NormalGameActionCoordinator.SavedUnpoweredPoles.cs" Link="PluginGame\NormalGameActionCoordinator.SavedUnpoweredPoles.cs" />
     <Compile Include="..\..\src\Spherewright.Plugin\Game\NormalGameActionCoordinator.SavedUnpoweredBeltChain.cs" Link="PluginGame\NormalGameActionCoordinator.SavedUnpoweredBeltChain.cs" />
     <Compile Include="..\..\src\Spherewright.Plugin\Game\NormalGameActionCoordinator.SavedConstructionReceipt.cs" Link="PluginGame\NormalGameActionCoordinator.SavedConstructionReceipt.cs" />
+    <Compile Include="..\..\src\Spherewright.Plugin\Game\GameSessionTracker.RemoteResumeUniverse.cs" Link="PluginGame\GameSessionTracker.RemoteResumeUniverse.cs" />
     <Compile Include="..\..\src\Spherewright.Plugin\Game\GameSessionTracker.RemoteResumeCompletion.cs" Link="PluginGame\GameSessionTracker.RemoteResumeCompletion.cs" />
     <Compile Include="..\..\src\Spherewright.Plugin\Game\GameSessionTracker.RemoteResumeLeaseHandoff.cs" Link="PluginGame\GameSessionTracker.RemoteResumeLeaseHandoff.cs" />
     <Compile Include="..\..\src\Spherewright.Plugin\Game\GameSessionTracker.PausedSave.cs" Link="PluginGame\GameSessionTracker.PausedSave.cs" />

@@ -320,18 +320,6 @@ internal sealed partial class GameSessionTracker
         else adoption.TerrainPreFirstFrame ??= terrain.Copy();
     }
 
-    internal bool ObserveRemoteResumeUniverseOnMainThread()
-    {
-        if (_remoteResumeAdoption is not null && (_resumeAdoptionError is not null || _remoteResumeAdoption.FirstFrame.Failure is not null))
-            return FailRemoteResumeAdmission("remote_resume_failed_adoption_is_terminal");
-        if (!HasPendingRemoteResumeAdoption || _remoteResumeAdoption?.FirstFrame is not { Armed: true } frame) return true;
-        if (frame.PhysicsObserved && GameMain.gameTick > frame.SourceGameTick + 1 && !_remoteResumeAdoption.NativeContactPending) return true;
-        var blocker = CaptureRemoteResumeAdoption(out var adoption);
-        if (blocker is null)
-            blocker = _remoteResumeUniverseGuard is null ? "remote_resume_universe_guard_unavailable" : _remoteResumeUniverseGuard(adoption!);
-        return blocker is null || FailRemoteResumeAdmission(blocker);
-    }
-
     internal void StopPendingRemoteFirstFrameOnMainThread()
     {
         if (HasPendingRemoteResumeAdoption

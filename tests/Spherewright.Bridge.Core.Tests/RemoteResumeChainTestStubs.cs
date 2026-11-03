@@ -15,6 +15,7 @@ internal sealed class VoyagerRemoteResumeAdoption
     internal string ResumeActionId = "";
     public NativeFirstFrameAdmission FirstFrame { get; } = new();
     public bool NativeContactPending { get; set; } = true;
+    public bool SurfaceRecoveryPending { get; set; }
     public NativeResumeFailureSnapshot? FirstFailure { get; private set; }
     public void RetainFailure(NativeResumeFailureSnapshot? evidence)
     { if (FirstFailure is null && evidence is not null) FirstFailure = evidence.Copy(); }
