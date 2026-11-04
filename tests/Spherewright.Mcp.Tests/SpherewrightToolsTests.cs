@@ -2667,6 +2667,20 @@ public sealed partial class SpherewrightToolsTests
             Assert.Equal(JsonValueKind.Null, result.StructuredContent!.Value.GetProperty("result").ValueKind);
     }
 
+    [Theory]
+    [InlineData(false,null,true)] [InlineData(false,true,true)] [InlineData(false,false,false)]
+    [InlineData(true,null,true)] [InlineData(true,false,true)] [InlineData(true,true,false)]
+    public async Task MechaResearchSupplyRequiresNullableExactCohortEcho(bool desired,bool? echo,bool error)
+    {
+        var bridge=new FakeBridgeClient(SuccessResult()) {ConfigurePlan=new PreparedNormalAction
+            {Prepared=true,CommitAllowedNow=true,PlanToken="synthetic-supply-plan",ActionKind=NormalActionKinds.ConfigureBuilding,
+                PlannedMechaResearchAutoSupplyEnabled=echo}};
+        var result=await SpherewrightTools.PrepareConfigureBuildingAsync(bridge,"synthetic-owned-session",101,0,0,
+            "fresh-player-hash",mode:desired?BuildingConfigurationModes.EnableMechaResearchAutoSupply:BuildingConfigurationModes.DisableMechaResearchAutoSupply);
+        Assert.Equal(error,result.IsError);Assert.Equal(0,bridge.LastConfigureRequest!.EntityId);
+        if(error)Assert.Equal(JsonValueKind.Null,result.StructuredContent!.Value.GetProperty("result").ValueKind);
+    }
+
     [Fact]
     public async Task WarehouseOperationMapsNativeDisabledGridCountAndFreshHash()
     {

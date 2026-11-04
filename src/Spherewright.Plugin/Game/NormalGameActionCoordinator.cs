@@ -857,6 +857,11 @@ internal sealed partial class NormalGameActionCoordinator
                 ExecuteSaveOnMainThread(action);
                 break;
             case NormalActionKinds.ConfigureBuilding:
+                if (MechaResearchSupplyPolicy.IsMode(plan.ConfigureMode))
+                {
+                    ExecuteMechaResearchSupplyOnMainThread(action);
+                    break;
+                }
                 if (plan.ConfigureMode == BuildingConfigurationModes.EnableMechaConstructionDrones)
                 {
                     ExecuteEnableMechaConstructionOnMainThread(action);
@@ -1375,6 +1380,8 @@ internal sealed partial class NormalGameActionCoordinator
             case NormalActionKinds.ConfigureBuilding:
                 if (plan.ConfigureMode == BuildingConfigurationModes.StorageCapacity)
                     return RevalidateStorageConfigurationOnMainThread(plan);
+                if (MechaResearchSupplyPolicy.IsMode(plan.ConfigureMode))
+                    return RevalidateMechaResearchSupplyOnMainThread(plan);
                 if (plan.ConfigureMode == BuildingConfigurationModes.EnableMechaConstructionDrones)
                     return RevalidateEnableMechaConstructionOnMainThread(plan);
                 if (plan.ConfigureMode == BuildingConfigurationModes.MinimalDysonReceivingNode)

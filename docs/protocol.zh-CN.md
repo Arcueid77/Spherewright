@@ -485,3 +485,7 @@ Move 地表预览是观察，不是寻路，180/600 tick 失败指导禁止重�
 `prepare_return_to_main_menu` 复用 `prepare_save` 的星球、revision、hash version 及可选暂停隔离保全参数，签发独立的 `return-to-main-menu` 计划；`commit_return_to_main_menu` 使用普通提交信封和单个 UUID。MCP 对应同名 `spherewright_*` 工具。仅接受当前 owned 世界、角色落地无指令、真实施工无人机闲置且无其他活动动作或 loader；原写入、Journey、隔离及单动作安全检查保留。
 
 提交先执行一次普通 owned Save，核验完整文件的精确身份、版本、当前 tick、和平及非沙盒状态，再沿原生 Esc 菜单路径设置 `backToMainMenu=true` 并调用 `DSPGame.EndGame`。原生 EndGame 还可能写 LastExit；不退出进程、不读档。查询原动作的 `mainMenuReturnReadback`，分别取得保存成功/tick、完整文件、End 发出、真实闲置菜单及首个失败谓词。接受或发出 End 不等于成功，菜单观察限十秒；世界结束后仍能查询原幂等及终态记录。失败/unknown 原件保留、不重放。读档另走受保护预检、确认和提交。
+
+### 原生背包科研自动供料开关
+
+`prepare_configure_building` 支持 `disable-mecha-research-auto-supply` 和 `enable-mecha-research-auto-supply`：实体/配方为0，使用新鲜玩家 stateHash，其余参数为默认值。可空的 `plannedMechaResearchAutoSupplyEnabled` 必须精确对应方向；null 表示不支持，false 是有效的关闭计划。原生协调器在准备和提交执行时要求旅程已闭合、玩家接地停稳、机甲科研点缓冲为空。它采用与 `UIMechaLab.SwitchAutoManageLabItems` 相同的历史设置复选框赋值，不调用缓冲回收、不更改科技、不推进模拟。工厂实验室继续正常工作。此能力在正常搬运矩阵时阻止自动吸收，同时避免丢弃零散科研点。

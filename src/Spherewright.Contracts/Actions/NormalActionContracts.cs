@@ -71,6 +71,8 @@ public static class BuildingConfigurationModes
     public const string EjectorOrbit = "ejector-orbit";
     public const string MinimalDysonReceivingNode = "dyson-minimal-receiving-node";
     public const string EnableMechaConstructionDrones = "enable-mecha-construction-drones";
+    public const string DisableMechaResearchAutoSupply = "disable-mecha-research-auto-supply";
+    public const string EnableMechaResearchAutoSupply = "enable-mecha-research-auto-supply";
 }
 
 public static class StorageConfigurationOperations
@@ -390,6 +392,8 @@ public sealed class PreparedNormalAction
     public MinimalDysonTargetSnapshot? PlannedMinimalDysonTarget { get; set; }
 
     public bool? PlannedMechaConstructionDronesEnabled { get; set; }
+
+    public bool? PlannedMechaResearchAutoSupplyEnabled { get; set; }
     public bool? PlannedPaidConstructionReadmission { get; set; }
 
     public BlueprintBuildProgress? BlueprintBuild { get; set; }

@@ -435,7 +435,7 @@ public static partial class SpherewrightTools
         int recipeId,
         [Description("For mode=sorter-filter use the inspected root configurationStateHash, NOT stateHash, despite this parameter's name. For mode=storage-capacity use the full stateHash. Follow the documented hash domain for each other mode.")]
         string expectedFactoryStateHash,
-        [Description("production, research, sorter-filter, storage-capacity, logistics-station-storage, logistics-station-belt, logistics-station-charge, logistics-station-delivery, ejector-orbit, dyson-minimal-receiving-node, or enable-mecha-construction-drones. For the minimal receiving node use one empty local2312 silo, recipeId=0 and expectedFactoryStateHash=silo.minimalReceivingTarget.configurationStateHash; leave other arguments at defaults. It creates one equatorial planned node on an existing pristine Native layer, never delivered points or rockets. The enable-only mecha mode requires entityId=0, recipeId=0, expectedFactoryStateHash=the fresh player stateHash and all other arguments at defaults. It calls the normal native switch from OFF to ON and can schedule existing ordinary construction/repair; it does not create or instantly build anything. For ejector-orbit use recipeId=0, ejectorOrbitId and the detail ejector.configurationStateHash; leave the other mode parameters at defaults.")]
+        [Description("production, research, sorter-filter, storage-capacity, logistics-station-storage, logistics-station-belt, logistics-station-charge, logistics-station-delivery, ejector-orbit, dyson-minimal-receiving-node, enable-mecha-construction-drones, disable-mecha-research-auto-supply, or enable-mecha-research-auto-supply. The research supply modes require entityId=0, recipeId=0, expectedFactoryStateHash=the fresh player stateHash, an empty mecha research point buffer and all other arguments at defaults. They toggle the ordinary native backpack research supply setting in a closed-journey home session; factory labs keep researching. Disabling never clears partial research points. For the minimal receiving node use one empty local2312 silo, recipeId=0 and expectedFactoryStateHash=silo.minimalReceivingTarget.configurationStateHash; leave other arguments at defaults. It creates one equatorial planned node on an existing pristine Native layer, never delivered points or rockets. The enable-only mecha mode requires entityId=0, recipeId=0, expectedFactoryStateHash=the fresh player stateHash and all other arguments at defaults. It calls the normal native switch from OFF to ON and can schedule existing ordinary construction/repair; it does not create or instantly build anything. For ejector-orbit use recipeId=0, ejectorOrbitId and the detail ejector.configurationStateHash; leave the other mode parameters at defaults.")]
         string mode = BuildingConfigurationModes.Production,
         int techId = 0,
         int filterItemId = 0,
@@ -499,6 +499,11 @@ public static partial class SpherewrightTools
                 BridgeErrorCodes.BridgeNotReady,
                 "The Plugin did not confirm the storage UI operation and expected configuration; no token is exposed.",
                 false, "Install a matching Plugin/MCP cohort, then fresh-read and prepare again."));
+        if (Spherewright.Bridge.Core.Factory.MechaResearchSupplyPolicy.IsMode(mode) && result.Success
+            && !Spherewright.Bridge.Core.Factory.MechaResearchSupplyPolicy.ConfirmsEcho(request,result.Value))
+            result=BridgeCallResult<PreparedNormalAction>.Failed(BridgeError.Create(BridgeErrorCodes.BridgeNotReady,
+                "The Plugin did not bind the exact native mecha research supply switch; no token is exposed.",false,
+                "Use a coherent cohort and a fresh player inspection with an empty mecha research buffer."));
         if (mode == BuildingConfigurationModes.EnableMechaConstructionDrones && result.Success
             && !Spherewright.Bridge.Core.Factory.MechaConstructionDronePolicy.ConfirmsPreparedEcho(request, result.Value))
             result = BridgeCallResult<PreparedNormalAction>.Failed(BridgeError.Create(
