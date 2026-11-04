@@ -489,3 +489,10 @@ Move 地表预览是观察，不是寻路，180/600 tick 失败指导禁止重�
 ### 原生背包科研自动供料开关
 
 `prepare_configure_building` 支持 `disable-mecha-research-auto-supply` 和 `enable-mecha-research-auto-supply`：实体/配方为0，使用新鲜玩家 stateHash，其余参数为默认值。可空的 `plannedMechaResearchAutoSupplyEnabled` 必须精确对应方向；null 表示不支持，false 是有效的关闭计划。原生协调器在准备和提交执行时要求旅程已闭合、玩家接地停稳、机甲科研点缓冲为空。它采用与 `UIMechaLab.SwitchAutoManageLabItems` 相同的历史设置复选框赋值，不调用缓冲回收、不更改科技、不推进模拟。工厂实验室继续正常工作。此能力在正常搬运矩阵时阻止自动吸收，同时避免丢弃零散科研点。
+
+
+### 原生机甲翘曲器自动补给复选框
+
+以 `mode=enable-mecha-warper-auto-supply`、实体/配方0、新鲜玩家 `stateHash` 作为 `expectedFactoryStateHash`，其余参数保持默认值，调用 `prepare_configure_building`。必须获得可空回显 `plannedMechaWarperAutoSupplyEnabled=true`；缺失或false拒绝该组合。受管玩家须接地严格停稳、无手工制造或忙碌施工无人机、旅程已闭合，原生舱为精确的单格filtered1210/stack20。空舱、部分舱和满舱均可，因为此操作只把关闭的复选框打开，不调用 `AutoReplenishWarper` 或 `UseWarper`，不写库存或改变旅程储备。原动作的 `mechaWarperAutoSupplyReadback` 必须证明false→true，以及即时完整背包/舱count、inc守恒；读回不完整时可空after仍为未知。不得重放accepted或unknown写入。随后必须新鲜预览路线并重新prepare出航：只有经证明的原生自动设置才允许计入背包翘曲器，原额外/返航储备不变。
+
+此设置路径已按DSP0.10.35.29151核对：`UIMechaWindow.OnAutoReplenishButtonClick` 的case4切换原生标志；普通航行先尝试使用舱内物品，失败后才走自动空舱补给。该标志由正常原生导出/导入保存。源码/构建测试不代表实装或实机验收。

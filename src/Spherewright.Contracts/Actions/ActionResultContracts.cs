@@ -63,6 +63,7 @@ public sealed class ActionResultSnapshot
     public ResearchQueueReadback? ResearchQueueReadback { get; set; }
     public StorageConfigurationReadback? StorageConfigurationReadback { get; set; }
     public MechaWarperSupplyReadback? MechaWarperSupplyReadback { get; set; }
+    public MechaWarperAutoSupplyReadback? MechaWarperAutoSupplyReadback { get; set; }
     public VoyagerFlightReadback? VoyagerFlightReadback { get; set; }
     public string? BlueprintBuildId { get; set; }
     public string? BlueprintBuildPhase { get; set; }

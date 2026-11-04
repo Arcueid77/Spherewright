@@ -2175,6 +2175,8 @@ internal sealed partial class NormalGameActionCoordinator
 
         if(request.Mode!=BuildingConfigurationModes.LogisticsStationDelivery && request.StationVesselDeliveryMinimumPercent!=-1)
             return InvalidPlan("Vessel delivery percentage requires logistics-station-delivery mode.");
+        if (request.Mode == BuildingConfigurationModes.EnableMechaWarperAutoSupply)
+            return PrepareMechaWarperAutoSupplyOnMainThread(requestedSessionId, request, common.Session!);
         if (MechaResearchSupplyPolicy.IsMode(request.Mode))
             return PrepareMechaResearchSupplyOnMainThread(requestedSessionId, request, common.Session!);
         if (request.Mode == BuildingConfigurationModes.EnableMechaConstructionDrones)

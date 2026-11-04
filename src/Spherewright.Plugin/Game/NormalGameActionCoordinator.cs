@@ -857,6 +857,11 @@ internal sealed partial class NormalGameActionCoordinator
                 ExecuteSaveOnMainThread(action);
                 break;
             case NormalActionKinds.ConfigureBuilding:
+                if (plan.ConfigureMode == BuildingConfigurationModes.EnableMechaWarperAutoSupply)
+                {
+                    ExecuteMechaWarperAutoSupplyOnMainThread(action);
+                    break;
+                }
                 if (MechaResearchSupplyPolicy.IsMode(plan.ConfigureMode))
                 {
                     ExecuteMechaResearchSupplyOnMainThread(action);
@@ -1380,6 +1385,8 @@ internal sealed partial class NormalGameActionCoordinator
             case NormalActionKinds.ConfigureBuilding:
                 if (plan.ConfigureMode == BuildingConfigurationModes.StorageCapacity)
                     return RevalidateStorageConfigurationOnMainThread(plan);
+                if (plan.ConfigureMode == BuildingConfigurationModes.EnableMechaWarperAutoSupply)
+                    return RevalidateMechaWarperAutoSupplyOnMainThread(plan);
                 if (MechaResearchSupplyPolicy.IsMode(plan.ConfigureMode))
                     return RevalidateMechaResearchSupplyOnMainThread(plan);
                 if (plan.ConfigureMode == BuildingConfigurationModes.EnableMechaConstructionDrones)
@@ -1660,6 +1667,7 @@ internal sealed partial class NormalGameActionCoordinator
             ResearchQueueReadback = action.ResearchQueueReadback,
             StorageConfigurationReadback = action.StorageConfigurationReadback,
             MechaWarperSupplyReadback = action.MechaWarperSupplyReadback,
+            MechaWarperAutoSupplyReadback = action.MechaWarperAutoSupplyReadback,
             VoyagerFlightReadback = action.VoyagerFlightReadback,
             BlueprintBuildId = action.BlueprintBuild?.BuildId,
             BlueprintBuildPhase = action.BlueprintBuild?.Phase,
@@ -2410,6 +2418,7 @@ internal sealed partial class NormalGameActionCoordinator
         public ResearchQueueReadback? ResearchQueueReadback { get; set; }
         public StorageConfigurationReadback? StorageConfigurationReadback { get; set; }
         public MechaWarperSupplyReadback? MechaWarperSupplyReadback { get; set; }
+        public MechaWarperAutoSupplyReadback? MechaWarperAutoSupplyReadback { get; set; }
         public Spherewright.Bridge.Core.Factory.BlueprintBuildState? BlueprintBuild { get; set; }
         public long LastBlueprintPollTick { get; set; }
         public string? Message { get; set; }

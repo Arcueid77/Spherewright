@@ -556,3 +556,10 @@ Native Import 可将 double 宇宙坐标逆投影为 float 本地位置；普通
 使用 `prepare_transfer(direction=production-reset-to-player, storageEntityId=<准确设备>, itemId=0, count=0)`，绑定新鲜玩家与设备完整哈希。此独立披露动作调用正常界面的原生业务方法 `FactorySystem.TakeBackItems_Assembler` 或 `TakeBackItems_Lab`，退回全部已披露输入/产物，并将配方或功能重置为空。提交前核对 `productionReset` 及完整 `itemBudget`，只提交一次；后来物流或机甲自动补料导致数量变化不能作为重放理由。
 
 只准入已证明空闲、主进度及额外生产进度均为零的制造设备或独立未堆叠研究站。科研站材料点数与增产点数都须准确整除3600，零碎点数保留并拒绝，不能取整；完整科研材料是未消耗库存，不是已上传科研退款。必须以独立空白且无过滤的背包格保证全部退回空间，不依赖其他物品竞争的部分堆栈。相同tick核对完整背包总量/增产点、设备归属连接和科技不变；不使用背包、机器buffer、进度、科技、能源或模拟setter。活动远端旅程拒绝可能激活未核算机甲科研的矩阵退回。回显缺失或不符不暴露令牌；能力本身不证明新配方、制造或场景验收。
+
+
+### 原生机甲翘曲器自动补给复选框
+
+以 `mode=enable-mecha-warper-auto-supply`、实体/配方0、新鲜玩家 `stateHash` 作为 `expectedFactoryStateHash`，其余参数保持默认值，调用 `prepare_configure_building`。必须获得可空回显 `plannedMechaWarperAutoSupplyEnabled=true`；缺失或false拒绝该组合。受管玩家须接地严格停稳、无手工制造或忙碌施工无人机、旅程已闭合，原生舱为精确的单格filtered1210/stack20。空舱、部分舱和满舱均可，因为此操作只把关闭的复选框打开，不调用 `AutoReplenishWarper` 或 `UseWarper`，不写库存或改变旅程储备。原动作的 `mechaWarperAutoSupplyReadback` 必须证明false→true，以及即时完整背包/舱count、inc守恒；读回不完整时可空after仍为未知。不得重放accepted或unknown写入。随后必须新鲜预览路线并重新prepare出航：只有经证明的原生自动设置才允许计入背包翘曲器，原额外/返航储备不变。
+
+此设置路径已按DSP0.10.35.29151核对：`UIMechaWindow.OnAutoReplenishButtonClick` 的case4切换原生标志；普通航行先尝试使用舱内物品，失败后才走自动空舱补给。该标志由正常原生导出/导入保存。源码/构建测试不代表实装或实机验收。

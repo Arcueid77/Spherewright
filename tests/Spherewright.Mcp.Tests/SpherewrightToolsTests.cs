@@ -2681,6 +2681,19 @@ public sealed partial class SpherewrightToolsTests
         if(error)Assert.Equal(JsonValueKind.Null,result.StructuredContent!.Value.GetProperty("result").ValueKind);
     }
 
+    [Theory]
+    [InlineData(null,true)][InlineData(false,true)][InlineData(true,false)]
+    public async Task WarperAutoSupplyRequiresExactNullableCohortEcho(bool? echo,bool error)
+    {
+        var bridge=new FakeBridgeClient(SuccessResult()) {ConfigurePlan=new PreparedNormalAction
+            {Prepared=true,CommitAllowedNow=true,PlanToken="synthetic-warper-setting",ActionKind=NormalActionKinds.ConfigureBuilding,
+                PlannedMechaWarperAutoSupplyEnabled=echo}};
+        var result=await SpherewrightTools.PrepareConfigureBuildingAsync(bridge,"synthetic-owned-session",101,0,0,
+            "fresh-player-hash",mode:BuildingConfigurationModes.EnableMechaWarperAutoSupply);
+        Assert.Equal(error,result.IsError);
+        if(error)Assert.Equal(JsonValueKind.Null,result.StructuredContent!.Value.GetProperty("result").ValueKind);
+    }
+
     [Fact]
     public async Task WarehouseOperationMapsNativeDisabledGridCountAndFreshHash()
     {

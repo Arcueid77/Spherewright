@@ -8,6 +8,23 @@ namespace Spherewright.Bridge.Core.Tests;
 public sealed class VoyagerRouteBudgetPolicyTests
 {
     [Fact]
+    public void EnablingNativeAutoSupplyDoesNotLowerTheOriginalWarperReserve()
+    {
+        var input=Facts();input.NativeWarperCount=2;input.PackageWarperCount=40;input.AutoReplenishWarper=false;
+        var request=Request();request.MaximumFlightGameTicks=108000;request.ReturnReserveGameTicks=54000;
+        request.ExtraWarperReserve=1;
+        var before=VoyagerRouteBudgetPolicy.Evaluate(input,request);
+        Assert.False(before.BudgetSufficient);Assert.Equal(2,before.AvailableWarpers);Assert.Equal(3,before.RequiredWarpers);
+        Assert.Contains(before.Blockers,b=>b.Code=="warper_reserve_insufficient");
+        input.AutoReplenishWarper=true;
+        var after=VoyagerRouteBudgetPolicy.Evaluate(input,request);
+        Assert.True(after.BudgetSufficient);Assert.Equal(42,after.AvailableWarpers);Assert.Equal(3,after.RequiredWarpers);
+        Assert.Equal(54000,after.ReturnReserveGameTicks);Assert.Equal(1,request.ExtraWarperReserve);
+        Assert.Equal(2,input.NativeWarperCount);Assert.Equal(40,input.PackageWarperCount);
+        Assert.NotEqual(before.RouteStateHash,after.RouteStateHash);
+    }
+
+    [Fact]
     public void StrictIdleCanAdmitBelowTheIndependentFreshReturnCoreMinimum()
     {
         const double core = 33_000_000, returnCore = 1_280_000_000;
