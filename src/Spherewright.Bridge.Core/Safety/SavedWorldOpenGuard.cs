@@ -10,6 +10,9 @@ public sealed class SavedWorldOpenGuard
     public bool LoadObserved { get; private set; }
     public bool Completed { get; private set; }
     public NativeResumeFailureSnapshot? FirstFailure => _failure?.Copy();
+    public bool MatchesCompletedWorld(object? world)=>Completed && _failure is null && ReferenceEquals(world,_world);
+    public bool MatchesObservedPausedSource(object? world,long tick,bool nativePaused)=>LoadObserved && !Completed
+        && _failure is null && ReferenceEquals(world,_world) && world is not null && tick==SavedTick && nativePaused;
     private NativeResumeFailureSnapshot? _failure;
     private object? _world;
 

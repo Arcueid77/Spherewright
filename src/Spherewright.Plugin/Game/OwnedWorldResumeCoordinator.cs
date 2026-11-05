@@ -135,7 +135,8 @@ internal sealed partial class OwnedWorldResumeCoordinator
             ExpectedPlanetId = payload.ExpectedPlanetId,
             MinimumGameTick = payload!.MinimumGameTick,
             RecoveryMode = payload.Request.RecoveryMode,
-            RecoveryEvidenceVersion = payload.SavedWorldOpenOnly ? OwnedSavedWorldOpenPolicy.EvidenceVersion
+            RecoveryEvidenceVersion = payload.ExactLastExitOpen ? OwnedLastExitOpenPolicy.EvidenceVersion
+                : payload.SavedWorldOpenOnly ? OwnedSavedWorldOpenPolicy.EvidenceVersion
                 : payload.RemotePrimaryRecovery ? VoyagerRemotePrimaryRecoveryPolicy.EvidenceVersion
                 : payload.CompletedRemoteContinuation ? VoyagerCompletedRemoteContinuationPolicy.EvidenceVersion
                 : payload.FailedRemoteReauthorization ? VoyagerFailedRemoteReauthorizationPolicy.EvidenceVersion
@@ -186,6 +187,7 @@ internal sealed partial class OwnedWorldResumeCoordinator
                     EffectiveDeadlineUtc=returnSource.DeadlineUtc,NewWallAuthorityRequired=returnSource.RequiresNewWallAuthority,
                 } : null,
             OpensSavedWorldOnly = payload.SavedWorldOpenOnly,
+            OpensExactLastExitOnly = payload.ExactLastExitOpen,
             PreviousAutomationRemainsStopped = payload.SavedWorldOpenOnly,
             DiscardedUnstoredProgressGameTicks = payload.SavedWorldOpenOnly || payload.RemotePrimaryRecovery
                 ? Math.Max(0, payload.SavedOpenKnownProgressTick - payload.MinimumGameTick) : (long?)null,
@@ -229,7 +231,7 @@ internal sealed partial class OwnedWorldResumeCoordinator
                 : payload.RemoteContinuation
                 ? "Confirm this exact fixed LastExit candidate after reviewing its disclosed tick and full-file proof. It retains the original successful flight, Journal and unchanged journey deadline/reserves; it does not load the successful pre-flight checkpoint."
                 : payload.SavedWorldOpenOnly
-                ? $"Open only the exact complete owned primary at tick {payload.MinimumGameTick}, pausing at Native load completion. Discarded progress: {Math.Max(0, payload.SavedOpenKnownProgressTick - payload.MinimumGameTick)} ticks, from known floor {payload.SavedOpenKnownProgressTick}. Existing applicable conversation authority may cover this exact disclosed choice. Old automation remains stopped; no automatic Save, Resume, charging, flight, task renewal or action replay."
+                ? $"Open only the exact complete owned {payload.ResumeSource} at tick {payload.MinimumGameTick}, pausing at Native load completion. Discarded progress: {Math.Max(0, payload.SavedOpenKnownProgressTick - payload.MinimumGameTick)} ticks, from known floor {payload.SavedOpenKnownProgressTick}. Existing applicable conversation authority may cover this exact disclosed choice. Old automation remains stopped; no automatic Save, Resume, charging, flight, task renewal or action replay."
                 : payload.VersionChangedPrimary ? OwnedWorldPrimaryMigrationPolicy.ConfirmationPromptFor(ticket.GameVersion, _tickets.CurrentGameVersion)
                 : payload.FixedAutosaveRecovery ? OwnedWorldAutosaveRecoveryPolicy.ConfirmationPromptFor(payload.Request.RecoveryMode)
                 : payload.Reauthorizing ? OwnedWorldReauthorizationPolicy.ConfirmationPrompt : string.Empty),
@@ -241,7 +243,7 @@ internal sealed partial class OwnedWorldResumeCoordinator
                 : payload.ReturnOnlyContinuation
                 ? "The exact current saved boundary and original return-only task are adopted; the original Native initialization/contact/idle chain proves control before a normal Save. Only the original-home return, cancellation and normal Save are permitted; old outcomes, tick grants and original deadlines remain unchanged."
                 : payload.SavedWorldOpenOnly
-                ? "Exact owned primary and durable Journal verified; Native load completed and paused at the saved tick. Reads are available; automated writes remain blocked. Opening does not change any original task result, Journey, spent amount or deadline, and does not resave the world."
+                ? "Exact owned source and durable Journal verified; Native load completed and paused at the saved tick. Reads are available; generic automated writes remain blocked. Opening does not change any original task result, Journey, spent amount or deadline, and does not resave the world."
                 : payload.RemotePrimaryRecovery && payload.RemoteEvidence?.CompletedSavedLandingAdmissionUsed == true
                 ? "The exact saved world, Journal and separate healthy landing admission are revalidated under new finite authority. Fresh Native contact/idle control, conserved accounting and a covering normal Save are required; the original outbound failure remains failed."
                 : payload.RemotePrimaryRecovery
@@ -459,7 +461,7 @@ internal sealed partial class OwnedWorldResumeCoordinator
             journalLease = null;
             primaryLease = null;
             if (payload.RemoteContinuation) _sessions.PrepareRemoteResumeNativeLoadObserver();
-            if (payload.SavedWorldOpenOnly) _sessions.PrepareSavedWorldOpenNativeObserver();
+            if (payload.SavedWorldOpenOnly) _sessions.PrepareSavedWorldOpenNativeObserver(payload.ExactLastExitOpen);
             // The source is an internal enum bound by the prepared fingerprint,
             // never a caller-supplied path/name or an automatic fallback.
             nativeLoadAttempted = true;
@@ -560,7 +562,7 @@ internal sealed partial class OwnedWorldResumeCoordinator
             if (_sessions.SavedWorldOpenCompleted(action.ActionId))
             {
                 result.State = NormalActionStates.Completed; result.Terminal = true; result.Succeeded = true;
-                result.SessionId = _sessions.SavedWorldOpenSessionId; result.PlanetId = action.Ticket.ExpectedPlanetId;
+                result.SessionId = _sessions.SavedWorldOpenSessionId; result.PlanetId = session.LocalPlanetId;
                 result.Message = "The exact saved owned world opened paused. Previous automation remains stopped; no automatic Save or task continuation was performed.";
             }
             else if (!string.IsNullOrEmpty(_sessions.ResumeAdoptionError))
@@ -670,7 +672,7 @@ internal sealed partial class OwnedWorldResumeCoordinator
                 ? request.ExpectedRecoveryGameTick : null;
             return _tickets.TryGetFreshRemoteFileAccessProvenance(token, out ticket, out provenance, out rejection, exactNewer);
         }
-        if (request.RecoveryMode == OwnedWorldResumeModes.OpenSavedPrimary
+        if (request.RecoveryMode is OwnedWorldResumeModes.OpenSavedPrimary or OwnedWorldResumeModes.OpenSavedLastExit
             || request.RecoveryMode == OwnedWorldResumeModes.ResumeReturnOnlyTask)
             return _tickets.TryGetSavedWorldOpenProvenance(token, out ticket, out provenance, out rejection);
         if (request.RecoveryMode == OwnedWorldResumeModes.ReauthorizeVersionChangedPrimary)
@@ -691,6 +693,24 @@ internal sealed partial class OwnedWorldResumeCoordinator
         lease = null;
         primaryLease = null;
         rejection = string.Empty;
+        if (request.RecoveryMode == OwnedWorldResumeModes.OpenSavedLastExit)
+        {
+            if (ticket.SourceProcessId != Process.GetCurrentProcess().Id && IsLiveDspProcess(ticket.SourceProcessId))
+            { rejection = "Another source game is running; exact LastExit opening requires one writer and an idle menu."; return false; }
+            try
+            {
+                lease = OwnedSaveRecoveryLease.Open(GameSave.SavePath(GameSave.LastExit), ticket.OwnedSaveName);
+                primaryLease = OwnedSaveRecoveryLease.Open(GameSave.SavePath(ticket.OwnedSaveName), ticket.OwnedSaveName);
+                var known = Math.Max(ticket.MinimumGameTick,Math.Max(ticket.ObservedProgressGameTickFloor ?? 0,primaryLease.Prefix.GameTick));
+                rejection = OwnedLastExitOpenPolicy.ValidateCandidate(request,known,_tickets.CurrentGameVersion,lease.Prefix) ?? string.Empty;
+                if (rejection.Length != 0) { lease.Dispose();lease=null;primaryLease.Dispose();primaryLease=null;return false; }
+                payload = new OwnedWorldResumePlanPayload(ticket,OwnedWorldResumeSourceKind.LastExit,request,lease,
+                    provenance,_sessions.Revision,primaryLease.Fingerprint,savedOpenKnownProgressTick:known);
+                return true;
+            }
+            catch(Exception exception)
+            { lease?.Dispose();lease=null;primaryLease?.Dispose();primaryLease=null;rejection="exact_lastexit_open_full_evidence_unavailable:"+exception.GetType().Name;return false; }
+        }
         if (request.RecoveryMode == OwnedWorldResumeModes.AuthorizeFailedLandingLastExit)
             return TryResolveFailedLandingPayload(ticket, request, provenance, out payload, out lease, out primaryLease, out rejection);
         if (request.RecoveryMode == OwnedWorldResumeModes.ResumeReturnOnlyTask)
@@ -1142,7 +1162,7 @@ internal sealed partial class OwnedWorldResumeCoordinator
                 primaryFingerprint, remoteEvidence?.Fingerprint ?? string.Empty, remoteJournalFingerprint, remoteCredentialFingerprint,
                 Request.RecoveryDeadlineUtc, Request.RecoveryScope, Request.MaximumChargeGameTicks, Request.MaximumChargeWallSeconds);
             Fingerprint = ReturnOnlyContinuation ? remoteEvidence!.ReturnOnlySource!.Fingerprint : SavedWorldOpenOnly
-                ? CanonicalStateHash.Combine("open-saved-primary-v1", fingerprint, SavedOpenKnownProgressTick, Request.AcceptUnstoredProgressLoss,
+                ? CanonicalStateHash.Combine(ExactLastExitOpen ? "open-saved-last-exit-v1" : "open-saved-primary-v1", fingerprint, SavedOpenKnownProgressTick, Request.AcceptUnstoredProgressLoss,
                     Request.MinimumRecoveryGameTick, Request.ExpectedRecoveryGameTick)
                 : RemotePrimaryRecovery
                 ? CanonicalStateHash.Combine("authorize-remote-primary-recovery-v1", fingerprint, SavedOpenKnownProgressTick,
@@ -1187,7 +1207,8 @@ internal sealed partial class OwnedWorldResumeCoordinator
         public RemoteResumeCredentialLease? RemoteCredentialLease { get; }
         public bool FailedRemoteReauthorization => Request.RecoveryMode == OwnedWorldResumeModes.ReauthorizeFailedRemoteLastExit;
         public bool CompletedRemoteContinuation => Request.RecoveryMode == OwnedWorldResumeModes.ContinueCompletedRemoteLastExit;
-        public bool SavedWorldOpenOnly => Request.RecoveryMode == OwnedWorldResumeModes.OpenSavedPrimary;
+        public bool ExactLastExitOpen => Request.RecoveryMode == OwnedWorldResumeModes.OpenSavedLastExit;
+        public bool SavedWorldOpenOnly => Request.RecoveryMode == OwnedWorldResumeModes.OpenSavedPrimary || ExactLastExitOpen;
         public bool RemotePrimaryRecovery => Request.RecoveryMode == OwnedWorldResumeModes.AuthorizeRemotePrimaryRecovery;
         public bool FailedLandingRecovery => Request.RecoveryMode == OwnedWorldResumeModes.AuthorizeFailedLandingLastExit;
         public int ExpectedPlanetId => FailedLandingRecovery ? RemoteEvidence!.Journey.RemotePlanetId!.Value : Ticket.ExpectedPlanetId;

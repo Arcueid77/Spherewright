@@ -86,7 +86,9 @@ internal sealed partial class GameSessionTracker : IDisposable
     internal bool SavedOpenObserverBound { get; private set; }
     internal OwnedWorldResumeTicket? SavedOpenPreviousTicket { get; private set; }
     internal long? SavedOpenPreparedKnownProgressGameTick { get; private set; }
-    internal void PrepareSavedWorldOpenNativeObserver() => SavedOpenObserverPrepared = true;
+    internal bool SavedOpenAnyNativeLocation { get; private set; }
+    internal void PrepareSavedWorldOpenNativeObserver(bool exactLastExitOpen=false)
+    { SavedOpenObserverPrepared = true;SavedOpenAnyNativeLocation=exactLastExitOpen; }
     internal void BindSavedWorldOpenNativeObserver() => SavedOpenObserverBound = true;
     internal void RecordSavedWorldOpenDispatchFailure(string error) => ResumeAdoptionError = "saved_world_open_dispatch_outcome_unknown:" + error;
     internal bool SavedWorldOpenCompleted(string actionId) => SavedOpenGuard is { Completed: true } guard && guard.ActionId == actionId;

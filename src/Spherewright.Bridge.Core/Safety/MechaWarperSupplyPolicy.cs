@@ -22,6 +22,8 @@ public sealed class MechaWarperSupplyFacts
     public int ChamberCount { get; set; }
     public int ChamberInc { get; set; }
     public bool AutoReplenishWarper { get; set; }
+    public bool PausedSpaceSourceAuthorized {get;set;}
+    public double? SpaceStopSpeed {get;set;}
 }
 
 public sealed class MechaWarperSupplyDecision
@@ -74,7 +76,8 @@ public static class MechaWarperSupplyPolicy
             facts.PlayerStateHashFresh, facts.IsAlive, facts.IsGrounded, facts.ControllerEnabled, facts.NativeGuideRunning, facts.IsIdle,
             facts.ChamberIsFiltered, facts.ChamberSlotCount, facts.ChamberGridCount, facts.ChamberBannedGridCount,
             facts.ChamberItemId, facts.ChamberFilterItemId, facts.ChamberStackSize,
-            facts.PackageCount, facts.PackageInc, facts.ChamberCount, facts.ChamberInc, facts.AutoReplenishWarper);
+            facts.PackageCount, facts.PackageInc, facts.ChamberCount, facts.ChamberInc, facts.AutoReplenishWarper,
+            facts.PausedSpaceSourceAuthorized,facts.SpaceStopSpeed);
     }
 
     public static MechaWarperSupplyVerification VerifyReadback(MechaWarperSupplyFacts before,

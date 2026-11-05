@@ -6,6 +6,7 @@ public sealed class PrepareSupplyMechaWarpersRequest
     public int Count { get; set; } = 20;
     public string ExpectedPlayerStateHash { get; set; } = string.Empty;
     public int StateHashVersion { get; set; } = 1;
+    public bool UiTopUp { get; set; }
 }
 
 // Immediate native-call boundary, before later ordinary consumption can change stock.

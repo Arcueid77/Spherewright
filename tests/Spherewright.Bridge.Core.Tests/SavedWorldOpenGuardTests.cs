@@ -6,6 +6,22 @@ namespace Spherewright.Bridge.Core.Tests;
 
 public sealed class SavedWorldOpenGuardTests
 {
+    [Fact]
+    public void ExactPausedDataAdoptionDoesNotRequireTheOldPlanetOrGrantCompletedExecution()
+    {
+        var g=NewGuard();var world=new object();
+        Assert.False(g.MatchesObservedPausedSource(world,72,true));
+        Assert.True(g.ObserveLoad(world,true,true,72,true,true));
+        Assert.True(g.MatchesObservedPausedSource(world,72,true));
+        Assert.False(g.MatchesObservedPausedSource(new object(),72,true));
+        Assert.False(g.MatchesObservedPausedSource(world,73,true));
+        Assert.False(g.MatchesObservedPausedSource(world,72,false));
+        Assert.False(g.MatchesCompletedWorld(world));
+        Assert.True(g.ConfirmJournal(world,72,true,()=>{}));
+        Assert.False(g.MatchesObservedPausedSource(world,72,true));
+        Assert.True(g.MatchesCompletedWorld(world));
+    }
+
     [Theory]
     [InlineData("native-complete", "native_load_completed")]
     [InlineData("paused", "native_paused")]

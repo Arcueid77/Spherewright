@@ -23,7 +23,11 @@ internal sealed partial class NormalGameActionCoordinator
                 "Inspect the current session and prepare a fresh action.");
         }
 
-        if (request.PlanetId != plan.PlanetId || (plan.ActionKind != NormalActionKinds.CancelVoyagerFlight
+        var pausedSpaceInventory=plan.ActionKind==NormalActionKinds.SupplyMechaWarpers && plan.MechaWarperUiTopUp
+            && plan.PlanetId==0 && plan.PausedSpaceInventoryPermit?.Matches(session)==true;
+        var pausedSpaceReturn=plan.ActionKind==NormalActionKinds.InterplanetaryFlight && plan.PlanetId==0
+            && plan.StoppedSpaceHomeReturn?.Permit.Matches(session)==true;
+        if (request.PlanetId != plan.PlanetId || (!pausedSpaceInventory && !pausedSpaceReturn && plan.ActionKind != NormalActionKinds.CancelVoyagerFlight
             && session.LocalPlanetId != plan.PlanetId))
         {
             return BridgeError.Create(
@@ -35,6 +39,8 @@ internal sealed partial class NormalGameActionCoordinator
 
         var commitBlockers = NormalActionKinds.IsSaveLifecycle(plan.ActionKind) && plan.SavePreservation is not null
             ? plan.SavePreservation.RemainingBlockers(session.WriteBlockers) : session.WriteBlockers;
+        if(pausedSpaceInventory)commitBlockers=plan.PausedSpaceInventoryPermit!.RemainingBlockers(session);
+        if(pausedSpaceReturn)commitBlockers=plan.StoppedSpaceHomeReturn!.Permit.RemainingBlockers(session);
         commitBlockers = VoyagerReturnOnlyRecoveryPolicy.ActionBlockers(commitBlockers, plan.ActionKind,
             plan.VoyagerReturnLeg && plan.VoyagerBudget is not null);
         if (commitBlockers.Count > 0)

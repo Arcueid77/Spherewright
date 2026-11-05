@@ -82,7 +82,16 @@ internal sealed partial class GameStateReader
         LocalPlanetRequest request,
         bool captureMoveInspection = false)
     {
-        var accessError = ValidateOwnedPlanetOnMainThread(requestedSessionId, request.PlanetId, out var factory);
+        PlanetFactory? factory=null;
+        BridgeError? accessError;
+        if(request.PlanetId==0 && GameMain.localPlanet is null)
+        {
+            var session=_sessions.CaptureOnMainThread();
+            accessError=session.GameLoaded && session.OwnedBySpherewright && requestedSessionId==session.SessionId
+                && GameMain.mainPlayer?.planetId==0 && GameMain.mainPlayer.movementState==EMovementState.Sail
+                ? null : NotReady("An exact owned loaded native Sail-space player is required for planet0 read-only observation.");
+        }
+        else accessError = ValidateOwnedPlanetOnMainThread(requestedSessionId, request.PlanetId, out factory);
         if (accessError is not null)
         {
             return GameCallResult<PlayerStateSnapshot>.Failed(accessError);
@@ -98,12 +107,12 @@ internal sealed partial class GameStateReader
         var result = new PlayerStateSnapshot
         {
             SessionId = _sessions.SessionId!,
-            PlanetId = factory!.planetId,
+            PlanetId = factory?.planetId ?? 0,
             CapturedAtGameTick = GameMain.gameTick,
             Position = CaptureVector(player.position),
             MovementState = player.movementState.ToString(),
             IsAlive = player.isAlive,
-            IsOnPlanet = player.planetId == factory.planetId,
+            IsOnPlanet = factory is not null && player.planetId == factory.planetId,
             IsFlying = player.movementState == EMovementState.Fly,
             IsSailing = player.movementState >= EMovementState.Sail,
             Speed = player.speed,
@@ -119,11 +128,18 @@ internal sealed partial class GameStateReader
             InventorySlotCount = player.package.size,
             AutoManageResearchItems = GameMain.history?.autoManageLabItems ?? false,
             MechaResearchPower = player.mecha.researchPower,
-            NativePhysics = CaptureNativePlayerPhysicsOnMainThread(player),
-            NativeLocalControlEnergy = NormalGameActionCoordinator.CaptureConditionalNativeLocalControlEnergy(player),
+            NativePhysics = factory is null ? null : CaptureNativePlayerPhysicsOnMainThread(player),
+            NativeLocalControlEnergy = factory is null ? null : NormalGameActionCoordinator.CaptureConditionalNativeLocalControlEnergy(player),
+            SpaceTransit = factory is null ? new Spherewright.Contracts.Players.NativeSpaceTransitSnapshot
+            {StarId=GameMain.localStar?.id,NativePaused=GameMain.isPaused,
+                UniverseX=player.uPosition.x,UniverseY=player.uPosition.y,UniverseZ=player.uPosition.z,
+                VelocityX=player.uVelocity.x,VelocityY=player.uVelocity.y,VelocityZ=player.uVelocity.z,
+                Speed=player.uVelocity.magnitude,WarpState=player.warpState,WarpCommand=player.warpCommand,Warping=player.warping} : null,
         };
 
         var inventory = new Dictionary<int, PlayerInventoryItem>();
+        if(result.SpaceTransit is {} transit && _sessions.TryGetStoppedSpaceHomeAnchor(out var home,out var homeHash,out var cap))
+        {transit.OriginalHomePlanetId=home;transit.ReturnHomeStateHash=homeHash;transit.MaximumReturnGameTicks=cap;}
         var packageGrids = player.package.grids ?? Array.Empty<StorageComponent.GRID>();
         var gridCount = Math.Min(player.package.size, packageGrids.Length);
         for (var index = 0; index < gridCount; index++)

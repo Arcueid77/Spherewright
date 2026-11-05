@@ -668,12 +668,13 @@ internal sealed partial class NormalGameActionCoordinator
     {
         PumpCheckpointReturnRecoveryOnMainThread();
         CheckVoyagerControlWatchdogOnMainThread();
+        UpdateStoppedSpaceReturnWatchdog();
         CheckStructuredConstructionWatchdogOnMainThread();
         CheckVoyagerLocalWalkWatchdogOnMainThread();
         foreach (var action in _actions.ActiveValues.ToArray())
         {
             // Voyager control runs at the audited native tick hook, never at render cadence.
-            if (action.Plan.VoyagerBudget is not null || IsStructuredConstruction(action.Plan)) continue;
+            if (action.Plan.VoyagerBudget is not null || action.Plan.StoppedSpaceHomeReturn is not null || IsStructuredConstruction(action.Plan)) continue;
             UpdateActionOnMainThread(action);
         }
         _actions.RefreshTerminals();
@@ -687,6 +688,8 @@ internal sealed partial class NormalGameActionCoordinator
             return false;
         }
 
+        if(!action.Terminal && action.Plan.StoppedSpaceHomeReturn is {} space && StoppedSpaceBindingMatches(space,action.SessionId))
+            space.Lease=DateTimeOffset.UtcNow.AddSeconds(30);
         if (!action.Terminal && action.Plan.VoyagerBudget is not null && VoyagerBindingMatches(action.Plan))
             action.VoyagerControlLeaseExpiresAtUtc = DateTimeOffset.UtcNow.AddSeconds(VoyagerControlLeaseSeconds);
         if (!action.Terminal && action.BlueprintBuild?.ConstructionControl is { StopReason: null } construction
@@ -767,7 +770,8 @@ internal sealed partial class NormalGameActionCoordinator
                 action.Message = "DSP accepted a normal player movement order.";
                 break;
             case NormalActionKinds.InterplanetaryFlight:
-                if (plan.VoyagerBudget is not null) StartVoyagerFlightOnMainThread(action);
+                if(plan.StoppedSpaceHomeReturn is not null)StartStoppedSpaceHomeReturn(action);
+                else if (plan.VoyagerBudget is not null) StartVoyagerFlightOnMainThread(action);
                 else StartInterplanetaryFlightOnMainThread(action);
                 break;
             case NormalActionKinds.CancelVoyagerFlight:
@@ -1487,7 +1491,10 @@ internal sealed partial class NormalGameActionCoordinator
         string completionCondition)
     {
         payload.EstimatedTicks = estimatedTicks;
-        var actionBlockers = VoyagerReturnOnlyRecoveryPolicy.ActionBlockers(session.WriteBlockers, payload.ActionKind,
+        var scopedPermit=payload.StoppedSpaceHomeReturn?.Permit ?? (payload.MechaWarperUiTopUp?payload.PausedSpaceInventoryPermit:null);
+        var sourceBlockers=scopedPermit is {} spacePermit
+            ? spacePermit.RemainingBlockers(session) : session.WriteBlockers;
+        var actionBlockers = VoyagerReturnOnlyRecoveryPolicy.ActionBlockers(sourceBlockers, payload.ActionKind,
             payload.VoyagerReturnLeg && payload.VoyagerBudget is not null);
         PreparedPlan<NormalActionPlanPayload> plan;
         try
@@ -1516,11 +1523,21 @@ internal sealed partial class NormalGameActionCoordinator
             EstimatedGameTicks = estimatedTicks,
             CommitBlockers = actionBlockers.Select(CloneBlocker).ToList(),
             CompletionCondition = completionCondition,
+            PlannedStoppedSpaceHomeReturn=payload.StoppedSpaceHomeReturn is not null ? true : null,
         });
     }
 
     private void Complete(ActionRecord action, string message)
     {
+        if(action.Plan.StoppedSpaceHomeReturn is {Finalized:false} space)
+        {
+            // Strict contact and every residual velocity must settle while Native
+            // still runs. Pause preserves that exact cut for render-thread Save.
+            if(!StrictStoppedSpaceHomeIdle(space.Player))
+            {action.Message="Native home landing is stable; strict contact and zero residual motion are still settling.";return;}
+            space.LandingPending=true;GameMain.Pause();
+            action.Message="Native home landing is stable; paused strict handoff and normal save remain pending.";return;
+        }
         if (IsVoyagerLocalOrder(action) && !action.VoyagerLocalCompleting)
         { RequestVoyagerLocalOrderStop(action, true, message); return; }
         if (action.Plan.VoyagerBudget is not null)
@@ -1528,7 +1545,7 @@ internal sealed partial class NormalGameActionCoordinator
             CompleteVoyagerLanding(action, message);
             return;
         }
-        if (action.ActionKind == NormalActionKinds.InterplanetaryFlight)
+        if (action.ActionKind == NormalActionKinds.InterplanetaryFlight && action.Plan.StoppedSpaceHomeReturn is null)
         {
             AbortPlayerOrderIfOwned(action);
             ReleaseNativeAscentInput(action);
@@ -1566,6 +1583,7 @@ internal sealed partial class NormalGameActionCoordinator
 
     private void Fail(ActionRecord action, string message)
     {
+        if(action.Plan.StoppedSpaceHomeReturn is not null){PauseStoppedSpaceReturn(action,message);return;}
         if (IsVoyagerLocalOrder(action) && !action.VoyagerLocalCompleting)
         { RequestVoyagerLocalOrderStop(action, false, message); return; }
         if (action.Plan.VoyagerBudget is not null && !action.VoyagerNativeLaunchStarted)

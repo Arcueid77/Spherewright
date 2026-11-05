@@ -13,6 +13,17 @@ namespace Spherewright.Bridge.Core.Tests;
 public sealed class CanonicalStateHashTests
 {
     [Fact]
+    public void SpaceObservationBindsUniverseMotionAndPauseWithoutChangingAbsentSpaceGroundDomain()
+    {
+        var p=new Spherewright.Contracts.Players.PlayerStateSnapshot {SessionId="synthetic",PlanetId=0};
+        var legacy=CanonicalStateHash.PlayerAction(p);
+        p.SpaceTransit=new Spherewright.Contracts.Players.NativeSpaceTransitSnapshot
+            {NativePaused=true,UniverseX=100000,VelocityX=.4,Speed=.4};
+        var space=CanonicalStateHash.PlayerAction(p);Assert.NotEqual(legacy,space);
+        p.SpaceTransit.VelocityX=.3;Assert.NotEqual(space,CanonicalStateHash.PlayerAction(p));
+        p.SpaceTransit=null;Assert.Equal(legacy,CanonicalStateHash.PlayerAction(p));
+    }
+    [Fact]
     public void LogisticsStationChargePolicy_MirrorsBoundedThreeMegawattUiSteps()
     {
         Assert.True(LogisticsStationChargePolicy.TryNormalizeUiPower(

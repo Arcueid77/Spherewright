@@ -57,6 +57,7 @@ public static class CanonicalStateHash
             snapshot.ConstructionDrones.ConstructionEnabled, snapshot.ConstructionDrones.Total,
             snapshot.ConstructionDrones.Alive, snapshot.ConstructionDrones.Idle,
             snapshot.ConstructionDrones.PendingBuildTargets, snapshot.ConstructionDrones.PendingRepairTargets);
+        AppendSpaceTransit(value,snapshot);
         return Hash(value);
     }
 
@@ -105,7 +106,15 @@ public static class CanonicalStateHash
             snapshot.ConstructionDrones.ConstructionEnabled, snapshot.ConstructionDrones.Total,
             snapshot.ConstructionDrones.Alive, snapshot.ConstructionDrones.Idle,
             snapshot.ConstructionDrones.PendingBuildTargets, snapshot.ConstructionDrones.PendingRepairTargets);
+        AppendSpaceTransit(value,snapshot);
         return Hash(value);
+    }
+
+    private static void AppendSpaceTransit(StringBuilder value,PlayerStateSnapshot snapshot)
+    {
+        if(snapshot.SpaceTransit is {} space)
+            Append(value,"owned-space-v1",space.StarId,space.NativePaused,space.UniverseX,space.UniverseY,space.UniverseZ,
+                space.VelocityX,space.VelocityY,space.VelocityZ,space.Speed,space.WarpState,space.WarpCommand,space.Warping);
     }
 
     public static string Resource(ResourceNodeSnapshot snapshot)

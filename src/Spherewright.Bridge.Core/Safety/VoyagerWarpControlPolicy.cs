@@ -130,16 +130,10 @@ public static class VoyagerWarpControlPolicy
         else if (facts.CoreEnergyJoules <= facts.NativeStartThresholdJoules)
             Block("native_warp_start_energy_insufficient", "Current core energy must be strictly greater than the unscaled native start threshold.");
 
-        var warpers = (long)facts.CurrentLegRemainingEntries + facts.ReturnRemainingEntries + facts.ExtraWarperReserve;
-        if (facts.NativeWarperCount < 0 || facts.CurrentLegRemainingEntries < 1 || facts.ReturnRemainingEntries < 0
-            || facts.ExtraWarperReserve < 0 || facts.ExtraWarperReserve > VoyagerRouteBudgetPolicy.MaximumExtraWarperReserve || warpers > int.MaxValue)
-            Block("invalid_remaining_warper_reserve", "Real native counts and all remaining entry reservations must be valid; the current entry is included.");
-        else
-        {
-            result.RequiredWarpers = (int)warpers;
-            if (facts.NativeWarperCount < warpers)
-                Block("warper_return_reserve_insufficient", "Real native warpers must cover this leg, remaining return entries and declared extras; package items are not reserved here.");
-        }
+        var storedWarpers=VoyagerStoredWarperReservePolicy.Evaluate(facts.NativeWarperCount,
+            facts.CurrentLegRemainingEntries,facts.ReturnRemainingEntries,facts.ExtraWarperReserve);
+        result.RequiredWarpers=storedWarpers.RequiredWarpers;
+        if(!storedWarpers.Proved)Block(storedWarpers.Code!,storedWarpers.Message!);
         var requiredEnergy = facts.LockedRemainingLegEnergyJoules + facts.ReturnEnergyFloorJoules;
         if (!facts.RemainingBudgetLocked || !FiniteNonnegative(facts.AvailableEnergyJoules)
             || !FinitePositive(facts.LockedRemainingLegEnergyJoules) || !FiniteNonnegative(facts.ReturnEnergyFloorJoules)

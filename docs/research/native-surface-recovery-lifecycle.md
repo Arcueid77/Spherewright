@@ -2,6 +2,16 @@
 
 [English](native-surface-recovery-lifecycle.md) | [简体中文](native-surface-recovery-lifecycle.zh-CN.md)
 
+## Stopped saved-space lifecycle
+
+The three resource domains are distinct: route estimates may include package stock when native automatic supply is enabled; launch preparation, commit revalidation and warp entry all require the same physical chamber reserve. A partial chamber does not trigger native empty-chamber replenishment. Explicit `uiTopUp=true` instead performs the normal UI package-to-filtered-chamber transfer, with exact capacity-limited count, zero inc, unchanged setting and synchronous bilateral readback. Never replay an accepted or unknown supply.
+
+`open_saved_last_exit` binds the complete fixed LastExit at one exact caller-supplied tick covering the ticket, observed progress and current primary. It requires digest confirmation under applicable owner authority, loads through the native loader and pauses at LoadComplete. It preserves old outcomes, clocks and cumulative spending. `planetId=0` exposes owned Sail-space observations; absent factory/ground facts remain null. This open-only credential keeps general automation quarantined.
+
+Only that exact world/session/open-action/saved-tick, stationary Sail state and sole opening quarantine permit a paused UI supply or an explicitly finite original-home return. The return binds the unchanged failed Journey, native observer, original home in the same star, physical warpers, original remaining ticks and energy floors. It records a separate immutable admission before normal Resume. Native501 controls normal paid Sail/Fly/Drift/Walk transitions; render updates observe its watchdog, and original-action polling renews only a short observation lease. Binding, observer, lease, cap, warp or funding loss pauses the same owned world and retains the original result.
+
+The energy envelope reuses `VoyagerControlReservePolicy`, including native factor3, orbital relative speed, steering/braking and background work, refreshed before native control. Landing must prove contact and exact body/controller/walk/drift zero tails while running before Pause. The paused handoff rechecks the same strict native facts, then clears only its own source quarantine, saves normally and proves the complete current primary before conservatively closing the old Journey. The old failed flight/checkpoint outcome stays failed; newer primary coverage may retire its checkpoint under the existing protective rule. No checkpoint is loaded, no reserve is reduced and no original action is replayed. Source tests and native-reference compilation do not establish installed flight acceptance.
+
 Pinned evidence: DSP `0.10.35.29151`, assembly SHA256 `EF314425DADE51F529F184F07BE136CD3C2660A6A81515603C7226FBE7AB1D8C`. This is implementation/replay evidence; PhysX landing and real saving still require installed acceptance.
 
 | State| Production transition and retained proof|

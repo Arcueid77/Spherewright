@@ -11,6 +11,7 @@ public static class OwnedWorldResumeModes
     public const string ReauthorizeFailedRemoteLastExit = "reauthorize_failed_remote_last_exit";
     public const string ContinueCompletedRemoteLastExit = "continue_completed_remote_last_exit";
     public const string OpenSavedPrimary = "open_saved_primary";
+    public const string OpenSavedLastExit = "open_saved_last_exit";
     public const string AuthorizeRemotePrimaryRecovery = "authorize_remote_primary_recovery";
     public const string ResumeReturnOnlyTask = "resume_return_only_task";
     public const string AuthorizeFailedLandingLastExit = "authorize_failed_landing_last_exit";
@@ -62,6 +63,7 @@ public sealed class CommitOwnedWorldResumeRequest
 
 public sealed class PreparedOwnedWorldResumePlan
 {
+    public bool OpensExactLastExitOnly { get; set; }
     public Factory.Vector3Snapshot? SurfaceRecoveryTarget { get; set; }
     public int SurfaceRecoveryMaximumWorkGameTicks { get; set; }
     public double SurfaceRecoveryMaximumWallSeconds { get; set; }

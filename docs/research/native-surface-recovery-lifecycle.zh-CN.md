@@ -2,6 +2,16 @@
 
 [English](native-surface-recovery-lifecycle.md) | [简体中文](native-surface-recovery-lifecycle.zh-CN.md)
 
+## 已停稳太空保存生命周期
+
+区分三个物料域：自动补给启用时，路线估算可计背包；起飞prepare、commit复核和跃迁进入必须共同核对舱内现物储备。部分舱不会触发原生空舱自动补给。显式`uiTopUp=true`改走正常UI背包→过滤舱转移，数量精确受容量限制，增产点为零，开关不变，并立即双边读回守恒。已接受或unknown补给不得重放。
+
+`open_saved_last_exit`绑定固定完整LastExit及调用者指定的唯一精确tick，覆盖票据、已观察进度和当前主存档。按适用所有者授权确认摘要，经原生加载器在LoadComplete暂停；旧结果、时钟和累计实耗不变。`planetId=0`只提供owned Sail太空观察，工厂/接地不适用字段保持null。只读打开凭据继续隔离通用自动操作。
+
+只有同一world/session/open-action/saved-tick、停稳Sail及唯一打开隔离项，才能在暂停中补舱或另立明确有限的原母星返航。返航绑定未改的失败Journey、原生观察器、同恒星原母星、舱内现物、原剩余tick及能源下限；正常Resume前另写不可变准入记录。Native501控制正常付费Sail/Fly/Drift/Walk转换，渲染更新只做看门检查，原动作轮询只续短观察租期。绑定、观察器、租期、限额、跃迁或资金失证即暂停同一owned世界并保留原结果。
+
+能源包络复用`VoyagerControlReservePolicy`，含原生系数3、天体相对速度、转向/制动和后台功耗，每次原生控制前刷新。落地先在运行中证明接触及刚体/controller/Walk/Drift运动尾部精确归零，再暂停；暂停交接重新核对同一严格原生事实，仅解除自己的源隔离，正常保存并证明完整当前主存档，最后保守核销旧Journey实耗。旧出航/checkpoint失败结果不变；较新主存档覆盖可按既有保护规则退休checkpoint。不加载checkpoint、不降储备、不重放原动作。源码回归及固定原生引用编译不证明已安装实机飞行成功。
+
 固定Native：DSP `0.10.35.29151`，Assembly SHA256 `EF314425DADE51F529F184F07BE136CD3C2660A6A81515603C7226FBE7AB1D8C`。
 本文为固定原生版本的实现及回放证据，不冒充实机接地或保存验收。
 

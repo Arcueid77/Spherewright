@@ -389,8 +389,10 @@ internal sealed partial class NormalGameActionCoordinator
     }
 
     private static bool NativeWalkModeIsBounded(Player player, bool stationary, NativeLocalWalkSceneBinding? scene = null,
-        bool finiteWaterCostWithNativePause = false, bool allowDrift = false, bool allowBudgetedRecharge = false) =>
-        NativeWalkModeBlocker(player, stationary, scene, finiteWaterCostWithNativePause, allowDrift, allowBudgetedRecharge) is null;
+        bool finiteWaterCostWithNativePause = false, bool allowDrift = false, bool allowBudgetedRecharge = false,
+        bool allowNativePause = false) =>
+        NativeWalkModeBlocker(player, stationary, scene, finiteWaterCostWithNativePause, allowDrift, allowBudgetedRecharge,
+            allowNativePause: allowNativePause) is null;
 
     private static string? NativeWalkModeBlocker(Player player, bool stationary, NativeLocalWalkSceneBinding? scene,
         bool finiteWaterCostWithNativePause, bool allowDrift, bool allowBudgetedRecharge = false,

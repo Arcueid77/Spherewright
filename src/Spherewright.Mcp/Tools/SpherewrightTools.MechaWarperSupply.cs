@@ -2,6 +2,7 @@ using System.ComponentModel;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
 using Spherewright.Contracts.Actions;
+using Spherewright.Contracts.Errors;
 using Spherewright.Mcp.BridgeClient;
 
 namespace Spherewright.Mcp.Tools;
@@ -10,15 +11,16 @@ public static partial class SpherewrightTools
 {
     [McpServerTool(Name = "spherewright_prepare_supply_mecha_warpers", Title = "Prepare native mecha warper supply",
         ReadOnly = false, Destructive = false, Idempotent = false, OpenWorld = false)]
-    [Description("Prepares a bounded native supply of real item1210 from the player package into the empty mecha warper chamber, without moving stock. Requires the fresh complete player stateHash, a healthy owned grounded idle player and exactly one native Filtered slot with filter1210, stack20 and zero count/inc. count must equal min(20, the fresh package count of1210), above zero. Binds package/chamber count/inc and the current automatic replenishment setting; preparation never changes autoReplenishWarper or spends a warper. Commit once using commit_supply_mecha_warpers and retain the original action on any unknown result.")]
+    [Description("Prepares bounded native supply of real item1210 without moving stock. Default: healthy owned grounded idle player, empty native Filtered chamber1210/stack20, count=min(20,package count). Explicit uiTopUp=true: partially filled chamber, exact count=min(20-chamber count,package count), zero inc, native UI transfer; also supported for planetId0 only at the exact paused saved-space source under its sole opening quarantine. No general write admission or game Resume. Requires fresh complete player stateHash and plannedMechaWarperUiTopUp=true echo for UI mode. Binds bilateral count/inc and unchanged autoReplenishWarper. Commit once and retain any unknown original result without replay.")]
     public static async Task<CallToolResult> PrepareSupplyMechaWarpersAsync(
         IBridgeClient bridgeClient,
         [Description("Current owned session ID from spherewright_get_session_state.")] string sessionId,
-        [Description("Current local planet ID in that same owned session.")] int planetId,
+        [Description("Current local planet ID; 0 only for the exact paused saved-space UI role.")] int planetId,
         [Description("Fresh complete player stateHash from spherewright_get_player_state, not the narrower player action hash.")] string expectedPlayerStateHash,
-        [Description("Exact native transfer count: min(20, the fresh player-package count of item1210), above zero. Does not choose a smaller arbitrary batch.")] int count = 20,
+        [Description("Exact native transfer count: min(20-current chamber count, package count); default mode requires an empty chamber. No smaller arbitrary batch.")] int count = 20,
         [Description("Request state-hash version; currently 1.")] int stateHashVersion = 1,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        [Description("Explicit native UI partial-chamber top-up; exact count=min(20-current chamber,package). Default retains the empty-chamber AutoReplenishWarper path.")] bool uiTopUp = false)
     {
         var result = await bridgeClient.PrepareSupplyMechaWarpersAsync(sessionId, new PrepareSupplyMechaWarpersRequest
         {
@@ -26,7 +28,12 @@ public static partial class SpherewrightTools
             Count = count,
             ExpectedPlayerStateHash = expectedPlayerStateHash,
             StateHashVersion = stateHashVersion,
+            UiTopUp = uiTopUp,
         }, cancellationToken).ConfigureAwait(false);
+        if(uiTopUp && result.Success && result.Value?.PlannedMechaWarperUiTopUp!=true)
+            result=BridgeCallResult<PreparedNormalAction>.Failed(BridgeError.Create(BridgeErrorCodes.BridgeNotReady,
+                "The Plugin did not confirm the native UI partial-chamber transfer; no token is exposed.",false,
+                "Use a matching cohort and fresh player inspection; never call the blind empty-chamber path on partial stock."));
         return ToToolResult(result, "Native empty-chamber warper-supply plan prepared; stock and automatic replenishment are unchanged.");
     }
 

@@ -55,6 +55,9 @@ internal sealed partial class NormalGameActionCoordinator
         }
         else if (journey is not null && !IsVoyagerJourneyClosed(journey))
             return InvalidPlan("An existing bounded journey still owns the return reserve; reconcile it or prepare its exact return.");
+        var storedWarpers=VoyagerStoredWarperReservePolicy.Evaluate(CountVoyagerWarpers(player.mecha.warpStorage),
+            1,returning?0:1,returning?journey!.ExtraWarperReserve:inspectedRequest!.ExtraWarperReserve);
+        if(!storedWarpers.Proved)return InvalidPlan(storedWarpers.Message!);
         var journeyId = returning ? journey!.JourneyId : Guid.NewGuid().ToString("D");
         var playerHash = CanonicalStateHash.PlayerAction(observed.Value);
         var payload = NormalActionPlanPayload.VoyagerFlight(requestedSessionId!, request.PlanetId, journeyId,
@@ -87,6 +90,9 @@ internal sealed partial class NormalGameActionCoordinator
         if (!fresh.Success || fresh.Value is null) return fresh.Error;
         if (!fresh.Value.BudgetSufficient) return Stale(fresh.Value.Blockers.First().Message);
         var journey = _flightCheckpoints.VoyagerJourney;
+        var storedWarpers=VoyagerStoredWarperReservePolicy.Evaluate(CountVoyagerWarpers(player.mecha.warpStorage),
+            1,plan.VoyagerReturnLeg?0:1,plan.VoyagerReturnLeg ? journey?.ExtraWarperReserve ?? -1 : plan.VoyagerRequest.ExtraWarperReserve);
+        if(!storedWarpers.Proved)return Stale(storedWarpers.Message!);
         if (plan.VoyagerReturnLeg)
         {
             if (journey is null || journey.JourneyId != plan.VoyagerJourneyId || journey.Phase != "remote_landed"
@@ -684,6 +690,10 @@ internal sealed partial class NormalGameActionCoordinator
 
     private BridgeError? ValidateVoyagerJourneyLocalCommit(NormalActionPlanPayload plan)
     {
+        if(plan.StoppedSpaceHomeReturn is not null)return RevalidateStoppedSpaceHomeReturn(plan);
+        if(plan.ActionKind==NormalActionKinds.SupplyMechaWarpers && plan.MechaWarperUiTopUp
+            && plan.PausedSpaceInventoryPermit is {} permit && _sessions.TryGetPausedSavedSpacePermit(out var current)
+            && current!.OpenActionId==permit.OpenActionId && permit.Matches(_sessions.CaptureOnMainThread()))return null;
         var returnOnly = _flightCheckpoints.VoyagerJourney;
         if (returnOnly?.ReturnOnlyScopeActive == true && !NormalActionKinds.IsSaveLifecycle(plan.ActionKind)
             && plan.ActionKind != NormalActionKinds.CancelVoyagerFlight

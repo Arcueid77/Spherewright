@@ -332,6 +332,8 @@ public sealed class PrepareLogisticsStationFleetTransferRequest
 
 public sealed class PrepareInterplanetaryFlightRequest
 {
+    public long StoppedSpaceReturnMaximumGameTicks {get;set;}
+    public double StoppedSpaceReturnMaximumWallSeconds {get;set;}
     public int PlanetId { get; set; }
 
     public int DestinationPlanetId { get; set; }
@@ -396,6 +398,8 @@ public sealed class PreparedNormalAction
 
     public bool? PlannedMechaResearchAutoSupplyEnabled { get; set; }
     public bool? PlannedMechaWarperAutoSupplyEnabled { get; set; }
+    public bool? PlannedMechaWarperUiTopUp { get; set; }
+    public bool? PlannedStoppedSpaceHomeReturn {get;set;}
     public bool? PlannedPaidConstructionReadmission { get; set; }
 
     public BlueprintBuildProgress? BlueprintBuild { get; set; }

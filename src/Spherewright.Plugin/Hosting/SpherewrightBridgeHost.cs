@@ -66,6 +66,7 @@ internal sealed class SpherewrightBridgeHost : IDisposable
         _pipeServer = pipeServer;
         _descriptor = descriptor;
         _sessionTracker.SetRemoteResumeLoadCompleteGuard(OnRemoteResumeNativeLoadComplete);
+        _normalActionCoordinator.SetStoppedSpaceObserverProof(ProveStoppedSpaceObserver);
     }
 
     public static SpherewrightBridgeHost Create(
@@ -341,6 +342,17 @@ internal sealed class SpherewrightBridgeHost : IDisposable
         return _sessionTracker.PreflightRemoteResumeBeforeFirstPlayerOnMainThread();
     }
 
+    private bool ProveStoppedSpaceObserver()
+    {
+        if(!_started || System.Threading.Thread.CurrentThread.ManagedThreadId!=_unityThreadId)return false;
+        RefreshVoyagerLocalPrePlayerBinding();
+        var logic=GameMain.logic;var manager=logic?.threadController?.threadManager;
+        return logic is not null && manager is not null && _localPrePlayerHandler is not null
+            && ReferenceEquals(logic,_localPrePlayerLogic) && ReferenceEquals(GameMain.data,_localPrePlayerWorld)
+            && ReferenceEquals(manager,_localPrePlayerManager)
+            && NativeTaskObserverOrderGuard.HasNativeBeforeObserver(manager.OnTaskLogic,logic,typeof(GameLogic),_localPrePlayerHandler);
+    }
+
     private void RefreshVoyagerLocalPrePlayerBinding()
     {
         var logic = GameMain.isRunning ? GameMain.logic : null;
@@ -411,6 +423,7 @@ internal sealed class SpherewrightBridgeHost : IDisposable
             }
             _normalActionCoordinator.UpdateStructuredConstructionPrePlayerTickOnMainThread();
             _normalActionCoordinator.UpdateVoyagerLocalPrePlayerTickOnMainThread();
+            _normalActionCoordinator.UpdateStoppedSpaceReturnPrePlayerTickOnMainThread();
         }
         catch (Exception exception)
         {
@@ -422,6 +435,7 @@ internal sealed class SpherewrightBridgeHost : IDisposable
 
     private void StopVoyagerLocalPrePlayerControl()
     {
+        _normalActionCoordinator.PauseStoppedSpaceReturnsOnObserverLoss();
         _normalActionCoordinator.VoyagerLocalPrePlayerTickAvailable = false;
         _sessionTracker.StopPendingRemoteFirstFrameOnMainThread();
         try

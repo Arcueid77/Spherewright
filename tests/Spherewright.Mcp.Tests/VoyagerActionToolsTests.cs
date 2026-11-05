@@ -15,6 +15,47 @@ namespace Spherewright.Mcp.Tests;
 public sealed class VoyagerActionToolsTests
 {
     [Fact]
+    public void RealSdkPublishesOptionalTypedSpaceRoleFieldsWithoutCancellationToken()
+    {
+        var services=new ServiceCollection();services.AddSingleton(NewBridge());
+        services.AddMcpServer().WithToolsFromAssembly(typeof(SpherewrightTools).Assembly);
+        using var provider=services.BuildServiceProvider();
+        var tools=provider.GetServices<McpServerTool>().Select(t=>t.ProtocolTool).ToArray();
+        foreach(var entry in new[]{("spherewright_prepare_supply_mecha_warpers","uiTopUp","boolean"),
+            ("spherewright_prepare_interplanetary_flight","stoppedSpaceReturnMaximumGameTicks","integer"),
+            ("spherewright_prepare_interplanetary_flight","stoppedSpaceReturnMaximumWallSeconds","number")})
+        {
+            var tool=Assert.Single(tools,t=>t.Name==entry.Item1);var schema=tool.InputSchema;
+            Assert.Equal(entry.Item3,schema.GetProperty("properties").GetProperty(entry.Item2).GetProperty("type").GetString());
+            Assert.DoesNotContain(entry.Item2,schema.GetProperty("required").EnumerateArray().Select(p=>p.GetString()));
+            Assert.False(schema.GetProperty("properties").TryGetProperty("cancellationToken",out _));
+        }
+    }
+
+    [Theory]
+    [InlineData(null,true)][InlineData(false,true)][InlineData(true,false)]
+    public async Task StoppedSpaceHomeReturnBindsExplicitFiniteCapsAndRequiresExactModeEcho(bool? echo,bool error)
+    {
+        var bridge=NewBridge();var proxy=Proxy(bridge);proxy.Prepared.PlannedStoppedSpaceHomeReturn=echo;
+        var result=await SpherewrightTools.PrepareInterplanetaryFlightAsync(bridge,"owned",0,101,"source-player","source-home-anchor",
+            minimumCoreEnergyRatio:.8,stoppedSpaceReturnMaximumGameTicks:54000,stoppedSpaceReturnMaximumWallSeconds:14400);
+        Assert.Equal(error,result.IsError);var request=Assert.IsType<PrepareInterplanetaryFlightRequest>(proxy.LastRequest);
+        Assert.Equal(0,request.PlanetId);Assert.Equal(101,request.DestinationPlanetId);
+        Assert.Equal(54000,request.StoppedSpaceReturnMaximumGameTicks);Assert.Equal(14400,request.StoppedSpaceReturnMaximumWallSeconds);
+        Assert.Single(proxy.Calls);
+    }
+    [Theory]
+    [InlineData(null,true)][InlineData(false,true)][InlineData(true,false)]
+    public async Task UiTopUpMapsExplicitModeAndRequiresNativeCohortEcho(bool? echo,bool error)
+    {
+        var bridge=NewBridge();var proxy=Proxy(bridge);proxy.Prepared.PlannedMechaWarperUiTopUp=echo;
+        var result=await SpherewrightTools.PrepareSupplyMechaWarpersAsync(bridge,"owned",0,"paused-space-player",
+            count:18,uiTopUp:true);
+        Assert.Equal(error,result.IsError);var request=Assert.IsType<PrepareSupplyMechaWarpersRequest>(proxy.LastRequest);
+        Assert.True(request.UiTopUp);Assert.Equal(18,request.Count);Assert.Equal(0,request.PlanetId);
+        Assert.Single(proxy.Calls);
+    }
+    [Fact]
     public async Task SupplyPreparationMapsExactFreshCountWithoutCommitOrChangingSettings()
     {
         var bridge = NewBridge(); var proxy = Proxy(bridge);
@@ -240,6 +281,7 @@ public sealed class VoyagerActionToolsTests
         public CancellationToken LastCancellationToken { get; private set; }
         public BridgeError? Error { get; set; }
         public ActionResultSnapshot Action { get; set; } = new();
+        public PreparedNormalAction Prepared {get;set;}=new() {Prepared=true,PlanToken="native-plan"};
         protected override object? Invoke(MethodInfo? targetMethod, object?[]? args)
         {
             Assert.NotNull(targetMethod); var name = targetMethod!.Name; Calls.Add(name);
@@ -250,10 +292,10 @@ public sealed class VoyagerActionToolsTests
             }
             LastSessionId = Assert.IsType<string>(args![0]); LastRequest = args[1];
             LastCancellationToken = Assert.IsType<CancellationToken>(args[2]);
-            if (name is nameof(IBridgeClient.PrepareSupplyMechaWarpersAsync) or nameof(IBridgeClient.PrepareVoyagerFlightAsync)
+            if (name is nameof(IBridgeClient.PrepareInterplanetaryFlightAsync) or nameof(IBridgeClient.PrepareSupplyMechaWarpersAsync) or nameof(IBridgeClient.PrepareVoyagerFlightAsync)
                 or nameof(IBridgeClient.PrepareCancelVoyagerFlightAsync))
                 return Task.FromResult(Error is null
-                    ? BridgeCallResult<PreparedNormalAction>.Succeeded(new PreparedNormalAction { Prepared = true, PlanToken = "native-plan" })
+                    ? BridgeCallResult<PreparedNormalAction>.Succeeded(Prepared)
                     : BridgeCallResult<PreparedNormalAction>.Failed(Error));
             if (name is nameof(IBridgeClient.CommitSupplyMechaWarpersAsync) or nameof(IBridgeClient.CommitVoyagerFlightAsync)
                 or nameof(IBridgeClient.CommitCancelVoyagerFlightAsync))

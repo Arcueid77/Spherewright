@@ -57,6 +57,7 @@
     <Compile Include="..\..\src\Spherewright.Plugin\RuntimeDescriptor\OwnedWorldResumeTicketStore.SavedFileAccess.cs" Link="PluginRuntimeDescriptor\OwnedWorldResumeTicketStore.SavedFileAccess.cs" />
     <Compile Include="..\..\src\Spherewright.Plugin\RuntimeDescriptor\FlightCheckpointStore.cs" Link="PluginRuntimeDescriptor\FlightCheckpointStore.cs" />
     <Compile Include="..\..\src\Spherewright.Plugin\RuntimeDescriptor\FlightCheckpointStore.Voyager.cs" Link="PluginRuntimeDescriptor\FlightCheckpointStore.Voyager.cs" />
+    <Compile Include="..\..\src\Spherewright.Plugin\RuntimeDescriptor\FlightCheckpointStore.StoppedSpaceReturn.cs" Link="PluginRuntimeDescriptor\FlightCheckpointStore.StoppedSpaceReturn.cs" />
     <Compile Include="..\..\src\Spherewright.Plugin\RuntimeDescriptor\FlightCheckpointStore.ReturnOnlyRecovery.cs" Link="PluginRuntimeDescriptor\FlightCheckpointStore.ReturnOnlyRecovery.cs" />
     <Compile Include="..\..\src\Spherewright.Plugin\RuntimeDescriptor\FlightCheckpointStore.ReturnOnlyContinuation.cs" Link="PluginRuntimeDescriptor\FlightCheckpointStore.ReturnOnlyContinuation.cs" />
     <Compile Include="..\..\src\Spherewright.Plugin\Game\GameSessionTracker.ReturnOnlyRecovery.cs" Link="PluginGame\GameSessionTracker.ReturnOnlyRecovery.cs" />

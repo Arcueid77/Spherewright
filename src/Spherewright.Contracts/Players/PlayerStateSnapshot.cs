@@ -70,6 +70,27 @@ public sealed class PlayerStateSnapshot
 
     public NativePlayerPhysicsSnapshot? NativePhysics { get; set; }
     public NativeLocalControlEnergyObservation? NativeLocalControlEnergy { get; set; }
+    public NativeSpaceTransitSnapshot? SpaceTransit { get; set; }
+}
+
+public sealed class NativeSpaceTransitSnapshot
+{
+    public int? OriginalHomePlanetId {get;set;}
+    public string? ReturnHomeStateHash {get;set;}
+    public long? MaximumReturnGameTicks {get;set;}
+    public string EvidenceScope {get;set;}="owned_native_space_read_only";
+    public int? StarId {get;set;}
+    public bool NativePaused {get;set;}
+    public double UniverseX {get;set;}
+    public double UniverseY {get;set;}
+    public double UniverseZ {get;set;}
+    public double VelocityX {get;set;}
+    public double VelocityY {get;set;}
+    public double VelocityZ {get;set;}
+    public double Speed {get;set;}
+    public float WarpState {get;set;}
+    public bool WarpCommand {get;set;}
+    public bool Warping {get;set;}
 }
 
 public sealed class MechaResearchItemSnapshot

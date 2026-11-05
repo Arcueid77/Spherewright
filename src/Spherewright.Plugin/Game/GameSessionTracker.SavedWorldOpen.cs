@@ -12,6 +12,7 @@ internal sealed partial class GameSessionTracker
     private GameLoader[]? _savedOpenLoadersBefore;
     private GameLoader? _savedOpenLoader;
     private NativeLoadCompletionSubscription<GameLoader>? _savedOpenSubscription;
+    private bool _savedOpenAnyNativeLocation;
     private Spherewright.Contracts.Players.NativeResumeFailureSnapshot? _savedOpenFailure;
     internal string? SavedWorldOpenSessionId { get; private set; }
     internal Spherewright.Contracts.Players.NativeResumeFailureSnapshot? SavedWorldOpenFirstFailure =>
@@ -20,11 +21,61 @@ internal sealed partial class GameSessionTracker
     internal bool SavedWorldOpenCompleted(string actionId) =>
         _savedWorldOpen is { Completed: true } guard && guard.ActionId == actionId;
 
-    internal void PrepareSavedWorldOpenNativeObserver()
+    internal bool TryGetPausedSavedSpacePermit(out PausedSavedSpacePermit? permit)
+    {
+        permit=null;var p=GameMain.mainPlayer;
+        if(!_savedOpenAnyNativeLocation || _savedWorldOpen is not {Completed:true} open
+            || !open.MatchesCompletedWorld(GameMain.data) || !GameMain.isPaused || !GameMain.isRunning
+            || GameMain.gameTick!=open.SavedTick || GameMain.localPlanet is not null || p?.controller is null
+            || p.planetId!=0 || p.movementState!=EMovementState.Sail || !p.isAlive || p.warping
+            || p.warpState!=0 || p.warpCommand || p.currentOrder is not null
+            || double.IsNaN(p.uVelocity.magnitude) || p.uVelocity.magnitude>.5d
+            || _writeQuarantineActionId!=open.ActionId || _writeQuarantineReason is null || _sessionId is null)return false;
+        var candidate=new PausedSavedSpacePermit(_sessionId,open.ActionId,_writeQuarantineReason,open.SavedTick);
+        if(!candidate.Matches(CaptureOnMainThread()))return false;
+        permit=candidate;return true;
+    }
+
+    internal bool TryGetStoppedSpaceHomeAnchor(out int home,out string hash,out long cap)
+    {
+        home=0;hash=string.Empty;cap=0;
+        var j=_flightCheckpoints.VoyagerJourney;
+        if(!TryGetPausedSavedSpacePermit(out var permit) || j is null || j.Phase!="recovery_required"
+            || j.HomeStarId!=GameMain.localStar?.id || j.OwnedSaveName!=_ownedSaveName || j.GameVersion!=_gameVersion
+            || !Guid.TryParse(j.LastAccountedFlightActionId,out _) || j.ReturnReserveGameTicks<3600)return false;
+        var target=GameMain.galaxy?.PlanetById(j.HomePlanetId);
+        if(target is null || target.star.id!=j.HomeStarId || target.type==EPlanetType.Gas)return false;
+        var spent=Math.Max(j.SpentGameTicks,GameMain.gameTick-j.StartedAtGameTick);
+        cap=Math.Min(j.ReturnReserveGameTicks,j.MaximumGameTicks-spent);
+        if(cap<3600)return false;
+        home=j.HomePlanetId;
+        hash=CanonicalStateHash.Combine("paused-space-home-anchor-v1",permit!.SessionId,permit.OpenActionId,
+            permit.SavedTick,Spherewright.Plugin.Transport.PluginJson.Serialize(j),home,target.uPosition.x,target.uPosition.y,target.uPosition.z);
+        return true;
+    }
+
+    internal bool CompleteStoppedSpaceHomeAdmission(string sourceSession,object world,string openAction,string reason,int home)
+    {
+        if(_savedWorldOpen is not {Completed:true} source || !source.MatchesCompletedWorld(world)
+            || !ReferenceEquals(world,GameMain.data) || _sessionId!=sourceSession || source.ActionId!=openAction
+            || _writeQuarantineActionId!=openAction || _writeHealth!=WriteHealthStates.Quarantined
+            || _writeQuarantineReason!=reason || CaptureOnMainThread().WriteBlockers.Count!=1
+            || GameMain.localPlanet?.id!=home || GameMain.mainPlayer?.planetId!=home)return false;
+        _writeHealth=WriteHealthStates.Healthy;_writeQuarantineActionId=null;_writeQuarantineReason=null;
+        return true;
+    }
+
+    internal bool StoppedSpaceHomeSaveCredentialMatches(string session,int home,long savedTick)=>
+        _resumeTickets.CurrentResumeToken is {} token && _resumeTickets.TryGetActiveTicket(token,out var ticket,out _)
+        && ticket is not null && ticket.SavedWorldOpenOnly!=true && ticket.OwnedSaveName==_ownedSaveName
+        && ticket.SourceSessionId==session && ticket.ExpectedPlanetId==home && ticket.MinimumGameTick==savedTick;
+
+    internal void PrepareSavedWorldOpenNativeObserver(bool exactLastExitOpen=false)
     {
         if (_savedWorldOpen is null || _savedOpenLoadersBefore is not null || _savedOpenSubscription is not null)
             throw new InvalidOperationException("saved_world_open_observer_unavailable");
         _savedOpenLoadersBefore = UnityEngine.Object.FindObjectsOfType<GameLoader>();
+        _savedOpenAnyNativeLocation=exactLastExitOpen;
     }
 
     internal void BindSavedWorldOpenNativeObserver()
@@ -53,7 +104,8 @@ internal sealed partial class GameSessionTracker
             if (!_savedWorldOpen.ObserveLoad(GameMain.data, completed && captureType is null, GameMain.isPaused,
                 GameMain.gameTick, ticket is null || GameMain.data is null ? null
                     : OwnedWorldProvenancePolicy.MatchesProtectedSaveIdentity(ticket.OwnedSaveName, GameMain.data.gameName),
-                ticket is null || GameMain.data?.localPlanet is null ? null : GameMain.data.localPlanet.id == ticket.ExpectedPlanetId))
+                _savedOpenAnyNativeLocation ? ObserveConsistentSavedNativeLocation()
+                    : ticket is null || GameMain.data?.localPlanet is null ? null : GameMain.data.localPlanet.id == ticket.ExpectedPlanetId))
                 _resumeAdoptionError = _savedWorldOpen.FirstFailure?.Code ?? "saved_world_open_native_boundary_unproved";
         }
         catch (Exception exception)
@@ -119,6 +171,19 @@ internal sealed partial class GameSessionTracker
         _savedOpenLoader = null; _savedOpenLoadersBefore = null; _savedWorldOpen = null;
         SavedWorldOpenSessionId = null;
         _savedOpenPreparedKnownProgressGameTick = null; _savedOpenObservedProgressFloor = null;
+        _savedOpenAnyNativeLocation=false;
+    }
+
+    private static bool? ObserveConsistentSavedNativeLocation()
+    {
+        var world=GameMain.data;var player=GameMain.mainPlayer;
+        if(world is null || player is null)return null;
+        if(world.localPlanet is {} planet)return planet.id>0 && player.planetId==planet.id;
+        return player.planetId==0 && player.movementState==EMovementState.Sail && !player.warping
+            && player.warpState==0f && !player.warpCommand
+            && !double.IsNaN(player.uPosition.x) && !double.IsInfinity(player.uPosition.x)
+            && !double.IsNaN(player.uPosition.y) && !double.IsInfinity(player.uPosition.y)
+            && !double.IsNaN(player.uPosition.z) && !double.IsInfinity(player.uPosition.z);
     }
 
     private long? UnaccountedObservedProgressFloorForTicket()

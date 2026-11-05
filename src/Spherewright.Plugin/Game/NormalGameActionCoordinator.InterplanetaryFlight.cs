@@ -28,6 +28,9 @@ internal sealed partial class NormalGameActionCoordinator
         string? requestedSessionId,
         PrepareInterplanetaryFlightRequest request)
     {
+        if(request.PlanetId==0)return PrepareStoppedSpaceHomeReturn(requestedSessionId,request);
+        if(request.StoppedSpaceReturnMaximumGameTicks!=0 || request.StoppedSpaceReturnMaximumWallSeconds!=0)
+            return InvalidPlan("Stopped-space return caps cannot alter an ordinary planetary flight.");
         var common = ValidatePrepareCommon(requestedSessionId, request.PlanetId, request.StateHashVersion);
         if (common.Error is not null)
         {
@@ -176,6 +179,7 @@ internal sealed partial class NormalGameActionCoordinator
 
     private BridgeError? RevalidateInterplanetaryFlightPlanOnMainThread(NormalActionPlanPayload plan)
     {
+        if(plan.StoppedSpaceHomeReturn is not null)return RevalidateStoppedSpaceHomeReturn(plan);
         var playerResult = _reader.GetPlayerStateOnMainThread(
             plan.SessionId,
             new LocalPlanetRequest { PlanetId = plan.PlanetId });

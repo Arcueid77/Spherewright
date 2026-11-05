@@ -1274,6 +1274,14 @@ internal sealed partial class GameSessionTracker : IDisposable
             return false;
         }
 
+        if(_savedOpenAnyNativeLocation && _savedWorldOpen is {} savedSource)
+        {
+            if(savedSource.MatchesObservedPausedSource(currentData,GameMain.gameTick,GameMain.isPaused)
+                && ObserveConsistentSavedNativeLocation()==true)return true;
+            rejection="The exact observed paused saved-world location or load boundary changed.";
+            return false;
+        }
+
         var localPlanet = currentData.localPlanet;
         if (localPlanet is null)
         {
