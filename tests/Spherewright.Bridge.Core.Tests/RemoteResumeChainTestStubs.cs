@@ -13,6 +13,7 @@ internal sealed class VoyagerRemoteResumeAdoption
     internal PausedSaveTestWorld? World;
     internal string SessionId = "";
     internal string ResumeActionId = "";
+    internal VoyagerRecoveryAuthorization? Authorization { get; set; }
     public NativeFirstFrameAdmission FirstFrame { get; } = new();
     public bool NativeContactPending { get; set; } = true;
     public bool SurfaceRecoveryPending { get; set; }

@@ -35,12 +35,14 @@ public static class VoyagerLandingChargePolicy
         return gap > 0 && gap <= VoyagerControlDeadlinePolicy.MaximumControlGapGameTicks;
     }
 
-    public static string? Blocker(VoyagerLandingChargeFacts f, long minimumStableGameTicks, long contactTimeoutGameTicks)
+    public static string? Blocker(VoyagerLandingChargeFacts f, long minimumStableGameTicks, long contactTimeoutGameTicks,
+        NativeResumeDecisionEvidence? evidence = null)
     {
         if (f is null) throw new ArgumentNullException(nameof(f));
-        if (!f.OriginalFlightActive) return "voyager_landing_charge_original_flight_unproved";
-        if (!f.NativeGuardFresh) return "voyager_landing_charge_pre_player_guard_unproved";
-        if (!f.CostEnvelopeStable) return "voyager_landing_charge_cost_envelope_changed";
+        bool Require(string name, bool value) => evidence is null ? value : evidence.Require(name, value);
+        if (!Require("landing_original_flight", f.OriginalFlightActive)) return "voyager_landing_charge_original_flight_unproved";
+        if (!Require("landing_native_guard_fresh", f.NativeGuardFresh)) return "voyager_landing_charge_pre_player_guard_unproved";
+        if (!Require("landing_cost_envelope_stable", f.CostEnvelopeStable)) return "voyager_landing_charge_cost_envelope_changed";
         if (f.EnvironmentBlocker is not null) return f.EnvironmentBlocker;
         if (f.Admission is null) return "voyager_landing_charge_capture_unproved";
         var admission = VoyagerRemoteIdleAdmissionPolicy.Evaluate(f.Admission);
@@ -62,7 +64,7 @@ public static class VoyagerLandingChargePolicy
         // essential: adding the same landing wait a second time invents spend.
         if (budget.LastLandedGameTick != budget.CurrentGameTick)
             return "voyager_landing_charge_accounting_projection_unproved";
-        var shape = VoyagerRecoveryWindowPolicy.ChargeBudgetBlocker(budget, f.NowUtc, budget.JourneyDeadlineUtc);
+        var shape = VoyagerRecoveryWindowPolicy.ChargeBudgetBlocker(budget, f.NowUtc, budget.JourneyDeadlineUtc, evidence);
         if (shape is not null) return shape;
         var fullBudget = VoyagerLocalActionBudgetPolicy.Evaluate(budget);
         if (!fullBudget.Proved) return fullBudget.BlockerCode ?? "voyager_landing_charge_full_budget_unproved";
