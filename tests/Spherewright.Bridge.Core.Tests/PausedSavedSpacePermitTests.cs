@@ -10,6 +10,14 @@ namespace Spherewright.Bridge.Core.Tests
  public sealed class PausedSavedSpacePermitTests
  {
   [Fact]
+  public void FrozenResidentSailPermitCannotBorrowAnotherPlanetOrBecomeGenericMovementPermission()
+  {
+   var s=Session();s.LocalPlanetId=101;
+   var p=new PausedSavedSpacePermit(s.SessionId!,s.WriteQuarantineActionId!,"source-open-only",1000,101);
+   Assert.True(p.Matches(s));s.LocalPlanetId=102;Assert.False(p.Matches(s));
+   s.LocalPlanetId=null;Assert.False(p.Matches(s));
+  }
+  [Fact]
   public void ActualCommitEntryAllowsOnlyBoundPausedInventoryWithoutClearingGlobalQuarantine()
   {
    var s=Session();var permit=new PausedSavedSpacePermit(s.SessionId!,s.WriteQuarantineActionId!,"source-open-only",1000);

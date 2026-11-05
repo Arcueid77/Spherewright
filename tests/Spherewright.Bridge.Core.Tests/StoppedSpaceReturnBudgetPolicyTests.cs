@@ -5,6 +5,17 @@ namespace Spherewright.Bridge.Core.Tests;
 public sealed class StoppedSpaceReturnBudgetPolicyTests
 {
     [Fact]
+    public void ProtectedExistingEntryDoesNotRenewCoreLaunchProofOrBypassCurrentTwoTickAndLoadedReserves()
+    {
+        var f=Facts();f.Core=738_823_189;Assert.False(StoppedSpaceReturnBudgetPolicy.Evaluate(f).Proved);
+        f.ExistingEntryProved=true;f.LoadedControlMargin=369_420_000;
+        Assert.True(StoppedSpaceReturnBudgetPolicy.Evaluate(f).Proved);
+        Assert.Equal(1_280_000_000,f.OriginalReturnCoreMinimum);
+        f.Core=2*f.NextTickEnergyUpper-1;Assert.False(StoppedSpaceReturnBudgetPolicy.Evaluate(f).Proved);
+        f.Core=738_823_189;f.LoadedEnergy=f.WithdrawalFloor+f.LoadedControlMargin;
+        Assert.False(StoppedSpaceReturnBudgetPolicy.Evaluate(f).Proved);
+    }
+    [Fact]
     public void CurrentSourceChargesAllObservedTicksAndKeepsOriginalReturnEnvelope()
     {
         var f=Facts();var d=StoppedSpaceReturnBudgetPolicy.Evaluate(f);

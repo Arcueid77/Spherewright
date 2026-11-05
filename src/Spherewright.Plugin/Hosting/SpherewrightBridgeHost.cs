@@ -384,7 +384,7 @@ internal sealed class SpherewrightBridgeHost : IDisposable
         ThreadManager.TaskFunc sourceObserver, int task, int ordinal)
     {
         if ((task != (int)EGameLogicTask.UniverseSimulator && task != (int)EGameLogicTask.Physics
-            && task != (int)EGameLogicTask.FactoryConstructionSystem) || ordinal != -1) return;
+            && task != (int)EGameLogicTask.FactoryConstructionSystem && task!=601) || ordinal != -1) return;
         if (!ReferenceEquals(sourceObserver, _localPrePlayerHandler)) return; // A retired observer cannot borrow a newer binding's proof.
         if (System.Threading.Thread.CurrentThread.ManagedThreadId != _unityThreadId)
         { _normalActionCoordinator.VoyagerLocalPrePlayerTickAvailable = false; return; }
@@ -398,6 +398,11 @@ internal sealed class SpherewrightBridgeHost : IDisposable
                 || !ReferenceEquals(_localPrePlayerManager, manager) || _localPrePlayerHandler is null
                 || !NativeTaskObserverOrderGuard.HasNativeBeforeObserver(manager.OnTaskLogic, logic, typeof(GameLogic), _localPrePlayerHandler))
             { StopVoyagerLocalPrePlayerControl(); return; }
+            if(task==601)
+            {
+                _normalActionCoordinator.ObserveStoppedSpaceReturnPlayerTickOnMainThread();
+                return;
+            }
             if (task == (int)EGameLogicTask.UniverseSimulator)
             {
                 // Native151 returned; this is not a501 observation or permission

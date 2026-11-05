@@ -1524,6 +1524,7 @@ internal sealed partial class NormalGameActionCoordinator
             CommitBlockers = actionBlockers.Select(CloneBlocker).ToList(),
             CompletionCondition = completionCondition,
             PlannedStoppedSpaceHomeReturn=payload.StoppedSpaceHomeReturn is not null ? true : null,
+            PlannedSavedHomeReturnPredecessorActionId=payload.StoppedSpaceHomeReturn?.Predecessor?.ActionId,
         });
     }
 
@@ -1659,7 +1660,7 @@ internal sealed partial class NormalGameActionCoordinator
             SessionId = action.SessionId,
             PlanetId = action.PlanetId,
             Message = action.Message,
-            NativeFirstFailure = action.PausedSpaceInventoryFailure?.Copy() ?? action.StructuredConstructionFirstFailure?.Copy() ?? action.VoyagerLocalStopFailure?.Copy() ?? action.Plan.SavePreservation?.FirstFailure ?? (action.Plan.ReturnOnlyTaskCancellation
+            NativeFirstFailure = action.StoppedSpaceReturnFailure?.Copy() ?? action.PausedSpaceInventoryFailure?.Copy() ?? action.StructuredConstructionFirstFailure?.Copy() ?? action.VoyagerLocalStopFailure?.Copy() ?? action.Plan.SavePreservation?.FirstFailure ?? (action.Plan.ReturnOnlyTaskCancellation
                 ? _sessions.ReturnOnlyFailureForTask(action.Plan.CancelVoyagerActionId!) : null),
             IdempotencyKey = action.IdempotencyKey,
             StartedAtGameTick = action.StartedAtGameTick,
@@ -1685,6 +1686,7 @@ internal sealed partial class NormalGameActionCoordinator
             ResearchQueueReadback = action.ResearchQueueReadback,
             StorageConfigurationReadback = action.StorageConfigurationReadback,
             MechaWarperSupplyReadback = action.MechaWarperSupplyReadback,
+            NativeHomeReturnFirstEffect=action.NativeHomeReturnFirstEffect,
             MechaWarperAutoSupplyReadback = action.MechaWarperAutoSupplyReadback,
             VoyagerFlightReadback = action.VoyagerFlightReadback,
             BlueprintBuildId = action.BlueprintBuild?.BuildId,

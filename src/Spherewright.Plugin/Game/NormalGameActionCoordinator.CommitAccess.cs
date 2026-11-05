@@ -25,7 +25,7 @@ internal sealed partial class NormalGameActionCoordinator
 
         var pausedSpaceInventory=plan.ActionKind==NormalActionKinds.SupplyMechaWarpers && plan.MechaWarperUiTopUp
             && plan.PlanetId==0 && plan.PausedSpaceInventoryPermit?.Matches(session)==true;
-        var pausedSpaceReturn=plan.ActionKind==NormalActionKinds.InterplanetaryFlight && plan.PlanetId==0
+        var pausedSpaceReturn=plan.ActionKind==NormalActionKinds.InterplanetaryFlight
             && plan.StoppedSpaceHomeReturn?.Permit.Matches(session)==true;
         if (request.PlanetId != plan.PlanetId || (!pausedSpaceInventory && !pausedSpaceReturn && plan.ActionKind != NormalActionKinds.CancelVoyagerFlight
             && session.LocalPlanetId != plan.PlanetId))

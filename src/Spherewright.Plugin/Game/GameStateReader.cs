@@ -130,7 +130,9 @@ internal sealed partial class GameStateReader
             MechaResearchPower = player.mecha.researchPower,
             NativePhysics = factory is null ? null : CaptureNativePlayerPhysicsOnMainThread(player),
             NativeLocalControlEnergy = factory is null ? null : NormalGameActionCoordinator.CaptureConditionalNativeLocalControlEnergy(player),
-            SpaceTransit = factory is null ? new Spherewright.Contracts.Players.NativeSpaceTransitSnapshot
+            // Factory residency and motion mode are independent: Native may
+            // already load the destination factory while the actor is still Sail.
+            SpaceTransit = player.movementState==EMovementState.Sail ? new Spherewright.Contracts.Players.NativeSpaceTransitSnapshot
             {StarId=GameMain.localStar?.id,NativePaused=GameMain.isPaused,
                 UniverseX=player.uPosition.x,UniverseY=player.uPosition.y,UniverseZ=player.uPosition.z,
                 VelocityX=player.uVelocity.x,VelocityY=player.uVelocity.y,VelocityZ=player.uVelocity.z,

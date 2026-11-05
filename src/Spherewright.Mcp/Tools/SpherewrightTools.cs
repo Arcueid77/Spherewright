@@ -1171,7 +1171,7 @@ public static partial class SpherewrightTools
         Destructive = false,
         Idempotent = false,
         OpenWorld = false)]
-    [Description("Binds a non-gas destination in the current star, Drive Engine level2, funded core/fuel and fresh snapshots. Ordinary planet flight uses local planet/star hashes. planetId0 is exclusively an exact paused saved-space original-home return: use spaceTransit.originalHomePlanetId and returnHomeStateHash from fresh player read, explicit finite stoppedSpaceReturnMaximumGameTicks and stoppedSpaceReturnMaximumWallSeconds, and require plannedStoppedSpaceHomeReturn=true. Preserves the failed original flight, cumulative spent, original return/energy/warper floors; no checkpoint load or warp entry. Strict native landing and a covering normal save precede healthy handoff. Prepare never launches or changes movement.")]
+    [Description("Binds a non-gas destination in the current star, Drive Engine level2, funded core/fuel and fresh snapshots. Ordinary planet flight uses local planet/star hashes. planetId0 is exclusively an exact paused saved-space original-home return. A resident home-planet Sail source requires savedHomeReturnPredecessorActionId and a known-terminal-failed attestation; it creates a new conserved safety continuation without replay or original-result changes. For either saved-source role: use spaceTransit.originalHomePlanetId and returnHomeStateHash from fresh player read, explicit finite stoppedSpaceReturnMaximumGameTicks and stoppedSpaceReturnMaximumWallSeconds, and require plannedStoppedSpaceHomeReturn=true. Preserves the failed original flight, cumulative spent, original return/energy/warper floors; no checkpoint load or warp entry. Strict native landing and a covering normal save precede healthy handoff. Prepare never launches or changes movement.")]
     public static async Task<CallToolResult> PrepareInterplanetaryFlightAsync(
         IBridgeClient bridgeClient,
         string sessionId,
@@ -1182,8 +1182,10 @@ public static partial class SpherewrightTools
         double minimumCoreEnergyRatio = 0.95d,
         int stateHashVersion = 1,
         CancellationToken cancellationToken = default,
-        [Description("For planetId0 only: explicit finite cap within the original remaining return reserve; 0 rejects this special role.")] long stoppedSpaceReturnMaximumGameTicks = 0,
-        [Description("For planetId0 only: fresh finite wall allowance, above0 and at most21600 seconds. Does not change the original Journey deadline.")] double stoppedSpaceReturnMaximumWallSeconds = 0)
+        [Description("For a saved Sail source only: explicit finite cap within the conserved original remaining return reserve; 0 rejects this special role.")] long stoppedSpaceReturnMaximumGameTicks = 0,
+        [Description("For a saved Sail source only: fresh finite wall allowance, above0 and at most21600 seconds. Does not change the original Journey deadline.")] double stoppedSpaceReturnMaximumWallSeconds = 0,
+        [Description("Only a new exact saved-source home-return continuation: original known-failed return action ID. Its protected entry and all elapsed ticks bind the remaining scope; never replays that action.")] string? savedHomeReturnPredecessorActionId = null,
+        [Description("Immediate caller attestation of the identified original terminal failure. Does not change or prove the old outcome; unknown/pending may not be attested.")] bool priorHomeReturnKnownTerminalFailed = false)
     {
         var result = await bridgeClient.PrepareInterplanetaryFlightAsync(
             sessionId,
@@ -1197,9 +1199,13 @@ public static partial class SpherewrightTools
                 StateHashVersion = stateHashVersion,
                 StoppedSpaceReturnMaximumGameTicks=stoppedSpaceReturnMaximumGameTicks,
                 StoppedSpaceReturnMaximumWallSeconds=stoppedSpaceReturnMaximumWallSeconds,
+                SavedHomeReturnPredecessorActionId=savedHomeReturnPredecessorActionId,
+                PriorHomeReturnKnownTerminalFailed=priorHomeReturnKnownTerminalFailed,
             },
             cancellationToken).ConfigureAwait(false);
-        if(planetId==0 && result.Success && result.Value?.PlannedStoppedSpaceHomeReturn!=true)
+        if((planetId==0 || savedHomeReturnPredecessorActionId is not null) && result.Success
+            && (result.Value?.PlannedStoppedSpaceHomeReturn!=true
+                || result.Value.PlannedSavedHomeReturnPredecessorActionId!=savedHomeReturnPredecessorActionId))
             result=BridgeCallResult<PreparedNormalAction>.Failed(BridgeError.Create(BridgeErrorCodes.BridgeNotReady,
                 "The Plugin did not confirm exact paused-source original-home-only return; no token is exposed.",false,
                 "Keep generic automation stopped and use matching source bytes."));
@@ -1213,7 +1219,7 @@ public static partial class SpherewrightTools
         Destructive = true,
         Idempotent = true,
         OpenWorld = false)]
-    [Description("Uses DSP's native flight/sail transition and sail-energy functions to launch, steer, brake, and land on the bound planet. Poll to terminal: a transient Walk tick does not complete landing or cancel an unfinished exact shore order. Stable arrival still requires 600 consecutive grounded low-speed ticks. A terminal recovery_required requires its matching checkpoint flow, not a competing Move or relabeling success. It never teleports, grants fuel, or enables sandbox fast travel.")]
+    [Description("Uses DSP's native flight/sail transition and sail-energy functions to launch, steer, brake, and land on the bound planet. Poll to terminal: a transient Walk tick does not complete landing or cancel an unfinished exact shore order. Stable arrival still requires 600 consecutive grounded low-speed ticks. For ordinary flights, terminal recovery_required requires its matching protected recovery flow. Saved-source home returns instead preserve the current complete LastExit and use a new explicitly bound continuation; never load an older checkpoint or replay a failed action. First paid-control evidence is not terminal landing. It never teleports, grants fuel, or enables sandbox fast travel.")]
     public static async Task<CallToolResult> CommitInterplanetaryFlightAsync(
         IBridgeClient bridgeClient,
         string sessionId,

@@ -52,17 +52,20 @@ internal sealed partial class NormalGameActionCoordinator
             ? "remote_idle_scene_water_overlap_unproved" : null;
     }
 
-    private static double? NativeLocalGravityUpperBound(Player player)
+    private static double? NativeLocalGravityUpperBound(Player player,bool allowUnlandedSail=false)
     {
         var star = GameMain.localStar;
         if (star?.planets is null || star.planetCount < 1 || star.planetCount > 64
-            || star.planets.Length < star.planetCount || !ReferenceEquals(player.planetData?.star, star)
+            || star.planets.Length < star.planetCount || (!ReferenceEquals(player.planetData?.star, star)
+                && !(allowUnlandedSail && player.planetId==0 && player.movementState==EMovementState.Sail))
             || !FiniteNativePosition(player.uPosition) || !FiniteNativePosition(star.uPosition)) return null;
         var radii = new double[star.planetCount];
+        if(allowUnlandedSail && (player.uPosition-star.uPosition).magnitude<star.physicsRadius)return null;
         for (var i = 0; i < radii.Length; i++)
         {
             var planet = star.planets[i];
             if (planet is null || !ReferenceEquals(planet.star, star) || !FiniteNativePosition(planet.uPosition)) return null;
+            if(allowUnlandedSail && (player.uPosition-planet.uPosition).magnitude<=1d)return null;
             radii[i] = planet.realRadius;
         }
         return VoyagerLocalWalkReservePolicy.CalculateNativeGravityUpperBound(radii, star.mass, star.physicsRadius);

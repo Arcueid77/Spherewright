@@ -14,6 +14,19 @@ namespace Spherewright.Mcp.Tests;
 
 public sealed class VoyagerActionToolsTests
 {
+    [Theory]
+    [InlineData(null,true)][InlineData("other",true)][InlineData("original-failed-return",false)]
+    public async Task ResidentSailContinuationRequiresItsExactParentEcho(string? echo,bool error)
+    {
+        var bridge=NewBridge();var proxy=Proxy(bridge);proxy.Prepared.PlannedStoppedSpaceHomeReturn=true;
+        proxy.Prepared.PlannedSavedHomeReturnPredecessorActionId=echo;
+        var result=await SpherewrightTools.PrepareInterplanetaryFlightAsync(bridge,"owned",101,101,"frozen-player","home-anchor",
+            savedHomeReturnPredecessorActionId:"original-failed-return",priorHomeReturnKnownTerminalFailed:true,
+            stoppedSpaceReturnMaximumGameTicks:51899,stoppedSpaceReturnMaximumWallSeconds:14400);
+        Assert.Equal(error,result.IsError);var request=Assert.IsType<PrepareInterplanetaryFlightRequest>(proxy.LastRequest);
+        Assert.Equal("original-failed-return",request.SavedHomeReturnPredecessorActionId);
+        Assert.True(request.PriorHomeReturnKnownTerminalFailed);Assert.Equal(101,request.PlanetId);
+    }
     [Fact]
     public void RealSdkPublishesOptionalTypedSpaceRoleFieldsWithoutCancellationToken()
     {
@@ -23,10 +36,15 @@ public sealed class VoyagerActionToolsTests
         var tools=provider.GetServices<McpServerTool>().Select(t=>t.ProtocolTool).ToArray();
         foreach(var entry in new[]{("spherewright_prepare_supply_mecha_warpers","uiTopUp","boolean"),
             ("spherewright_prepare_interplanetary_flight","stoppedSpaceReturnMaximumGameTicks","integer"),
-            ("spherewright_prepare_interplanetary_flight","stoppedSpaceReturnMaximumWallSeconds","number")})
+            ("spherewright_prepare_interplanetary_flight","stoppedSpaceReturnMaximumWallSeconds","number"),
+            ("spherewright_prepare_interplanetary_flight","savedHomeReturnPredecessorActionId","string"),
+            ("spherewright_prepare_interplanetary_flight","priorHomeReturnKnownTerminalFailed","boolean")})
         {
             var tool=Assert.Single(tools,t=>t.Name==entry.Item1);var schema=tool.InputSchema;
-            Assert.Equal(entry.Item3,schema.GetProperty("properties").GetProperty(entry.Item2).GetProperty("type").GetString());
+            var type=schema.GetProperty("properties").GetProperty(entry.Item2).GetProperty("type");
+            if(entry.Item2=="savedHomeReturnPredecessorActionId")
+                Assert.Equal(new[]{"string","null"},type.EnumerateArray().Select(t=>t.GetString()).ToArray());
+            else Assert.Equal(entry.Item3,type.GetString());
             Assert.DoesNotContain(entry.Item2,schema.GetProperty("required").EnumerateArray().Select(p=>p.GetString()));
             Assert.False(schema.GetProperty("properties").TryGetProperty("cancellationToken",out _));
         }

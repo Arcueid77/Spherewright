@@ -28,7 +28,8 @@ internal sealed partial class NormalGameActionCoordinator
         string? requestedSessionId,
         PrepareInterplanetaryFlightRequest request)
     {
-        if(request.PlanetId==0)return PrepareStoppedSpaceHomeReturn(requestedSessionId,request);
+        if(request.PlanetId==0 || request.SavedHomeReturnPredecessorActionId is not null)
+            return PrepareStoppedSpaceHomeReturn(requestedSessionId,request);
         if(request.StoppedSpaceReturnMaximumGameTicks!=0 || request.StoppedSpaceReturnMaximumWallSeconds!=0)
             return InvalidPlan("Stopped-space return caps cannot alter an ordinary planetary flight.");
         var common = ValidatePrepareCommon(requestedSessionId, request.PlanetId, request.StateHashVersion);
@@ -338,7 +339,9 @@ internal sealed partial class NormalGameActionCoordinator
         }
 
         ReleaseNativeAscentInput(action);
-        var origin = GameMain.galaxy?.PlanetById(action.PlanetId);
+        // A saved near-home Sail continuation is already in flight; treating its
+        // resident home as a launch origin would command departure from home.
+        var origin = action.Plan.StoppedSpaceHomeReturn is not null?null:GameMain.galaxy?.PlanetById(action.PlanetId);
         var navigationTarget = destination.uPosition;
         var detour = default(FlightPathDetour);
         var detourSelected = action.Plan.VoyagerBudget is not null
