@@ -11,6 +11,7 @@ internal sealed partial class NormalGameActionCoordinator
             && _savedConstructionTail is { GenericPaidSite: true, Sealed: true } tail && tail.Build.BuildId == build.BuildId
             && tail.Adoption.SessionId == _sessions.SessionId && _sessions.IsCurrentSessionOwned
             && ReferenceEquals(tail.Adoption.World, GameMain.data) && ReferenceEquals(tail.Adoption.Player, GameMain.mainPlayer)
-            && ReferenceEquals(tail.Factory, GameMain.localPlanet?.factory);
+            && ReferenceEquals(tail.Factory, GameMain.localPlanet?.factory)
+            && tail.SearchCache is not null && tail.SearchCache.Matches(tail.Adoption.Player,tail.Factory,_sessions.SessionId,build);
     }
 }

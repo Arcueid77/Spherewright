@@ -95,6 +95,17 @@ internal sealed partial class NormalGameActionCoordinator
             || !SavedConstructionTail.TryPower(p, out var power)) return "remote_resume_saved_drone_tail_source_unproved";
         var tail = new SavedConstructionTail(adoption, f, build, ids, power) {GenericPaidSite=generic is not null,
             AllowExistingPaidWork=generic is not null && HasSavedPaidWorkReceipt(generic,journeyId,GameMain.gameTick)};
+        if(tail.GenericPaidSite)
+        {
+            var decision=adoption.CurrentDecisionEvidence!;
+            decision.Number("saved_paid_cached_build_targets",p.mecha.constructionModule.buildTargetTotalCount);
+            decision.Observe("saved_paid_dispatch_disabled",!p.mecha.constructionModule.droneEnabled);
+            decision.Require("saved_paid_no_reserved_prelaunch",ConstructionOwnPrelaunchCacheClear(f,build));
+            if(!TryBindSavedPaidSearchCache(p,f,build,out var cache))
+            {decision.Require("saved_paid_current_search_cache",false);return "remote_resume_saved_paid_search_cache_unproved";}
+            decision.Require("saved_paid_current_search_cache",true);
+            tail.SearchCache=cache;
+        }
         _savedConstructionTail = tail;
         if (!SavedConstructionTailMatches(p, journeyId)) return "remote_resume_saved_drone_tail_motion_unproved";
         if(tail.GenericPaidSite && (currentSite is null
@@ -111,6 +122,7 @@ internal sealed partial class NormalGameActionCoordinator
             || !_sessions.IsCurrentSessionOwned || _sessions.SessionId != t.Adoption.SessionId
             || !ReferenceEquals(GameMain.data, t.Adoption.World) || !ReferenceEquals(p, t.Adoption.Player)
             || !ReferenceEquals(p.factory, t.Factory) || p.mecha.constructionModule.droneEnabled
+            || t.GenericPaidSite && (t.SearchCache is null || !t.SearchCache.Matches(p,t.Factory,_sessions.SessionId,t.Build))
             || !SavedConstructionTail.TryPower(p, out var power) || power != t.Power
             || GameMain.gameTick < t.Adoption.Evidence.SourceGameTick
             || GameMain.gameTick - t.Adoption.Evidence.SourceGameTick > NativeSavedConstructionTailPolicy.MaximumGameTicks
@@ -270,6 +282,7 @@ internal sealed partial class NormalGameActionCoordinator
         internal long? NativeFactoryPass; internal bool Sealed;
         internal bool GenericPaidSite;
         internal bool AllowExistingPaidWork;
+        internal SavedPaidSearchCache? SearchCache;
         internal readonly double WallSeconds=NativeConstructionCadencePolicy.WallBudget(NativeSavedConstructionTailPolicy.MaximumGameTicks,Time.fixedDeltaTime)??double.NaN;
         internal SavedConstructionTail(VoyagerRemoteResumeAdoption a, PlanetFactory f, BlueprintBuildState b, List<int> ids, double power)
         { Adoption=a; Factory=f; Build=b; DroneIds=new HashSet<int>(ids); Power=power; SourceAnchor=Anchor=a.Player.position; Eject=Anchor.normalized*(Anchor.magnitude+2.8f); }

@@ -24,7 +24,7 @@ internal sealed partial class NormalGameActionCoordinator
                 && factory.prebuildCursor >= 1 && factory.prebuildCursor <= 131072 && factory.prebuildCursor <= factory.prebuildPool.Length
                 && factory.constructionSystem?.constructionModules is not null && factory.constructionSystem.constructStats is not null
                 && factory.constructionSystem.constructionModules.count == 0 && factory.constructionSystem.constructStats.count == 0)
-            || !Require("saved_factory_site_physical_idle", TryObserveOwnedConstructionDrones(factory, player.mecha.constructionModule,
+            || !Require("saved_factory_site_idle_or_bound_paid_tail", TryObserveOwnedConstructionDrones(factory, player.mecha.constructionModule,
                 out var idle, out _) && (idle || HasCurrentSavedFactoryTail(player,journeyId)))) return false;
         var ids = new HashSet<int>(); var entities = new HashSet<int>(); var pending = new HashSet<int>();
         var edges = new List<SavedFactoryEdge>();

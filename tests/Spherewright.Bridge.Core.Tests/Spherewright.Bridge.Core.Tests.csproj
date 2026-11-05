@@ -48,6 +48,7 @@
     <Compile Include="..\..\src\Spherewright.Plugin\Game\NormalGameActionCoordinator.MechaWork.cs" Link="PluginGame\NormalGameActionCoordinator.MechaWork.cs" />
     <Compile Include="..\..\src\Spherewright.Plugin\Game\NormalGameActionCoordinator.SavedFactorySite.cs" Link="PluginGame\NormalGameActionCoordinator.SavedFactorySite.cs" />
     <Compile Include="..\..\src\Spherewright.Plugin\Game\NormalGameActionCoordinator.SavedBeltSourceTopology.cs" Link="PluginGame\NormalGameActionCoordinator.SavedBeltSourceTopology.cs" />
+    <Compile Include="..\..\src\Spherewright.Plugin\Game\NormalGameActionCoordinator.SavedPaidSearchCache.cs" Link="PluginGame\NormalGameActionCoordinator.SavedPaidSearchCache.cs" />
     <Compile Include="..\..\src\Spherewright.Plugin\Game\NormalGameActionCoordinator.SavedUnpoweredPoles.cs" Link="PluginGame\NormalGameActionCoordinator.SavedUnpoweredPoles.cs" />
     <Compile Include="..\..\src\Spherewright.Plugin\Game\NormalGameActionCoordinator.SavedUnpoweredBeltChain.cs" Link="PluginGame\NormalGameActionCoordinator.SavedUnpoweredBeltChain.cs" />
     <Compile Include="..\..\src\Spherewright.Plugin\Game\NormalGameActionCoordinator.SavedConstructionReceipt.cs" Link="PluginGame\NormalGameActionCoordinator.SavedConstructionReceipt.cs" />
