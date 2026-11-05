@@ -1659,7 +1659,7 @@ internal sealed partial class NormalGameActionCoordinator
             SessionId = action.SessionId,
             PlanetId = action.PlanetId,
             Message = action.Message,
-            NativeFirstFailure = action.StructuredConstructionFirstFailure?.Copy() ?? action.VoyagerLocalStopFailure?.Copy() ?? action.Plan.SavePreservation?.FirstFailure ?? (action.Plan.ReturnOnlyTaskCancellation
+            NativeFirstFailure = action.PausedSpaceInventoryFailure?.Copy() ?? action.StructuredConstructionFirstFailure?.Copy() ?? action.VoyagerLocalStopFailure?.Copy() ?? action.Plan.SavePreservation?.FirstFailure ?? (action.Plan.ReturnOnlyTaskCancellation
                 ? _sessions.ReturnOnlyFailureForTask(action.Plan.CancelVoyagerActionId!) : null),
             IdempotencyKey = action.IdempotencyKey,
             StartedAtGameTick = action.StartedAtGameTick,

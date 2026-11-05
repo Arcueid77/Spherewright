@@ -20,6 +20,8 @@ public sealed class CanonicalStateHashTests
         p.SpaceTransit=new Spherewright.Contracts.Players.NativeSpaceTransitSnapshot
             {NativePaused=true,UniverseX=100000,VelocityX=.4,Speed=.4};
         var space=CanonicalStateHash.PlayerAction(p);Assert.NotEqual(legacy,space);
+        p.SpaceTransit.FrozenSavedPoseVerified=true;Assert.NotEqual(space,CanonicalStateHash.PlayerAction(p));
+        p.SpaceTransit.FrozenSavedPoseVerified=false;
         p.SpaceTransit.VelocityX=.3;Assert.NotEqual(space,CanonicalStateHash.PlayerAction(p));
         p.SpaceTransit=null;Assert.Equal(legacy,CanonicalStateHash.PlayerAction(p));
     }

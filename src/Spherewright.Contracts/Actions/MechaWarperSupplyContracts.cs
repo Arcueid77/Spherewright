@@ -31,4 +31,7 @@ public sealed class MechaWarperSupplyReadback
     public bool? NativeReturnedSuccess { get; set; }
     public bool ReadbackComplete { get; set; }
     public bool ConservationVerified { get; set; }
+    public string? FrozenSpacePoseBefore {get;set;}
+    public string? FrozenSpacePoseAfter {get;set;}
+    public bool? SpaceMomentumPreserved {get;set;}
 }

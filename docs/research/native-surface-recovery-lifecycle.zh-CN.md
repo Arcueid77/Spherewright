@@ -2,7 +2,7 @@
 
 [English](native-surface-recovery-lifecycle.md) | [简体中文](native-surface-recovery-lifecycle.zh-CN.md)
 
-## 已停稳太空保存生命周期
+## 暂停太空保存生命周期
 
 区分三个物料域：自动补给启用时，路线估算可计背包；起飞prepare、commit复核和跃迁进入必须共同核对舱内现物储备。部分舱不会触发原生空舱自动补给。显式`uiTopUp=true`改走正常UI背包→过滤舱转移，数量精确受容量限制，增产点为零，开关不变，并立即双边读回守恒。已接受或unknown补给不得重放。
 
@@ -10,7 +10,9 @@
 
 真实tracker和协调器测试共用`SavedWorldOpenLeaseHandoff`，核对持有的源/主存档/Journal租约及显式LastExit角色。即使授权已消费，加载前拒绝仍保留唯一原终态句柄。旧消费token后续只能标识当前保存数据：成对不可变attempt/tombstone、未变Journal、精确当前LastExit及主存档覆盖，共同派生独立的只读打开凭据。旧消费和任务结果不改，通用执行拒绝新凭据；较新活动代、不同副本/来源/进度下限均拒绝派生。不因数据访问而推断旧unknown加载曾成功或失败。
 
-只有同一world/session/open-action/saved-tick、停稳Sail及唯一打开隔离项，才能在暂停中补舱或另立明确有限的原母星返航。返航绑定未改的失败Journey、原生观察器、同恒星原母星、舱内现物、原剩余tick及能源下限；正常Resume前另写不可变准入记录。Native501控制正常付费Sail/Fly/Drift/Walk转换，渲染更新只做看门检查，原动作轮询只续短观察租期。绑定、观察器、租期、限额、跃迁或资金失证即暂停同一owned世界并保留原结果。
+只有同一world/session/open-action/saved-tick、原生保存Sail位置/动量冻结及唯一打开隔离项，才能在暂停中补舱或另立明确有限的原母星返航。返航绑定未改的失败Journey、原生观察器、同恒星原母星、舱内现物、原剩余tick及能源下限；正常Resume前另写不可变准入记录。Native501控制正常付费Sail/Fly/Drift/Walk转换，渲染更新只做看门检查，原动作轮询只续短观察租期。绑定、观察器、租期、限额、跃迁或资金失证即暂停同一owned世界并保留原结果。
+
+暂停不是惯性速度归零。专用guard在真实LoadComplete暂停切面绑定world/player/controller引用、精确保存tick和全部宇宙位置/速度分量；即使保存速度非零，也仅在整切面不变时允许UI库存事务。UI同步回执必须同时证明数量/增产点守恒及同一动量指纹；unknown读回会锁住当前暂停执行角色。Native Resume后冻结证明自然失效，只有另立的付费返航控制角色可运行；地表严格接触和零尾部要求不变。
 
 能源包络复用`VoyagerControlReservePolicy`，含原生系数3、天体相对速度、转向/制动和后台功耗，每次原生控制前刷新。落地先在运行中证明接触及刚体/controller/Walk/Drift运动尾部精确归零，再暂停；暂停交接重新核对同一严格原生事实，仅解除自己的源隔离，正常保存并证明完整当前主存档，最后保守核销旧Journey实耗。旧出航/checkpoint失败结果不变；较新主存档覆盖可按既有保护规则退休checkpoint。不加载checkpoint、不降储备、不重放原动作。源码回归及固定原生引用编译不证明已安装实机飞行成功。
 

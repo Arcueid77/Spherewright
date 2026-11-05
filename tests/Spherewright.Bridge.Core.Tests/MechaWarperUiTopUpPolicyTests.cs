@@ -5,13 +5,13 @@ namespace Spherewright.Bridge.Core.Tests;
 public sealed class MechaWarperUiTopUpPolicyTests
 {
     [Fact]
-    public void PausedSpaceUsesItsOwnPermitAndBoundedSailStopInsteadOfPretendingGrounded()
+    public void PausedSpaceUsesFrozenPoseAuthorityWithoutPretendingZeroInertialSpeedOrGroundContact()
     {
-        var f=Facts(2,20);f.CurrentPlanetVerified=false;f.IsGrounded=false;f.PausedSpaceSourceAuthorized=true;f.SpaceStopSpeed=.4;
+        var f=Facts(2,20);f.CurrentPlanetVerified=false;f.IsGrounded=false;f.PausedSpaceSourceAuthorized=true;f.PausedSpaceSpeed=7.807988126320179;f.PausedSpacePoseFingerprint="frozen-source-pose";
         Assert.True(MechaWarperUiTopUpPolicy.Evaluate(f,18).Allowed);
         Assert.False(MechaWarperSupplyPolicy.Evaluate(f,18).Allowed);
         f.PausedSpaceSourceAuthorized=false;Assert.False(MechaWarperUiTopUpPolicy.Evaluate(f,18).Allowed);
-        f.PausedSpaceSourceAuthorized=true;f.SpaceStopSpeed=.6;Assert.False(MechaWarperUiTopUpPolicy.Evaluate(f,18).Allowed);
+        f.PausedSpaceSourceAuthorized=true;f.PausedSpaceSpeed=double.NaN;Assert.False(MechaWarperUiTopUpPolicy.Evaluate(f,18).Allowed);
     }
     [Theory]
     [InlineData(2,20,18,20,2)][InlineData(2,5,5,7,0)][InlineData(19,20,1,20,19)]

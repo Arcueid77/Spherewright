@@ -6,7 +6,8 @@ public static class MechaWarperUiTopUpPolicy
     public static MechaWarperSupplyDecision Evaluate(MechaWarperSupplyFacts f,int count)
     {
         var location=f.CurrentPlanetVerified && f.IsGrounded || f.PausedSpaceSourceAuthorized
-            && f.SpaceStopSpeed is >=0 and <=.5d;
+            && f.PausedSpaceSpeed is >=0 && !double.IsInfinity(f.PausedSpaceSpeed.Value)
+            && !string.IsNullOrEmpty(f.PausedSpacePoseFingerprint);
         if(!f.OwnedBindingVerified || !location || !f.PlayerStateHashFresh
             || !f.IsAlive || !f.ControllerEnabled || f.NativeGuideRunning || !f.IsIdle
             || !f.ChamberIsFiltered || f.ChamberSlotCount!=1 || f.ChamberGridCount!=1
@@ -14,7 +15,7 @@ public static class MechaWarperUiTopUpPolicy
             || f.ChamberStackSize!=20 || f.ChamberCount is <1 or >=20 || f.PackageCount<=0
             || f.PackageInc!=0 || f.ChamberInc!=0)
             return new() {BlockerCode="warper_ui_topup_exact_native_partial_chamber_required",
-                Message="UI top-up requires the exact owned grounded idle binding, a partial native 1210/20 chamber and zero-inc stock."};
+                Message="UI top-up requires the exact owned idle binding (grounded or a verified frozen saved-Sail source), a partial native 1210/20 chamber and zero-inc stock."};
         var exact=Math.Min(20-f.ChamberCount,f.PackageCount);
         return count==exact ? new() {Allowed=true,ExactNativeCount=exact}
             : new() {ExactNativeCount=exact,BlockerCode="warper_ui_topup_exact_count_required",
@@ -24,10 +25,13 @@ public static class MechaWarperUiTopUpPolicy
     public static MechaWarperSupplyVerification Verify(MechaWarperSupplyFacts before,MechaWarperSupplyFacts after,
         int count,bool? nativeSuccess)
     {
+        var sameRole=before.PausedSpaceSourceAuthorized
+            ? after.PausedSpaceSourceAuthorized && after.PausedSpaceSpeed==before.PausedSpaceSpeed
+                && after.PausedSpacePoseFingerprint==before.PausedSpacePoseFingerprint
+            : after.CurrentPlanetVerified && after.IsGrounded;
         var valid=Evaluate(before,count).Allowed && nativeSuccess==true
             && after.OwnedBindingVerified && after.IsAlive
-            && (after.CurrentPlanetVerified && after.IsGrounded || after.PausedSpaceSourceAuthorized
-                && before.PausedSpaceSourceAuthorized && after.SpaceStopSpeed==before.SpaceStopSpeed)
+            && sameRole
             && after.ControllerEnabled && !after.NativeGuideRunning && after.IsIdle
             && after.ChamberIsFiltered && after.ChamberSlotCount==1 && after.ChamberGridCount==1
             && after.ChamberBannedGridCount==0 && after.ChamberItemId==1210 && after.ChamberFilterItemId==1210

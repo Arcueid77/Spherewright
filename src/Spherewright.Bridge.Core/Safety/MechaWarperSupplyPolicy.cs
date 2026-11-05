@@ -23,7 +23,8 @@ public sealed class MechaWarperSupplyFacts
     public int ChamberInc { get; set; }
     public bool AutoReplenishWarper { get; set; }
     public bool PausedSpaceSourceAuthorized {get;set;}
-    public double? SpaceStopSpeed {get;set;}
+    public double? PausedSpaceSpeed {get;set;}
+    public string? PausedSpacePoseFingerprint {get;set;}
 }
 
 public sealed class MechaWarperSupplyDecision
@@ -77,7 +78,7 @@ public static class MechaWarperSupplyPolicy
             facts.ChamberIsFiltered, facts.ChamberSlotCount, facts.ChamberGridCount, facts.ChamberBannedGridCount,
             facts.ChamberItemId, facts.ChamberFilterItemId, facts.ChamberStackSize,
             facts.PackageCount, facts.PackageInc, facts.ChamberCount, facts.ChamberInc, facts.AutoReplenishWarper,
-            facts.PausedSpaceSourceAuthorized,facts.SpaceStopSpeed);
+            facts.PausedSpaceSourceAuthorized,facts.PausedSpaceSpeed,facts.PausedSpacePoseFingerprint);
     }
 
     public static MechaWarperSupplyVerification VerifyReadback(MechaWarperSupplyFacts before,

@@ -1,0 +1,47 @@
+{
+  "evidenceScope": "actual paused Sail response; position and velocity direction normalized, tick and identities synthetic; inertial speed and null facts preserved",
+  "session": {
+    "gameLoaded": true,
+    "ownedBySpherewright": true,
+    "writesAllowed": false,
+    "writeHealth": "quarantined",
+    "localPlanetId": null,
+    "writeBlockers": [
+      {
+        "code": "WRITE_SUBSYSTEM_QUARANTINED",
+        "message": "SAVED_WORLD_OPEN_AUTOMATION_STOPPED: The saved world is open. Previous automatic tasks remain stopped; fresh execution authority and Native checks are required."
+      }
+    ],
+    "sessionId": "synthetic-owned-session",
+    "writeQuarantineActionId": "11111111-1111-4111-8111-111111111111",
+    "gameTick": 1000
+  },
+  "player": {
+    "planetId": 0,
+    "isOnPlanet": false,
+    "isAlive": true,
+    "movementState": "Sail",
+    "nativePhysics": null,
+    "nativeLocalControlEnergy": null,
+    "spaceTransit": {
+      "originalHomePlanetId": null,
+      "returnHomeStateHash": null,
+      "maximumReturnGameTicks": null,
+      "evidenceScope": "owned_native_space_read_only",
+      "starId": 1,
+      "nativePaused": true,
+      "universeX": 10.0,
+      "universeY": 20.0,
+      "universeZ": 30.0,
+      "velocityX": 0.0,
+      "velocityY": 0.0,
+      "velocityZ": 7.807988126320179,
+      "speed": 7.807988126320179,
+      "warpState": 0,
+      "warpCommand": false,
+      "warping": false
+    },
+    "sessionId": "synthetic-owned-session",
+    "capturedAtGameTick": 1000
+  }
+}

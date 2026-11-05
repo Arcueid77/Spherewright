@@ -29,7 +29,7 @@ internal sealed partial class NormalGameActionCoordinator
             expectedHash, playerHash, request.Count, binding!,request.UiTopUp,
             request.PlanetId==0 && _sessions.TryGetPausedSavedSpacePermit(out var permit)?permit:null);
         var prepared = AddPreparedPlan(payload, common.Session!, 1,
-            request.UiTopUp ? "One bounded native UI TakeItem/AddItemStacked transfer tops up the exact partial chamber; real stock and count/inc are conserved, with no UseWarper call."
+            request.UiTopUp ? "One bounded native UI TakeItem/AddItemStacked transfer tops up the exact partial chamber; real stock and count/inc are conserved, and a paused saved-space source must retain its complete frozen momentum cut, with no UseWarper call."
             : "Exactly one native Mecha.AutoReplenishWarper call fills the empty native chamber; bilateral count/inc are conserved and the automatic setting is unchanged.");
         if (prepared.Value is not null) prepared.Value.PlannedMechaWarperUiTopUp=request.UiTopUp;
         if (prepared.Value is not null)
@@ -75,6 +75,7 @@ internal sealed partial class NormalGameActionCoordinator
             RequestedCount = plan.Count, PackageCountBefore = beforeFacts.PackageCount, PackageIncBefore = beforeFacts.PackageInc,
             ChamberCountBefore = beforeFacts.ChamberCount, ChamberIncBefore = beforeFacts.ChamberInc,
             AutoReplenishWarperBefore = beforeFacts.AutoReplenishWarper };
+        readback.FrozenSpacePoseBefore=beforeFacts.PausedSpacePoseFingerprint;
         if(plan.MechaWarperUiTopUp)readback.EvidenceScope="synchronous_native_ui_partial_warper_chamber_topup";
         action.MechaWarperSupplyReadback = readback;
         // Latch before the sole native call. False, throw or incomplete proof remain the original
@@ -82,11 +83,13 @@ internal sealed partial class NormalGameActionCoordinator
         plan.MechaWarperSupplyAttempted = true;
         bool? nativeReturnedSuccess = null;
         Exception? nativeFailure = null;
+        MechaWarperSupplyVerification? verification = null;
+        try
+        {
         try { nativeReturnedSuccess = plan.MechaWarperUiTopUp
             ? ApplyNativeUiWarperTopUp(nativeBinding,plan.Count) : nativeBinding.Mecha.AutoReplenishWarper(); }
         catch (Exception exception) { nativeFailure = exception; }
         readback.NativeReturnedSuccess = nativeReturnedSuccess;
-        MechaWarperSupplyVerification? verification = null;
         if (TryCaptureMechaWarperSupply(plan.SessionId, plan.PlanetId, action.ActionId,
                 nativeBinding, out _, out var after))
         {
@@ -98,6 +101,10 @@ internal sealed partial class NormalGameActionCoordinator
             readback.ChamberCountAfter = afterFacts.ChamberCount;
             readback.ChamberIncAfter = afterFacts.ChamberInc;
             readback.AutoReplenishWarperAfter = afterFacts.AutoReplenishWarper;
+            readback.FrozenSpacePoseAfter=afterFacts.PausedSpacePoseFingerprint;
+            if(plan.PausedSpaceInventoryPermit is not null)
+                readback.SpaceMomentumPreserved=afterFacts.PausedSpaceSourceAuthorized
+                    && readback.FrozenSpacePoseBefore is not null && readback.FrozenSpacePoseAfter==readback.FrozenSpacePoseBefore;
             verification = plan.MechaWarperUiTopUp ? MechaWarperUiTopUpPolicy.Verify(beforeFacts,afterFacts,plan.Count,nativeReturnedSuccess)
                 : MechaWarperSupplyPolicy.VerifyReadback(beforeFacts, afterFacts, plan.Count, nativeReturnedSuccess);
             readback.ActualStored = verification.ActualStored;
@@ -107,6 +114,15 @@ internal sealed partial class NormalGameActionCoordinator
             throw new InvalidOperationException("The original native warper-supply call threw; retain its readback and do not replay.", nativeFailure);
         if (verification?.Succeeded != true)
             throw new InvalidOperationException("Native warper supply did not prove its exact prepared count, bilateral count/inc and unchanged setting; retain the original action.");
+        }
+        finally
+        {
+            if(plan.PausedSpaceInventoryPermit is not null && verification?.Succeeded!=true)
+            {
+                if(_sessions.StopPausedSavedSpaceExecution(action.ActionId,nativeBinding.World,plan.PausedSpaceInventoryPermit))
+                    action.PausedSpaceInventoryFailure=_sessions.SavedWorldOpenFirstFailure;
+            }
+        }
         action.TargetItemId = MechaWarperSupplyPolicy.WarperItemId;
         action.BeforeTargetAmount = beforeFacts.ChamberCount;
         action.AfterTargetAmount = readback.ChamberCountAfter;
@@ -114,7 +130,8 @@ internal sealed partial class NormalGameActionCoordinator
         action.AfterStateHash = CanonicalStateHash.Combine(NormalActionKinds.SupplyMechaWarpers,
             readback.PackageCountBefore, readback.PackageCountAfter, readback.PackageIncBefore, readback.PackageIncAfter,
             readback.ChamberCountBefore, readback.ChamberCountAfter, readback.ChamberIncBefore, readback.ChamberIncAfter,
-            readback.AutoReplenishWarperBefore, readback.AutoReplenishWarperAfter, plan.Count);
+            readback.AutoReplenishWarperBefore, readback.AutoReplenishWarperAfter, plan.Count,
+            readback.FrozenSpacePoseBefore,readback.FrozenSpacePoseAfter,readback.SpaceMomentumPreserved);
     }
 
     private bool TryCaptureMechaWarperSupply(string? sessionId, int planetId, string? ignoredActionId,
@@ -143,21 +160,22 @@ internal sealed partial class NormalGameActionCoordinator
         var packageCount = package.GetItemCount(MechaWarperSupplyPolicy.WarperItemId, out var packageInc);
         var chamberCount = chamber.GetItemCount(MechaWarperSupplyPolicy.WarperItemId, out var chamberInc);
         var grid = chamber.grids[0];
+        var pausedSource=planetId==0 && _sessions.TryGetPausedSavedSpacePermit(out _);
         facts = new MechaWarperSupplyFacts { OwnedBindingVerified = true,
             CurrentPlanetVerified = data.localPlanet is not null && data.localPlanet.id == planetId && player.planetId == planetId,
             PlayerStateHashFresh = true, IsAlive = player.isAlive,
             IsGrounded = player.movementState == EMovementState.Walk && !player.warping,
             ControllerEnabled = !data.disableController, NativeGuideRunning = data.guideRunning,
             IsIdle = player.currentOrder is null && !float.IsNaN(player.speed) && !float.IsInfinity(player.speed)
-                && (planetId==0 ? player.uVelocity.magnitude<=.5d : player.speed >= 0f && player.speed <= 0.1f) && BuildUiIsIdle(player)
+                && (planetId==0 ? pausedSource : player.speed >= 0f && player.speed <= 0.1f) && BuildUiIsIdle(player)
                 && !_actions.ActiveValues.Any(candidate => !candidate.Terminal && candidate.ActionId != ignoredActionId),
             ChamberIsFiltered = chamber.type == EStorageType.Filtered && !chamber.isPlayerInventory,
             ChamberSlotCount = chamber.size, ChamberGridCount = chamber.grids.Length, ChamberBannedGridCount = chamber.bans,
             ChamberItemId = grid.itemId, ChamberFilterItemId = grid.filter, ChamberStackSize = grid.stackSize,
             PackageCount = packageCount, PackageInc = packageInc, ChamberCount = chamberCount, ChamberInc = chamberInc,
             AutoReplenishWarper = mecha.autoReplenishWarper,
-            PausedSpaceSourceAuthorized=planetId==0 && _sessions.TryGetPausedSavedSpacePermit(out _),
-            SpaceStopSpeed=planetId==0?player.uVelocity.magnitude:null };
+            PausedSpaceSourceAuthorized=pausedSource,PausedSpaceSpeed=planetId==0?player.uVelocity.magnitude:null,
+            PausedSpacePoseFingerprint=pausedSource?_sessions.FrozenSavedSpacePoseFingerprint:null };
         return true;
     }
 
@@ -206,6 +224,9 @@ internal sealed partial class NormalGameActionCoordinator
         public StorageComponent.GRID[] PackageGrids = null!;
         public StorageComponent.GRID[] ChamberGrids = null!;
     }
+
+    private sealed partial class ActionRecord
+    {public Spherewright.Contracts.Players.NativeResumeFailureSnapshot? PausedSpaceInventoryFailure {get;set;}}
 
     private sealed partial class NormalActionPlanPayload
     {

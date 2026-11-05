@@ -13,6 +13,7 @@ internal sealed partial class GameSessionTracker
     private GameLoader? _savedOpenLoader;
     private NativeLoadCompletionSubscription<GameLoader>? _savedOpenSubscription;
     private bool _savedOpenAnyNativeLocation;
+    private PausedSavedSpacePoseGuard? _savedSpacePose;
     private Spherewright.Contracts.Players.NativeResumeFailureSnapshot? _savedOpenFailure;
     internal string? SavedWorldOpenSessionId { get; private set; }
     internal Spherewright.Contracts.Players.NativeResumeFailureSnapshot? SavedWorldOpenFirstFailure =>
@@ -28,13 +29,32 @@ internal sealed partial class GameSessionTracker
             || !open.MatchesCompletedWorld(GameMain.data) || !GameMain.isPaused || !GameMain.isRunning
             || GameMain.gameTick!=open.SavedTick || GameMain.localPlanet is not null || p?.controller is null
             || p.planetId!=0 || p.movementState!=EMovementState.Sail || !p.isAlive || p.warping
-            || p.warpState!=0 || p.warpCommand || p.currentOrder is not null
-            || double.IsNaN(p.uVelocity.magnitude) || p.uVelocity.magnitude>.5d
+            || p.warpState!=0 || p.warpCommand || p.currentOrder is not null || p.orders?.orderCount!=0
+            || _savedOpenFailure is not null || _savedSpacePose?.Matches(GameMain.data,p,p.controller,GameMain.gameTick,
+                p.movementState.ToString(),CaptureSavedSpacePose(p))!=true
             || _writeQuarantineActionId!=open.ActionId || _writeQuarantineReason is null || _sessionId is null)return false;
         var candidate=new PausedSavedSpacePermit(_sessionId,open.ActionId,_writeQuarantineReason,open.SavedTick);
         if(!candidate.Matches(CaptureOnMainThread()))return false;
         permit=candidate;return true;
     }
+
+    internal string? FrozenSavedSpacePoseFingerprint=>TryGetPausedSavedSpacePermit(out _)?_savedSpacePose?.Fingerprint:null;
+    internal bool StopPausedSavedSpaceExecution(string actionId,object world,PausedSavedSpacePermit permit)
+    {
+        if(_savedWorldOpen?.MatchesCompletedWorld(world)!=true || !ReferenceEquals(GameMain.data,world)
+            || _sessionId!=permit.SessionId || _savedWorldOpen.ActionId!=permit.OpenActionId)return false;
+        _savedSpacePose?.Invalidate();
+        _savedOpenFailure??=NativeResumeDecisionEvidence.UnobservedFailure(
+            Spherewright.Contracts.Errors.BridgeErrorCodes.ActionOutcomeUnknown,"paused_saved_space_inventory",
+            GameMain.gameTick,DateTimeOffset.UtcNow,"original_native_inventory_outcome_reconciled");
+        _savedOpenFailure.Observations["original_action_id"]=actionId;
+        return true;
+    }
+    private static Spherewright.Contracts.Players.NativeSpaceTransitSnapshot CaptureSavedSpacePose(Player p)=>new() {
+        StarId=GameMain.localStar?.id,NativePaused=GameMain.isPaused,
+        UniverseX=p.uPosition.x,UniverseY=p.uPosition.y,UniverseZ=p.uPosition.z,
+        VelocityX=p.uVelocity.x,VelocityY=p.uVelocity.y,VelocityZ=p.uVelocity.z,Speed=p.uVelocity.magnitude,
+        WarpState=p.warpState,WarpCommand=p.warpCommand,Warping=p.warping };
 
     internal bool TryGetStoppedSpaceHomeAnchor(out int home,out string hash,out long cap)
     {
@@ -107,6 +127,9 @@ internal sealed partial class GameSessionTracker
                 _savedOpenAnyNativeLocation ? ObserveConsistentSavedNativeLocation()
                     : ticket is null || GameMain.data?.localPlanet is null ? null : GameMain.data.localPlanet.id == ticket.ExpectedPlanetId))
                 _resumeAdoptionError = _savedWorldOpen.FirstFailure?.Code ?? "saved_world_open_native_boundary_unproved";
+            else if(_savedOpenAnyNativeLocation && GameMain.localPlanet is null && GameMain.mainPlayer is {} spacePlayer)
+                _savedSpacePose=PausedSavedSpacePoseGuard.Capture(GameMain.data,spacePlayer,spacePlayer.controller,
+                    _savedWorldOpen.SavedTick,GameMain.gameTick,spacePlayer.movementState.ToString(),CaptureSavedSpacePose(spacePlayer));
         }
         catch (Exception exception)
         {
@@ -172,6 +195,7 @@ internal sealed partial class GameSessionTracker
         SavedWorldOpenSessionId = null;
         _savedOpenPreparedKnownProgressGameTick = null; _savedOpenObservedProgressFloor = null;
         _savedOpenAnyNativeLocation=false;
+        _savedSpacePose=null;
     }
 
     private static bool? ObserveConsistentSavedNativeLocation()

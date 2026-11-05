@@ -156,7 +156,8 @@ public sealed class VoyagerActionToolsTests
         Assert.Equal("outcome_unknown", action.GetProperty("state").GetString());
         var proof = action.GetProperty("mechaWarperSupplyReadback");
         foreach (var field in new[] { "actualStored", "packageCountAfter", "packageIncAfter", "chamberCountAfter",
-                     "chamberIncAfter", "autoReplenishWarperAfter", "nativeReturnedSuccess" })
+                     "chamberIncAfter", "autoReplenishWarperAfter", "nativeReturnedSuccess",
+                     "frozenSpacePoseBefore", "frozenSpacePoseAfter", "spaceMomentumPreserved" })
             Assert.Equal(JsonValueKind.Null, proof.GetProperty(field).ValueKind);
         Assert.False(proof.GetProperty("readbackComplete").GetBoolean());
         Assert.False(proof.GetProperty("conservationVerified").GetBoolean());
@@ -187,6 +188,21 @@ public sealed class VoyagerActionToolsTests
         Assert.True(proof.GetProperty("readbackComplete").GetBoolean());
         Assert.True(proof.GetProperty("conservationVerified").GetBoolean());
         Assert.False(proof.GetProperty("autoReplenishWarperAfter").GetBoolean());
+    }
+
+    [Fact]
+    public async Task SavedSpaceSupplyPublishesItsSameCutMomentumProofWithoutInventingGroundContact()
+    {
+        var bridge=NewBridge();var proxy=Proxy(bridge);
+        proxy.Action=new ActionResultSnapshot {ActionId="original-space-ui",ActionKind=NormalActionKinds.SupplyMechaWarpers,
+            State="completed",Terminal=true,Succeeded=true,MechaWarperSupplyReadback=new() {
+                FrozenSpacePoseBefore="native-frozen-cut",FrozenSpacePoseAfter="native-frozen-cut",SpaceMomentumPreserved=true }};
+        var result=await SpherewrightTools.GetActionResultAsync(bridge,"original-space-ui");
+        var proof=result.StructuredContent!.Value.GetProperty("result").GetProperty("mechaWarperSupplyReadback");
+        Assert.Equal("native-frozen-cut",proof.GetProperty("frozenSpacePoseBefore").GetString());
+        Assert.Equal(proof.GetProperty("frozenSpacePoseBefore").GetString(),proof.GetProperty("frozenSpacePoseAfter").GetString());
+        Assert.True(proof.GetProperty("spaceMomentumPreserved").GetBoolean());
+        Assert.Equal(new[]{nameof(IBridgeClient.GetActionResultAsync)},proxy.Calls);
     }
 
     [Fact]

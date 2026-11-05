@@ -10,6 +10,7 @@
     <None Update="Fixtures\native-terrain-settling-cut.json" CopyToOutputDirectory="PreserveNewest" />
     <None Update="Fixtures\native-paid-site-landing-cut.json" CopyToOutputDirectory="PreserveNewest" />
     <None Update="Fixtures\saved-open-predispatch-refusal.json" CopyToOutputDirectory="PreserveNewest" />
+    <None Update="Fixtures\paused-saved-sail-momentum.json" CopyToOutputDirectory="PreserveNewest" />
     <ProjectReference Include="..\..\src\Spherewright.Bridge.Core\Spherewright.Bridge.Core.csproj" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" />
     <PackageReference Include="Newtonsoft.Json" />

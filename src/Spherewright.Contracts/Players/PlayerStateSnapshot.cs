@@ -81,6 +81,7 @@ public sealed class NativeSpaceTransitSnapshot
     public string EvidenceScope {get;set;}="owned_native_space_read_only";
     public int? StarId {get;set;}
     public bool NativePaused {get;set;}
+    public bool FrozenSavedPoseVerified {get;set;}
     public double UniverseX {get;set;}
     public double UniverseY {get;set;}
     public double UniverseZ {get;set;}

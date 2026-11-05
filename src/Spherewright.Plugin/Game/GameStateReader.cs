@@ -138,6 +138,8 @@ internal sealed partial class GameStateReader
         };
 
         var inventory = new Dictionary<int, PlayerInventoryItem>();
+        if(result.SpaceTransit is {} spaceRead)
+            spaceRead.FrozenSavedPoseVerified=_sessions.TryGetPausedSavedSpacePermit(out _);
         if(result.SpaceTransit is {} transit && _sessions.TryGetStoppedSpaceHomeAnchor(out var home,out var homeHash,out var cap))
         {transit.OriginalHomePlanetId=home;transit.ReturnHomeStateHash=homeHash;transit.MaximumReturnGameTicks=cap;}
         var packageGrids = player.package.grids ?? Array.Empty<StorageComponent.GRID>();
