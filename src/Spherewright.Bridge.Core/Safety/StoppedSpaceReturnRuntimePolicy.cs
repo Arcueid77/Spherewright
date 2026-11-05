@@ -6,6 +6,7 @@ public sealed class StoppedSpaceReturnRuntimeFacts
     public bool ExactSourceQuarantine {get;set;}
     public bool ExactOriginalLedger {get;set;}
     public bool NativeObserverBound {get;set;}
+    public bool NativeControlAvailable {get;set;}
     public bool PlayerOrderAbsentOrOwned {get;set;}
     public string MovementState {get;set;}=string.Empty;
     public int? CurrentStar {get;set;}
@@ -31,7 +32,7 @@ public static class StoppedSpaceReturnRuntimePolicy
     public static bool AllowsNextNativeTick(StoppedSpaceReturnRuntimeFacts f)
     {
         bool Finite(double v)=>!double.IsNaN(v)&&!double.IsInfinity(v);
-        return f.ExactNativeBinding && f.ExactSourceQuarantine && f.ExactOriginalLedger && f.NativeObserverBound
+        return f.ExactNativeBinding && f.ExactSourceQuarantine && f.ExactOriginalLedger && f.NativeObserverBound && f.NativeControlAvailable
             && f.PlayerOrderAbsentOrOwned && new[]{"Sail","Fly","Drift","Walk"}.Contains(f.MovementState)
             && f.HomeStar>0 && f.CurrentStar==f.HomeStar && f.CurrentTick>=f.SourceTick && f.SourceTick>=0
             && f.MaximumTicks>0 && f.CurrentTick-f.SourceTick<f.MaximumTicks

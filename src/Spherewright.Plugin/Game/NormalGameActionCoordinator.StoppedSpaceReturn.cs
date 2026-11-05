@@ -130,6 +130,8 @@ internal sealed partial class NormalGameActionCoordinator
                 && s.WriteBlockers[0].Message==b.Permit.QuarantineReason,
             ExactOriginalLedger=PluginJson.Serialize(_flightCheckpoints.VoyagerJourney)==b.OriginalLedger,
             NativeObserverBound=_stoppedSpaceObserverProof?.Invoke()==true,
+            NativeControlAvailable=!b.World.disableController && !b.World.guideRunning
+                && LocalRawMovementInputIdle() && BuildUiIsIdle(b.Player),
             PlayerOrderAbsentOrOwned=b.Player.currentOrder is null || ReferenceEquals(b.Player.currentOrder,a.PlayerOrder),
             MovementState=b.Player.movementState.ToString(),CurrentStar=GameMain.localStar?.id,HomeStar=b.Star,
             SourceTick=b.Permit.SavedTick,CurrentTick=GameMain.gameTick,MaximumTicks=b.MaximumTicks,
