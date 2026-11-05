@@ -5,6 +5,7 @@ namespace Spherewright.Plugin.Game;
 
 internal sealed partial class GameSessionTracker
 {
+    internal Spherewright.Contracts.Players.NativeResumeFailureSnapshot? CompletionFailureForTest => _remoteResumeAdoption?.FirstFailure;
     // Unity import/callback shell only. Source capture, registration, loaded
     // binding, terminal persistence and lease completion are production code.
     internal bool AdoptFailedLandingNativeShellForTest(FlightCheckpointStore store, OwnedWorldResumeTicketStore? tickets = null)

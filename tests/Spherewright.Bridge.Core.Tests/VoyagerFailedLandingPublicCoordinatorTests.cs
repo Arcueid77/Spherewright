@@ -8,6 +8,28 @@ namespace Spherewright.Bridge.Core.Tests;
 public sealed partial class VoyagerRemoteResumeCoordinatorIntegrationTests
 {
     [Fact]
+    public void CompletionSharingFailureRetainsItsStoreCauseAndNeverClaimsHealthyAdmission()
+    {
+        using var s = new Scenario(currentNative: true, failedLanding: true);
+        Assert.True(s.Commit(s.Prepare(FailedLandingRequest())).Success);
+        Assert.True(s.Sessions.AdoptFailedLandingNativeShellForTest(s.Checkpoints));
+        GameMain.gameTick = 12512;
+        using (var reader = new FileStream(Path.Combine(s.Handoff, "voyager-journey.json"),
+            FileMode.Open, FileAccess.Read, FileShare.Read))
+        {
+            Assert.False(s.Sessions.CompleteContactForTest(null));
+            Assert.False(s.Sessions.ContactAdmittedForTest);
+            var failure = s.Sessions.CompletionFailureForTest!;
+            Assert.Equal("completion_terminal_persisted", failure.FirstFailedPredicate);
+            Assert.Contains("IOException", failure.Observations["store_rejection"]);
+            Assert.Equal("adopted", s.Checkpoints.VoyagerJourney!.FailedLandingAdmissions.Single().State);
+            Assert.Null(s.Checkpoints.VoyagerJourney.LastLandedGameTick);
+        }
+        s.Sessions.PreserveFailedLandingForTest("preservation-after-sharing-failure");
+        Assert.Equal("failed_health", s.Checkpoints.VoyagerJourney!.FailedLandingAdmissions.Single().State);
+        Assert.Equal("completion_terminal_persisted", s.Checkpoints.VoyagerJourney.FailedLandingAdmissions.Single().FirstFailure!.FirstFailedPredicate);
+    }
+    [Fact]
     public void FailedLandingPublicPrepareDisclosesIndependentBoundaryAndRetainedFailureWithoutLoading()
     {
         using var s = new Scenario(currentNative: true, failedLanding: true);
