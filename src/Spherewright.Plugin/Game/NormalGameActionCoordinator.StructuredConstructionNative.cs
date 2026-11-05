@@ -49,7 +49,7 @@ internal sealed partial class NormalGameActionCoordinator
     }
 
     private static NativeConstructionDroneReserve CaptureConstructionReserve(BlueprintBuildState build, Player player, out string costHash,
-        NativeResumeDecisionEvidence? decision = null)
+        NativeResumeDecisionEvidence? decision = null, bool startsNewPaidWindow = false)
     {
         var module = player.mecha.constructionModule;
         var speed = GameMain.history.constructionDroneSpeed;
@@ -66,7 +66,7 @@ internal sealed partial class NormalGameActionCoordinator
             ? null : CaptureNativeMechaRechargeFacts(player, independent);
         var movement = EvaluateNativeLocalMovementCost(player, modeTransitionsExcluded: true, independent, rechargeFacts);
         var background = movement.Proved ? movement.WorkPowerUpperWatts!.Value : double.NaN;
-        var anchor = build.ConstructionControl is not null ? ToVector(build.ConstructionControl.Anchor) : player.position;
+        var anchor = ToVector(StructuredConstructionWindowPolicy.ReserveAnchor(build,ConstructionVector(player.position),startsNewPaidWindow));
         var ejectAnchor = anchor.normalized * (anchor.magnitude + 2.8f);
         var liveEject = player.position.normalized * (player.position.magnitude + 2.8f);
         var ejectDisplacement = Vector3.Distance(ejectAnchor, liveEject);

@@ -135,17 +135,16 @@ internal sealed partial class NormalGameActionCoordinator
         // A retained build still needs its own disabled-dispatch stop receipt.
         if (!module.droneEnabled && build.ConstructionControl is { DispatchDisabled:false })
             return Stale("The ordinary construction drones were disabled outside this build's retained stop receipt.");
-        var decision = new NativeResumeDecisionEvidence("structured_construction_prepare", GameMain.gameTick, DateTimeOffset.UtcNow, true);
-        var reserve = CaptureConstructionReserve(build, player, out var costHash, decision);
         var workTicks = build.ConstructionControl is null ? StructuredConstructionWorkTicks
             : build.ConstructionControl.RemainingWorkGameTicks(GameMain.gameTick, DateTimeOffset.UtcNow).GetValueOrDefault();
-        if (workTicks < 1 && plan.AllowNewPaidConstructionWindow && (build.Phase == "paused" || build.Phase == "outcome_unknown" && independentStop)
-            && build.PreviousConstructionWindows.Count < 16
-            && build.Objects.Any(o => o.State == BlueprintObjectStates.PendingConstruction)
-            && build.Objects.All(o => o.State == BlueprintObjectStates.PendingConstruction || o.State == BlueprintObjectStates.Completed)
-            && (build.ConstructionControl!.CanReadmitPaidPending(GameMain.gameTick, DateTimeOffset.UtcNow) || independentStop))
-            workTicks = StructuredConstructionWorkTicks;
-        if (workTicks < 1) return Stale("The original window expired. Only a known safely paused paid batch may receive a distinct finite admission after fresh Native and original Journey budget proof; no active/unknown action or pending object is recreated.");
+        var newPaidWindow=StructuredConstructionWindowPolicy.StartsNewPaidWindow(build,plan.AllowNewPaidConstructionWindow,
+            independentStop,GameMain.gameTick,DateTimeOffset.UtcNow);
+        if(newPaidWindow)workTicks=StructuredConstructionWorkTicks;
+        if (workTicks < 1 || build.Phase=="outcome_unknown" && !newPaidWindow)
+            return Stale("Only an expired independently stopped paid batch may receive a distinct finite admission; preserve the old window and fresh-prepare without recreating any object.");
+        var decision = new NativeResumeDecisionEvidence("structured_construction_prepare", GameMain.gameTick, DateTimeOffset.UtcNow, true);
+        decision.Observe("construction_distinct_paid_window_anchor",newPaidWindow);
+        var reserve = CaptureConstructionReserve(build, player, out var costHash, decision,newPaidWindow);
         if (!decision.Require("construction_native_geometry_and_cost", reserve.Proved)
             || !decision.Require("construction_core_and_return_funded", NativeConstructionDroneReservePolicy.CanFundNativeTail(player.mecha.coreEnergy,
                 CalculateAvailableFlightEnergy(player.mecha), journey.ReturnEnergyFloorJoules, reserve.TailAndNextTickEnergyJoules)))
@@ -244,14 +243,13 @@ internal sealed partial class NormalGameActionCoordinator
         var workWall=NativeConstructionCadencePolicy.WallBudget(StructuredConstructionWorkTicks,cadence);
         if(!workWall.HasValue) {Fail(action,"The Native construction scheduling cadence is unproved; no create occurred.");return;}
         var submit = build.Objects.All(o => o.State == BlueprintObjectStates.NotSubmitted);
-        var readmit = !submit && oldControl is not null
-            && !oldControl.RemainingWorkGameTicks(GameMain.gameTick, nowUtc).HasValue;
+        var expired = !submit && oldControl is not null && !oldControl.RemainingWorkGameTicks(GameMain.gameTick,nowUtc).HasValue;
+        var readmit=StructuredConstructionWindowPolicy.StartsNewPaidWindow(build,action.Plan.AllowNewPaidConstructionWindow,
+            HasCurrentSavedPaidStop(build),GameMain.gameTick,nowUtc);
+        if(expired && !readmit || build.Phase=="outcome_unknown" && !readmit)
+        { Fail(action, "The exact stopped paid predecessor no longer permits a distinct admission; no create or drone toggle occurred."); return; }
         if (readmit)
         {
-            if (!action.Plan.AllowNewPaidConstructionWindow || build.PreviousConstructionWindows.Count >= 16
-                || !(build.Phase == "paused" && oldControl!.CanReadmitPaidPending(GameMain.gameTick, nowUtc)
-                    || build.Phase == "outcome_unknown" && HasCurrentSavedPaidStop(build)))
-            { Fail(action, "The exact stopped paid predecessor no longer permits a distinct admission; no create or drone toggle occurred."); return; }
             build.PreviousConstructionWindows.Add(oldControl!);
         }
         action.BlueprintBuild = build;
@@ -260,7 +258,7 @@ internal sealed partial class NormalGameActionCoordinator
         action.ConstructionLastNativeTick = GameMain.gameTick;
         build.ConstructionControl = new StructuredConstructionControlState
         {
-            Anchor = ConstructionVector(player.position), NativeCostHash = action.Plan.ConstructionNativeCostHash!,
+            Anchor = StructuredConstructionWindowPolicy.ReserveAnchor(build,ConstructionVector(player.position),readmit), NativeCostHash = action.Plan.ConstructionNativeCostHash!,
             StartedAtGameTick = readmit ? GameMain.gameTick : oldControl?.StartedAtGameTick ?? GameMain.gameTick,
             StartedAtUtc = readmit ? nowUtc : oldControl?.StartedAtUtc ?? nowUtc,
             WorkDeadlineGameTick = readmit ? GameMain.gameTick + StructuredConstructionWorkTicks : oldControl?.WorkDeadlineGameTick ?? GameMain.gameTick + StructuredConstructionWorkTicks,
