@@ -500,7 +500,7 @@ A distinct paid window calculates its full geometry and return reserve from the 
 
 ## First carrier rocket: observation
 
-Detail inspection of an existing2312 silo adds `silo` with legitimate item1503 stock/inc, raw cycle/target flags, existing native rocket IDs/source planets/target nodes/positions, receiving-node structure points and resident-star silo coverage. Counts with incomplete coverage stay null; partial lists remain partial. `firedAnimationActive` is never a launch receipt. Cross-check exact manufacturing/supply/consumption, source isolation, real flight and the target's delivered-point increase. Inspection does not create a sphere/layer/node, order points or launch rockets. Minimum receiving-target creation and actual launch/recovery need their own supported normal paths and evidence. See [Native research](research/game-api-first-rocket.md).
+Detail inspection of an existing2312 silo adds `silo` with legitimate item1503 stock/inc, raw cycle/target flags, existing native rocket IDs/source planets/target nodes/positions, receiving-node structure points and resident-star silo coverage. Counts with incomplete coverage stay null; partial lists remain partial. `firedAnimationActive` is never a launch receipt. Cross-check exact manufacturing/supply/consumption, source isolation, real flight and the target's delivered-point increase. Inspection does not create a sphere/layer/node, order points or launch rockets. Minimum receiving-target creation and actual launch/recovery need their own supported normal paths and evidence. See [Native research](https://github.com/Arcueid77/Spherewright/blob/06ba214792a610d9c3d25191f4c3c28473796361/docs/research/game-api-first-rocket.md).
 
 ## First solar sail: ejector and swarm
 
