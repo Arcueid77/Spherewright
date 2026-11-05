@@ -520,6 +520,8 @@ Native Import 可将 double 宇宙坐标逆投影为 float 本地位置；普通
 
 独立已付新窗口按将写入新控制的当前严格接地锚点，计算全部几何与返回储备；prepare、重验、start及后续检查使用同一锚点。普通续接保留原锚点，活动中或未过期unknown不能取得替换锚点。旧控制/历史及扣料不改，16米、成本、核心/loaded能源与返航门保留。费用拒绝不能通过暗改旧锚点或提高能源上限解决。
 
+显式有界地表恢复中，完整、无外来对象且为空的脚部切面可能在宽球探针中先碰到准确owned物体的侧面；该侧面不能称为支撑平面。此时仅可另取从脚部上方开始、首命中准确当前地形的独立向下射线，仍按原0.5法线及[-2,0.2]米高度界限证明平面。首命中缺失/外来/未知、切面不完整、已有重叠、替代命中非当前地形或射线不支撑均不得借用此分支。两次事实及实际选用者均保留；Native接地仍须真实观察，最终严格接地/零尾闲置门不变。
+
 ## 首枚火箭：观察
 
 详细检查已有2312发射井增加`silo`：合法物品1503库存/增产点、原始周期/目标标志、已有原生火箭ID/来源星球/目标节点/位置、接收节点结构点及恒星驻留工厂发射井覆盖。覆盖不完整时数量保持null，部分列表只代表部分观察。`firedAnimationActive`不是发射回执。须交叉核对制造/供料/准确消耗、来源隔离、真实飞行和目标抵达结构点增长。观察不创建球体/层/节点、不订购结构点或发射火箭。最小接收目标创建、真实发射/恢复仍需分别具备正常公开路径及证据。见[原生研究](research/game-api-first-rocket.zh-CN.md)。
@@ -539,7 +541,7 @@ Native Import 可将 double 宇宙坐标逆投影为 float 本地位置；普通
 新建或已完全耗尽的燃料发电机须先正常放入燃料，供电分拣器才能运行。fresh检查准确已建2204火电或2211聚变机组及玩家；使用`prepare_transfer`，`direction=player-to-generator-fuel`、`storageEntityId`填该机组、正数原生接受燃料及count1..10、`expectedPlayerStateHash`和机组完整`stateHash`作为`expectedStorageStateHash`。须空手、来源燃料inc0、正常建造交互距离，机组缓存燃料/热值、已加载余热及当前容量/发电均为零。原生恰好烧完最后余热后仍可能保留此前加载的燃料ID；本子集只接受与拟补燃料相同的残留ID，插入过程中保持该原生ID不变。残留ID本身不代表余热或燃料库存。核对`generatorColdStartFuel`中的身份/数量/原生操作回读后只提交原转移动作一次，核销同tick背包/机组的等量反向变化。由原生`PlanetFactory.InsertInto`正常插入燃料，不直接写游戏缓存/能量或推进模拟；后续燃烧与发电属于普通原生行为。冷插入不证明供电、运输、制造或真实验收；此子集不支持热机补料或燃料取出。
 
 
-保存中的静止原生Drift或未接地Walk可选择一笔**新的有界地表恢复Move**：在`spherewright_prepare_resume_owned_game`的`authorize_remote_primary_recovery`模式提供完整`surfaceRecoveryTargetX/Y/Z`三坐标，新增tick必须为零，充能上限至少600tick/20秒，且必须已有独立完成的保存落地准入。目标与600/20上限纳入fresh披露/`confirmationDigest`，须准确核对回声；不提供参数仍用普通恢复。缺坐标、其他模式、混合程序或错误回声均不暴露planToken。它不重放未知Move，也不允许加载较旧存档。
+保存中的静止原生Drift或未接地Walk可选择一笔**新的有界地表恢复Move**：在`spherewright_prepare_resume_owned_game`的`authorize_remote_primary_recovery`模式提供完整`surfaceRecoveryTargetX/Y/Z`三坐标，additionalVoyagerGameTicks须符合另获的所有者有限授权并准确回显（没有该增量授权则为零），充能上限至少600tick/20秒，且必须已有独立完成的保存落地准入。目标与600/20上限纳入fresh披露/`confirmationDigest`，须准确核对回声；不提供参数仍用普通恢复。缺坐标、其他模式、混合程序或错误回声均不暴露planToken。它不重放未知Move，也不允许加载较旧存档。
 
 新resume任务在准确来源/世界/actor/地形绑定及当tick资金通过后，独占一笔普通原生订单。初次Drift绑定两秒失效，查询和重复生命周期观察不续期。即使独立的旧first-frame锁尚未armed，真实151分发入口也须服务此pending控制器，不伪造旧锁或501观察。移动中复用原生变换绑定，冻结准确localScale输入及完整父链；不将旋转派生lossyScale的舍入微变误判为缩放。实际改尺寸、换父级、非均匀祖先缩放或无效姿态仍拒绝。目标须在1–16m内，以fresh原生射线检查3.5m落点缓冲，而不要求整段路径干燥。真实151/501、准确自有订单、有界Walk/Drift模式、当前地形支撑、每步能源/tick/UTC/翘曲器/返航储备，以及下一完整601加13tick尾部资金均不可缺失。最多600tick（含失败帧）、20秒墙钟及距来源24m，全部计入原Journey。不写姿态/速度，不手动模拟，不注入资源，不提前放行普通写入。原生Drift转Walk时，只有最后的sphere接地项未命中且fresh准确当前地形支撑、其他模式/费用/订单/储备全部通过，才可继续有界工作，绝不视为空闲。接触边界的完整自有足部重叠不是“空中必须零命中”：Native ground为false时，须从重叠外侧发射下行射线，以同一2m/.5法线界限fresh证明准确当前地形平面；Native ground仍保持false。不完整/饱和/外来命中或无支撑平面仍拒绝，并保留原截点数量/归属/投射事实。原生到达/AbortOrder后继续付费停稳，成功仍要求实际/帧接地Walk、速度归零且手动/RTS尾部全零；失败则停止/Pause并隔离新任务，不自动重试。`nativePhysics.resumeSurfaceRecoveryMove`仅是新resume动作的离体观察，不改旧unknown、不增加tick。恢复绑定失败由`nativeFirstFailure.firstFailedPredicate`标出当刻首个实际runtime或first-physics玩家比较项，后来的暂停观测不替换原截点。源码/CI/离线通过不能冒充真实恢复或施工。
 

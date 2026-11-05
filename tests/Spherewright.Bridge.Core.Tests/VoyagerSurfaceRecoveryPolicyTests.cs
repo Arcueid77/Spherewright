@@ -15,6 +15,24 @@ public sealed class VoyagerSurfaceRecoveryPolicyTests
     private static readonly DateTimeOffset Now = new(2025, 1, 1, 0, 0, 0, TimeSpan.Zero);
 
     [Fact]
+    public void IndependentlyProvedTerrainUnderAnOwnedSideHitStillNeedsNativeGroundOrderDrainAndRealSequence()
+    {
+        var first=new NativeSurfaceRecoveryPlane(){Hit=true,CurrentOwnerProved=true,NormalDotUp=.42,HeightFromActor=-.02};
+        var ray=new NativeSurfaceRecoveryPlane(){Hit=true,CurrentOwnerProved=true,CurrentTerrainProved=true,NormalDotUp=.99,HeightFromActor=-.24};
+        var selected=NativeSurfaceRecoveryPlanePolicy.Select(0,true,true,first,()=>ray,out var used);Assert.True(used);
+        var p=new VoyagerSurfaceRecoveryPolicy(100,Now);var f=Good();
+        f.NativeModeBlocker="remote_idle_ground_contact_unproved";
+        f.CurrentTerrainSupportProved=NativeSurfaceRecoverySupportPolicy.CutProved(false,0,true,0,0,selected.CurrentOwnerProved,selected.NormalDotUp,selected.HeightFromActor);
+        Assert.Null(p.ObserveUniverse(101,Now,true));Assert.Equal(VoyagerSurfaceRecoveryStep.Continue,p.ObservePhysics(f));Assert.False(p.Completed);
+        f.GameTick=f.OriginalJourney!.CurrentGameTick=102;f.NativeModeBlocker=null;f.DistanceToTargetMeters=1;
+        f.CurrentTerrainSupportProved=NativeSurfaceRecoverySupportPolicy.CutProved(true,1,true,1,0,ray.CurrentOwnerProved,ray.NormalDotUp,ray.HeightFromActor);
+        Assert.Null(p.ObserveUniverse(102,Now,true));Assert.Equal(VoyagerSurfaceRecoveryStep.Continue,p.ObservePhysics(f)); // Still no strict idle/drain.
+        f.GameTick=f.OriginalJourney.CurrentGameTick=103;f.StrictGroundedWalkWithZeroTail=true;f.OriginalOrderAbsent=true;
+        Assert.Null(p.ObserveUniverse(103,Now,true));Assert.Equal(VoyagerSurfaceRecoveryStep.Complete,p.ObservePhysics(f));
+        Assert.False(f.OriginalJourney.NativePlayerIdle);Assert.Equal(.42,first.NormalDotUp);
+    }
+
+    [Fact]
     public void NativeWalkTransitionCanFinishItsFundedFallWithoutPretendingToBeGrounded()
     {
         var p = new VoyagerSurfaceRecoveryPolicy(100, Now); var f = Good();

@@ -279,16 +279,35 @@ internal sealed partial class NormalGameActionCoordinator
             cast = Physics.Raycast(new Ray(position + up * 2f, -up), out hit, 4f, 15873, QueryTriggerInteraction.Ignore);
         evidence.Observe("surface_support_downward_cast_hit", cast);
         evidence.Number("surface_support_overlap_branch", count > 0 ? 1 : 0);
-        var normal = cast ? Vector3.Dot(hit.normal, up) : (float?)null;
-        var height = cast ? Vector3.Dot(hit.point - position, up) : (float?)null;
-        evidence.Number("surface_support_normal_dot_up", normal); evidence.Number("surface_support_height_from_actor", height);
-        var castOwned = cast && (s.Scene.Surface.Count(t => ReferenceEquals(t, hit.collider)) == 1
-            || GameStateReader.CurrentOwnedContactOwnerBlocker(p, s.Scene.Surface, hit.collider) is null);
-        var supporting = castOwned
-            && normal >= .5f && height >= -2f && height <= .2f;
+        NativeSurfaceRecoveryPlane Plane(bool didHit,RaycastHit h)
+        {
+            var terrain=didHit && s.Scene.Surface.Count(t=>ReferenceEquals(t,h.collider))==1;
+            return new NativeSurfaceRecoveryPlane {Hit=didHit,CurrentTerrainProved=terrain,
+                CurrentOwnerProved=didHit && (terrain || GameStateReader.CurrentOwnedContactOwnerBlocker(p,s.Scene.Surface,h.collider) is null),
+                NormalDotUp=didHit?Vector3.Dot(h.normal,up):(double?)null,
+                HeightFromActor=didHit?Vector3.Dot(h.point-position,up):(double?)null};
+        }
+        var first=Plane(cast,hit);
+        evidence.Observe("surface_support_first_cast_owner",first.CurrentOwnerProved);
+        evidence.Observe("surface_support_first_cast_terrain",first.CurrentTerrainProved);
+        evidence.Number("surface_support_first_cast_normal_dot_up",first.NormalDotUp);
+        evidence.Number("surface_support_first_cast_height_from_actor",first.HeightFromActor);
+        var selected=NativeSurfaceRecoveryPlanePolicy.Select(count,complete,owned,first,()=>{
+            var rayHit=Physics.Raycast(new Ray(position+up*2f,-up),out var terrainHit,4f,15873,QueryTriggerInteraction.Ignore);
+            var plane=Plane(rayHit,terrainHit);
+            evidence.Observe("surface_support_independent_ray_hit",rayHit);
+            evidence.Observe("surface_support_independent_ray_current_terrain",plane.CurrentTerrainProved);
+            evidence.Number("surface_support_independent_ray_normal_dot_up",plane.NormalDotUp);
+            evidence.Number("surface_support_independent_ray_height_from_actor",plane.HeightFromActor);
+            return plane;
+        },out var usedTerrainRay);
+        evidence.Observe("surface_support_selected_independent_terrain_ray",usedTerrainRay);
+        evidence.Number("surface_support_normal_dot_up",selected.NormalDotUp);
+        evidence.Number("surface_support_height_from_actor",selected.HeightFromActor);
+        var supporting=NativeSurfaceRecoveryPlanePolicy.Supporting(selected);
         evidence.Require("surface_support_owned_downward_plane", supporting);
         return NativeSurfaceRecoverySupportPolicy.CutProved(grounded, count, complete, terrainCount, objectCount,
-            castOwned, normal, height);
+            selected.CurrentOwnerProved,selected.NormalDotUp,selected.HeightFromActor);
     }
 
     private static bool SurfaceRecoveryLandingPatch(SurfaceRecoveryState s)
