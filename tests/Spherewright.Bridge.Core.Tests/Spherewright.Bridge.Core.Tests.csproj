@@ -9,6 +9,7 @@
     <None Update="Fixtures\surface-recovery-contact-cut.json" CopyToOutputDirectory="PreserveNewest" />
     <None Update="Fixtures\native-terrain-settling-cut.json" CopyToOutputDirectory="PreserveNewest" />
     <None Update="Fixtures\native-paid-site-landing-cut.json" CopyToOutputDirectory="PreserveNewest" />
+    <None Update="Fixtures\saved-open-predispatch-refusal.json" CopyToOutputDirectory="PreserveNewest" />
     <ProjectReference Include="..\..\src\Spherewright.Bridge.Core\Spherewright.Bridge.Core.csproj" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" />
     <PackageReference Include="Newtonsoft.Json" />
@@ -58,6 +59,8 @@
     <Compile Include="..\..\src\Spherewright.Plugin\RuntimeDescriptor\FlightCheckpointStore.cs" Link="PluginRuntimeDescriptor\FlightCheckpointStore.cs" />
     <Compile Include="..\..\src\Spherewright.Plugin\RuntimeDescriptor\FlightCheckpointStore.Voyager.cs" Link="PluginRuntimeDescriptor\FlightCheckpointStore.Voyager.cs" />
     <Compile Include="..\..\src\Spherewright.Plugin\RuntimeDescriptor\FlightCheckpointStore.StoppedSpaceReturn.cs" Link="PluginRuntimeDescriptor\FlightCheckpointStore.StoppedSpaceReturn.cs" />
+    <Compile Include="..\..\src\Spherewright.Plugin\RuntimeDescriptor\OwnedWorldResumeTicketStore.ConsumedSavedData.cs" Link="PluginRuntimeDescriptor\OwnedWorldResumeTicketStore.ConsumedSavedData.cs" />
+    <Compile Include="..\..\src\Spherewright.Plugin\Game\SavedWorldOpenLeaseHandoff.cs" Link="PluginGame\SavedWorldOpenLeaseHandoff.cs" />
     <Compile Include="..\..\src\Spherewright.Plugin\RuntimeDescriptor\FlightCheckpointStore.ReturnOnlyRecovery.cs" Link="PluginRuntimeDescriptor\FlightCheckpointStore.ReturnOnlyRecovery.cs" />
     <Compile Include="..\..\src\Spherewright.Plugin\RuntimeDescriptor\FlightCheckpointStore.ReturnOnlyContinuation.cs" Link="PluginRuntimeDescriptor\FlightCheckpointStore.ReturnOnlyContinuation.cs" />
     <Compile Include="..\..\src\Spherewright.Plugin\Game\GameSessionTracker.ReturnOnlyRecovery.cs" Link="PluginGame\GameSessionTracker.ReturnOnlyRecovery.cs" />

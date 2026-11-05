@@ -127,9 +127,13 @@ internal sealed partial class GameSessionTracker : IDisposable
         string? remoteResumeActionId = null, OwnedWorldResumeSourceKind resumeSource = OwnedWorldResumeSourceKind.None,
         VoyagerRecoveryAuthorization? recoveryAuthorization = null,
         bool savedWorldOpenOnly = false, string? savedWorldOpenActionId = null,
-        long? savedWorldOpenKnownProgressGameTick = null)
+        long? savedWorldOpenKnownProgressGameTick = null,bool exactLastExitOpen = false)
     {
         if (FailBeforeRemoteLeaseHandoffForTest) throw new InvalidOperationException("synthetic_pre_dispatch_failure");
+        if(savedWorldOpenOnly && SavedWorldOpenLeaseHandoff.Validate(ticket,sourceLease,journalLease,primaryLease,
+            resumeSource,reauthorizingExpiredPrimary,savedWorldOpenActionId,savedWorldOpenKnownProgressGameTick,
+            ticket.GameVersion,exactLastExitOpen) is {} openRejection)
+            throw new InvalidOperationException(openRejection);
         if (remoteEvidence is not null && !RemoteResumeLeaseHandoffMatches(ticket, sourceLease, primaryLease,
             journalLease, remoteEvidence, remoteResumeActionId, resumeSource, reauthorizingExpiredPrimary, reauthorizingFixedAutosave0))
             throw new InvalidOperationException("remote_resume_full_lease_handoff_unproved");

@@ -586,8 +586,8 @@ public sealed partial class OwnedWorldAutosaveCoordinatorIntegrationTests
     private sealed class Fixture : IDisposable
     {
         private readonly string _root = Path.Combine(Path.GetTempPath(), "Spherewright", "autosave-coordinator", Guid.NewGuid().ToString("N"));
-        private string Runtime => Path.Combine(_root, "runtime");
-        private string Handoff => Path.Combine(_root, "handoff");
+        internal string Runtime => Path.Combine(_root, "runtime");
+        internal string Handoff => Path.Combine(_root, "handoff");
         private string JournalId => GameplayJournalIdentity.HashOwnedSaveIdentity(Identity);
         internal string CandidatePath => GameSave.SavePath(GameSave.AutoSave0);
         internal string PrimaryPath => GameSave.SavePath(Identity);

@@ -456,7 +456,7 @@ internal sealed partial class OwnedWorldResumeCoordinator
                 payload.FixedAutosaveRecovery, primaryLease, currentPayload!.RemoteEvidence,
                 payload.RemoteContinuation ? action.ActionId : null, payload.ResumeSource, recoveryAuthorization,
                 payload.SavedWorldOpenOnly, payload.SavedWorldOpenOnly ? action.ActionId : null,
-                payload.SavedWorldOpenOnly ? payload.SavedOpenKnownProgressTick : (long?)null);
+                payload.SavedWorldOpenOnly ? payload.SavedOpenKnownProgressTick : (long?)null,payload.ExactLastExitOpen);
             sourceLease = null; // Tracker owns the lease through adoption/Journal confirmation.
             journalLease = null;
             primaryLease = null;
@@ -487,7 +487,22 @@ internal sealed partial class OwnedWorldResumeCoordinator
             {
                 _sessions.CancelExpectedResumedSession();
                 currentPayload?.RemoteEvidence?.Dispose();
-                return GameCallResult<OwnedWorldResumeResult>.Failed(BridgeError.Create(
+                if(payload.SavedWorldOpenOnly)
+                {
+                    // The authorization attempt may already be durably consumed.
+                    // Retain its original handle even though Native StartGame was
+                    // never entered; this is known failure, not ambiguous dispatch.
+                    action.TerminalResult=new ActionResultSnapshot {
+                        ActionId=action.ActionId,ActionKind="resume-owned-game",State=NormalActionStates.ActionFailed,
+                        Terminal=true,Succeeded=false,
+                        Message="The saved-world opening attempt failed before Native load dispatch; retain this original handle and consumed authorization evidence.",
+                        NativeFirstFailure=new Spherewright.Contracts.Players.NativeResumeFailureSnapshot {
+                            Code=BridgeErrorCodes.ActionFailed,Stage="saved_world_open_pre_dispatch",
+                            FirstFailedPredicate="native_load_dispatch_not_entered",FactsState="observed",CapturedAtUtc=DateTimeOffset.UtcNow,
+                            Predicates=new Dictionary<string,string>{{"native_load_dispatch_entered","false"}},
+                            Observations=new Dictionary<string,string>{{"exception_type",exception.GetType().Name}} }};
+                }
+                else return GameCallResult<OwnedWorldResumeResult>.Failed(BridgeError.Create(
                     BridgeErrorCodes.ActionFailed,
                     $"DSP rejected the exact protected owned-world resume through its normal loader ({exception.GetType().Name}).",
                     false,
@@ -507,7 +522,7 @@ internal sealed partial class OwnedWorldResumeCoordinator
             ActionId = action.ActionId,
             Accepted = true,
             IdempotentReplay = false,
-            State = action.NativeLoadObservationError is null ? NormalActionStates.WaitingForGame : NormalActionStates.OutcomeUnknown,
+            State = action.TerminalResult?.State ?? (action.NativeLoadObservationError is null ? NormalActionStates.WaitingForGame : NormalActionStates.OutcomeUnknown),
         };
         if (!_idempotency.TryAdd(IdempotencyScope, request.IdempotencyKey, fingerprint, result))
         {
@@ -672,7 +687,15 @@ internal sealed partial class OwnedWorldResumeCoordinator
                 ? request.ExpectedRecoveryGameTick : null;
             return _tickets.TryGetFreshRemoteFileAccessProvenance(token, out ticket, out provenance, out rejection, exactNewer);
         }
-        if (request.RecoveryMode is OwnedWorldResumeModes.OpenSavedPrimary or OwnedWorldResumeModes.OpenSavedLastExit
+        if(request.RecoveryMode==OwnedWorldResumeModes.OpenSavedLastExit)
+        {
+            if(_tickets.TryGetSavedWorldOpenProvenance(token,out ticket,out provenance,out rejection))return true;
+            if(OwnedLastExitOpenPolicy.ValidateRequest(request) is not null
+                || _actions.Values.Any(a=>a.TerminalResult?.Terminal!=true) || request.MinimumRecoveryGameTick!=request.ExpectedRecoveryGameTick
+                || request.ExpectedRecoveryGameTick is not long exactTick)return false;
+            return _tickets.TryGetConsumedCurrentSavedData(token,exactTick,out ticket,out provenance,out rejection);
+        }
+        if (request.RecoveryMode is OwnedWorldResumeModes.OpenSavedPrimary
             || request.RecoveryMode == OwnedWorldResumeModes.ResumeReturnOnlyTask)
             return _tickets.TryGetSavedWorldOpenProvenance(token, out ticket, out provenance, out rejection);
         if (request.RecoveryMode == OwnedWorldResumeModes.ReauthorizeVersionChangedPrimary)

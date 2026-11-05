@@ -1,0 +1,17 @@
+{
+  "evidenceScope": "sanitized actual pre-dispatch response; selected role inferred from the exact production mode",
+  "recoveryMode": "open_saved_last_exit",
+  "error": {
+    "code": "ACTION_FAILED",
+    "message": "DSP rejected the exact protected owned-world resume through its normal loader (InvalidOperationException).",
+    "retryable": false,
+    "recovery": "Inspect the local Spherewright and Unity logs; do not load another save.",
+    "nativeFirstFailure": null
+  },
+  "session": {
+    "gameLoaded": false,
+    "ownedBySpherewright": false,
+    "localPlanetId": null,
+    "gameTick": null
+  }
+}

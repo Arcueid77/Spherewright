@@ -896,7 +896,7 @@ internal sealed partial class GameSessionTracker : IDisposable
         OwnedWorldResumeSourceKind resumeSource = OwnedWorldResumeSourceKind.None,
         VoyagerRecoveryAuthorization? recoveryAuthorization = null,
         bool savedWorldOpenOnly = false, string? savedWorldOpenActionId = null,
-        long? savedWorldOpenKnownProgressGameTick = null)
+        long? savedWorldOpenKnownProgressGameTick = null, bool exactLastExitOpen = false)
     {
         if (ticket is null)
         {
@@ -943,15 +943,14 @@ internal sealed partial class GameSessionTracker : IDisposable
             || recoveryAuthorization.Proposal.MaximumChargeWallSeconds != proposal.MaximumChargeWallSeconds)
             || remoteEvidence?.RecoveryProposal is not null && recoveryAuthorization is null)
             throw new InvalidOperationException("remote_resume_recovery_authorization_handoff_unproved");
-        if (savedWorldOpenOnly && (sourceLease is null || journalLease is null
-            || remoteEvidence is not null || recoveryAuthorization is not null
-            || !reauthorizingExpiredPrimary || !Guid.TryParse(savedWorldOpenActionId, out _)
-            || !savedWorldOpenKnownProgressGameTick.HasValue || savedWorldOpenKnownProgressGameTick < ticket.MinimumGameTick
-            || resumeSource != OwnedWorldResumeSourceKind.OwnedPrimary
-            || ticket.GameplayJournalCheckpoint is null || !sourceLease.Prefix.MatchesExpectedIdentity
-            || !sourceLease.Prefix.Peaceful || sourceLease.Prefix.GameVersion != _gameVersion || ticket.GameVersion != _gameVersion
-            || primaryLease is not null && !primaryLease.Prefix.MatchesExpectedIdentity))
+        if(exactLastExitOpen && !savedWorldOpenOnly)
+            throw new InvalidOperationException("saved_world_open_exact_mode_without_open_only_scope");
+        if (savedWorldOpenOnly && (remoteEvidence is not null || recoveryAuthorization is not null))
             throw new InvalidOperationException("saved_world_open_lease_handoff_unproved");
+        if(savedWorldOpenOnly && SavedWorldOpenLeaseHandoff.Validate(ticket,sourceLease,journalLease,primaryLease,
+            resumeSource,reauthorizingExpiredPrimary,savedWorldOpenActionId,savedWorldOpenKnownProgressGameTick,
+            _gameVersion,exactLastExitOpen) is {} openRejection)
+            throw new InvalidOperationException(openRejection);
         if (!savedWorldOpenOnly && remoteEvidence is null && sourceLease is not null && (ticket.GameplayJournalCheckpoint is null
             || !string.IsNullOrWhiteSpace(ticket.QuarantineActionId)
             || !sourceLease.Prefix.MatchesExpectedIdentity
