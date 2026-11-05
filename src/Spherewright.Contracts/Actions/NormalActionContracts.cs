@@ -39,6 +39,7 @@ public static class NormalBuildKinds
 
 public static class TransferDirections
 {
+    public const string StationStorageToPlayer = "station-storage-to-player";
     public const string ProductionResetToPlayer = "production-reset-to-player";
     public const string PlayerToGeneratorFuel = "player-to-generator-fuel";
     public const string PlayerToStorage = "player-to-storage";
@@ -373,6 +374,7 @@ public sealed class CommitNormalActionRequest
 
 public sealed class PreparedNormalAction
 {
+    public StationCargoWithdrawalPlan? StationCargoWithdrawal { get; set; }
     public int? PlannedStationVesselDeliveryMinimumPercent { get; set; }
     public GeneratorColdStartFuelPlan? GeneratorColdStartFuel { get; set; }
     public ProductionResetPlan? ProductionReset { get; set; }

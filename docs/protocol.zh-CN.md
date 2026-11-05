@@ -3,6 +3,11 @@
 
 [English](protocol.md) | [简体中文](protocol.zh-CN.md)
 
+站内货物新增显式 `station-storage-to-player` 转移子集：当地已建2103/2104站、唯一现物且零增产点槽位、所选槽无在途订单、精确数量1..100、空手、普通建造交互范围及已证背包容量。原生 `StationComponent.TakeItem` 与 `StorageComponent.AddItemStacked` 在同一tick核对数量/增产点守恒；其余槽配置、站状态及背包物料必须不变。此手动UI操作不要求站点供电。prepare必须有 `stationCargoWithdrawal`，终态须有 `stationCargoWithdrawalReadback`；缺少同源回执不暴露token。后续正常机甲自动补给可能移动刚收到的燃料：保留即时原回执，再分别读背包/燃料舱，不重放转移。
+
+新出航预览可显式提供 `maximumRoundTripWallSeconds`600..86400，作为与原游戏tick、物品、能源和返航储备独立的有限墙钟预算。不传则保留旧tick换算时钟；返航必须不传并继承原始/有效时钟。该值进入哈希及同源回显，并在新保护Journey记录中保持不可变；旧记录保留原序列化字节形状和两小时上限。现有确认式远端恢复方案已支持最多24小时有限窗；须在真实所有者授权内选择足够有限时间，经新鲜Native方案/摘要确认，不改旧时钟、不退还消耗。300秒启动到真实实操门及所有逐动作停止/充能帽不变。这些仍是源码能力，实装及实机验收需分别证明。
+
+
 协议版本保持 `1`；`0.5.0` Voyager 开发接口面向 DSP `0.10.35.29151`，保留 `0.4` 协议接口。本文描述当前维护的源码，不宣称已安装组件或 Voyager 实机验收。正式 `v0.4.0` tag 指向 `b7c0002dbe2e8f5608c5ca140b0c6326a1818021`，旧生产验收仍固定于 `2a7a98d1932c404e3a7abc2c11233d9c0b8780d9`。参见[产品状态](project-status.zh-CN.md)、[原生验证](validation/native-29151-preflight.zh-CN.md)、[安全模型](safety-model.zh-CN.md)和 [Agent 指南](agent-playbook.zh-CN.md)。
 
 <a id="framing-and-authentication"></a>

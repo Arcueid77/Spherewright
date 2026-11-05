@@ -68,6 +68,9 @@ public static class VoyagerRouteBudgetPolicy
     {
         if (request is null) throw new ArgumentNullException(nameof(request));
         var isReturn = !string.IsNullOrEmpty(request.JourneyId);
+        if(!VoyagerWallWindowPolicy.ValidExplicit(request.MaximumRoundTripWallSeconds)
+            || isReturn && request.MaximumRoundTripWallSeconds.HasValue)
+            return "Explicit outbound wall seconds must be600..86400; a return inherits its protected original/effective deadline.";
         if (isReturn && !Guid.TryParse(request.JourneyId, out _))
             return "A return must name the exact protected journey identifier.";
         if (request.PlanetId <= 0 || request.DestinationPlanetId < 0 || request.DestinationStarId < 0
@@ -102,6 +105,7 @@ public static class VoyagerRouteBudgetPolicy
         var isReturn = !string.IsNullOrEmpty(request.JourneyId);
         var result = new VoyagerRouteBudgetSnapshot
         {
+            MaximumRoundTripWallSeconds = request.MaximumRoundTripWallSeconds,
             SessionId = input.SessionId,
             OriginPlanetId = input.OriginPlanetId,
             OriginStarId = input.OriginStarId,
@@ -272,6 +276,9 @@ public static class VoyagerRouteBudgetPolicy
         if (!result.CoreBufferSufficient)
             Block(result, "core_buffer_or_generation_insufficient", "Native core capacity, current charge or conservative generation cannot sustain one finite warp leg and its declared return-recharge minimum.");
         result.RouteStateHash = BuildRouteStateHash(input, request);
+        if(request.MaximumRoundTripWallSeconds.HasValue)
+            result.RouteStateHash=CanonicalStateHash.Combine("voyager-explicit-wall-v1",result.RouteStateHash,
+                request.MaximumRoundTripWallSeconds.Value);
         result.BudgetSufficient = result.Blockers.Count == 0;
         // Even a sufficient preview is tokenless and never grants movement or commit authority.
         return result;

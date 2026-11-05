@@ -446,7 +446,9 @@ internal sealed partial class NormalGameActionCoordinator
     public GameCallResult<PreparedNormalAction> PrepareTransferOnMainThread(
         string? requestedSessionId,
         PrepareTransferRequest request)
-        => request.Direction == TransferDirections.ProductionResetToPlayer
+        => request.Direction == TransferDirections.StationStorageToPlayer
+            ? PrepareStationCargoWithdrawalOnMainThread(requestedSessionId, request)
+            : request.Direction == TransferDirections.ProductionResetToPlayer
             ? PrepareProductionResetOnMainThread(requestedSessionId,request)
             : request.Direction == TransferDirections.PlayerToGeneratorFuel
             ? PrepareGeneratorColdStartFuelOnMainThread(requestedSessionId, request)
@@ -841,7 +843,8 @@ internal sealed partial class NormalGameActionCoordinator
                 CancelBlueprintBuildOnMainThread(action);
                 break;
             case NormalActionKinds.Transfer:
-                if (action.Plan.TransferDirection == TransferDirections.ProductionResetToPlayer) ExecuteProductionResetOnMainThread(action);
+                if (action.Plan.TransferDirection == TransferDirections.StationStorageToPlayer) ExecuteStationCargoWithdrawalOnMainThread(action);
+                else if (action.Plan.TransferDirection == TransferDirections.ProductionResetToPlayer) ExecuteProductionResetOnMainThread(action);
                 else if (action.Plan.TransferDirection == TransferDirections.PlayerToGeneratorFuel) ExecuteGeneratorColdStartFuelOnMainThread(action);
                 else ExecuteStorageTransferOnMainThread(action);
                 break;
@@ -1372,7 +1375,9 @@ internal sealed partial class NormalGameActionCoordinator
             case NormalActionKinds.CancelBlueprintBuild:
                 return RevalidateBlueprintCancelOnMainThread(plan);
             case NormalActionKinds.Transfer:
-                return plan.TransferDirection == TransferDirections.ProductionResetToPlayer
+                return plan.TransferDirection == TransferDirections.StationStorageToPlayer
+                    ? RevalidateStationCargoWithdrawalOnMainThread(plan)
+                    : plan.TransferDirection == TransferDirections.ProductionResetToPlayer
                     ? RevalidateProductionResetOnMainThread(plan)
                     : plan.TransferDirection == TransferDirections.PlayerToGeneratorFuel
                     ? RevalidateGeneratorColdStartFuelOnMainThread(plan) : RevalidateStorageTransferOnMainThread(plan);
@@ -1685,6 +1690,7 @@ internal sealed partial class NormalGameActionCoordinator
             } : null,
             ResearchQueueReadback = action.ResearchQueueReadback,
             StorageConfigurationReadback = action.StorageConfigurationReadback,
+            StationCargoWithdrawalReadback = action.StationCargoWithdrawalReadback,
             MechaWarperSupplyReadback = action.MechaWarperSupplyReadback,
             NativeHomeReturnFirstEffect=action.NativeHomeReturnFirstEffect,
             MechaWarperAutoSupplyReadback = action.MechaWarperAutoSupplyReadback,
@@ -2437,6 +2443,7 @@ internal sealed partial class NormalGameActionCoordinator
         public UpgradeReadback? UpgradeReadback { get; set; }
         public ResearchQueueReadback? ResearchQueueReadback { get; set; }
         public StorageConfigurationReadback? StorageConfigurationReadback { get; set; }
+        public StationCargoWithdrawalReadback? StationCargoWithdrawalReadback { get; set; }
         public MechaWarperSupplyReadback? MechaWarperSupplyReadback { get; set; }
         public MechaWarperAutoSupplyReadback? MechaWarperAutoSupplyReadback { get; set; }
         public Spherewright.Bridge.Core.Factory.BlueprintBuildState? BlueprintBuild { get; set; }

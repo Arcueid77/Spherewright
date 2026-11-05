@@ -38,12 +38,13 @@ public sealed class VoyagerActionToolsTests
             ("spherewright_prepare_interplanetary_flight","stoppedSpaceReturnMaximumGameTicks","integer"),
             ("spherewright_prepare_interplanetary_flight","stoppedSpaceReturnMaximumWallSeconds","number"),
             ("spherewright_prepare_interplanetary_flight","savedHomeReturnPredecessorActionId","string"),
+            ("spherewright_preview_voyager_route","maximumRoundTripWallSeconds","integer"),
             ("spherewright_prepare_interplanetary_flight","priorHomeReturnKnownTerminalFailed","boolean")})
         {
             var tool=Assert.Single(tools,t=>t.Name==entry.Item1);var schema=tool.InputSchema;
             var type=schema.GetProperty("properties").GetProperty(entry.Item2).GetProperty("type");
-            if(entry.Item2=="savedHomeReturnPredecessorActionId")
-                Assert.Equal(new[]{"string","null"},type.EnumerateArray().Select(t=>t.GetString()).ToArray());
+            if(entry.Item2 is "savedHomeReturnPredecessorActionId" or "maximumRoundTripWallSeconds")
+                Assert.Equal(new[]{entry.Item3,"null"},type.EnumerateArray().Select(t=>t.GetString()).ToArray());
             else Assert.Equal(entry.Item3,type.GetString());
             Assert.DoesNotContain(entry.Item2,schema.GetProperty("required").EnumerateArray().Select(p=>p.GetString()));
             Assert.False(schema.GetProperty("properties").TryGetProperty("cancellationToken",out _));

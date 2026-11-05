@@ -3,6 +3,11 @@
 
 [English](https://github.com/Arcueid77/Spherewright/blob/main/docs/agent-playbook.md) | [简体中文](agent-playbook.zh-CN.md)
 
+站内货物新增显式 `station-storage-to-player` 转移子集：当地已建2103/2104站、唯一现物且零增产点槽位、所选槽无在途订单、精确数量1..100、空手、普通建造交互范围及已证背包容量。原生 `StationComponent.TakeItem` 与 `StorageComponent.AddItemStacked` 在同一tick核对数量/增产点守恒；其余槽配置、站状态及背包物料必须不变。此手动UI操作不要求站点供电。prepare必须有 `stationCargoWithdrawal`，终态须有 `stationCargoWithdrawalReadback`；缺少同源回执不暴露token。后续正常机甲自动补给可能移动刚收到的燃料：保留即时原回执，再分别读背包/燃料舱，不重放转移。
+
+新出航预览可显式提供 `maximumRoundTripWallSeconds`600..86400，作为与原游戏tick、物品、能源和返航储备独立的有限墙钟预算。不传则保留旧tick换算时钟；返航必须不传并继承原始/有效时钟。该值进入哈希及同源回显，并在新保护Journey记录中保持不可变；旧记录保留原序列化字节形状和两小时上限。现有确认式远端恢复方案已支持最多24小时有限窗；须在真实所有者授权内选择足够有限时间，经新鲜Native方案/摘要确认，不改旧时钟、不退还消耗。300秒启动到真实实操门及所有逐动作停止/充能帽不变。这些仍是源码能力，实装及实机验收需分别证明。
+
+
 每个会话首次游戏操作前必须阅读本指南。它也是内嵌 MCP 资源 `spherewright://agent/playbooks/opening-movement-v1`，不需要活动 Bridge 即可读取。
 
 ## 打开存档并保持旧自动任务停止

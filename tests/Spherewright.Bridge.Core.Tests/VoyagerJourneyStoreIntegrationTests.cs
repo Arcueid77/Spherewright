@@ -823,7 +823,7 @@ public sealed partial class VoyagerJourneyStoreIntegrationTests
         internal string PrimaryPath => GameSave.SavePath(Identity);
         internal int SyntheticPrimaryProofWrites { get; private set; }
         internal Fixture(bool returnLeg = false, bool persistJourney = true, bool returnedHome = false,
-            string recoveryPhase = "recovery_required", bool originalWindowExpired = false)
+            string recoveryPhase = "recovery_required", bool originalWindowExpired = false,int? maximumRoundTripWallSeconds=null)
         {
             if (recoveryPhase != "active" && recoveryPhase != "recovery_required" && recoveryPhase != "outcome_unknown")
                 throw new ArgumentException("Use an actual active or interrupted journey phase.", nameof(recoveryPhase));
@@ -851,7 +851,8 @@ public sealed partial class VoyagerJourneyStoreIntegrationTests
                     StartedAtGameTick = outboundSavedTick, SpentGameTicks = 0, MaximumGameTicks = 36000, ReturnReserveGameTicks = 18000,
                     ReturnEnergyFloorJoules = 20000000d, WithdrawalReserveJoules = 10000000d,
                     ReturnCoreEnergyMinimumJoules = 8000000d, ExtraWarperReserve = 1,
-                    IssuedAtUtc = issued, DeadlineUtc = issued.AddMinutes(30) };
+                    IssuedAtUtc = issued, MaximumRoundTripWallSeconds=maximumRoundTripWallSeconds,
+                    DeadlineUtc = issued.AddSeconds(maximumRoundTripWallSeconds??1800) };
                 if (persistJourney) Assert.True(Store.TryPersistVoyagerJourney(Record, out var firstRejection), firstRejection);
                 Assert.True(Store.TryMarkAttemptStarted(Ticket.CheckpointId, OriginalFlightId, outboundSavedTick + 1, out _));
                 var activeFlightId = OriginalFlightId;

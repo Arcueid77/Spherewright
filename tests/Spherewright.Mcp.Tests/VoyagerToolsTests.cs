@@ -13,6 +13,19 @@ namespace Spherewright.Mcp.Tests;
 
 public sealed class VoyagerToolsTests
 {
+    [Theory]
+    [InlineData(null,true)][InlineData(3600,true)][InlineData(43200,false)]
+    public async Task ExplicitFiniteOutboundWallWindowRequiresExactNativeEcho(int? echo,bool error)
+    {
+        var bridge=NewBridge();var proxy=Proxy(bridge);proxy.Budget.MaximumRoundTripWallSeconds=echo;
+        var result=await SpherewrightTools.PreviewVoyagerRouteAsync(bridge,"synthetic-owned",901,902,
+            "player-hash","catalog-hash",maximumRoundTripWallSeconds:43200);
+        Assert.Equal(error,result.IsError);
+        var request=Assert.IsType<PreviewVoyagerRouteRequest>(proxy.LastRequest);
+        Assert.Equal(43200,request.MaximumRoundTripWallSeconds);
+        Assert.Single(proxy.Calls);
+    }
+
     [Fact]
     public async Task CatalogMapsOwnedOriginAndPreservesUnknownVersusObservedZero()
     {

@@ -52,7 +52,8 @@ public static partial class SpherewrightTools
         [Description("Finite maximum warp game ticks per leg, default1800; separate from the whole round-trip and return windows.")] long maximumWarpGameTicksPerLeg = 1800,
         [Description("Finite maximum arrival offset in metres, default3000000; an arrival envelope is not proof of landing.")] double maximumArrivalOffsetMeters = 3000000d,
         [Description("Original protected journeyId for a homebound return preview; null starts an outbound round-trip budget. A return validates only the remaining homebound leg and original reserve.")] string? journeyId = null,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        [Description("Optional explicit finite outbound round-trip wall window600..86400 seconds. Omit to retain the legacy tick-derived deadline. This grants no game ticks, items or energy; returns must omit it and inherit the protected original/effective deadline. Read back the matching maximumRoundTripWallSeconds echo; older cohorts cannot supply this window.")] int? maximumRoundTripWallSeconds = null)
     {
         var result = await bridgeClient.PreviewVoyagerRouteAsync(sessionId, new PreviewVoyagerRouteRequest
         {
@@ -69,7 +70,13 @@ public static partial class SpherewrightTools
             MaximumWarpGameTicksPerLeg = maximumWarpGameTicksPerLeg,
             MaximumArrivalOffsetMeters = maximumArrivalOffsetMeters,
             JourneyId = journeyId,
+            MaximumRoundTripWallSeconds = maximumRoundTripWallSeconds,
         }, cancellationToken).ConfigureAwait(false);
+        if(result.Success && maximumRoundTripWallSeconds.HasValue
+            && result.Value?.MaximumRoundTripWallSeconds!=maximumRoundTripWallSeconds)
+            return ToToolResult(BridgeCallResult<VoyagerRouteBudgetSnapshot>.Failed(BridgeError.Create(
+                BridgeErrorCodes.BridgeNotReady,"The Plugin did not echo the explicit finite wall window.",false,
+                "Use matching Plugin/MCP bytes; do not assume an older cohort extended its deadline.")),string.Empty);
         if (result.Success && result.Value is { } snapshot && (snapshot.Prepared || snapshot.Executable || snapshot.CommitAllowedNow))
         {
             return UnsafeVoyagerRead<VoyagerRouteBudgetSnapshot>();

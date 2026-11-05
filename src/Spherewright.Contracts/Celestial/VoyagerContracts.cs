@@ -89,6 +89,7 @@ public sealed class VoyagerResourceSummary
 
 public sealed class PreviewVoyagerRouteRequest
 {
+    public int? MaximumRoundTripWallSeconds { get; set; }
     public string? JourneyId { get; set; }
     public int PlanetId { get; set; }
     public int DestinationPlanetId { get; set; }
@@ -106,6 +107,7 @@ public sealed class PreviewVoyagerRouteRequest
 
 public sealed class VoyagerRouteBudgetSnapshot
 {
+    public int? MaximumRoundTripWallSeconds { get; set; }
     // Actual remaining confirmed task budget. MaximumFlightGameTicks on the
     // return preview is only its bounded flight allocation, not a new grant.
     public long? ProtectedRemainingJourneyGameTicks { get; set; }

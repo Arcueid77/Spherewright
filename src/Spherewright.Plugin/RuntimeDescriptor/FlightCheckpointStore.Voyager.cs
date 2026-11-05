@@ -1,4 +1,5 @@
 using System.Text;
+using Spherewright.Bridge.Core.Safety;
 using Spherewright.Plugin.Game;
 using Spherewright.Plugin.Security;
 using Spherewright.Plugin.Transport;
@@ -261,6 +262,7 @@ internal sealed partial class FlightCheckpointStore
             && old.DestinationStarId == next.DestinationStarId && old.StartedAtGameTick == next.StartedAtGameTick
             && old.MaximumGameTicks == next.MaximumGameTicks && old.ReturnReserveGameTicks == next.ReturnReserveGameTicks
             && old.IssuedAtUtc == next.IssuedAtUtc && old.DeadlineUtc == next.DeadlineUtc
+            && old.MaximumRoundTripWallSeconds == next.MaximumRoundTripWallSeconds
             && next.SpentGameTicks >= old.SpentGameTicks && next.ReturnEnergyFloorJoules >= old.ReturnEnergyFloorJoules
             && next.WithdrawalReserveJoules >= old.WithdrawalReserveJoules
             && next.ReturnCoreEnergyMinimumJoules >= old.ReturnCoreEnergyMinimumJoules
@@ -275,7 +277,7 @@ internal sealed partial class FlightCheckpointStore
         && r.ReturnReserveGameTicks >= 3600 && r.ReturnReserveGameTicks < r.MaximumGameTicks
         && r.SpentGameTicks >= 0 && ValidReturnOnlyTask(r) && ValidFailedLandingAdmissions(r)
         && r.StartedAtGameTick >= 0 && r.DeadlineUtc > r.IssuedAtUtc && r.IssuedAtUtc != default
-        && r.DeadlineUtc - r.IssuedAtUtc <= TimeSpan.FromHours(2)
+        && VoyagerWallWindowPolicy.ValidRecord(r.IssuedAtUtc,r.DeadlineUtc,r.MaximumRoundTripWallSeconds)
         && FinitePositive(r.ReturnEnergyFloorJoules) && FinitePositive(r.WithdrawalReserveJoules)
         && FinitePositive(r.ReturnCoreEnergyMinimumJoules) && r.ExtraWarperReserve >= 0 && r.ExtraWarperReserve <= 18
         && new[] { "outbound", "remote_landed", "return", "home_awaiting_save", "completed", "recovery_required", "outcome_unknown", "recovered_closed", "prelaunch_failed" }.Contains(r.Phase)
@@ -313,6 +315,8 @@ internal sealed partial class VoyagerJourneyRecord
     public int ExtraWarperReserve { get; set; }
     public DateTimeOffset IssuedAtUtc { get; set; }
     public DateTimeOffset DeadlineUtc { get; set; }
+    public int? MaximumRoundTripWallSeconds { get; set; }
+    public bool ShouldSerializeMaximumRoundTripWallSeconds()=>MaximumRoundTripWallSeconds.HasValue;
     public long? LastLandedGameTick { get; set; }
     public long? CompletedSaveGameTick { get; set; }
     public string? CompletedSaveActionId { get; set; }

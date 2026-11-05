@@ -2,6 +2,11 @@
 
 [English](#spherewright-agent-playbook-opening-and-core-operation) | [简体中文](agent-playbook.zh-CN.md)
 
+Station cargo has an explicit `station-storage-to-player` transfer subset: a local built2103/2104 station, one unique physical zero-inc slot, no selected-slot orders, count1..100, empty hand, ordinary build range and proven package capacity. Native `StationComponent.TakeItem` and `StorageComponent.AddItemStacked` conserve same-tick count/inc; unrelated slot configuration, station state and package stock must remain unchanged. Power is not required for this manual UI operation. Require `stationCargoWithdrawal` at prepare and `stationCargoWithdrawalReadback` at terminal; missing cohort proof exposes no token. A later ordinary mecha auto-supply may move newly received fuel: retain the immediate receipt and inspect the later package/chamber separately, without replay.
+
+New outbound previews optionally accept `maximumRoundTripWallSeconds`600..86400. It is an explicit finite wall allowance, independent of unchanged game-tick, item, energy and return reserves. Omission retains the legacy tick-derived deadline; returns must omit the field and inherit their original/effective clock. The value is hashed, echoed and immutable in new protected journey records. Legacy records keep their old serialized shape and two-hour bound. The existing confirmed remote-recovery proposal already permits a finite window up to24 hours; select enough finite time under actual owner authority, with a fresh Native plan/digest, without rewriting old deadlines or refunding spending. The300-second startup-to-real-work gate and all per-action stop/charge caps remain unchanged. These are source capabilities until separately cold-installed and accepted live.
+
+
 Read this playbook before the first gameplay action in a session. It is also the embedded MCP resource `spherewright://agent/playbooks/opening-movement-v1`, available without a live Bridge.
 
 ## Open a saved world without continuing old automation

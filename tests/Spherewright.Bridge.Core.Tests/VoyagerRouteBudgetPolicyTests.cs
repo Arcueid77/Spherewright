@@ -8,6 +8,26 @@ namespace Spherewright.Bridge.Core.Tests;
 public sealed class VoyagerRouteBudgetPolicyTests
 {
     [Fact]
+    public void ExplicitWallBudgetChangesOnlyItsBoundHashAndNeverTheMaterialEnergyOrTickReserves()
+    {
+        var input=Facts();var request=Request();
+        var legacy=VoyagerRouteBudgetPolicy.Evaluate(input,request);
+        request.MaximumRoundTripWallSeconds=43200;
+        var finite=VoyagerRouteBudgetPolicy.Evaluate(input,request);
+        Assert.Equal(legacy.BudgetSufficient,finite.BudgetSufficient);
+        Assert.Equal(43200,finite.MaximumRoundTripWallSeconds);
+        Assert.NotEqual(legacy.RouteStateHash,finite.RouteStateHash);
+        Assert.Equal(legacy.MaximumFlightGameTicks,finite.MaximumFlightGameTicks);
+        Assert.Equal(legacy.ReturnReserveGameTicks,finite.ReturnReserveGameTicks);
+        Assert.Equal(legacy.RequiredWarpers,finite.RequiredWarpers);
+        Assert.Equal(legacy.OutboundEnergyBudgetJoules,finite.OutboundEnergyBudgetJoules);
+        Assert.Equal(legacy.ReturnEnergyBudgetJoules,finite.ReturnEnergyBudgetJoules);
+        Assert.Equal(legacy.WithdrawalReserveJoules,finite.WithdrawalReserveJoules);
+        request.MaximumRoundTripWallSeconds=86400;
+        Assert.NotEqual(finite.RouteStateHash,VoyagerRouteBudgetPolicy.Evaluate(input,request).RouteStateHash);
+    }
+
+    [Fact]
     public void EnablingNativeAutoSupplyDoesNotLowerTheOriginalWarperReserve()
     {
         var input=Facts();input.NativeWarperCount=2;input.PackageWarperCount=40;input.AutoReplenishWarper=false;

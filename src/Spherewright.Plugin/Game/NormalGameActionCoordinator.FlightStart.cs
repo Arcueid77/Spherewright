@@ -12,6 +12,7 @@ internal sealed partial class NormalGameActionCoordinator
         var budget = plan.VoyagerBudget!;
         InitializeVoyagerFlightNavigationOnMainThread(action);
         if (!EnsureFlightCheckpointOnMainThread(action)) return;
+        var issuedAt=DateTimeOffset.UtcNow;
         var journey = plan.VoyagerReturnLeg ? _flightCheckpoints.VoyagerJourney! : new VoyagerJourneyRecord
         {
             JourneyId = plan.VoyagerJourneyId!, OwnedSaveName = _sessions.CaptureOnMainThread().SaveName!,
@@ -23,8 +24,10 @@ internal sealed partial class NormalGameActionCoordinator
             WithdrawalReserveJoules = budget.WithdrawalReserveJoules,
             ReturnCoreEnergyMinimumJoules = budget.ReturnCoreEnergyMinimumJoules,
             ExtraWarperReserve = plan.VoyagerRequest!.ExtraWarperReserve,
-            IssuedAtUtc = DateTimeOffset.UtcNow,
-            DeadlineUtc = DateTimeOffset.UtcNow.AddSeconds(budget.MaximumFlightGameTicks / 60d * 2d + 120d),
+            IssuedAtUtc = issuedAt,
+            MaximumRoundTripWallSeconds = plan.VoyagerRequest!.MaximumRoundTripWallSeconds,
+            DeadlineUtc = VoyagerWallWindowPolicy.OutboundDeadline(issuedAt,budget.MaximumFlightGameTicks,
+                plan.VoyagerRequest!.MaximumRoundTripWallSeconds),
         };
         if (plan.VoyagerReturnLeg && journey.LastLandedGameTick.HasValue)
             journey.SpentGameTicks += Math.Max(0L, GameMain.gameTick - journey.LastLandedGameTick.Value);
