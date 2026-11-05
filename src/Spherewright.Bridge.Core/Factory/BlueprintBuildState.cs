@@ -25,6 +25,8 @@ public sealed class BlueprintBuildState
     public List<StructuredConstructionControlState> PreviousConstructionWindows { get; set; } = new();
     public SavedFactoryTailCertificate? SavedTailCompletion {get;set;}
     public bool ShouldSerializeSavedTailCompletion() => SavedTailCompletion is not null;
+    public List<SavedPaidConstructionStop> SavedPaidStops { get; set; } = new();
+    public bool ShouldSerializeSavedPaidStops() => SavedPaidStops?.Count > 0;
 
     public static BlueprintBuildState Create(BlueprintSiteSnapshot site, FoundryConstructionPlan? foundryPlan = null,
         FoundryConstructionIntent? foundryIntent = null, StructuredConstructionBinding? structuredConstruction = null)
@@ -76,6 +78,9 @@ public sealed class BlueprintBuildState
             ConstructionControl?.Validate(Site.CapturedAtGameTick);
             if(SavedTailCompletion is not null && !SavedTailCompletion.Matches(this,LastEvidenceGameTick))
                 throw new InvalidDataException("Saved tail completion must bind the original unchanged control and later Native idle pass.");
+            if (SavedPaidStops is null || SavedPaidStops.Count > 16 || SavedPaidStops.Any(s => s is null || !s.Matches(this, LastEvidenceGameTick))
+                || SavedPaidStops.Select(s => s.EvidenceHash()).Distinct().Count() != SavedPaidStops.Count)
+                throw new InvalidDataException("Saved paid stop must bind unchanged submission/control and a later exact Native idle pass.");
             if (PreviousConstructionWindows is null || PreviousConstructionWindows.Count > 16
                 || PreviousConstructionWindows.Any(w => w is null) || PreviousConstructionWindows.Count > 0 && ConstructionControl is null)
                 throw new InvalidDataException("Invalid paid construction window history.");
@@ -83,7 +88,8 @@ public sealed class BlueprintBuildState
             {
                 var old = PreviousConstructionWindows[i]; old.Validate(Site.CapturedAtGameTick);
                 var next = i + 1 < PreviousConstructionWindows.Count ? PreviousConstructionWindows[i + 1] : ConstructionControl!;
-                if (!next.IsNewWindowFor(old) || old.PhysicalIdleVerifiedAtGameTick > LastEvidenceGameTick)
+                if (!(next.IsNewWindowFor(old) || SavedPaidStops.Any(s => s.PermitsWindow(this, old, next)))
+                    || old.PhysicalIdleVerifiedAtGameTick > LastEvidenceGameTick)
                     throw new InvalidDataException("A new finite window must retain a safely stopped paid predecessor.");
             }
             if (ConstructionControl?.Phase == "completed_idle"
@@ -98,7 +104,8 @@ public sealed class BlueprintBuildState
                 || ConstructionControl.Phase != "completed_idle"))
                 throw new InvalidDataException("A structured build is not complete before physical drone idle proof.");
         }
-        else if (ConstructionControl is not null || PreviousConstructionWindows is null || PreviousConstructionWindows.Count != 0)
+        else if (ConstructionControl is not null || PreviousConstructionWindows is null || PreviousConstructionWindows.Count != 0
+            || SavedPaidStops is null || SavedPaidStops.Count != 0)
             throw new InvalidDataException("A generic blueprint cannot inherit structured control authority.");
         var visited = new HashSet<int>();
         while (visited.Count < Objects.Count)
@@ -157,6 +164,20 @@ public sealed class BlueprintBuildState
             throw new InvalidOperationException("Fresh authority and proven previous outcomes are required.");
         foreach (var step in Objects.Where(o => o.State == BlueprintObjectStates.Blocked))
         { step.State = BlueprintObjectStates.NotSubmitted; step.FailureKind = null; }
+        Phase = "running"; ActiveSessionId = sessionId; ActionId = actionId;
+        MaximumObjectsToSubmit = maximumObjects; SubmittedThisAction = 0; Generation++;
+    }
+
+    public void BeginSavedPaidReadmission(string sessionId, string actionId, int maximumObjects, long tick)
+    {
+        var original = PreviousConstructionWindows.LastOrDefault();
+        if (Phase != "outcome_unknown" || original is null || ConstructionControl is null
+            || !Guid.TryParse(sessionId, out _) || !Guid.TryParse(actionId, out _) || tick < LastEvidenceGameTick
+            || maximumObjects != Objects.Count || !Objects.Any(o => o.State == BlueprintObjectStates.PendingConstruction)
+            || Objects.Any(o => o.State != BlueprintObjectStates.PendingConstruction && o.State != BlueprintObjectStates.Completed)
+            || !SavedPaidStops.Any(s => s.NativeSessionId == sessionId && s.StoppedActionId == ActionId
+                && s.PermitsWindow(this, original, ConstructionControl)))
+            throw new InvalidOperationException("Independent Native stop and fresh no-create paid authority are required.");
         Phase = "running"; ActiveSessionId = sessionId; ActionId = actionId;
         MaximumObjectsToSubmit = maximumObjects; SubmittedThisAction = 0; Generation++;
     }
@@ -256,8 +277,10 @@ public sealed class BlueprintBuildState
         var windows=PreviousConstructionWindows.Count == 0 ? current
             : CanonicalStateHash.Combine("structured-paid-continuation-progress-v1", current,
                 CanonicalStateHash.Combine("prior-windows", PreviousConstructionWindows.Select(w => (object)w.EvidenceHash()).ToArray()));
-        return SavedTailCompletion is null ? windows
+        var tail = SavedTailCompletion is null ? windows
             : CanonicalStateHash.Combine("later-native-tail-state-v1",windows,SavedTailCompletion.EvidenceHash());
+        return SavedPaidStops.Count == 0 ? tail : CanonicalStateHash.Combine("later-native-paid-stop-v1", tail,
+            CanonicalStateHash.Combine("independent-stops", SavedPaidStops.Select(s => (object)s.EvidenceHash()).ToArray()));
     }
 
     private static readonly HashSet<string> AllowedStates = new HashSet<string>(StringComparer.Ordinal)

@@ -16,6 +16,8 @@ public sealed class StructuredConstructionBinding
     public int DestinationObjectId { get; set; }
     public List<StructuredConstructionConnection> Steps { get; set; } = new List<StructuredConstructionConnection>();
     public List<StructuredConstructionEndpoint> Endpoints { get; set; } = new List<StructuredConstructionEndpoint>();
+    public StructuredEmptyBeltSource? EmptyBeltSource { get; set; }
+    public bool ShouldSerializeEmptyBeltSource() => EmptyBeltSource is not null;
 
     public static bool SupportsItem(int id) => id == 2301 || id == 2104 || id == 2201 || id == 2203
         || id == 2205 || id == 2001 || id == 2011 || IsFactoryCoreItem(id);
@@ -31,10 +33,12 @@ public sealed class StructuredConstructionBinding
     {
         if (Steps is null || Steps.Any(s => s is null) || Endpoints is null || Endpoints.Any(e => e is null))
             throw new InvalidDataException("Invalid structured provenance collections.");
-        return CanonicalStateHash.Combine("structured-native-construction-v1", Kind, JourneyId,
+        var original = CanonicalStateHash.Combine("structured-native-construction-v1", Kind, JourneyId,
             NativePlanHash, ResourceNodeId, ResourceStateHash, SourceObjectId, DestinationObjectId,
             CanonicalStateHash.Combine("connections", Steps.Select(s => (object)s.Hash()).ToArray()),
             CanonicalStateHash.Combine("endpoints", Endpoints.Select(e => (object)e.Hash()).ToArray()));
+        return EmptyBeltSource is null ? original
+            : CanonicalStateHash.Combine("structured-empty-belt-source-v1", original, EmptyBeltSource.Hash());
     }
 
     public void Validate(BlueprintSiteSnapshot site)
@@ -63,9 +67,65 @@ public sealed class StructuredConstructionBinding
                 || !Finite(s.Yaw)))
             throw new InvalidDataException("Invalid native structured construction provenance.");
         foreach (var endpoint in Endpoints) endpoint.Validate();
+        EmptyBeltSource?.Validate(this, site);
     }
 
     private static bool Finite(float x) => !float.IsNaN(x) && !float.IsInfinity(x);
+}
+
+// A copied empty OPEN TAIL admission, never a Native object or a replay grant.
+// Ordinary Native source-cover creation still proves exact cargo and neighbours.
+public sealed class StructuredEmptyBeltSource
+{
+    public int ObjectId { get; set; }
+    public string BindingHash { get; set; } = string.Empty;
+    public string CargoHash { get; set; } = string.Empty;
+    public string CompletionTopologyHash { get; set; } = string.Empty;
+    public int CargoStackCount { get; set; }
+
+    public bool MatchesCurrent(int objectId, string bindingHash, string cargoHash, string completionTopologyHash, int cargoStackCount)
+    {
+        Hash();
+        return ObjectId == objectId && cargoStackCount == 0
+            && BeltSourceReusePolicy.SameEvidence(BindingHash, bindingHash)
+            && BeltSourceReusePolicy.SameEvidence(CargoHash, cargoHash)
+            && BeltSourceReusePolicy.SameEvidence(CompletionTopologyHash, completionTopologyHash);
+    }
+
+    public string Hash()
+    {
+        if (ObjectId <= 0 || CargoStackCount != 0
+            || !OwnedWorldRecoveryPolicy.IsCanonicalFingerprint(BindingHash)
+            || !OwnedWorldRecoveryPolicy.IsCanonicalFingerprint(CargoHash)
+            || !OwnedWorldRecoveryPolicy.IsCanonicalFingerprint(CompletionTopologyHash))
+            throw new InvalidDataException("Invalid empty belt source evidence.");
+        return CanonicalStateHash.Combine("structured-empty-belt-source-evidence-v1", ObjectId,
+            BindingHash, CargoHash, CompletionTopologyHash, CargoStackCount);
+    }
+
+    public void Validate(StructuredConstructionBinding binding, BlueprintSiteSnapshot site)
+    {
+        Hash();
+        if (!site.NativeCheckPerformed || !site.NativeCheckPassed
+            || binding.Kind != "belt" || binding.SourceObjectId != ObjectId || binding.DestinationObjectId != 0
+            || site.Objects.Count < 2 || site.Objects.Any(o => o.ItemId != 2001)
+            || binding.Endpoints.Count != 1 || binding.Endpoints[0].ObjectId != ObjectId || binding.Endpoints[0].ItemId != 2001
+            || binding.Endpoints[0].ExistingConnections.Any(c => c.Slot == 0)
+            || binding.Steps[0].InputObjectId != ObjectId || binding.Steps[0].InputStepIndex != -1
+            || binding.Steps[0].InputFromSlot != 0 || binding.Steps[0].InputToSlot != 1
+            || binding.Steps[binding.Steps.Count - 1].OutputObjectId != 0)
+            throw new InvalidDataException("Empty source extension requires one exact existing open belt tail and only new output objects.");
+        for (var i = 0; i < binding.Steps.Count; i++)
+        {
+            var step = binding.Steps[i];
+            if (step.InputStepIndex != (i == 0 ? -1 : i - 1) || step.InputObjectId != (i == 0 ? ObjectId : 0)
+                || step.InputFromSlot != 0 || step.InputToSlot != 1
+                || step.OutputStepIndex != (i + 1 < binding.Steps.Count ? i + 1 : -1)
+                || step.OutputObjectId != 0 || step.OutputFromSlot != 0
+                || i + 1 < binding.Steps.Count && step.OutputToSlot != 1)
+                throw new InvalidDataException("Empty source extension requires the exact directed NEW belt chain.");
+        }
+    }
 }
 
 public sealed class StructuredConstructionEndpoint

@@ -3,6 +3,7 @@ using Spherewright.Bridge.Core.Factory;
 using Spherewright.Bridge.Core.Safety;
 using Spherewright.Contracts.Factory;
 using Spherewright.Plugin.Game;
+using Spherewright.Plugin.Transport;
 using Xunit;
 
 namespace Spherewright.Bridge.Core.Tests;
@@ -12,6 +13,24 @@ namespace Spherewright.Bridge.Core.Tests;
 [Collection("Owned resume native substitutes")]
 public sealed class SavedFactorySiteTests
 {
+    [Fact]
+    public void IndependentlyCertifiedPaidStopMayRetainPendingObjectsWithoutClaimingConstructionCompletion()
+    {
+        using var f = new Fixture(true, unknownTail: true, workFailure: true);
+        Assert.True(f.Store().TryRead(out var rows)); var b = rows.Single(x => x.Phase == "outcome_unknown");
+        var original = PluginJson.Serialize(b.ConstructionControl);
+        b.SavedPaidStops.Add(new() { OriginalActionId = b.ConstructionControl!.NativeCreateActionId!, StoppedActionId = b.ActionId!,
+            OriginalControlHash = b.ConstructionControl.EvidenceHash(), BuildPlanHash = b.PlanHash,
+            PaidSubmissionHash = SavedPaidConstructionStop.SubmissionHash(b), NativeSessionId = Guid.NewGuid().ToString(),
+            SourceFingerprint = CanonicalStateHash.Combine("synthetic-native-source"), SourceGameTick = 120,
+            NativeFactoryPassGameTick = 121, PhysicalIdleGameTick = 122 });
+        b.LastEvidenceGameTick = 122; b.Generation++; GameMain.gameTick = 130;
+        Assert.True(f.Store().TryPut(b)); Assert.Null(f.SavedLandingGuard()); Assert.Null(f.Guard());
+        Assert.Equal("landing_charge_completed_paid_site_required", f.LandingGuard());
+        Assert.False(PaidFactoryCompletionPolicy.HasCompletedIdleProof(b, 130));
+        Assert.Equal(original, PluginJson.Serialize(b.ConstructionControl));
+        Assert.Equal("outcome_unknown", b.Phase); Assert.Equal(BlueprintObjectStates.PendingConstruction, b.Objects[0].State);
+    }
     [Fact]
     public void CapturedLandingFailureReplaysAcrossReceiptCompletionRecoveryAndFreshLandingWithoutReplayingFlight()
     {

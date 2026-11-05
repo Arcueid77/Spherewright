@@ -52,10 +52,42 @@ internal sealed partial class GameSessionTracker
     private string? CompleteFailedLandingAdmission(VoyagerRemoteResumeEvidence evidence)
     {
         if (!evidence.FailedLandingRecovery) return null;
-        if (_remoteResumeAdoption is not { } adoption || adoption.FirstFailure is not null
-            || !IsCurrentSessionOwned || _sessionId != adoption.SessionId || !ReferenceEquals(GameMain.data, adoption.World)
-            || !_flightCheckpoints.TryFinishFailedLandingAdmission(adoption.ResumeActionId, true, null, GameMain.gameTick, out _))
-            return "failed_landing_healthy_admission_persistence_unproved";
+        const string code = "failed_landing_healthy_admission_persistence_unproved";
+        var decision = new NativeResumeDecisionEvidence("failed_landing_admission_completion", GameMain.gameTick,
+            DateTimeOffset.UtcNow, true);
+        var adoption = _remoteResumeAdoption;
+        string Fail()
+        {
+            adoption?.RetainFailure(decision.Failure(code));
+            return code;
+        }
+        if (!decision.Require("completion_adoption_present", adoption is not null)) return Fail();
+        if (!decision.Require("completion_prior_failure_absent", adoption!.FirstFailure is null)
+            || !decision.Require("completion_current_world_owned", IsCurrentSessionOwned)
+            || !decision.Require("completion_session_bound", _sessionId == adoption.SessionId)
+            || !decision.Require("completion_loaded_world_bound", ReferenceEquals(GameMain.data, adoption.World))) return Fail();
+        var journey = _flightCheckpoints.VoyagerJourney;
+        var run = journey?.FailedLandingAdmissions.LastOrDefault();
+        decision.Number("completion_source_tick", run?.SourceGameTick);
+        decision.Number("completion_adopted_tick", run?.AdoptedAtGameTick);
+        decision.Number("completion_conserved_spent_ticks", run?.ConservedSpentGameTicks);
+        decision.Number("completion_charge_tick_limit", run?.MaximumChargeGameTicks);
+        decision.Number("completion_journey_tick_limit", journey?.MaximumGameTicks);
+        decision.Number("completion_return_reserve_ticks", journey?.ReturnReserveGameTicks);
+        decision.Number("completion_deadline_remaining_seconds", run is null ? null : (run.DeadlineUtc - DateTimeOffset.UtcNow).TotalSeconds);
+        decision.Observe("completion_run_adopted", run?.State == "adopted");
+        decision.Observe("completion_run_action_bound", run?.ActionId == adoption.ResumeActionId);
+        var persisted = _flightCheckpoints.TryFinishFailedLandingAdmission(adoption.ResumeActionId, true, null,
+            GameMain.gameTick, out var rejection);
+        if (!decision.Require("completion_terminal_persisted", persisted))
+        {
+            // Store rejections contain bounded policy text/exception TYPE,
+            // never private exception messages, paths or document contents.
+            var failure = decision.Failure(code);
+            failure.Observations["store_rejection"] = rejection;
+            adoption.RetainFailure(failure);
+            return code;
+        }
         return null;
     }
 

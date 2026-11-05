@@ -19,11 +19,12 @@ internal sealed partial class NormalGameActionCoordinator
             return "remote_resume_charge_rts_or_manual_velocity_nonzero";
         if (h?.techQueue is not { Length: 32 } || !VoyagerMechaWorkIdle(p))
             return "remote_resume_charge_mecha_work_not_quiescent";
-        if (factory is null
-            || module.buildTargetTotalCount != 0 || module.repairTargetTotalCount != 0 || module.autoReconstructTargetTotalCount != 0
-            || module.buildTargets is { } bt && (bt.Length > 256 || bt.Any(t => t.objectId != 0))
-            || module.repairTargets is { } rt && (rt.Length > 256 || rt.Any(t => t.objectId != 0))
-            || module.autoReconstructTargets is { } at && (at.Length > 256 || at.Any(t => t.objectId != 0)))
+        if (factory is null)return "remote_resume_charge_native_construction_not_empty";
+        var emptySearch = module.buildTargetTotalCount == 0 && module.repairTargetTotalCount == 0 && module.autoReconstructTargetTotalCount == 0
+            && !(module.buildTargets is { } bt && (bt.Length > 256 || bt.Any(t => t.objectId != 0)))
+            && !(module.repairTargets is { } rt && (rt.Length > 256 || rt.Any(t => t.objectId != 0)))
+            && !(module.autoReconstructTargets is { } at && (at.Length > 256 || at.Any(t => t.objectId != 0)));
+        if (!emptySearch && !HasCurrentSavedFactoryTail(p,journeyId))
             return "remote_resume_charge_native_construction_not_empty";
         // The empty-factory path remains unchanged. A live original landing
         // may bind only a completely built, fully paid owned site. Recovery

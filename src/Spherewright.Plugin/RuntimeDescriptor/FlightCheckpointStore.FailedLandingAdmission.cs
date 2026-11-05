@@ -105,7 +105,7 @@ internal sealed partial class FlightCheckpointStore
     internal bool TryFinishFailedLandingAdmission(string actionId, bool healthProved,
         NativeResumeFailureSnapshot? failure, long? observedOwnedTick, out string rejection)
     {
-        rejection = "failed_landing_terminal_admission_unproved";
+        rejection = "failed_landing_terminal_action_or_state_unproved";
         var j = VoyagerJourney; var r = j?.FailedLandingAdmissions.LastOrDefault();
         if (j is null || r is null || r.ActionId != actionId || r.State is not ("pending_native_load" or "adopted")
             || healthProved && (r.State != "adopted" || failure is not null || !observedOwnedTick.HasValue)
@@ -113,11 +113,17 @@ internal sealed partial class FlightCheckpointStore
         if (observedOwnedTick.HasValue)
         {
             var elapsed = (decimal)observedOwnedTick.Value - r.SourceGameTick;
-            if (elapsed < 0 || observedOwnedTick < r.AdoptedAtGameTick
-                || healthProved && elapsed > r.MaximumChargeGameTicks + VoyagerLocalWalkReservePolicy.StopGameTicks
-                || r.ConservedSpentGameTicks + elapsed > long.MaxValue) return false;
-            if (healthProved && (DateTimeOffset.UtcNow >= r.DeadlineUtc
-                || r.ConservedSpentGameTicks + elapsed + j.ReturnReserveGameTicks + 1 + VoyagerLocalWalkReservePolicy.StopGameTicks > j.MaximumGameTicks)) return false;
+            rejection = "failed_landing_terminal_tick_regressed";
+            if (elapsed < 0 || observedOwnedTick < r.AdoptedAtGameTick) return false;
+            rejection = "failed_landing_terminal_charge_ticks_exhausted";
+            if (healthProved && elapsed > r.MaximumChargeGameTicks + VoyagerLocalWalkReservePolicy.StopGameTicks) return false;
+            rejection = "failed_landing_terminal_accounting_overflow";
+            if (r.ConservedSpentGameTicks + elapsed > long.MaxValue) return false;
+            rejection = "failed_landing_terminal_deadline_exhausted";
+            if (healthProved && DateTimeOffset.UtcNow >= r.DeadlineUtc) return false;
+            rejection = "failed_landing_terminal_return_reserve_unfunded";
+            if (healthProved && r.ConservedSpentGameTicks + elapsed + j.ReturnReserveGameTicks + 1
+                + VoyagerLocalWalkReservePolicy.StopGameTicks > j.MaximumGameTicks) return false;
             // Every actual tick is conserved on success AND failure. A missing
             // Native observation is unknown, never a zero-tick refund.
             j.SpentGameTicks = (long)(r.ConservedSpentGameTicks + elapsed);

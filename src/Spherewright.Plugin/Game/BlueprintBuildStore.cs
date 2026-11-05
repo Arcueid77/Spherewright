@@ -61,18 +61,33 @@ internal sealed class BlueprintBuildStore
                     || proposed.Builds[index].Generation > state.Generation)
                     throw new InvalidDataException("Finite plan identity or generation regressed.");
                 var previous = proposed.Builds[index];
+                var priorStops = previous.SavedPaidStops.Select(s => s.EvidenceHash()).ToArray();
+                var nextStops = state.SavedPaidStops.Select(s => s.EvidenceHash()).ToArray();
+                var stopsUnchanged = priorStops.SequenceEqual(nextStops);
+                var appendedStop = nextStops.Length == priorStops.Length + 1
+                    && nextStops.Take(priorStops.Length).SequenceEqual(priorStops)
+                    && previous.ActionId == state.ActionId && previous.ConstructionControl is not null
+                    && state.ConstructionControl?.EvidenceHash() == previous.ConstructionControl.EvidenceHash()
+                    && state.SavedPaidStops.Last().StoppedActionId == state.ActionId
+                    && state.SavedPaidStops.Last().OriginalControlHash == previous.ConstructionControl.EvidenceHash();
+                if (!stopsUnchanged && !appendedStop)
+                    throw new InvalidDataException("Independent Native stop evidence is append-only and cannot revise its predecessor.");
                 var historyUnchanged = previous.PreviousConstructionWindows.Count == state.PreviousConstructionWindows.Count
                     && previous.PreviousConstructionWindows.Select(w => w.EvidenceHash())
                         .SequenceEqual(state.PreviousConstructionWindows.Select(w => w.EvidenceHash()));
                 var readmitted = previous.StructuredConstruction is not null && previous.ConstructionControl is not null
                     && state.ConstructionControl is not null && previous.ActionId != state.ActionId
-                    && previous.Phase == "paused" && previous.Objects.Any(o => o.State == BlueprintObjectStates.PendingConstruction)
+                    && (previous.Phase == "paused" || previous.Phase == "outcome_unknown"
+                        && SavedPaidConstructionStop.Current(previous, state.ConstructionControl.StartedAtGameTick) is { } stopped
+                        && stopped.NativeSessionId == state.ActiveSessionId)
+                    && previous.Objects.Any(o => o.State == BlueprintObjectStates.PendingConstruction)
                     && previous.Objects.All(o => o.State == BlueprintObjectStates.PendingConstruction || o.State == BlueprintObjectStates.Completed)
                     && state.PreviousConstructionWindows.Count == previous.PreviousConstructionWindows.Count + 1
                     && state.PreviousConstructionWindows.Take(previous.PreviousConstructionWindows.Count).Select(w => w.EvidenceHash())
                         .SequenceEqual(previous.PreviousConstructionWindows.Select(w => w.EvidenceHash()))
                     && state.PreviousConstructionWindows.Last().EvidenceHash() == previous.ConstructionControl.EvidenceHash()
-                    && state.ConstructionControl.IsNewWindowFor(previous.ConstructionControl);
+                    && (state.ConstructionControl.IsNewWindowFor(previous.ConstructionControl)
+                        || state.SavedPaidStops.Any(s => s.PermitsWindow(state, previous.ConstructionControl, state.ConstructionControl)));
                 if (!historyUnchanged && !readmitted)
                     throw new InvalidDataException("Construction history is append-only and cannot renew an active or unknown action.");
                 if (previous.StructuredConstruction is not null && previous.ConstructionControl is not null

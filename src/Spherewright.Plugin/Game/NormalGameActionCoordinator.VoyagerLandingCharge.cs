@@ -56,7 +56,14 @@ internal sealed partial class NormalGameActionCoordinator
         var perTick = facts?.MovementReserve?.PerNativeTickEnergyJoules;
         var sequence = wait is null || VoyagerLandingChargePolicy.NativeSequenceProved(
             wait.ArmedAtGameTick, wait.LastPrePlayerTick, GameMain.gameTick, postPlayer);
-        return VoyagerLandingChargePolicy.Blocker(new VoyagerLandingChargeFacts
+        var evidence = new NativeResumeDecisionEvidence(postPlayer ? "voyager_landing_charge_post_player" : "voyager_landing_charge_pre_player",
+            GameMain.gameTick, DateTimeOffset.UtcNow, true);
+        evidence.Number("projected_spent_ticks", facts?.JourneyBudget?.SpentGameTicks);
+        evidence.Number("original_maximum_ticks", facts?.JourneyBudget?.MaximumGameTicks);
+        evidence.Number("original_return_ticks", facts?.JourneyBudget?.ReturnReserveGameTicks);
+        evidence.Number("core_j", facts?.CoreEnergyJoules);
+        evidence.Number("loaded_j", facts?.JourneyBudget?.AvailableLoadedEnergyJoules);
+        var blocker = VoyagerLandingChargePolicy.Blocker(new VoyagerLandingChargeFacts
         {
             Admission = facts, ContinuingWait = continuing,
             OriginalFlightActive = VoyagerLandingChargeFlightMatches(action),
@@ -72,7 +79,9 @@ internal sealed partial class NormalGameActionCoordinator
             NowUtc = DateTimeOffset.UtcNow, ControlLeaseExpiresAtUtc = action.VoyagerControlLeaseExpiresAtUtc,
             CoreCapacityJoules = player.mecha.coreEnergyCap,
             ReturnCoreMinimumJoules = action.VoyagerJourney?.ReturnCoreEnergyMinimumJoules ?? double.NaN,
-        }, FlightLandingStableTicks, FlightLandingTimeoutTicks);
+        }, FlightLandingStableTicks, FlightLandingTimeoutTicks, evidence);
+        if (blocker is not null) action.VoyagerLocalStopFailure ??= evidence.Failure(blocker);
+        return blocker;
     }
 
     private bool TryWaitForVoyagerLandingCore(ActionRecord action, VoyagerRemoteIdleAdmissionDecision admission,

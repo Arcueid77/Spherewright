@@ -21,7 +21,7 @@ internal sealed partial class Player { internal PlanetFactory? factory; internal
 internal sealed partial class PlayerController { internal TestMotion actionWalk = new(), actionDrift = new(); }
 internal sealed class TestMotion { internal UnityEngine.Vector3 rtsVelocity, moveVelocity; }
 internal sealed partial class Mecha { internal ConstructionModuleComponent constructionModule = new(); }
-internal sealed class TestTarget { internal int objectId; }
+internal struct TestTarget { internal int objectId;internal float value; }
 internal sealed class ConstructionModuleComponent
 {
     internal int buildTargetTotalCount, repairTargetTotalCount, autoReconstructTargetTotalCount;
@@ -39,6 +39,7 @@ internal sealed class PlanetFactory
     internal TestCargoTraffic cargoTraffic = new();
     internal object cargoContainer = new();
     internal bool TestGeometryMatches = true, TestConnectionsMatch = true;
+    internal string TestSourceTopology = "sha256:" + new string('d',64);
     internal TestSiteConstructionSystem constructionSystem = new();
     internal Dictionary<(int, int), SavedFactoryPort> TestPorts = new();
     internal void ReadObjectConn(int id, int slot, out bool output, out int other, out int otherSlot)
@@ -55,7 +56,7 @@ internal struct TestEntity
     internal UnityEngine.Vector3 pos;
     internal UnityEngine.Quaternion rot;
 }
-internal struct TestPrebuild { internal int id; }
+internal struct TestPrebuild { internal int id,builderModuleId;internal bool isDestroyed; }
 internal sealed class TestFactorySystem { internal int minerCursor = 2; internal TestMiner[] minerPool = new TestMiner[4]; }
 internal struct TestMiner { internal int id, entityId, pcId, productId, productCount; }
 internal sealed class TestPowerSystem
@@ -137,8 +138,22 @@ internal sealed partial class NormalGameActionCoordinator
     // or stop-only stage4 controller. Its motion/cost proof has separate tests.
     private BlueprintBuildState? RetainedUnpoweredRecoveryIls(Player p, PlanetFactory f, string? journeyId, NativeResumeDecisionEvidence? evidence) => null;
     private bool SavedConstructionTailMatches(Player p, string? journeyId) => false;
-    private bool HasCurrentSavedFactoryTail(Player p,string? journeyId)=>false;
-    private bool HasCurrentSavedFactoryTailBuild(Player p,string? journeyId,BlueprintBuildState build)=>false;
+    private SavedPaidSearchCache? _testSavedSearch;private BlueprintBuildState? _testSavedBuild;
+    private bool HasCurrentSavedFactoryTail(Player p,string? journeyId)=>_testSavedSearch is not null && _testSavedBuild is not null
+        && _sessions.IsCurrentSessionOwned && journeyId==_testSavedBuild.StructuredConstruction!.JourneyId
+        && _testSavedSearch.Matches(p,p.factory!,_sessions.SessionId,_testSavedBuild);
+    private bool HasCurrentSavedFactoryTailBuild(Player p,string? journeyId,BlueprintBuildState build)
+        =>build.BuildId==_testSavedBuild?.BuildId && HasCurrentSavedFactoryTail(p,journeyId) && journeyId is not null
+            && (HasSavedStoppedPaidBatchReceipt(build,journeyId,GameMain.gameTick) || HasSavedPaidWorkReceipt(build,journeyId,GameMain.gameTick));
+    internal bool BindSavedSearchForTest(Player p,PlanetFactory f,BlueprintBuildState b)
+    {if(b.StructuredConstruction is null || !HasSavedPaidWorkReceipt(b,b.StructuredConstruction.JourneyId,GameMain.gameTick)
+        || !TryBindSavedPaidSearchCache(p,f,b,out var cache))return false;_testSavedSearch=cache;_testSavedBuild=b;return true;}
+    internal bool SavedSearchForTest(Player p,BlueprintBuildState b)
+        =>_testSavedSearch?.Matches(p,p.factory!,_sessions.SessionId,b)==true;
+    private static bool ConstructionOwnPrelaunchCacheClear(PlanetFactory f,BlueprintBuildState b)
+        =>b.Objects.Where(o=>o.State==BlueprintObjectStates.PendingConstruction).All(o=>o.PrebuildId>0
+            && o.PrebuildId<f.prebuildCursor && f.prebuildPool[o.PrebuildId.Value].id==o.PrebuildId
+            && f.prebuildPool[o.PrebuildId.Value].builderModuleId!=-1);
     internal static bool SavedTowerReceiptForTest(BlueprintBuildState b, string journeyId, long tick) => HasSavedPassiveTowerReceipt(b, journeyId, tick);
     internal static bool SavedPaidWorkReceiptForTest(BlueprintBuildState b,string journeyId,long tick)=>HasSavedPaidWorkReceipt(b,journeyId,tick);
     private static bool StructuredEntityMatches(PlanetFactory factory, int id, BlueprintBuildState build, BlueprintSiteObject spec,
@@ -154,6 +169,13 @@ internal sealed partial class NormalGameActionCoordinator
     private static UnityEngine.Vector3 ToVector(Vector3Snapshot p) => new(p.X, p.Y, p.Z);
     private static UnityEngine.Quaternion BlueprintRotation(QuaternionSnapshot p) => new(p.X, p.Y, p.Z, p.W);
     private static bool ProvesNativeBeltRotation(PlanetFactory f, int id) => f.TestGeometryMatches;
+    private static bool TryBeltSourceTopology(PlanetFactory f,int id,out string hash,
+        out List<FactoryConnectionSnapshot> connections,bool nativeCompletionRotation=false)
+    { hash=f.TestSourceTopology;connections=[];return f.TestGeometryMatches; }
+    internal bool BindSavedSourcesForTest(Player p,PlanetFactory f,string journey,IReadOnlyList<BlueprintBuildState> saved)
+        =>BindSavedEmptyBeltSourceTopologies(p,f,journey,saved,null);
+    internal bool SavedSourceMatchesForTest(PlanetFactory f,BlueprintBuildState build,string hash)
+        =>SavedEmptyBeltSourceTopologyMatches(f,build,hash);
     private static bool StructuredConnectionsMatch(PlanetFactory factory, BlueprintBuildState build) => factory.TestConnectionsMatch;
     private static bool TryObserveOwnedConstructionDrones(PlanetFactory factory, ConstructionModuleComponent module,
         out bool idle, out List<int> activeIds)

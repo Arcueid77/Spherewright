@@ -24,7 +24,7 @@ internal sealed partial class NormalGameActionCoordinator
                 && factory.prebuildCursor >= 1 && factory.prebuildCursor <= 131072 && factory.prebuildCursor <= factory.prebuildPool.Length
                 && factory.constructionSystem?.constructionModules is not null && factory.constructionSystem.constructStats is not null
                 && factory.constructionSystem.constructionModules.count == 0 && factory.constructionSystem.constructStats.count == 0)
-            || !Require("saved_factory_site_physical_idle", TryObserveOwnedConstructionDrones(factory, player.mecha.constructionModule,
+            || !Require("saved_factory_site_idle_or_bound_paid_tail", TryObserveOwnedConstructionDrones(factory, player.mecha.constructionModule,
                 out var idle, out _) && (idle || HasCurrentSavedFactoryTail(player,journeyId)))) return false;
         var ids = new HashSet<int>(); var entities = new HashSet<int>(); var pending = new HashSet<int>();
         var edges = new List<SavedFactoryEdge>();
@@ -33,6 +33,7 @@ internal sealed partial class NormalGameActionCoordinator
             var binding = build.StructuredConstruction;
             var control = build.ConstructionControl;
             var tailCertified=build.SavedTailCompletion?.Matches(build,GameMain.gameTick)==true;
+            var stopCertified=SavedPaidConstructionStop.Current(build,GameMain.gameTick) is not null;
             var currentTail=HasCurrentSavedFactoryTailBuild(player,journeyId,build);
             var complete = PaidFactoryCompletionPolicy.HasCompletedIdleProof(build, GameMain.gameTick)
                 || currentTail && build.Objects.All(o=>o.State==BlueprintObjectStates.Completed);
@@ -40,7 +41,7 @@ internal sealed partial class NormalGameActionCoordinator
                 && HasSavedPassiveTowerReceipt(build, binding.JourneyId, GameMain.gameTick);
             if (!Require("saved_factory_site_paid_idle_receipts", binding is not null && control is not null
                     && build.LastEvidenceGameTick <= GameMain.gameTick && build.Objects.Count == build.Site.Objects.Count
-                    && (tailCertified || currentTail || control.PhysicalIdleVerified && control.PhysicalIdleVerifiedAtGameTick <= GameMain.gameTick
+                    && (tailCertified || stopCertified || currentTail || control.PhysicalIdleVerified && control.PhysicalIdleVerifiedAtGameTick <= GameMain.gameTick
                     && control.DisabledNativeFactoryPassGameTick <= GameMain.gameTick && (!control.BindingLost || legacyTower)
                     && Guid.TryParse(control.NativeCreateActionId, out _)
                     && (complete && control.Phase == "completed_idle"
@@ -62,13 +63,15 @@ internal sealed partial class NormalGameActionCoordinator
                     var id = step.EntityId.GetValueOrDefault();
                     if (!step.CompletedAtGameTick.HasValue || step.CompletedAtGameTick > GameMain.gameTick
                         || control!.PreexistingEntityIds.Contains(id) || !entities.Add(id)
-                        || !StructuredEntityMatches(factory, id, build, spec, allowCurrentSorterFilter: true)) return false;
+                        || !Require("saved_factory_site_completed_native_pose",
+                            StructuredEntityMatches(factory, id, build, spec, allowCurrentSorterFilter: true))) return false;
                     batchIds[i] = id;
                 }
                 else
                 {
                     var id = step.PrebuildId!.Value;
-                    if (complete || !pending.Add(id) || !BlueprintPrebuildMatches(factory, id, spec)) return false;
+                    if (complete || !pending.Add(id) || !Require("saved_factory_site_pending_native_pose",
+                        BlueprintPrebuildMatches(factory, id, spec))) return false;
                     batchIds[i] = -id;
                 }
                 if (!ids.Add(batchIds[i]) || ids.Count > 512) return false;
@@ -86,8 +89,9 @@ internal sealed partial class NormalGameActionCoordinator
                 if (endpoint.ObjectId <= 0 || endpoint.ObjectId >= factory.entityCursor) return false;
                 ref var e = ref factory.entityPool![endpoint.ObjectId];
                 if (e.id != endpoint.ObjectId || e.protoId != endpoint.ItemId || Vector3.Distance(e.pos, ToVector(endpoint.Position)) > .003f
-                    || (endpoint.ItemId == 2001 ? !ProvesNativeBeltRotation(factory, endpoint.ObjectId)
-                        : Quaternion.Angle(e.rot, BlueprintRotation(endpoint.Rotation)) > .1f)) return false;
+                    || !Require("saved_factory_site_endpoint_native_pose", endpoint.ItemId == 2001
+                        ? ProvesNativeBeltRotation(factory, endpoint.ObjectId)
+                        : Quaternion.Angle(e.rot, BlueprintRotation(endpoint.Rotation)) <= .1f)) return false;
                 foreach (var old in endpoint.ExistingConnections)
                     edges.Add(new SavedFactoryEdge { From = old.IsOutput ? endpoint.ObjectId : old.OtherObjectId,
                         FromSlot = old.IsOutput ? old.Slot : old.OtherSlot, To = old.IsOutput ? old.OtherObjectId : endpoint.ObjectId,

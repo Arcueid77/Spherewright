@@ -13,6 +13,24 @@ public sealed partial class VoyagerRemoteResumeCoordinatorIntegrationTests
         => NativeResumeDecisionEvidence.UnobservedFailure("synthetic_landing_failure", "synthetic_native_stage", null,
             DateTimeOffset.UtcNow, "synthetic_native_predicate");
 
+    [Theory]
+    [InlineData(12509, "failed_landing_terminal_tick_regressed")]
+    [InlineData(31000, "failed_landing_terminal_charge_ticks_exhausted")]
+    public void FailedLandingRejectedCompletionReportsItsExactGuardAndLeavesDurableAdmissionUnchanged(long observedTick, string expected)
+    {
+        using var s = new Scenario(currentNative: true, failedLanding: true);
+        Assert.True(s.Checkpoints.TryOpenFailedLandingSource(s.Tickets, s.Token, FailedLandingRequest(), out var source, out _));
+        var action = Guid.NewGuid().ToString();
+        Assert.True(s.Checkpoints.TryRegisterFailedLandingAdmission(source!, action, true, LandingDigest, DateTimeOffset.UtcNow, out _));
+        Assert.True(s.Checkpoints.TryBindFailedLandingAdmissionSession(action, Guid.NewGuid().ToString(), 12510, out _));
+        source!.Dispose();
+        var path = Path.Combine(s.Handoff, "voyager-journey.json"); var original = File.ReadAllBytes(path);
+        Assert.False(s.Checkpoints.TryFinishFailedLandingAdmission(action, true, null, observedTick, out var rejection));
+        Assert.Equal(expected, rejection); Assert.Equal(original, File.ReadAllBytes(path));
+        Assert.Equal("adopted", s.Checkpoints.VoyagerJourney!.FailedLandingAdmissions.Single().State);
+        Assert.Null(s.Checkpoints.VoyagerJourney.LastLandedGameTick);
+    }
+
     [Fact]
     public void FailedLandingNewLandingAdmissionRecordsAreOmittedFromEveryUnchangedLegacyJourney()
     {

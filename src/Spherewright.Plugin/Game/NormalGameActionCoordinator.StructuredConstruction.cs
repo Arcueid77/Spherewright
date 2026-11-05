@@ -33,17 +33,20 @@ internal sealed partial class NormalGameActionCoordinator
         if (journey.Phase != "remote_landed" || journey.RemotePlanetId != plan.PlanetId
             || !StructuredConstructionBinding.SupportsItem(plan.BuildingItemId)
             || plan.BuildSteps.Count < 1 || plan.BuildSteps.Count > StructuredConstructionBinding.MaximumNewObjects(plan.BuildingItemId)
-            || plan.BuildSteps.Any(s => s.SourceBeltAnchor is not null || s.DestinationBeltAnchor is not null
+            || plan.BuildSteps.Any(s => s.DestinationBeltAnchor is not null
                 || s.BeltPathMode == BeltPathModes.NativeElevatedGrid))
-            return Stale($"Remote construction requires an original-journey native-validated batch of1..{StructuredConstructionBinding.MaximumNewObjects(plan.BuildingItemId)} supported NEW objects without elevated paths or belt-cover reuse; observed NEW count={plan.BuildSteps.Count}, item={plan.BuildingItemId}, journey phase={journey.Phase}.");
+            return Stale($"Remote construction requires an original-journey native-validated batch of1..{StructuredConstructionBinding.MaximumNewObjects(plan.BuildingItemId)} supported NEW objects without elevated paths or destination covers; a source tail requires separate empty paid-source evidence. Observed NEW count={plan.BuildSteps.Count}, item={plan.BuildingItemId}, journey phase={journey.Phase}.");
         if (!_blueprints.TryRead(out var old) || old.Count >= BlueprintBuildStore.MaximumBuilds
             || old.Any(b => b.StructuredConstruction is not null
                 && !PaidFactoryCompletionPolicy.HasCompletedIdleProof(b,GameMain.gameTick)))
             return BlueprintError("Read and fresh-resume the exact existing structured build; do not submit a replacement batch.");
+        if (!TryBindStructuredEmptyBeltSource(plan, old, out var sourceEvidence, out var sourceRejection))
+            return Stale(sourceRejection);
 
         var binding = new StructuredConstructionBinding
         {
             Kind = plan.BuildKind, JourneyId = journey.JourneyId, NativePlanHash = plan.ExpectedStateHash,
+            EmptyBeltSource = sourceEvidence,
             ResourceNodeId = plan.BuildResourceNodeId, ResourceStateHash = plan.BuildResourceStateHash,
             SourceObjectId = plan.SourceObjectId, DestinationObjectId = plan.DestinationObjectId,
             Steps = plan.BuildSteps.Select(s => new StructuredConstructionConnection
@@ -92,6 +95,7 @@ internal sealed partial class NormalGameActionCoordinator
 
     private BridgeError? ValidateStructuredConstructionBudget(NormalActionPlanPayload plan)
     {
+        if (StructuredEmptySourcePrecreateBlocker(plan) is { } sourceBlocker) return Stale(sourceBlocker);
         if (!VoyagerRemoteIdleBindingMatches())
             return Stale("Structured remote work requires this live landed-controller idle binding; a remote Host/save reload is not silently recertified.");
         var build = plan.BlueprintState!;
@@ -122,7 +126,8 @@ internal sealed partial class NormalGameActionCoordinator
             var error=Stale("The Native rigid body/support plane has not settled; no create/debit occurred. Fresh-prepare after natural physics.");
             error.NativeFirstFailure=evidence.Failure("native_construction_anchor_not_settled");return error;
         }
-        if (build.ConstructionControl is { } retainedControl
+        var independentStop = HasCurrentSavedPaidStop(build);
+        if (build.ConstructionControl is { } retainedControl && !independentStop
             && !retainedControl.NativeDrainBarrierPassed(GameMain.gameTick, ConstructionOwnPrelaunchCacheClear(factory, build)))
             return Stale("The original disabled dispatch has not proved a later native factory pass and a drained owned prelaunch cache.");
         // Fresh, fully budgeted construction already owns a native enable at
@@ -130,16 +135,16 @@ internal sealed partial class NormalGameActionCoordinator
         // A retained build still needs its own disabled-dispatch stop receipt.
         if (!module.droneEnabled && build.ConstructionControl is { DispatchDisabled:false })
             return Stale("The ordinary construction drones were disabled outside this build's retained stop receipt.");
-        var decision = new NativeResumeDecisionEvidence("structured_construction_prepare", GameMain.gameTick, DateTimeOffset.UtcNow, true);
-        var reserve = CaptureConstructionReserve(build, player, out var costHash, decision);
         var workTicks = build.ConstructionControl is null ? StructuredConstructionWorkTicks
             : build.ConstructionControl.RemainingWorkGameTicks(GameMain.gameTick, DateTimeOffset.UtcNow).GetValueOrDefault();
-        if (workTicks < 1 && plan.AllowNewPaidConstructionWindow && build.Phase == "paused" && build.PreviousConstructionWindows.Count < 16
-            && build.Objects.Any(o => o.State == BlueprintObjectStates.PendingConstruction)
-            && build.Objects.All(o => o.State == BlueprintObjectStates.PendingConstruction || o.State == BlueprintObjectStates.Completed)
-            && build.ConstructionControl!.CanReadmitPaidPending(GameMain.gameTick, DateTimeOffset.UtcNow))
-            workTicks = StructuredConstructionWorkTicks;
-        if (workTicks < 1) return Stale("The original window expired. Only a known safely paused paid batch may receive a distinct finite admission after fresh Native and original Journey budget proof; no active/unknown action or pending object is recreated.");
+        var newPaidWindow=StructuredConstructionWindowPolicy.StartsNewPaidWindow(build,plan.AllowNewPaidConstructionWindow,
+            independentStop,GameMain.gameTick,DateTimeOffset.UtcNow);
+        if(newPaidWindow)workTicks=StructuredConstructionWorkTicks;
+        if (workTicks < 1 || build.Phase=="outcome_unknown" && !newPaidWindow)
+            return Stale("Only an expired independently stopped paid batch may receive a distinct finite admission; preserve the old window and fresh-prepare without recreating any object.");
+        var decision = new NativeResumeDecisionEvidence("structured_construction_prepare", GameMain.gameTick, DateTimeOffset.UtcNow, true);
+        decision.Observe("construction_distinct_paid_window_anchor",newPaidWindow);
+        var reserve = CaptureConstructionReserve(build, player, out var costHash, decision,newPaidWindow);
         if (!decision.Require("construction_native_geometry_and_cost", reserve.Proved)
             || !decision.Require("construction_core_and_return_funded", NativeConstructionDroneReservePolicy.CanFundNativeTail(player.mecha.coreEnergy,
                 CalculateAvailableFlightEnergy(player.mecha), journey.ReturnEnergyFloorJoules, reserve.TailAndNextTickEnergyJoules)))
@@ -181,7 +186,7 @@ internal sealed partial class NormalGameActionCoordinator
             if (!_blueprints.TryPut(build)) return GameCallResult<PreparedNormalAction>.Failed(BlueprintError("structured_progress_persistence_failed"));
             return StalePlan("Native construction progress advanced. Read the same buildId and fresh-prepare its retained pending objects.");
         }
-        if (blockers.Count != 0 || build.Phase == "outcome_unknown"
+        if (blockers.Count != 0 || build.Phase == "outcome_unknown" && !(request.AllowNewPaidConstructionWindow && HasCurrentSavedPaidStop(build))
             || build.Objects.Any(o => o.State != BlueprintObjectStates.PendingConstruction && o.State != BlueprintObjectStates.Completed))
             return GameCallResult<PreparedNormalAction>.Failed(BlueprintError("Only proven pending structured objects can resume; reconcile the original action. " + string.Join(";", blockers)));
         if (build.Objects.All(o => o.State == BlueprintObjectStates.Completed)) return InvalidPlan("This exact batch is already built; never create it again.");
@@ -210,7 +215,7 @@ internal sealed partial class NormalGameActionCoordinator
         var build = builds.SingleOrDefault(b => b.BuildId == plan.BlueprintState!.BuildId);
         if (build is null || build.PlanHash != plan.BlueprintState!.PlanHash) return Stale("The original structured build identity changed.");
         var blockers = ReconcileStructuredConstructionState(build);
-        if (blockers.Count != 0 || build.Phase == "outcome_unknown"
+        if (blockers.Count != 0 || build.Phase == "outcome_unknown" && !(plan.AllowNewPaidConstructionWindow && HasCurrentSavedPaidStop(build))
             || build.Objects.Any(o => o.State != BlueprintObjectStates.PendingConstruction && o.State != BlueprintObjectStates.Completed)
             || build.Objects.All(o => o.State == BlueprintObjectStates.Completed)
             || build.ProgressHash(plan.SessionId, _sessions.CaptureOnMainThread().Revision) != plan.BlueprintInputHash)
@@ -223,6 +228,8 @@ internal sealed partial class NormalGameActionCoordinator
 
     private void StartStructuredConstructionOnMainThread(ActionRecord action)
     {
+        if (StructuredEmptySourcePrecreateBlocker(action.Plan) is { } sourceBlocker)
+        { Fail(action, sourceBlocker + "; no Native create occurred."); return; }
         var build = CloneBlueprintState(action.Plan.BlueprintState!);
         var player = GameMain.mainPlayer;
         var factory = GameMain.data.localLoadedPlanetFactory;
@@ -236,14 +243,14 @@ internal sealed partial class NormalGameActionCoordinator
         var workWall=NativeConstructionCadencePolicy.WallBudget(StructuredConstructionWorkTicks,cadence);
         if(!workWall.HasValue) {Fail(action,"The Native construction scheduling cadence is unproved; no create occurred.");return;}
         var submit = build.Objects.All(o => o.State == BlueprintObjectStates.NotSubmitted);
-        var readmit = !submit && oldControl is not null
-            && !oldControl.RemainingWorkGameTicks(GameMain.gameTick, nowUtc).HasValue;
+        var expired = !submit && oldControl is not null && !oldControl.RemainingWorkGameTicks(GameMain.gameTick,nowUtc).HasValue;
+        var readmit=StructuredConstructionWindowPolicy.StartsNewPaidWindow(build,action.Plan.AllowNewPaidConstructionWindow,
+            HasCurrentSavedPaidStop(build),GameMain.gameTick,nowUtc);
+        if(expired && !readmit || build.Phase=="outcome_unknown" && !readmit)
+        { Fail(action, "The exact stopped paid predecessor no longer permits a distinct admission; no create or drone toggle occurred."); return; }
         if (readmit)
         {
-            if (!action.Plan.AllowNewPaidConstructionWindow || build.Phase != "paused" || build.PreviousConstructionWindows.Count >= 16
-                || !oldControl!.CanReadmitPaidPending(GameMain.gameTick, nowUtc))
-            { Fail(action, "The exact stopped paid predecessor no longer permits a distinct admission; no create or drone toggle occurred."); return; }
-            build.PreviousConstructionWindows.Add(oldControl);
+            build.PreviousConstructionWindows.Add(oldControl!);
         }
         action.BlueprintBuild = build;
         action.ConstructionBinding = new StructuredNativeBinding(GameMain.data, player, factory,
@@ -251,7 +258,7 @@ internal sealed partial class NormalGameActionCoordinator
         action.ConstructionLastNativeTick = GameMain.gameTick;
         build.ConstructionControl = new StructuredConstructionControlState
         {
-            Anchor = ConstructionVector(player.position), NativeCostHash = action.Plan.ConstructionNativeCostHash!,
+            Anchor = StructuredConstructionWindowPolicy.ReserveAnchor(build,ConstructionVector(player.position),readmit), NativeCostHash = action.Plan.ConstructionNativeCostHash!,
             StartedAtGameTick = readmit ? GameMain.gameTick : oldControl?.StartedAtGameTick ?? GameMain.gameTick,
             StartedAtUtc = readmit ? nowUtc : oldControl?.StartedAtUtc ?? nowUtc,
             WorkDeadlineGameTick = readmit ? GameMain.gameTick + StructuredConstructionWorkTicks : oldControl?.WorkDeadlineGameTick ?? GameMain.gameTick + StructuredConstructionWorkTicks,
@@ -263,7 +270,8 @@ internal sealed partial class NormalGameActionCoordinator
             NativeCreateActionId = oldControl?.NativeCreateActionId,
             PreexistingEntityIds = oldControl?.PreexistingEntityIds.ToList() ?? CaptureConstructionExistingEntities(factory, build),
         };
-        build.Begin(action.SessionId, action.ActionId, build.Objects.Count, GameMain.gameTick);
+        if (build.Phase == "outcome_unknown") build.BeginSavedPaidReadmission(action.SessionId, action.ActionId, build.Objects.Count, GameMain.gameTick);
+        else build.Begin(action.SessionId, action.ActionId, build.Objects.Count, GameMain.gameTick);
         if (!_blueprints.TryPut(build)) { Fail(action, "The finite structured lease could not persist; no native create or drone toggle occurred."); return; }
         // Admission already proves a stationary, order-free Native player.
         // A self-target Move is still a movement command; repeatedly issuing
