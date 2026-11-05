@@ -39,6 +39,7 @@ internal sealed class PlanetFactory
     internal TestCargoTraffic cargoTraffic = new();
     internal object cargoContainer = new();
     internal bool TestGeometryMatches = true, TestConnectionsMatch = true;
+    internal string TestSourceTopology = "sha256:" + new string('d',64);
     internal TestSiteConstructionSystem constructionSystem = new();
     internal Dictionary<(int, int), SavedFactoryPort> TestPorts = new();
     internal void ReadObjectConn(int id, int slot, out bool output, out int other, out int otherSlot)
@@ -154,6 +155,13 @@ internal sealed partial class NormalGameActionCoordinator
     private static UnityEngine.Vector3 ToVector(Vector3Snapshot p) => new(p.X, p.Y, p.Z);
     private static UnityEngine.Quaternion BlueprintRotation(QuaternionSnapshot p) => new(p.X, p.Y, p.Z, p.W);
     private static bool ProvesNativeBeltRotation(PlanetFactory f, int id) => f.TestGeometryMatches;
+    private static bool TryBeltSourceTopology(PlanetFactory f,int id,out string hash,
+        out List<FactoryConnectionSnapshot> connections,bool nativeCompletionRotation=false)
+    { hash=f.TestSourceTopology;connections=[];return f.TestGeometryMatches; }
+    internal bool BindSavedSourcesForTest(Player p,PlanetFactory f,string journey,IReadOnlyList<BlueprintBuildState> saved)
+        =>BindSavedEmptyBeltSourceTopologies(p,f,journey,saved,null);
+    internal bool SavedSourceMatchesForTest(PlanetFactory f,BlueprintBuildState build,string hash)
+        =>SavedEmptyBeltSourceTopologyMatches(f,build,hash);
     private static bool StructuredConnectionsMatch(PlanetFactory factory, BlueprintBuildState build) => factory.TestConnectionsMatch;
     private static bool TryObserveOwnedConstructionDrones(PlanetFactory factory, ConstructionModuleComponent module,
         out bool idle, out List<int> activeIds)

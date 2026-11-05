@@ -82,8 +82,9 @@ internal sealed partial class NormalGameActionCoordinator
             if(candidates.Length==1)generic=CloneBlueprintState(candidates[0]);
             if (generic is not null)
             {
-                if (ReconcileStructuredConstructionState(generic).Count != 0)
-                    return "remote_resume_saved_paid_object_mapping_unproved";
+                var mapping = ReconcileStructuredConstructionObjects(generic);
+                if (mapping.Count != 0)
+                    return "remote_resume_saved_paid_object_mapping_unproved:" + mapping[0];
                 currentSite=genericSaved.Select(b=>b.BuildId==generic.BuildId?generic:b).ToList();
             }
         }
@@ -97,7 +98,7 @@ internal sealed partial class NormalGameActionCoordinator
         _savedConstructionTail = tail;
         if (!SavedConstructionTailMatches(p, journeyId)) return "remote_resume_saved_drone_tail_motion_unproved";
         if(tail.GenericPaidSite && (currentSite is null
-            || !SavedFactorySiteMatches(p,f,journeyId,currentSite,adoption.CurrentDecisionEvidence)))
+            || !BindSavedEmptyBeltSourceTopologies(p,f,journeyId,currentSite,adoption.CurrentDecisionEvidence)))
         {_savedConstructionTail=null;return "remote_resume_saved_factory_tail_full_site_unproved";}
         if (generic is not null && !_blueprints.TryPut(generic))
         {_savedConstructionTail=null;return "remote_resume_saved_paid_mapping_persistence_failed";}

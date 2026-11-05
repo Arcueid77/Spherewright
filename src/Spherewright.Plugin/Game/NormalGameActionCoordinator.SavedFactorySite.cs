@@ -63,13 +63,15 @@ internal sealed partial class NormalGameActionCoordinator
                     var id = step.EntityId.GetValueOrDefault();
                     if (!step.CompletedAtGameTick.HasValue || step.CompletedAtGameTick > GameMain.gameTick
                         || control!.PreexistingEntityIds.Contains(id) || !entities.Add(id)
-                        || !StructuredEntityMatches(factory, id, build, spec, allowCurrentSorterFilter: true)) return false;
+                        || !Require("saved_factory_site_completed_native_pose",
+                            StructuredEntityMatches(factory, id, build, spec, allowCurrentSorterFilter: true))) return false;
                     batchIds[i] = id;
                 }
                 else
                 {
                     var id = step.PrebuildId!.Value;
-                    if (complete || !pending.Add(id) || !BlueprintPrebuildMatches(factory, id, spec)) return false;
+                    if (complete || !pending.Add(id) || !Require("saved_factory_site_pending_native_pose",
+                        BlueprintPrebuildMatches(factory, id, spec))) return false;
                     batchIds[i] = -id;
                 }
                 if (!ids.Add(batchIds[i]) || ids.Count > 512) return false;
@@ -87,8 +89,9 @@ internal sealed partial class NormalGameActionCoordinator
                 if (endpoint.ObjectId <= 0 || endpoint.ObjectId >= factory.entityCursor) return false;
                 ref var e = ref factory.entityPool![endpoint.ObjectId];
                 if (e.id != endpoint.ObjectId || e.protoId != endpoint.ItemId || Vector3.Distance(e.pos, ToVector(endpoint.Position)) > .003f
-                    || (endpoint.ItemId == 2001 ? !ProvesNativeBeltRotation(factory, endpoint.ObjectId)
-                        : Quaternion.Angle(e.rot, BlueprintRotation(endpoint.Rotation)) > .1f)) return false;
+                    || !Require("saved_factory_site_endpoint_native_pose", endpoint.ItemId == 2001
+                        ? ProvesNativeBeltRotation(factory, endpoint.ObjectId)
+                        : Quaternion.Angle(e.rot, BlueprintRotation(endpoint.Rotation)) <= .1f)) return false;
                 foreach (var old in endpoint.ExistingConnections)
                     edges.Add(new SavedFactoryEdge { From = old.IsOutput ? endpoint.ObjectId : old.OtherObjectId,
                         FromSlot = old.IsOutput ? old.Slot : old.OtherSlot, To = old.IsOutput ? old.OtherObjectId : endpoint.ObjectId,

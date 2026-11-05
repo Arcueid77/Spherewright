@@ -238,6 +238,17 @@ internal sealed partial class NormalGameActionCoordinator
 
     private List<string> ReconcileStructuredConstructionState(BlueprintBuildState build)
     {
+        var errors = ReconcileStructuredConstructionObjects(build);
+        var factory = GameMain.data?.localLoadedPlanetFactory;
+        if (errors.Count == 0 && (factory is null || !StructuredConnectionsMatch(factory, build)))
+            errors.Add("structured_exact_reciprocal_topology_unproved");
+        return errors;
+    }
+
+    // Mapping alone grants no continuation. The cold saved-site caller must
+    // prove the entire paid factory union before persisting these observations.
+    private List<string> ReconcileStructuredConstructionObjects(BlueprintBuildState build)
+    {
         var errors = new List<string>();
         var factory = GameMain.data?.localLoadedPlanetFactory;
         if (factory is null || factory.planetId != build.Site.PlanetId || GameMain.gameTick < build.LastEvidenceGameTick
@@ -274,7 +285,6 @@ internal sealed partial class NormalGameActionCoordinator
                 else build.ConfirmCompletion(step.Index, found, GameMain.gameTick);
             }
         }
-        if (errors.Count == 0 && !StructuredConnectionsMatch(factory, build)) errors.Add("structured_exact_reciprocal_topology_unproved");
         return errors;
     }
 
@@ -410,7 +420,7 @@ internal sealed partial class NormalGameActionCoordinator
         && factory.powerSystem.consumerPool[consumerId].id == consumerId
         && factory.powerSystem.consumerPool[consumerId].entityId == entityId;
 
-    private static bool StructuredConnectionsMatch(PlanetFactory factory, BlueprintBuildState build)
+    private bool StructuredConnectionsMatch(PlanetFactory factory, BlueprintBuildState build)
     {
         var binding = build.StructuredConstruction!;
         var ids = build.Objects.Select(o => o.State == BlueprintObjectStates.Completed ? o.EntityId.GetValueOrDefault()
@@ -435,7 +445,7 @@ internal sealed partial class NormalGameActionCoordinator
             {
                 if (endpoint.ItemId != 2001 || !ProvesNativeBeltRotation(factory, endpoint.ObjectId)
                     || !TryBeltSourceTopology(factory, endpoint.ObjectId, out var topology, out _, nativeCompletionRotation: true)
-                    || !BeltSourceReusePolicy.SameEvidence(source.CompletionTopologyHash, topology)) return false;
+                    || !SavedEmptyBeltSourceTopologyMatches(factory, build, topology)) return false;
             }
             else if (Quaternion.Angle(entity.rot, BlueprintRotation(endpoint.Rotation)) > .1f) return false;
         }
