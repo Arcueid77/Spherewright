@@ -2,6 +2,12 @@
 
 [English](project-status.md) · [简体中文](project-status.zh-CN.md)
 
+**当前交审截点（2026-11-06）。** 首帆/首火箭扩展已有界实机闭合：外星当地正常制造、4帆真实发射并转换入云、1枚运载火箭实际抵达且增加1个原生结构点、跨星辅料真实到货、普通保存及冷恢复续接。最终选择的实装及两份交审包均绑定源码`d3b7ac897bb44d62c8a7ed54c51a55ff2b8de7b0`；准确源码CI、Native构建、同源安装、中英文/内嵌指南检查及233项程序载荷逐字节一致性通过。[固定Lab交审记录](https://github.com/Arcueid77/Spherewright-Lab/blob/b78ff30448bf98383a86020b327de2df36da3763/releases/v0.5.0/expansion-review-delivery-2026-11-06.md)列出具体证据与边界，不声称已分别重做两种发行布局的完整冷安装/恢复矩阵。未创建tag、Release或平台上传。
+
+本次仅状态文档更新，不替换已选择的实装或候选源码。原三项Voyager门和旧包保留原证据适用范围；下列较早开发截点保持原意。
+
+## 此前开发截点
+
 站内货物新增显式 `station-storage-to-player` 转移子集：当地已建2103/2104站、唯一现物且零增产点槽位、所选槽无在途订单、精确数量1..100、空手、普通建造交互范围及已证背包容量。原生 `StationComponent.TakeItem` 与 `StorageComponent.AddItemStacked` 在同一tick核对数量/增产点守恒；其余槽配置、站状态及背包物料必须不变。此手动UI操作不要求站点供电。prepare必须有 `stationCargoWithdrawal`，终态须有 `stationCargoWithdrawalReadback`；缺少同源回执不暴露token。后续正常机甲自动补给可能移动刚收到的燃料：保留即时原回执，再分别读背包/燃料舱，不重放转移。
 
 新出航预览可显式提供 `maximumRoundTripWallSeconds`600..86400，作为与原游戏tick、物品、能源和返航储备独立的有限墙钟预算。不传则保留旧tick换算时钟；返航必须不传并继承原始/有效时钟。该值进入哈希及同源回显，并在新保护Journey记录中保持不可变；旧记录保留原序列化字节形状和两小时上限。现有确认式远端恢复方案已支持最多24小时有限窗；须在真实所有者授权内选择足够有限时间，经新鲜Native方案/摘要确认，不改旧时钟、不退还消耗。300秒启动到真实实操门及所有逐动作停止/充能帽不变。这些仍是源码能力，实装及实机验收需分别证明。
