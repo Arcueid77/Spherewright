@@ -37,7 +37,7 @@ internal sealed partial class NormalGameActionCoordinator
             && ItemProto.fuelNeeds[g.fuelMask]?.Contains(itemId) == true && fuel is not null && fuel.HeatValue > 0;
         var facts = new GeneratorColdStartFuelFacts
         {
-            BuildingItemId = buildingItemId = e.protoId, RequestedCount = count,
+            BuildingItemId = buildingItemId = e.protoId, RequestedCount = count, RequestedFuelItemId = itemId,
             PackageCount = p.package.GetItemCount(itemId), NativeFuelAdmitted = admitted,
             ExactNativeComponent = g.id == id && g.entityId == entityId && g.useFuelPerTick > 0 && g.genEnergyPerTick > 0
                 && desc is { isPowerGen: true } && desc.fuelMask == g.fuelMask
@@ -45,8 +45,9 @@ internal sealed partial class NormalGameActionCoordinator
             ZeroIncPackageFuel = p.package.grids.Where(x => x.itemId == itemId).All(x => x.inc == 0),
             EmptyPlayerHand = p.inhandItemId == 0 && p.inhandItemCount == 0 && p.inhandItemInc == 0,
             WithinBuildArea = Vector3.Distance(p.position, e.pos) <= p.mecha.buildArea,
-            BufferedFuelId = g.fuelId, BufferedFuelCount = g.fuelCount, BufferedFuelInc = g.fuelInc,
+            BufferedFuelId = g.fuelId, BufferedFuelCount = g.fuelCount, BufferedFuelInc = g.fuelInc, BufferedFuelHeat = g.fuelHeat,
             CurrentFuelId = g.curFuelId, LoadedFuelEnergy = g.fuelEnergy,
+            CapacityEnergyPerTick = g.capacityCurrentTick, GeneratedEnergyPerTick = g.generateCurrentTick,
         };
         if (GeneratorColdStartFuelPolicy.Blocker(facts) is { } blocked) return blocked;
         binding = new() { Factory = f, Package = p.package, Entities = f.entityPool, Generators = system.genPool, GeneratorId = id };
@@ -122,7 +123,8 @@ internal sealed partial class NormalGameActionCoordinator
         unaffected.fuelInc = beforeGenerator.fuelInc; unaffected.fuelHeat = beforeGenerator.fuelHeat;
         if (inserted != removed || remainderInc != 0 || after != before - removed
             || g.fuelId != plan.TransferItemId || g.fuelCount != removed || g.fuelInc != 0
-            || g.curFuelId != 0 || g.fuelEnergy != 0 || g.fuelHeat != LDB.items.Select(plan.TransferItemId)!.HeatValue
+            || g.curFuelId != beforeGenerator.curFuelId || g.fuelEnergy != beforeGenerator.fuelEnergy
+            || g.fuelHeat != LDB.items.Select(plan.TransferItemId)!.HeatValue
             || !unaffected.Equals(beforeGenerator))
             throw new InvalidOperationException("generator_cold_start_bilateral_native_conservation_unproved");
         action.TargetObjectId = plan.TransferStorageEntityId; action.TargetItemId = plan.TransferItemId;

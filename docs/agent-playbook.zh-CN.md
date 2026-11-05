@@ -526,7 +526,7 @@ Native Import 可将 double 宇宙坐标逆投影为 float 本地位置；普通
 
 ## 普通发电机冷启动
 
-新燃料发电机须先正常放入首批燃料，供电分拣器才能运行。fresh检查准确已建2204火电或2211聚变机组及玩家；使用`prepare_transfer`，`direction=player-to-generator-fuel`、`storageEntityId`填该机组、正数原生接受燃料及count1..10、`expectedPlayerStateHash`和机组完整`stateHash`作为`expectedStorageStateHash`。须空手、来源燃料inc0、正常建造交互距离，机组缓存燃料及已加载/当前燃料均空。核对`generatorColdStartFuel`中的身份/数量/原生操作回读后只提交原转移动作一次，核销同tick背包/机组的等量反向变化。由原生`PlanetFactory.InsertInto`正常插入燃料，不直接写游戏缓存/能量或推进模拟；后续燃烧与发电属于普通原生行为。冷插入不证明供电、运输、制造或真实验收；此子集不支持热机补料或燃料取出。
+新建或已完全耗尽的燃料发电机须先正常放入燃料，供电分拣器才能运行。fresh检查准确已建2204火电或2211聚变机组及玩家；使用`prepare_transfer`，`direction=player-to-generator-fuel`、`storageEntityId`填该机组、正数原生接受燃料及count1..10、`expectedPlayerStateHash`和机组完整`stateHash`作为`expectedStorageStateHash`。须空手、来源燃料inc0、正常建造交互距离，机组缓存燃料/热值、已加载余热及当前容量/发电均为零。原生恰好烧完最后余热后仍可能保留此前加载的燃料ID；本子集只接受与拟补燃料相同的残留ID，插入过程中保持该原生ID不变。残留ID本身不代表余热或燃料库存。核对`generatorColdStartFuel`中的身份/数量/原生操作回读后只提交原转移动作一次，核销同tick背包/机组的等量反向变化。由原生`PlanetFactory.InsertInto`正常插入燃料，不直接写游戏缓存/能量或推进模拟；后续燃烧与发电属于普通原生行为。冷插入不证明供电、运输、制造或真实验收；此子集不支持热机补料或燃料取出。
 
 
 保存中的静止原生Drift或未接地Walk可选择一笔**新的有界地表恢复Move**：在`spherewright_prepare_resume_owned_game`的`authorize_remote_primary_recovery`模式提供完整`surfaceRecoveryTargetX/Y/Z`三坐标，新增tick必须为零，充能上限至少600tick/20秒，且必须已有独立完成的保存落地准入。目标与600/20上限纳入fresh披露/`confirmationDigest`，须准确核对回声；不提供参数仍用普通恢复。缺坐标、其他模式、混合程序或错误回声均不暴露planToken。它不重放未知Move，也不允许加载较旧存档。
