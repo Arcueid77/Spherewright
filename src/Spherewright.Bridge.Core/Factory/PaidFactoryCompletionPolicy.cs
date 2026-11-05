@@ -13,6 +13,7 @@ public static class PaidFactoryCompletionPolicy
             || build.Objects.Count != build.Site.Objects.Count
             || build.Objects.Any(o => o.State != BlueprintObjectStates.Completed)) return false;
         if (build.SavedTailCompletion?.Matches(build, currentTick) == true) return true;
+        if (SavedPaidConstructionStop.Current(build, currentTick) is not null) return true;
         var control = build.ConstructionControl;
         return build.Phase == "completed" && control.Phase == "completed_idle"
             && control.PhysicalIdleVerified && control.PhysicalIdleVerifiedAtGameTick.HasValue

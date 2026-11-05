@@ -33,6 +33,7 @@ internal sealed partial class NormalGameActionCoordinator
             var binding = build.StructuredConstruction;
             var control = build.ConstructionControl;
             var tailCertified=build.SavedTailCompletion?.Matches(build,GameMain.gameTick)==true;
+            var stopCertified=SavedPaidConstructionStop.Current(build,GameMain.gameTick) is not null;
             var currentTail=HasCurrentSavedFactoryTailBuild(player,journeyId,build);
             var complete = PaidFactoryCompletionPolicy.HasCompletedIdleProof(build, GameMain.gameTick)
                 || currentTail && build.Objects.All(o=>o.State==BlueprintObjectStates.Completed);
@@ -40,7 +41,7 @@ internal sealed partial class NormalGameActionCoordinator
                 && HasSavedPassiveTowerReceipt(build, binding.JourneyId, GameMain.gameTick);
             if (!Require("saved_factory_site_paid_idle_receipts", binding is not null && control is not null
                     && build.LastEvidenceGameTick <= GameMain.gameTick && build.Objects.Count == build.Site.Objects.Count
-                    && (tailCertified || currentTail || control.PhysicalIdleVerified && control.PhysicalIdleVerifiedAtGameTick <= GameMain.gameTick
+                    && (tailCertified || stopCertified || currentTail || control.PhysicalIdleVerified && control.PhysicalIdleVerifiedAtGameTick <= GameMain.gameTick
                     && control.DisabledNativeFactoryPassGameTick <= GameMain.gameTick && (!control.BindingLost || legacyTower)
                     && Guid.TryParse(control.NativeCreateActionId, out _)
                     && (complete && control.Phase == "completed_idle"

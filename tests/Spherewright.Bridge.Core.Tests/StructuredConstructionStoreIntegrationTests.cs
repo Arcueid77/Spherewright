@@ -13,6 +13,64 @@ namespace Spherewright.Bridge.Core.Tests;
 public sealed class StructuredConstructionStoreIntegrationTests
 {
     [Fact]
+    public void LaterNativeStopAdmitsOnlyTheSamePaidPendingBatchAndAppendsTheUnknownControlUnchanged()
+    {
+        using var fixture = new Fixture(); var state = Pending(2); var original = state.ConstructionControl!;
+        Assert.DoesNotContain("savedPaidStops", PluginJson.Serialize(state));
+        original.RequestStop("construction_pre_player_stationary_binding_lost", 110, original.StartedAtUtc.AddSeconds(1), true);
+        original.DispatchDisabled = true; original.Phase = "quarantined"; state.LastEvidenceGameTick = 112; state.Stop("outcome_unknown");
+        Assert.True(fixture.Store().TryPut(state)); var oldBytes = PluginJson.Serialize(original); var oldHash = original.EvidenceHash();
+        state.ConfirmCompletion(0, 100, 121);
+        var newSession = Guid.NewGuid().ToString();
+        state.SavedPaidStops.Add(new() { OriginalActionId = original.NativeCreateActionId!, StoppedActionId = state.ActionId!,
+            OriginalControlHash = oldHash, BuildPlanHash = state.PlanHash, PaidSubmissionHash = SavedPaidConstructionStop.SubmissionHash(state),
+            NativeSessionId = newSession, SourceFingerprint = CanonicalStateHash.Combine("synthetic-saved-source"),
+            SourceGameTick = 120, NativeFactoryPassGameTick = 122, PhysicalIdleGameTick = 123,
+            CompletedAtStop = new() { new() { Index = 0, EntityId = 100 } } });
+        state.LastEvidenceGameTick = 123; state.Generation++;
+        Assert.True(fixture.Store().TryPut(state)); Assert.False(PaidFactoryCompletionPolicy.HasCompletedIdleProof(state, 123));
+        Assert.Throws<InvalidOperationException>(() => state.Begin(newSession, Guid.NewGuid().ToString(), 2, 3800));
+        var next = StructuredConstructionControlTests.Control(); next.StartedAtGameTick = 3800; next.WorkDeadlineGameTick = 7400;
+        next.StartedAtUtc = original.WorkDeadlineUtc.AddSeconds(1); next.WorkDeadlineUtc = next.StartedAtUtc.AddSeconds(60);
+        next.ObservationLeaseExpiresAtUtc = next.StartedAtUtc.AddSeconds(30); next.NativeCreateActionId = original.NativeCreateActionId;
+        state.PreviousConstructionWindows.Add(original); state.ConstructionControl = next;
+        Assert.Throws<InvalidOperationException>(() => state.BeginSavedPaidReadmission(Guid.NewGuid().ToString(), Guid.NewGuid().ToString(), 2, 3800));
+        state.BeginSavedPaidReadmission(newSession, Guid.NewGuid().ToString(), 2, 3800);
+        Assert.True(fixture.Store().TryPut(state)); var restored = Assert.Single(fixture.Read());
+        Assert.Equal(oldBytes, PluginJson.Serialize(Assert.Single(restored.PreviousConstructionWindows)));
+        Assert.Equal(oldHash, restored.SavedPaidStops.Single().OriginalControlHash);
+        Assert.Equal(100, restored.Objects[0].EntityId); Assert.Equal(21, restored.Objects[1].PrebuildId);
+        Assert.All(restored.Objects, o => { Assert.Equal(12, o.InventoryBefore); Assert.Equal(10, o.InventoryAfter); });
+        Assert.Throws<InvalidOperationException>(() => restored.BeforeStructuredSubmission(3801, 10, "replay"));
+        restored.SavedPaidStops[0].SourceFingerprint = CanonicalStateHash.Combine("replacement-source");
+        Assert.False(fixture.Store().TryPut(restored));
+    }
+
+    [Theory]
+    [InlineData("no-pass")][InlineData("not-idle")][InlineData("foreign-session")][InlineData("unpaid")][InlineData("completed-changed")]
+    public void SavedPaidStopNeverBorrowsAnUnknownSubmissionOrUnprovedNativeBoundary(string fault)
+    {
+        var state = Pending(2); var c = state.ConstructionControl!;
+        c.RequestStop("construction_pre_player_stationary_binding_lost", 110, c.StartedAtUtc.AddSeconds(1), true);
+        c.DispatchDisabled = true; c.Phase = "quarantined"; state.LastEvidenceGameTick = 112; state.Stop("outcome_unknown");
+        state.ConfirmCompletion(0, 100, 121); state.LastEvidenceGameTick = 123;
+        var p = new SavedPaidConstructionStop { OriginalActionId = c.NativeCreateActionId!, StoppedActionId = state.ActionId!,
+            OriginalControlHash = c.EvidenceHash(), BuildPlanHash = state.PlanHash, PaidSubmissionHash = SavedPaidConstructionStop.SubmissionHash(state),
+            NativeSessionId = Guid.NewGuid().ToString(), SourceFingerprint = CanonicalStateHash.Combine("source"),
+            SourceGameTick = 120, NativeFactoryPassGameTick = 122, PhysicalIdleGameTick = 123,
+            CompletedAtStop = new() { new() { Index = 0, EntityId = 100 } } };
+        Assert.True(p.Matches(state, 123));
+        switch (fault)
+        {
+            case "no-pass": p.NativeFactoryPassGameTick = 120; break;
+            case "not-idle": p.PhysicalIdleGameTick = 121; break;
+            case "foreign-session": p.NativeSessionId = "unproved"; break;
+            case "unpaid": state.Objects[1].InventoryAfter = 11; break;
+            case "completed-changed": state.Objects[0].EntityId = 101; break;
+        }
+        Assert.False(p.Matches(state, 123)); Assert.False(c.CanReadmitPaidPending(3800, c.WorkDeadlineUtc.AddSeconds(1)));
+    }
+    [Fact]
     public void EmptySourceExtensionPersistsOnlyTheNewDebitAndNeverRecreatesItsPaidSourceOrPendingBatch()
     {
         using var fixture = new Fixture();

@@ -10,7 +10,7 @@ internal sealed partial class NormalGameActionCoordinator
         if(b.StructuredConstruction is not {} binding || binding.JourneyId!=journeyId || b.Phase!="outcome_unknown"
             || b.Objects.Count<1 || b.Objects.Count!=b.Site.Objects.Count || b.LastEvidenceGameTick>tick
             || b.ConstructionControl is not {DispatchDisabled:true,OriginalDroneEnabled:true,StopReason:not null} c
-            || c.NativeCreateActionId!=b.ActionId || !Guid.TryParse(c.NativeCreateActionId,out _)
+            || !Guid.TryParse(c.NativeCreateActionId,out _) || !Guid.TryParse(b.ActionId,out _)
             || !c.DrainStartedAtGameTick.HasValue || c.DrainStartedAtGameTick>tick || !c.DrainStartedAtUtc.HasValue
             || b.Objects.Any(o=>o.State!=BlueprintObjectStates.Completed && o.State!=BlueprintObjectStates.PendingConstruction)
             || b.Site.Objects.Any(o=>!StructuredConstructionBinding.SupportsItem(o.ItemId)))return false;
