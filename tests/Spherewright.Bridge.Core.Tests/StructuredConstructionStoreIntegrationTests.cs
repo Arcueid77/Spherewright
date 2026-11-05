@@ -13,6 +13,25 @@ namespace Spherewright.Bridge.Core.Tests;
 public sealed class StructuredConstructionStoreIntegrationTests
 {
     [Fact]
+    public void EmptySourceExtensionPersistsOnlyTheNewDebitAndNeverRecreatesItsPaidSourceOrPendingBatch()
+    {
+        using var fixture = new Fixture();
+        var (binding, _) = StructuredEmptyBeltSourceTests.Scenario();
+        var state = BlueprintBuildState.Create(Site(2, 2001), structuredConstruction: binding);
+        var original = state.StructuredConstruction!.ImmutableHash(); Start(state);
+        state.BeforeStructuredSubmission(101, 12, "before-two-new");
+        state.ConfirmStructuredSubmission(new[] { 20, 21 }, 10, "paid-two-new-only");
+        Assert.True(fixture.Store().TryPut(state));
+        var restored = Assert.Single(fixture.Read());
+        Assert.Equal(original, restored.StructuredConstruction!.ImmutableHash());
+        Assert.Equal(9, restored.StructuredConstruction.EmptyBeltSource!.ObjectId);
+        Assert.Equal(new int?[] { 20, 21 }, restored.Objects.Select(o => o.PrebuildId));
+        Assert.All(restored.Objects, o => { Assert.Equal(12, o.InventoryBefore); Assert.Equal(10, o.InventoryAfter); });
+        Assert.Throws<InvalidOperationException>(() => restored.BeforeStructuredSubmission(102, 10, "replay"));
+        restored.StructuredConstruction.EmptyBeltSource.CompletionTopologyHash = CanonicalStateHash.Combine("tampered-source");
+        Assert.False(fixture.Store().TryPut(restored));
+    }
+    [Fact]
     public void SafelyStoppedPaidBatchGetsDistinctWindowWithoutRewritingOldWindowOrDebit()
     {
         using var fixture = new Fixture();

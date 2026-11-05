@@ -33,17 +33,20 @@ internal sealed partial class NormalGameActionCoordinator
         if (journey.Phase != "remote_landed" || journey.RemotePlanetId != plan.PlanetId
             || !StructuredConstructionBinding.SupportsItem(plan.BuildingItemId)
             || plan.BuildSteps.Count < 1 || plan.BuildSteps.Count > StructuredConstructionBinding.MaximumNewObjects(plan.BuildingItemId)
-            || plan.BuildSteps.Any(s => s.SourceBeltAnchor is not null || s.DestinationBeltAnchor is not null
+            || plan.BuildSteps.Any(s => s.DestinationBeltAnchor is not null
                 || s.BeltPathMode == BeltPathModes.NativeElevatedGrid))
-            return Stale($"Remote construction requires an original-journey native-validated batch of1..{StructuredConstructionBinding.MaximumNewObjects(plan.BuildingItemId)} supported NEW objects without elevated paths or belt-cover reuse; observed NEW count={plan.BuildSteps.Count}, item={plan.BuildingItemId}, journey phase={journey.Phase}.");
+            return Stale($"Remote construction requires an original-journey native-validated batch of1..{StructuredConstructionBinding.MaximumNewObjects(plan.BuildingItemId)} supported NEW objects without elevated paths or destination covers; a source tail requires separate empty paid-source evidence. Observed NEW count={plan.BuildSteps.Count}, item={plan.BuildingItemId}, journey phase={journey.Phase}.");
         if (!_blueprints.TryRead(out var old) || old.Count >= BlueprintBuildStore.MaximumBuilds
             || old.Any(b => b.StructuredConstruction is not null
                 && !PaidFactoryCompletionPolicy.HasCompletedIdleProof(b,GameMain.gameTick)))
             return BlueprintError("Read and fresh-resume the exact existing structured build; do not submit a replacement batch.");
+        if (!TryBindStructuredEmptyBeltSource(plan, old, out var sourceEvidence, out var sourceRejection))
+            return Stale(sourceRejection);
 
         var binding = new StructuredConstructionBinding
         {
             Kind = plan.BuildKind, JourneyId = journey.JourneyId, NativePlanHash = plan.ExpectedStateHash,
+            EmptyBeltSource = sourceEvidence,
             ResourceNodeId = plan.BuildResourceNodeId, ResourceStateHash = plan.BuildResourceStateHash,
             SourceObjectId = plan.SourceObjectId, DestinationObjectId = plan.DestinationObjectId,
             Steps = plan.BuildSteps.Select(s => new StructuredConstructionConnection
@@ -92,6 +95,7 @@ internal sealed partial class NormalGameActionCoordinator
 
     private BridgeError? ValidateStructuredConstructionBudget(NormalActionPlanPayload plan)
     {
+        if (StructuredEmptySourcePrecreateBlocker(plan) is { } sourceBlocker) return Stale(sourceBlocker);
         if (!VoyagerRemoteIdleBindingMatches())
             return Stale("Structured remote work requires this live landed-controller idle binding; a remote Host/save reload is not silently recertified.");
         var build = plan.BlueprintState!;
@@ -223,6 +227,8 @@ internal sealed partial class NormalGameActionCoordinator
 
     private void StartStructuredConstructionOnMainThread(ActionRecord action)
     {
+        if (StructuredEmptySourcePrecreateBlocker(action.Plan) is { } sourceBlocker)
+        { Fail(action, sourceBlocker + "; no Native create occurred."); return; }
         var build = CloneBlueprintState(action.Plan.BlueprintState!);
         var player = GameMain.mainPlayer;
         var factory = GameMain.data.localLoadedPlanetFactory;

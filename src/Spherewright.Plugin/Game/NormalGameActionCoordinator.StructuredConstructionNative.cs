@@ -430,8 +430,14 @@ internal sealed partial class NormalGameActionCoordinator
             if (endpoint.ObjectId >= factory.entityCursor) return false;
             ref var entity = ref factory.entityPool[endpoint.ObjectId];
             if (entity.id != endpoint.ObjectId || entity.protoId != endpoint.ItemId
-                || Vector3.Distance(entity.pos, ToVector(endpoint.Position)) > .003f
-                || Quaternion.Angle(entity.rot, BlueprintRotation(endpoint.Rotation)) > .1f) return false;
+                || Vector3.Distance(entity.pos, ToVector(endpoint.Position)) > .003f) return false;
+            if (binding.EmptyBeltSource is { } source && endpoint.ObjectId == source.ObjectId)
+            {
+                if (endpoint.ItemId != 2001 || !ProvesNativeBeltRotation(factory, endpoint.ObjectId)
+                    || !TryBeltSourceTopology(factory, endpoint.ObjectId, out var topology, out _, nativeCompletionRotation: true)
+                    || !BeltSourceReusePolicy.SameEvidence(source.CompletionTopologyHash, topology)) return false;
+            }
+            else if (Quaternion.Angle(entity.rot, BlueprintRotation(endpoint.Rotation)) > .1f) return false;
         }
         foreach (var id in ids.Concat(binding.Endpoints.Select(e => e.ObjectId)))
         {

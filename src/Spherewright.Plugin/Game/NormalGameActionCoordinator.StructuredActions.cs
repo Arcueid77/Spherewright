@@ -1517,8 +1517,13 @@ internal sealed partial class NormalGameActionCoordinator
                 throw;
             }
 
-            create = () => CreateWithBeltCoverProof(factory, tool, sourceCover, destinationCover, previews,
-                action.Plan.BuildSteps[0].SourceBeltAnchor, action.Plan.BuildSteps[action.Plan.BuildSteps.Count - 1].DestinationBeltAnchor);
+            create = () =>
+            {
+                if (StructuredEmptySourcePrecreateBlocker(action.Plan) is { } sourceBlocker)
+                    throw new InvalidOperationException(sourceBlocker);
+                CreateWithBeltCoverProof(factory, tool, sourceCover, destinationCover, previews,
+                    action.Plan.BuildSteps[0].SourceBeltAnchor, action.Plan.BuildSteps[action.Plan.BuildSteps.Count - 1].DestinationBeltAnchor);
+            };
             cleanup = () =>
             {
                 try { tool.ReleaseSnapshot(); }

@@ -19,6 +19,7 @@ internal sealed partial class NormalGameActionCoordinator
         internal string CompletionTopologyHash = string.Empty;
         internal string BindingHash = string.Empty;
         internal string CargoHash = string.Empty;
+        internal int CargoStackCount;
         internal EmptyBeltPathState? ElevatedEmptyPath;
         internal List<FactoryConnectionSnapshot> Connections = new List<FactoryConnectionSnapshot>();
     }
@@ -89,7 +90,7 @@ internal sealed partial class NormalGameActionCoordinator
             state = new BeltSourceState { EntityId = entityId, ItemId = entity.protoId, Position = entity.pos, Tilt = entity.tilt,
                 Connections = connections, TopologyHash = topology, CompletionTopologyHash = completionTopology,
                 BindingHash = CanonicalStateHash.Combine("belt-source-binding-v1", fields.ToArray()),
-                CargoHash = CanonicalStateHash.Combine("belt-source-cargo-v1", cargoFields.ToArray()) };
+                CargoHash = CanonicalStateHash.Combine("belt-source-cargo-v1", cargoFields.ToArray()), CargoStackCount = references.Count };
             if (requireEmptyElevatedPath)
             {
                 if (!TryCaptureEmptyBeltPath(factory, entityId, 0, out var empty, out reason))
