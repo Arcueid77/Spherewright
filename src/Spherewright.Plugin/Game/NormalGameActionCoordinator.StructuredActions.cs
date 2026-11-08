@@ -299,6 +299,8 @@ internal sealed partial class NormalGameActionCoordinator
         foreach (var candidate in candidates)
         {
             candidate.ModelIndex = modelIndex;
+            if (BuildStepDescription(candidate, item).isSpraycoster)
+                candidate.Parameters.AddRange(new int[128]);
             if (TryValidateClickBuild(factory, player, item, candidate, 0, out var accepted, out last))
             {
                 return BuildPreparation.Succeeded(NormalBuildKinds.Core, new[] { accepted });
@@ -862,6 +864,8 @@ internal sealed partial class NormalGameActionCoordinator
     {
         accepted = candidate;
         rejection = string.Empty;
+        if (BuildStepDescription(candidate, item).isSpraycoster)
+            return TryValidateNativeAddonBuild(factory, player, item, candidate, out accepted, out rejection);
         if (!BuildUiIsIdle(player))
         {
             rejection = "The player's normal build UI owns preview state.";
@@ -1575,6 +1579,33 @@ internal sealed partial class NormalGameActionCoordinator
             {
                 tool.buildPreviews.Clear();
                 tool.ReleaseSnapshot();
+                tool._Free();
+            };
+        }
+        else if (BuildStepDescription(action.Plan.BuildSteps[0], item).isSpraycoster)
+        {
+            var tool = new SpherewrightAddonBuildTool();
+            tool._Init(GameMain.data!);
+            tool.SetFactoryReferences();
+            tool.handItem = item;
+            tool.handPrefabDesc = BuildStepDescription(action.Plan.BuildSteps[0], item);
+            tool.yaw = action.Plan.BuildSteps[0].Yaw;
+            tool.SnapshotPlayerInventory();
+            previews = CreateLinkedPreviews(action.Plan.BuildSteps, item);
+            tool.buildPreviews.AddRange(previews);
+            tool.BindPreparedPose(previews[0]);
+            if (!tool.CheckPreparedBuildConditions() || !PreviewsExactlyMatch(action.Plan.BuildSteps, previews))
+            {
+                tool.ReleaseSnapshot();
+                tool.buildPreviews.Clear();
+                tool._Free();
+                throw new InvalidOperationException("Native addon geometry changed before creation.");
+            }
+            create = tool.CreatePrebuilds;
+            cleanup = () =>
+            {
+                tool.ReleaseSnapshot();
+                tool.buildPreviews.Clear();
                 tool._Free();
             };
         }

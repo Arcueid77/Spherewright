@@ -413,6 +413,20 @@ internal sealed partial class NormalGameActionCoordinator
             var splitter = system.splitterPool[e.splitterId];
             return splitter.id == e.splitterId && splitter.entityId == id;
         }
+        if (desc.isPiler)
+        {
+            var traffic = factory.cargoTraffic;
+            return traffic?.pilerPool is not null && e.pilerId > 0 && e.pilerId < traffic.pilerCursor
+                && e.pilerId < traffic.pilerPool.Length && traffic.pilerPool[e.pilerId].id == e.pilerId
+                && traffic.pilerPool[e.pilerId].entityId == id;
+        }
+        if (desc.isSpraycoster)
+        {
+            var traffic = factory.cargoTraffic;
+            return traffic?.spraycoaterPool is not null && e.spraycoaterId > 0 && e.spraycoaterId < traffic.spraycoaterCursor
+                && e.spraycoaterId < traffic.spraycoaterPool.Length && traffic.spraycoaterPool[e.spraycoaterId].id == e.spraycoaterId
+                && traffic.spraycoaterPool[e.spraycoaterId].entityId == id;
+        }
         if (desc.isBattleBase)
         {
             var pool = factory.defenseSystem?.battleBases;

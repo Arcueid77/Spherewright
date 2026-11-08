@@ -110,12 +110,47 @@ public sealed class NativeStackingPolicyTests
     [InlineData(2102)]
     [InlineData(2106)]
     [InlineData(2020)]
+    [InlineData(2040)]
+    [InlineData(2313)]
     [InlineData(2901)]
     [InlineData(2902)]
     [InlineData(3009)]
     public void KnownNativeStackFamiliesHaveRemoteComponentProofAdapters(int item)
     {
         Assert.True(StructuredConstructionBinding.IsFactoryCoreItem(item));
+    }
+
+    [Theory]
+    [InlineData("click")]
+    [InlineData("addon")]
+    public void NativeHeightStacksHaveNoInventedStorageLayerCapAndBindTheirTool(string tool)
+    {
+        var plan = Plan();
+        plan.MaximumLayers = null;
+        plan.HeightLimitKind = "native_reach";
+        plan.BuildToolKind = tool;
+        NativeStackingPolicy.ValidatePlan(plan);
+        Assert.True(NativeStackingPolicy.ConfirmsPlan(Request(), new PreparedNormalAction { PlannedStackConstruction = plan }));
+        var hash = NativeStackingPolicy.PlanHash(plan);
+        plan.BuildToolKind = tool == "click" ? "addon" : "click";
+        Assert.NotEqual(hash, NativeStackingPolicy.PlanHash(plan));
+        plan.MaximumLayers = 3;
+        Assert.Throws<InvalidDataException>(() => NativeStackingPolicy.ValidatePlan(plan));
+        plan.MaximumLayers = null;
+        plan.HeightLimitKind = "technology";
+        Assert.Throws<InvalidDataException>(() => NativeStackingPolicy.ValidatePlan(plan));
+    }
+
+    [Fact]
+    public void ExistingTechnologyPlanRetainsItsOriginalHash()
+    {
+        var plan = Plan();
+        var original = CanonicalStateHash.Combine("native-stack-construction-v1", plan.EvidenceVersion,
+            plan.SelectedObjectId, plan.RootObjectId, plan.AnchorObjectId, plan.BeforeStackStateHash,
+            plan.BuildingItemId, plan.ModelIndex, plan.ExistingLayerCount, plan.MaximumLayers,
+            plan.InputFromSlot, plan.InputToSlot,
+            CanonicalStateHash.Combine("existing-stack-members", plan.ExistingObjectIds.Cast<object>().ToArray()));
+        Assert.Equal(original, NativeStackingPolicy.PlanHash(plan));
     }
 
     [Fact]

@@ -108,11 +108,15 @@ internal sealed partial class GameStateReader
                 throw new InvalidOperationException("walking_terrain_owner_unavailable");
             CaptureWalkingSceneCoverage(player, actorColliders, actorLayers, simulator, result);
             var ground = CaptureWalkingTerrain(planet, player.position, 0, 0, simulator);
+            result.OriginSurface = ground;
             if (ground.GroundRadiusMetres.HasValue)
                 result.GroundOffsetMetres = player.position.magnitude - ground.GroundRadiusMetres.Value;
             if (requireIdleWalk && (!ground.Observed || !ground.Dry || result.GroundOffsetMetres < -.05
                 || result.GroundOffsetMetres > .5))
+            {
+                if (ground.ReasonCode is not null) AddMovementBlocker(result, ground.ReasonCode);
                 AddMovementBlocker(result, "walking_origin_not_on_observed_dry_terrain");
+            }
             var factoryHash = string.Empty;
             if (requireIdleWalk)
             {
@@ -239,13 +243,23 @@ internal sealed partial class GameStateReader
         var result = new WalkingTerrainPoint { Index = index, RequestedPosition = CaptureVector(point) };
         var up = point.normalized;
         var ray = new Ray(up * (planet.realRadius + 80), -up);
-        if (!Physics.Raycast(ray, out var ground, 160, 8704, QueryTriggerInteraction.Ignore)
-            || !simulator.surfaceCollider.Any(surface => ReferenceEquals(surface, ground.collider)))
+        var groundHit = Physics.Raycast(ray, out var ground, 160, 8704, QueryTriggerInteraction.Ignore);
+        result.GroundRayHit = groundHit;
+        result.GroundColliderLayer = groundHit ? ground.collider.gameObject.layer : null;
+        result.CurrentSurfaceReferenceMatches = groundHit
+            ? simulator.surfaceCollider.Count(surface => ReferenceEquals(surface, ground.collider)) : 0;
+        result.CurrentSurfaceUnityMatches = groundHit
+            ? simulator.surfaceCollider.Count(surface => surface != null && surface == ground.collider) : 0;
+        if (!groundHit || result.CurrentSurfaceReferenceMatches != 1 || result.CurrentSurfaceUnityMatches != 1)
         {
             result.ReasonCode = "walking_ground_ray_owner_unavailable";
             return result;
         }
-        var waterHit = Physics.Raycast(ray, out var water, 160, 16, QueryTriggerInteraction.Ignore);
+        // The current planet's ocean can be a trigger. Its exact simulator
+        // owner still has to match before this read establishes water coverage.
+        var waterHit = Physics.Raycast(ray, out var water, 160, 16, QueryTriggerInteraction.Collide);
+        result.WaterRayHit = waterHit;
+        result.CurrentOceanReferenceMatches = waterHit ? ReferenceEquals(water.collider, simulator.oceanCollider) : null;
         if (planet.waterItemId > 0 && (simulator.oceanCollider == null || !simulator.oceanCollider.enabled
             || !simulator.oceanCollider.gameObject.activeInHierarchy || !waterHit))
         {

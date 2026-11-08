@@ -5,12 +5,15 @@ public sealed class NativeStackingCatalogEntry
     public int ItemId { get; set; }
     public string Name { get; set; } = string.Empty;
     public int ModelIndex { get; set; }
+    public int BuildMode { get; set; }
     public string Family { get; set; } = string.Empty;
     public bool CanStack { get; set; }
     public bool StorageAttachment { get; set; }
     public bool Unlocked { get; set; }
     public int InventoryCount { get; set; }
-    public int MaximumLayers { get; set; }
+    public int? MaximumLayers { get; set; }
+    public string HeightLimitKind { get; set; } = "technology";
+    public float MaximumConstructionHeightMetres { get; set; }
     public bool AllowsRotation { get; set; }
     public bool AllowsPorts { get; set; }
     public Vector3Snapshot JointOffset { get; set; } = new();
@@ -74,6 +77,18 @@ public sealed class NativeStackDeviceState
     public List<int>? NativeBeltIds { get; set; }
     public List<int>? NativeInputBeltIds { get; set; }
     public List<int>? NativeOutputBeltIds { get; set; }
+    public int? PilerMode { get; set; }
+    public int? CooldownTicks { get; set; }
+    public int? WorkProgress { get; set; }
+    public List<FactoryBufferSnapshot>? CachedCargo { get; set; }
+    public int? ProliferatorItemId { get; set; }
+    public int? ProliferatorAbility { get; set; }
+    public int? SprayTimesPerItem { get; set; }
+    public int? RemainingSprays { get; set; }
+    public int? ExtraSprays { get; set; }
+    public int? SprayCapacity { get; set; }
+    public bool? ProliferatorUsed { get; set; }
+    public int? CargoBeltItemId { get; set; }
 }
 
 public sealed class NativeStackConstructionPlan
@@ -87,7 +102,11 @@ public sealed class NativeStackConstructionPlan
     public int ModelIndex { get; set; }
     public int ExistingLayerCount { get; set; }
     public List<int> ExistingObjectIds { get; set; } = new();
-    public int MaximumLayers { get; set; }
+    public int? MaximumLayers { get; set; }
+    public string HeightLimitKind { get; set; } = "technology";
+    public string BuildToolKind { get; set; } = "click";
+    public bool ShouldSerializeHeightLimitKind() => HeightLimitKind != "technology";
+    public bool ShouldSerializeBuildToolKind() => BuildToolKind != "click";
     public int InputFromSlot { get; set; } = 15;
     public int InputToSlot { get; set; } = 14;
 }

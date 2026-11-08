@@ -12,24 +12,28 @@ namespace Spherewright.Bridge.Core.Tests;
 // No DSP invocation, Native Create, flight or construction acceptance.
 public sealed class StructuredConstructionStoreIntegrationTests
 {
-    [Fact]
-    public void NativeStackPendingStoreRetainsModelAnchorAndSinglePaidSubmission()
+    [Theory]
+    [InlineData(2101, 51, 8, "technology", "click")]
+    [InlineData(2040, 257, null, "native_reach", "click")]
+    [InlineData(2313, 120, null, "native_reach", "addon")]
+    public void NativeStackPendingStoreRetainsModelAnchorAndSinglePaidSubmission(int itemId, int model, int? cap, string limit, string tool)
     {
         using var fixture = new Fixture();
-        var site = Site(1, 2101);
-        site.Objects[0].NativeModelIndex = 51;
+        var site = Site(1, itemId);
+        site.Objects[0].NativeModelIndex = model;
         var binding = Binding(1);
         binding.SourceObjectId = 7;
-        binding.Endpoints.Add(new() { ObjectId = 7, ItemId = 2101 });
-        binding.Steps[0].NativeModelIndex = 51;
+        binding.Endpoints.Add(new() { ObjectId = 7, ItemId = itemId });
+        binding.Steps[0].NativeModelIndex = model;
         binding.Steps[0].InputObjectId = 7;
         binding.Steps[0].InputFromSlot = 15;
         binding.Steps[0].InputToSlot = 14;
         binding.StackConstruction = new Spherewright.Contracts.Factory.NativeStackConstructionPlan
         {
             SelectedObjectId = 7, RootObjectId = 7, AnchorObjectId = 7,
-            BeforeStackStateHash = "sha256:synthetic-stack", BuildingItemId = 2101, ModelIndex = 51,
-            ExistingLayerCount = 1, ExistingObjectIds = new() { 7 }, MaximumLayers = 8,
+            BeforeStackStateHash = "sha256:synthetic-stack", BuildingItemId = itemId, ModelIndex = model,
+            ExistingLayerCount = 1, ExistingObjectIds = new() { 7 }, MaximumLayers = cap,
+            HeightLimitKind = limit, BuildToolKind = tool,
         };
         var state = BlueprintBuildState.Create(site, structuredConstruction: binding);
         Start(state);
@@ -37,14 +41,22 @@ public sealed class StructuredConstructionStoreIntegrationTests
         state.ConfirmStructuredSubmission(new[] { 20 }, 2, "after");
         Assert.True(fixture.Store().TryPut(state));
         var restored = Assert.Single(fixture.Read());
-        Assert.Equal(51, restored.Site.Objects[0].NativeModelIndex);
+        Assert.Equal(model, restored.Site.Objects[0].NativeModelIndex);
         Assert.Equal(7, restored.StructuredConstruction!.StackConstruction!.AnchorObjectId);
         Assert.Equal(new[] { 7 }, restored.StructuredConstruction.StackConstruction.ExistingObjectIds);
+        Assert.Equal(cap, restored.StructuredConstruction.StackConstruction.MaximumLayers);
+        Assert.Equal(tool, restored.StructuredConstruction.StackConstruction.BuildToolKind);
+        Assert.Equal(limit, restored.StructuredConstruction.StackConstruction.HeightLimitKind);
+        if (tool == "click" && limit == "technology")
+        {
+            Assert.DoesNotContain("buildToolKind", PluginJson.Serialize(restored.StructuredConstruction.StackConstruction));
+            Assert.DoesNotContain("heightLimitKind", PluginJson.Serialize(restored.StructuredConstruction.StackConstruction));
+        }
         Assert.Equal(20, restored.Objects[0].PrebuildId);
         Assert.Equal(3, restored.Objects[0].InventoryBefore);
         Assert.Equal(2, restored.Objects[0].InventoryAfter);
         Assert.Throws<InvalidOperationException>(() => restored.BeforeStructuredSubmission(102, 2, "replay"));
-        restored.Site.Objects[0].NativeModelIndex = 52;
+        restored.Site.Objects[0].NativeModelIndex = model + 1;
         Assert.False(fixture.Store().TryPut(restored));
     }
 

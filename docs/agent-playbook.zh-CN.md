@@ -583,6 +583,8 @@ Native Import 可将 double 宇宙坐标逆投影为 float 本地位置；普通
 
 ## 原生垂直叠放
 
+原生目录覆盖储仓、液罐、研究站、分流器样式、自动集装机和喷涂机。`maximumLayers=null`且`heightLimitKind=native_reach`时，由原生建造高度及可达范围决定准入；`maximumConstructionHeightMetres`回显当前原生高度额度。喷涂机使用原生Addon工具及径向2.666667米偏移。逐层核对集装机缓存物品/数量/增产点及模式，喷涂机传送带身份、增产剂余量/喷涂次数及工作状态。
+
 `get_build_catalog.stacking`列出原生物品/模型样式、允许的下层物品、旋转规则、层数上限、解锁与背包数量。检查正数已建成锚点，并要求完整`stack`观察。选择器可指向任一已建成层或原生仓储挂件，返回顶层才是实际放置锚点。待建、循环或不可用的链须先重新核销，再考虑增加一层。
 
 调用`prepare_build`时提供`stackOnObjectId`、`expectedStackStateHash`和可选`preferredModelIndex`，省略地面、资源、传送带及源/目的连接参数。原生按下层模型真实接点偏移、上层兼容与朝向、当前仓储/研究站科技、放置条件及1个已有建筑物品预检。提交前要求匹配的`plannedStackConstruction`与`plannedModelIndex`。正常无人机完成待建体，原终态`stackConstructionReadback`证明整条结果链。逐类另读仓格/物品、液罐流体、研究站工作/矩阵点数以及分流器端口/过滤/优先级。只读目录本身不证明库存行为或实机验收。

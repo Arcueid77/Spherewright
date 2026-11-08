@@ -28,7 +28,7 @@ public sealed class StructuredConstructionBinding
     // paid drone work and exact component/pose/topology completion proof.
     public static bool IsFactoryCoreItem(int id) => id == 2302 || id == 2304 || id == 2309
         || id == 2101 || id == 2102 || id == 2106 || id == 2020 || id == 2901 || id == 2902
-        || id == 3009 || id == 2211 || id == 2311 || id == 2312;
+        || id == 3009 || id == 2040 || id == 2313 || id == 2211 || id == 2311 || id == 2312;
 
     public static int MaximumNewObjects(int itemId) => itemId == 2001 ? 12 : 8;
 
@@ -76,19 +76,15 @@ public sealed class StructuredConstructionBinding
         EmptyBeltSource?.Validate(this, site);
         if (Steps.Where((step, index) => step.NativeModelIndex != site.Objects[index].NativeModelIndex).Any())
             throw new InvalidDataException("Structured native model binding differs from its approved site.");
-        if (StackConstruction is { } stack && (Kind != "core" || Steps.Count != 1
-            || stack.EvidenceVersion != 1 || stack.SelectedObjectId <= 0 || stack.RootObjectId <= 0
+        if (StackConstruction is { } stack)
+        {
+            NativeStackingPolicy.ValidatePlan(stack);
+            if (Kind != "core" || Steps.Count != 1
             || stack.AnchorObjectId != SourceObjectId || stack.BuildingItemId != site.Objects[0].ItemId
-            || stack.ModelIndex != Steps[0].NativeModelIndex || stack.ExistingLayerCount < 1
-            || stack.ExistingLayerCount >= NativeStackingPolicy.MaximumObservedLayers || stack.MaximumLayers < 1
-            || stack.ExistingObjectIds is null || stack.ExistingObjectIds.Count != stack.ExistingLayerCount
-            || stack.ExistingObjectIds.Any(id => id <= 0) || stack.ExistingObjectIds.Distinct().Count() != stack.ExistingLayerCount
-            || stack.ExistingObjectIds[0] != stack.RootObjectId
-            || stack.ExistingObjectIds[stack.ExistingObjectIds.Count - 1] != stack.AnchorObjectId
-            || string.IsNullOrEmpty(stack.BeforeStackStateHash) || !stack.BeforeStackStateHash.StartsWith("sha256:", StringComparison.Ordinal)
-            || stack.InputFromSlot != 15 || stack.InputToSlot != 14
-            || Steps[0].InputObjectId != stack.AnchorObjectId || Steps[0].InputFromSlot != 15 || Steps[0].InputToSlot != 14))
-            throw new InvalidDataException("Invalid native stack construction binding.");
+            || stack.ModelIndex != Steps[0].NativeModelIndex
+            || Steps[0].InputObjectId != stack.AnchorObjectId || Steps[0].InputFromSlot != 15 || Steps[0].InputToSlot != 14)
+                throw new InvalidDataException("Invalid native stack construction binding.");
+        }
     }
 
     private static bool Finite(float x) => !float.IsNaN(x) && !float.IsInfinity(x);

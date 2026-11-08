@@ -13,6 +13,8 @@ internal sealed partial class GameStateReader
         if (desc.isStorage) return "storage";
         if (desc.isLab) return "lab";
         if (desc.isSplitter) return "splitter";
+        if (desc.isPiler) return "piler";
+        if (desc.isSpraycoster) return "spraycoater";
         return string.Empty;
     }
 
@@ -22,7 +24,7 @@ internal sealed partial class GameStateReader
         var result = new List<NativeStackingCatalogEntry>();
         foreach (var item in LDB.items.dataArray)
         {
-            if (item is null || !item.CanBuild) continue;
+            if (item is null || !item.CanBuild || !item.IsEntity) continue;
             var modelCount = Math.Max(1, item.ModelCount);
             if (modelCount > 32)
             {
@@ -52,12 +54,16 @@ internal sealed partial class GameStateReader
                     ItemId = item.ID,
                     Name = item.name ?? string.Empty,
                     ModelIndex = model!.ID,
+                    BuildMode = item.BuildMode,
                     Family = NativeStackFamily(desc),
                     CanStack = desc.multiLevel,
                     StorageAttachment = desc.addonType == EAddonType.Storage,
                     Unlocked = GameMain.history.ItemUnlocked(item.ID),
                     InventoryCount = GameMain.mainPlayer.package.GetItemCount(item.ID),
-                    MaximumLayers = desc.isLab ? GameMain.history.labLevel : GameMain.history.storageLevel,
+                    MaximumLayers = desc.isLab ? GameMain.history.labLevel
+                        : desc.isStorage || desc.isTank || desc.isSplitter ? GameMain.history.storageLevel : null,
+                    HeightLimitKind = desc.isLab || desc.isStorage || desc.isTank || desc.isSplitter ? "technology" : "native_reach",
+                    MaximumConstructionHeightMetres = GameMain.history.buildMaxHeight,
                     AllowsRotation = desc.multiLevelAllowRotate,
                     AllowsPorts = desc.multiLevelAllowPortsOrSlots,
                     JointOffset = CaptureVector(desc.lapJoint),
@@ -149,6 +155,8 @@ internal sealed partial class GameStateReader
                 fields.Add(device?.OutputFilterItemId);
                 fields.Add(device?.OutputFilterPreset);
                 fields.Add(device?.PrioritySlotPresets);
+                fields.Add(device?.PilerMode);
+                fields.Add(device?.ProliferatorItemId);
                 fields.Add(desc.lapJoint.x);
                 fields.Add(desc.lapJoint.y);
                 fields.Add(desc.lapJoint.z);
@@ -229,6 +237,42 @@ internal sealed partial class GameStateReader
                 NativeOutputBeltIds = new() { splitter.output0, splitter.output1, splitter.output2, splitter.output3 },
             };
         }
+        if (entity.pilerId > 0)
+        {
+            var traffic = factory.cargoTraffic;
+            var pool = traffic.pilerPool;
+            if (entity.pilerId >= traffic.pilerCursor || entity.pilerId >= pool.Length
+                || pool[entity.pilerId].id != entity.pilerId || pool[entity.pilerId].entityId != entity.id)
+                throw new InvalidOperationException("stack_piler_component_unavailable");
+            var piler = pool[entity.pilerId];
+            return new NativeStackDeviceState
+            {
+                PilerMode = (int)piler.pilerState, CooldownTicks = piler.cacheCdTick, WorkProgress = piler.timeSpend,
+                NativeInputBeltIds = new() { piler.inputBeltId }, NativeOutputBeltIds = new() { piler.outputBeltId },
+                CachedCargo = new()
+                {
+                    new() { Role = "piler-cache-1", ItemId = piler.cacheItemId1, Count = piler.cacheCargoStack1, Inc = piler.cacheCargoInc1 },
+                    new() { Role = "piler-cache-2", ItemId = piler.cacheItemId2, Count = piler.cacheCargoStack2, Inc = piler.cacheCargoInc2 },
+                },
+            };
+        }
+        if (entity.spraycoaterId > 0)
+        {
+            var traffic = factory.cargoTraffic;
+            var pool = traffic.spraycoaterPool;
+            if (entity.spraycoaterId >= traffic.spraycoaterCursor || entity.spraycoaterId >= pool.Length
+                || pool[entity.spraycoaterId].id != entity.spraycoaterId || pool[entity.spraycoaterId].entityId != entity.id)
+                throw new InvalidOperationException("stack_spraycoater_component_unavailable");
+            var coater = pool[entity.spraycoaterId];
+            return new NativeStackDeviceState
+            {
+                NativeBeltIds = new() { coater.cargoBeltId, coater.incBeltId },
+                ProliferatorItemId = coater.incItemId, ProliferatorAbility = coater.incAbility,
+                SprayTimesPerItem = coater.incSprayTimes, RemainingSprays = coater.incCount,
+                ExtraSprays = coater.extraIncCount, SprayCapacity = coater.incCapacity,
+                ProliferatorUsed = coater.incUsed, WorkProgress = coater.sprayTime, CargoBeltItemId = coater.cargoBeltItemId,
+            };
+        }
         return null;
     }
 
@@ -253,6 +297,20 @@ internal sealed partial class GameStateReader
             fields.Add(device?.ResearchHashBytes);
             fields.Add(device?.BonusResearchHashBytes);
             fields.Add(device?.FluidInc);
+            fields.Add(device?.CooldownTicks);
+            fields.Add(device?.WorkProgress);
+            fields.Add(device?.ProliferatorAbility);
+            fields.Add(device?.SprayTimesPerItem);
+            fields.Add(device?.RemainingSprays);
+            fields.Add(device?.ExtraSprays);
+            fields.Add(device?.ProliferatorUsed);
+            foreach (var buffer in device?.CachedCargo ?? Enumerable.Empty<FactoryBufferSnapshot>())
+            {
+                fields.Add(buffer.Role);
+                fields.Add(buffer.ItemId);
+                fields.Add(buffer.Count);
+                fields.Add(buffer.Inc);
+            }
             foreach (var buffer in snapshot.Buffers)
             {
                 fields.Add(buffer.Role);

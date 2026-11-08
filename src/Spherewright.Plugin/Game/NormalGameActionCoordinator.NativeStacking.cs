@@ -33,7 +33,13 @@ internal sealed partial class NormalGameActionCoordinator
         var transposes = desc.multiLevelAlternativeYawTransposes ?? Array.Empty<bool>();
         var alternative = Array.IndexOf(alternatives, top.protoId);
         var transpose = alternative >= 0 && alternative < transposes.Length && transposes[alternative];
-        var position = top.pos + top.rot * topDesc.lapJoint;
+        var addonStack = desc.isSpraycoster && topDesc.isSpraycoster && item.BuildMode == 9;
+        if (item.BuildMode != 1 && !addonStack)
+            return BuildPreparation.Failed(BridgeErrorCodes.InvalidRequest, "The native stack uses an unsupported placement tool.");
+        // DSP29151's Addon.DeterminePreviews uses this explicit radial offset
+        // for spraycoaters, rather than the model's zero lapJoint.
+        var position = addonStack ? top.pos.normalized * (top.pos.magnitude + 2.666667f)
+            : top.pos + top.rot * topDesc.lapJoint;
         var rotation = desc.multiLevelAllowRotate
             ? Maths.SphericalRotation(position, request.PreferredYaw ?? 0)
             : transpose ? top.rot * Quaternion.Euler(0, 90, 0) : top.rot;
@@ -52,8 +58,12 @@ internal sealed partial class NormalGameActionCoordinator
             ModelIndex = modelIndex,
             ExistingLayerCount = before.Layers.Count,
             ExistingObjectIds = before.Layers.Select(layer => layer.ObjectId).ToList(),
-            MaximumLayers = desc.isLab ? GameMain.history.labLevel : GameMain.history.storageLevel,
+            MaximumLayers = desc.isLab ? GameMain.history.labLevel
+                : desc.isStorage || desc.isTank || desc.isSplitter ? GameMain.history.storageLevel : null,
+            HeightLimitKind = desc.isLab || desc.isStorage || desc.isTank || desc.isSplitter ? "technology" : "native_reach",
+            BuildToolKind = addonStack ? "addon" : "click",
         };
+        if (addonStack) candidate.Parameters.AddRange(new int[128]);
         if (!TryValidateClickBuild(factory, player, item, candidate, 0, out var accepted, out var reason))
             return BuildPreparation.Failed(BridgeErrorCodes.BuildLocationInvalid, reason);
         var endpoint = _reader.InspectFactoryEntityOnMainThread(_sessions.SessionId,
@@ -76,6 +86,57 @@ internal sealed partial class NormalGameActionCoordinator
     private static PrefabDesc BuildStepDescription(BuildStepPlan step, ItemProto item) =>
         NativeBuildModel(item, step.ModelIndex)
         ?? throw new InvalidOperationException("The bound native building model is unavailable.");
+
+    private static bool TryValidateNativeAddonBuild(PlanetFactory factory, Player player, ItemProto item,
+        BuildStepPlan candidate, out BuildStepPlan accepted, out string rejection)
+    {
+        accepted = candidate;
+        rejection = string.Empty;
+        var plan = candidate.StackConstruction;
+        if (!BuildStepDescription(candidate, item).isSpraycoster || !BuildUiIsIdle(player))
+        {
+            rejection = "The exact idle native addon stack is unavailable.";
+            return false;
+        }
+        if (OverlapsExistingFactoryObject(factory, BuildStepDescription(candidate, item), candidate.Position,
+            candidate.Rotation, out var occupied, plan?.AnchorObjectId ?? 0))
+        {
+            rejection = "The addon stack overlaps another native object:" + occupied;
+            return false;
+        }
+        var tool = new SpherewrightAddonBuildTool();
+        tool._Init(GameMain.data);
+        tool.SetFactoryReferences();
+        using var ui = new NativeBuildPreviewUiScope();
+        try
+        {
+            if (!ReferenceEquals(tool.factory, factory))
+            {
+                rejection = "The isolated native addon validator is not bound to the local factory.";
+                return false;
+            }
+            tool.handItem = item;
+            tool.handPrefabDesc = BuildStepDescription(candidate, item);
+            tool.SnapshotPlayerInventory();
+            var preview = CreatePreview(candidate, item);
+            tool.buildPreviews.Add(preview);
+            tool.BindPreparedPose(preview);
+            if (!tool.CheckPreparedBuildConditions() || preview.condition != EBuildCondition.Ok
+                || preview.coverObjId != 0 || preview.willRemoveCover)
+            {
+                rejection = "Native addon stack validation returned " + preview.condition;
+                return false;
+            }
+            accepted = BuildStepPlan.FromPreview(candidate, preview);
+            return true;
+        }
+        finally
+        {
+            tool.ReleaseSnapshot();
+            tool.buildPreviews.Clear();
+            tool._Free();
+        }
+    }
 
     private bool NativeStackAnchorMatches(PlanetFactory factory, NativeStackConstructionPlan? plan)
     {

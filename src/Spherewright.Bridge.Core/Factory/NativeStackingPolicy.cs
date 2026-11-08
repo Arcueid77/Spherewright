@@ -6,17 +6,19 @@ namespace Spherewright.Bridge.Core.Factory;
 
 public static class NativeStackingPolicy
 {
-    public const int MaximumObservedLayers = 32;
+    public const int MaximumObservedLayers = 256;
 
     public static string? PlanHash(NativeStackConstructionPlan? plan)
     {
         if (plan is null) return null;
         ValidatePlan(plan);
-        return CanonicalStateHash.Combine("native-stack-construction-v1", plan.EvidenceVersion,
+        var original = CanonicalStateHash.Combine("native-stack-construction-v1", plan.EvidenceVersion,
             plan.SelectedObjectId, plan.RootObjectId, plan.AnchorObjectId, plan.BeforeStackStateHash,
             plan.BuildingItemId, plan.ModelIndex, plan.ExistingLayerCount, plan.MaximumLayers,
             plan.InputFromSlot, plan.InputToSlot,
             CanonicalStateHash.Combine("existing-stack-members", plan.ExistingObjectIds.Cast<object>().ToArray()));
+        return plan.BuildToolKind == "click" && plan.HeightLimitKind == "technology" ? original
+            : CanonicalStateHash.Combine("native-stack-placement-v2", original, plan.BuildToolKind, plan.HeightLimitKind);
     }
 
     public static void ValidatePlan(NativeStackConstructionPlan plan)
@@ -24,7 +26,11 @@ public static class NativeStackingPolicy
         if (plan.EvidenceVersion != 1 || plan.SelectedObjectId <= 0 || plan.RootObjectId <= 0
             || plan.AnchorObjectId <= 0 || plan.BuildingItemId <= 0 || plan.ModelIndex <= 0
             || plan.ExistingLayerCount < 1 || plan.ExistingLayerCount >= MaximumObservedLayers
-            || plan.MaximumLayers < 1 || plan.ExistingObjectIds is null
+            || plan.MaximumLayers.HasValue && plan.MaximumLayers < 1
+            || plan.HeightLimitKind is not ("technology" or "native_reach")
+            || plan.BuildToolKind is not ("click" or "addon")
+            || plan.MaximumLayers.HasValue != (plan.HeightLimitKind == "technology")
+            || plan.ExistingObjectIds is null
             || plan.ExistingObjectIds.Count != plan.ExistingLayerCount
             || plan.ExistingObjectIds.Any(id => id <= 0)
             || plan.ExistingObjectIds.Distinct().Count() != plan.ExistingLayerCount
@@ -69,6 +75,6 @@ public static class NativeStackingPolicy
             && plan.BeforeStackStateHash == request.ExpectedStackStateHash
             && (request.PreferredModelIndex is null || plan.ModelIndex == request.PreferredModelIndex)
             && plan.ExistingLayerCount > 0 && plan.ExistingLayerCount < MaximumObservedLayers
-            && plan.MaximumLayers > 0;
+            && (!plan.MaximumLayers.HasValue || plan.MaximumLayers > 0);
     }
 }

@@ -103,12 +103,22 @@ internal sealed partial class NormalGameActionCoordinator
                 Initialize(() => { tool._Init(GameMain.data); tool.SetFactoryReferences(); tool.SnapshotPlayerInventory(); });
                 tool.startObjectId = preview.inputObjId; tool.castObjectId = preview.outputObjId;
             }
+            else if (preview.desc.isSpraycoster)
+            {
+                var tool = new SpherewrightAddonBuildTool(); _tool = tool;
+                tool.handItem = preview.item; tool.handPrefabDesc = preview.desc;
+                _check = tool.CheckPreparedBuildConditions; _create = tool.CreatePrebuilds; _releaseSnapshot = tool.ReleaseSnapshot;
+                Initialize(() => { tool._Init(GameMain.data); tool.SetFactoryReferences(); tool.SnapshotPlayerInventory(); });
+                tool.BindPreparedPose(preview);
+            }
             else
             {
                 var tool = new SpherewrightClickBuildTool(); _tool = tool;
                 tool.handItem = preview.item; tool.handPrefabDesc = preview.desc;
                 _check = tool.CheckBuildConditions; _create = tool.CreatePrebuilds; _releaseSnapshot = tool.ReleaseSnapshot;
                 Initialize(() => { tool._Init(GameMain.data); tool.SetFactoryReferences(); tool.SnapshotPlayerInventory(); });
+                tool.multiLevelCovering = preview.inputObjId > 0 && preview.inputToSlot == 14;
+                tool.castObjectId = tool.multiLevelCovering ? preview.inputObjId : 0;
             }
             _tool.buildPreviews.Add(preview);
         }

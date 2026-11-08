@@ -17,6 +17,7 @@ public sealed class MovementGeometrySnapshot
     public Vector3Snapshot EffectiveTarget { get; set; } = new();
     public double RadiusMetres { get; set; }
     public double GroundOffsetMetres { get; set; }
+    public WalkingTerrainPoint? OriginSurface { get; set; }
     public List<WalkingBodyCapsule> Body { get; set; } = new();
     public List<WalkingColliderSnapshot> Colliders { get; set; } = new();
 }
@@ -44,6 +45,12 @@ public sealed class WalkingColliderSnapshot
 
 public sealed class WalkingTerrainPoint
 {
+    public bool? GroundRayHit { get; set; }
+    public int? GroundColliderLayer { get; set; }
+    public int? CurrentSurfaceReferenceMatches { get; set; }
+    public int? CurrentSurfaceUnityMatches { get; set; }
+    public bool? WaterRayHit { get; set; }
+    public bool? CurrentOceanReferenceMatches { get; set; }
     public int Index { get; set; }
     public Vector3Snapshot RequestedPosition { get; set; } = new();
     public Vector3Snapshot? Position { get; set; }
