@@ -16,6 +16,8 @@ internal sealed partial class NormalGameActionCoordinator
         string? requestedSessionId,
         PrepareBuildRequest request)
     {
+        var stackError = NativeStackingPolicy.ValidateRequest(request);
+        if (stackError is not null) return InvalidPlan(stackError);
         var routePreviewError = BeltRoutePreviewPolicy.ValidateRequest(request);
         if (routePreviewError is not null) return InvalidPlan(routePreviewError);
         var endpointPreviewError = BeltEndpointPreviewPolicy.ValidateRequest(request);
@@ -92,7 +94,11 @@ internal sealed partial class NormalGameActionCoordinator
                 "Fresh-read the player. Enable ordinary mecha construction drones through the explicit enable-mecha-construction-drones configuration mode before submitting a new prebuild; retain existing prebuilds and never recreate them."));
 
         BuildPreparation preparation;
-        if (item.prefabDesc.isBelt)
+        if (request.StackOnObjectId.HasValue)
+        {
+            preparation = TryPrepareNativeStackBuild(factory, player, item, request);
+        }
+        else if (item.prefabDesc.isBelt)
         {
             preparation = TryPrepareBeltBuild(factory, player, item, request);
         }
@@ -173,6 +179,8 @@ internal sealed partial class NormalGameActionCoordinator
                 prepared.Value.BlueprintBuild = BlueprintSnapshot(payload.BlueprintState!, common.Session!, new List<string>());
                 prepared.Value.CompletionCondition = "One exact native batch, durable material/prebuild/entity/topology receipts and a finite original-journey drone lease. Terminal success requires physical owned-drone idle; pending objects resume only by this buildId, never by a replacement Create.";
             }
+            prepared.Value.PlannedStackConstruction = preparation.Steps[0].StackConstruction;
+            prepared.Value.PlannedModelIndex = preparation.Steps[0].ModelIndex == 0 ? null : preparation.Steps[0].ModelIndex;
             prepared.Value.BuildKind = preparation.Kind;
             if (preparation.Kind == NormalBuildKinds.Belt)
             {
@@ -245,6 +253,9 @@ internal sealed partial class NormalGameActionCoordinator
                 "A core building request cannot bind resource, connection, or belt-path targets.");
         }
 
+        var modelIndex = request.PreferredModelIndex ?? 0;
+        if (NativeBuildModel(item, modelIndex) is null)
+            return BuildPreparation.Failed(BridgeErrorCodes.InvalidRequest, "The preferred model does not belong to this building.");
         var candidates = new List<BuildStepPlan>();
         if (request.PreferredPosition is not null)
         {
@@ -287,6 +298,7 @@ internal sealed partial class NormalGameActionCoordinator
         var last = "No core-building candidate was accepted.";
         foreach (var candidate in candidates)
         {
+            candidate.ModelIndex = modelIndex;
             if (TryValidateClickBuild(factory, player, item, candidate, 0, out var accepted, out last))
             {
                 return BuildPreparation.Succeeded(NormalBuildKinds.Core, new[] { accepted });
@@ -862,8 +874,8 @@ internal sealed partial class NormalGameActionCoordinator
         // exact current-version build colliders to both poses and perform the
         // same conservative occupied-volume check before calling the native
         // validator.  This also covers prebuilds created by ordinary gameplay.
-        if (OverlapsExistingFactoryObject(factory, item.prefabDesc, candidate.Position, candidate.Rotation,
-                out var occupiedObjectId))
+        if (OverlapsExistingFactoryObject(factory, BuildStepDescription(candidate, item), candidate.Position, candidate.Rotation,
+                out var occupiedObjectId, candidate.StackConstruction?.AnchorObjectId ?? 0))
         {
             rejection = $"The exact build-collider volume overlaps existing factory object {occupiedObjectId}.";
             if (evidence is not null) evidence.OccupiedObjectId = occupiedObjectId;
@@ -882,7 +894,9 @@ internal sealed partial class NormalGameActionCoordinator
             }
 
             tool.handItem = item;
-            tool.handPrefabDesc = item.prefabDesc;
+            tool.handPrefabDesc = BuildStepDescription(candidate, item);
+            tool.multiLevelCovering = candidate.StackConstruction is not null;
+            tool.castObjectId = candidate.StackConstruction?.AnchorObjectId ?? 0;
             tool.yaw = candidate.Yaw;
             tool.SnapshotPlayerInventory();
             var preview = CreatePreview(candidate, item);
@@ -925,7 +939,8 @@ internal sealed partial class NormalGameActionCoordinator
         PrefabDesc candidateDescription,
         Vector3 candidatePosition,
         Quaternion candidateRotation,
-        out int occupiedObjectId)
+        out int occupiedObjectId,
+        int stackAnchorObjectId = 0)
     {
         occupiedObjectId = 0;
         var candidateColliders = CreateWorldBuildColliders(
@@ -941,12 +956,12 @@ internal sealed partial class NormalGameActionCoordinator
         for (var entityId = 1; entityId < entityLimit; entityId++)
         {
             ref var entity = ref factory.entityPool[entityId];
-            if (entity.id != entityId || entity.protoId <= 0)
+            if (entity.id != entityId || entity.protoId <= 0 || entityId == stackAnchorObjectId)
             {
                 continue;
             }
 
-            var description = LDB.items.Select(entity.protoId)?.prefabDesc;
+            var description = LDB.models.Select(entity.modelIndex)?.prefabDesc;
             if (description is null)
             {
                 continue;
@@ -970,7 +985,7 @@ internal sealed partial class NormalGameActionCoordinator
                 continue;
             }
 
-            var description = LDB.items.Select(prebuild.protoId)?.prefabDesc;
+            var description = LDB.models.Select(prebuild.modelIndex)?.prefabDesc;
             if (description is null)
             {
                 continue;
@@ -1390,6 +1405,9 @@ internal sealed partial class NormalGameActionCoordinator
             return Stale("Building unlock, owned item count, player, or construction queue changed after prepare.");
         }
 
+        if (!NativeStackAnchorMatches(factory, plan.BuildSteps[0].StackConstruction))
+            return Stale("The bound native stack changed after preparation.");
+
         if (plan.BuildResourceNodeId > 0)
         {
             var resource = _reader.InspectResourceNodeOnMainThread(
@@ -1455,7 +1473,7 @@ internal sealed partial class NormalGameActionCoordinator
             && string.Equals(BuildEndpointHash(snapshot.Value), endpointHash, StringComparison.Ordinal);
     }
 
-    private static void CreatePreparedPrebuildsOnMainThread(ActionRecord action)
+    private void CreatePreparedPrebuildsOnMainThread(ActionRecord action)
     {
         var factory = GameMain.localPlanet?.factory
             ?? throw new InvalidOperationException("The local factory is unavailable.");
@@ -1566,7 +1584,9 @@ internal sealed partial class NormalGameActionCoordinator
             tool._Init(GameMain.data!);
             tool.SetFactoryReferences();
             tool.handItem = item;
-            tool.handPrefabDesc = item.prefabDesc;
+            tool.handPrefabDesc = BuildStepDescription(action.Plan.BuildSteps[0], item);
+            tool.multiLevelCovering = action.Plan.BuildSteps[0].StackConstruction is not null;
+            tool.castObjectId = action.Plan.BuildSteps[0].StackConstruction?.AnchorObjectId ?? 0;
             tool.yaw = action.Plan.BuildSteps[0].Yaw;
             tool.SnapshotPlayerInventory();
             previews = CreateLinkedPreviews(action.Plan.BuildSteps, item);
@@ -1633,6 +1653,9 @@ internal sealed partial class NormalGameActionCoordinator
                     OutputStepIndex = step.OutputStepIndex,
                 });
 
+            var stack = action.Plan.BuildSteps[0].StackConstruction;
+            var originalStackContents = stack is null ? null
+                : _reader.CaptureNativeStackContents(factory, stack.ExistingObjectIds);
             try { create(); }
             finally
             {
@@ -1650,6 +1673,8 @@ internal sealed partial class NormalGameActionCoordinator
                         && !action.PrebuildIds.Contains(-id)) action.PrebuildIds.Add(-id);
                 }
             }
+            if (stack is not null && originalStackContents != _reader.CaptureNativeStackContents(factory, stack.ExistingObjectIds))
+                throw new InvalidOperationException("Native stack creation changed existing inventory or work at the same tick; preserve this original action.");
             if (action.Plan.BuildKind == NormalBuildKinds.Belt
                 && action.Plan.BuildSteps[0].BeltPathMode == BeltPathModes.NativeElevatedGrid
                 && !ProvesCreatedElevatedPath(factory, action.Plan.BuildSteps, previews))
@@ -1766,6 +1791,19 @@ internal sealed partial class NormalGameActionCoordinator
         out string rejection)
     {
         rejection = string.Empty;
+        if (entityIds.Count != plan.BuildSteps.Count
+            || entityIds.Where((id, index) => plan.BuildSteps[index].ModelIndex > 0
+                && factory.entityPool[id].modelIndex != plan.BuildSteps[index].ModelIndex).Any())
+        {
+            rejection = "The completed native building model differs from its prepared variant.";
+            return false;
+        }
+        if (plan.BuildSteps[0].StackConstruction is { } stack
+            && !NativeStackCompletionMatches(factory, stack, entityIds[0]))
+        {
+            rejection = "The completed native stack model or reciprocal connection differs from its plan.";
+            return false;
+        }
         if (plan.BuildKind == NormalBuildKinds.Resource)
         {
             ref var entity = ref factory.entityPool[entityIds[0]];
@@ -3387,7 +3425,7 @@ internal sealed partial class NormalGameActionCoordinator
         var preview = new BuildPreview
         {
             item = item,
-            desc = item.prefabDesc,
+            desc = BuildStepDescription(step, item),
             lpos = step.Position,
             lpos2 = step.Position2,
             lrot = step.Rotation,
@@ -3565,6 +3603,8 @@ internal sealed partial class NormalGameActionCoordinator
 
     private sealed class BuildStepPlan
     {
+        public int ModelIndex { get; set; }
+        public NativeStackConstructionPlan? StackConstruction { get; set; }
         public int ItemId { get; private set; }
         public int FilterItemId { get; set; }
         public Vector3 Position { get; private set; }
@@ -3642,6 +3682,8 @@ internal sealed partial class NormalGameActionCoordinator
             var result = new BuildStepPlan
             {
                 ItemId = template.ItemId,
+                ModelIndex = template.ModelIndex == 0 ? 0 : preview.desc.modelIndex,
+                StackConstruction = template.StackConstruction,
                 FilterItemId = preview.desc.isInserter ? preview.filterId : 0,
                 Position = preview.lpos,
                 Rotation = preview.lrot,
@@ -3678,6 +3720,8 @@ internal sealed partial class NormalGameActionCoordinator
         public bool EquivalentTo(BuildStepPlan other)
         {
             return ItemId == other.ItemId
+                   && ModelIndex == other.ModelIndex
+                   && NativeStackingPolicy.PlanHash(StackConstruction) == NativeStackingPolicy.PlanHash(other.StackConstruction)
                    && FilterItemId == other.FilterItemId
                    && Vector3.Distance(Position, other.Position) <= 0.01f
                    && Vector3.Distance(Position2, other.Position2) <= 0.01f
@@ -3707,6 +3751,12 @@ internal sealed partial class NormalGameActionCoordinator
         public void AppendFingerprint(ICollection<object?> fields)
         {
             fields.Add(ItemId);
+            if (ModelIndex != 0)
+            {
+                fields.Add("native-model-v1");
+                fields.Add(ModelIndex);
+                fields.Add(NativeStackingPolicy.PlanHash(StackConstruction));
+            }
             fields.Add(FilterItemId);
             fields.Add(Position.x);
             fields.Add(Position.y);

@@ -1577,6 +1577,11 @@ internal sealed partial class NormalGameActionCoordinator
             _sessions.ForgetCurrentFlightCheckpoint(action.FlightCheckpointId!);
         }
 
+        if (!CaptureCompletedNativeStack(action))
+        {
+            QuarantineBuildOutcome(action, "Completed stack readback is incomplete or differs from its original native plan.");
+            return;
+        }
         action.State = NormalActionStates.Completed;
         action.Terminal = true;
         action.Succeeded = true;
@@ -1690,6 +1695,7 @@ internal sealed partial class NormalGameActionCoordinator
             } : null,
             ResearchQueueReadback = action.ResearchQueueReadback,
             StorageConfigurationReadback = action.StorageConfigurationReadback,
+            StackConstructionReadback = action.StackConstructionReadback,
             StationCargoWithdrawalReadback = action.StationCargoWithdrawalReadback,
             MechaWarperSupplyReadback = action.MechaWarperSupplyReadback,
             NativeHomeReturnFirstEffect=action.NativeHomeReturnFirstEffect,
@@ -2443,6 +2449,7 @@ internal sealed partial class NormalGameActionCoordinator
         public UpgradeReadback? UpgradeReadback { get; set; }
         public ResearchQueueReadback? ResearchQueueReadback { get; set; }
         public StorageConfigurationReadback? StorageConfigurationReadback { get; set; }
+        public NativeStackSnapshot? StackConstructionReadback { get; set; }
         public StationCargoWithdrawalReadback? StationCargoWithdrawalReadback { get; set; }
         public MechaWarperSupplyReadback? MechaWarperSupplyReadback { get; set; }
         public MechaWarperAutoSupplyReadback? MechaWarperAutoSupplyReadback { get; set; }

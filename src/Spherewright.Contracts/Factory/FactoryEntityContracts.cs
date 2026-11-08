@@ -57,6 +57,8 @@ public sealed class InspectFactoryEntityRequest
 
 public sealed class FactoryEntitySnapshot
 {
+    public int? ModelIndex { get; set; }
+    public NativeStackSnapshot? Stack { get; set; }
     // Detail-only, opt-in local geometry; excluded from all action/configuration hashes.
     public FactoryGeometryCutSnapshot? GeometryCut { get; set; }
     public string SessionId { get; set; } = string.Empty;

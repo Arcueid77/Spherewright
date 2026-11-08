@@ -164,6 +164,9 @@ public sealed class PrepareSelectResearchRequest
 
 public sealed class PrepareBuildRequest
 {
+    public int? StackOnObjectId { get; set; }
+    public string? ExpectedStackStateHash { get; set; }
+    public int? PreferredModelIndex { get; set; }
     /// <summary>Explicit bounded multispan READ-ONLY qualification, never a build plan.</summary>
     public BeltRoutePreviewRequest? BeltRoutePreview { get; set; }
     /// <summary>Optional read-only qualification of exact existing endpoints against one NEW belt span. Never creates a commit capability.</summary>
@@ -374,6 +377,8 @@ public sealed class CommitNormalActionRequest
 
 public sealed class PreparedNormalAction
 {
+    public int? PlannedModelIndex { get; set; }
+    public NativeStackConstructionPlan? PlannedStackConstruction { get; set; }
     public StationCargoWithdrawalPlan? StationCargoWithdrawal { get; set; }
     public int? PlannedStationVesselDeliveryMinimumPercent { get; set; }
     public GeneratorColdStartFuelPlan? GeneratorColdStartFuel { get; set; }

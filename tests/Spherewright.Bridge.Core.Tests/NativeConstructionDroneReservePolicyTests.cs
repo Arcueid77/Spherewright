@@ -9,6 +9,62 @@ namespace Spherewright.Bridge.Core.Tests;
 // invoke a drone update, or establish a live construction/idle acceptance.
 public sealed class NativeConstructionDroneReservePolicyTests
 {
+    [Theory]
+    [InlineData(6f)]
+    [InlineData(10f)]
+    [InlineData(12f)]
+    [InlineData(120f)]
+    public void BoundVerticalStackFundsCopiedReturnAtItsOwnEnvelope(float speed)
+    {
+        var facts = Facts();
+        facts.VerticalStackTarget = true;
+        facts.NativeSpeedMetersPerSecond = speed;
+        facts.MaximumTargetDistanceMeters = 46;
+        facts.FixedToLiveEjectDistanceMeters = .005;
+        var reserve = NativeConstructionDroneReservePolicy.Evaluate(facts);
+        Assert.True(reserve.Proved);
+        Assert.True(reserve.VerticalStackTarget);
+        for (var direction = 0; direction < 16; direction++)
+        {
+            var motion = Motion(200, speed);
+            var angle = direction * Math.PI / 8;
+            const double distance = 48d - 1e-5;
+            motion.Position = new()
+            {
+                X = motion.Eject.X + distance * Math.Cos(angle),
+                Y = motion.Eject.Y + distance * Math.Sin(angle),
+                Z = motion.Eject.Z,
+            };
+            var ticks = 0;
+            while (!NativeConstructionDroneReservePolicy.CopiedStepWouldNativeRecycle(motion)
+                && ticks < reserve.TailGameTicks)
+            {
+                var next = NativeConstructionDroneReservePolicy.PredictCopiedOrdinaryStep(motion)!;
+                Assert.True(NativeConstructionDroneReservePolicy.CopiedDroneStepPreservesEnvelope(
+                    4, speed, 0, Distance(motion.Position, motion.Eject), 0, Distance(next, motion.Eject),
+                    fixedToLiveEjectDistanceMeters: .005, verticalStackTarget: true));
+                motion.Position = next;
+                ticks++;
+            }
+            Assert.True(NativeConstructionDroneReservePolicy.CopiedStepWouldNativeRecycle(motion));
+            Assert.True(ticks < reserve.TailGameTicks - 64);
+        }
+        facts.VerticalStackTarget = false;
+        Assert.False(NativeConstructionDroneReservePolicy.Evaluate(facts).Proved);
+    }
+
+    [Fact]
+    public void VerticalStackRetainsRadiusAndExclusiveProfileGuards()
+    {
+        var facts = Facts();
+        facts.VerticalStackTarget = true;
+        facts.MaximumTargetDistanceMeters = 46;
+        facts.AnchorRadiusMeters = 120;
+        Assert.False(NativeConstructionDroneReservePolicy.Evaluate(facts).Proved);
+        facts.AnchorRadiusMeters = 200;
+        facts.TallStationTarget = true;
+        Assert.False(NativeConstructionDroneReservePolicy.Evaluate(facts).Proved);
+    }
     [Fact]
     public void TallStationPaysIts34mReturnUnderFreshTighterAnchorFactsWithoutChangingCoreCapacity()
     {

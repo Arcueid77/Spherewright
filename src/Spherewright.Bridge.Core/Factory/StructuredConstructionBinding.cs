@@ -7,6 +7,8 @@ namespace Spherewright.Bridge.Core.Factory;
 // It is not blueprint syntax, a prepare token, or authority to submit again.
 public sealed class StructuredConstructionBinding
 {
+    public NativeStackConstructionPlan? StackConstruction { get; set; }
+    public bool ShouldSerializeStackConstruction() => StackConstruction is not null;
     public string Kind { get; set; } = string.Empty;
     public string JourneyId { get; set; } = string.Empty;
     public string NativePlanHash { get; set; } = string.Empty;
@@ -25,7 +27,8 @@ public sealed class StructuredConstructionBinding
     // These ordinary core types still need current-version Native placement,
     // paid drone work and exact component/pose/topology completion proof.
     public static bool IsFactoryCoreItem(int id) => id == 2302 || id == 2304 || id == 2309
-        || id == 2101 || id == 2106 || id == 2211 || id == 2311 || id == 2312;
+        || id == 2101 || id == 2102 || id == 2106 || id == 2020 || id == 2901 || id == 2902
+        || id == 3009 || id == 2211 || id == 2311 || id == 2312;
 
     public static int MaximumNewObjects(int itemId) => itemId == 2001 ? 12 : 8;
 
@@ -37,8 +40,10 @@ public sealed class StructuredConstructionBinding
             NativePlanHash, ResourceNodeId, ResourceStateHash, SourceObjectId, DestinationObjectId,
             CanonicalStateHash.Combine("connections", Steps.Select(s => (object)s.Hash()).ToArray()),
             CanonicalStateHash.Combine("endpoints", Endpoints.Select(e => (object)e.Hash()).ToArray()));
-        return EmptyBeltSource is null ? original
+        var result = EmptyBeltSource is null ? original
             : CanonicalStateHash.Combine("structured-empty-belt-source-v1", original, EmptyBeltSource.Hash());
+        return StackConstruction is null ? result
+            : CanonicalStateHash.Combine("structured-native-stack-v1", result, NativeStackingPolicy.PlanHash(StackConstruction));
     }
 
     public void Validate(BlueprintSiteSnapshot site)
@@ -60,6 +65,7 @@ public sealed class StructuredConstructionBinding
             || !Endpoints.Select(e => e.ObjectId).OrderBy(i => i).SequenceEqual(
                 new[] { SourceObjectId, DestinationObjectId }.Where(i => i > 0).Distinct().OrderBy(i => i))
             || Steps.Any(s => s is null || s.InputStepIndex < -1 || s.InputStepIndex >= Steps.Count
+                || s.NativeModelIndex.HasValue && s.NativeModelIndex.Value <= 0
                 || s.OutputStepIndex < -1 || s.OutputStepIndex >= Steps.Count
                 || s.InputObjectId < 0 || s.OutputObjectId < 0
                 || s.InputFromSlot < -1 || s.InputFromSlot >= 16 || s.InputToSlot < 0 || s.InputToSlot >= 16
@@ -68,6 +74,21 @@ public sealed class StructuredConstructionBinding
             throw new InvalidDataException("Invalid native structured construction provenance.");
         foreach (var endpoint in Endpoints) endpoint.Validate();
         EmptyBeltSource?.Validate(this, site);
+        if (Steps.Where((step, index) => step.NativeModelIndex != site.Objects[index].NativeModelIndex).Any())
+            throw new InvalidDataException("Structured native model binding differs from its approved site.");
+        if (StackConstruction is { } stack && (Kind != "core" || Steps.Count != 1
+            || stack.EvidenceVersion != 1 || stack.SelectedObjectId <= 0 || stack.RootObjectId <= 0
+            || stack.AnchorObjectId != SourceObjectId || stack.BuildingItemId != site.Objects[0].ItemId
+            || stack.ModelIndex != Steps[0].NativeModelIndex || stack.ExistingLayerCount < 1
+            || stack.ExistingLayerCount >= NativeStackingPolicy.MaximumObservedLayers || stack.MaximumLayers < 1
+            || stack.ExistingObjectIds is null || stack.ExistingObjectIds.Count != stack.ExistingLayerCount
+            || stack.ExistingObjectIds.Any(id => id <= 0) || stack.ExistingObjectIds.Distinct().Count() != stack.ExistingLayerCount
+            || stack.ExistingObjectIds[0] != stack.RootObjectId
+            || stack.ExistingObjectIds[stack.ExistingObjectIds.Count - 1] != stack.AnchorObjectId
+            || string.IsNullOrEmpty(stack.BeforeStackStateHash) || !stack.BeforeStackStateHash.StartsWith("sha256:", StringComparison.Ordinal)
+            || stack.InputFromSlot != 15 || stack.InputToSlot != 14
+            || Steps[0].InputObjectId != stack.AnchorObjectId || Steps[0].InputFromSlot != 15 || Steps[0].InputToSlot != 14))
+            throw new InvalidDataException("Invalid native stack construction binding.");
     }
 
     private static bool Finite(float x) => !float.IsNaN(x) && !float.IsInfinity(x);
@@ -157,6 +178,8 @@ public sealed class StructuredConstructionEndpoint
 
 public sealed class StructuredConstructionConnection
 {
+    public int? NativeModelIndex { get; set; }
+    public bool ShouldSerializeNativeModelIndex() => NativeModelIndex.HasValue;
     public int InputStepIndex { get; set; } = -1;
     public int OutputStepIndex { get; set; } = -1;
     public int InputObjectId { get; set; }
@@ -167,8 +190,13 @@ public sealed class StructuredConstructionConnection
     public int OutputToSlot { get; set; }
     public float Yaw { get; set; }
     public bool IsConnectionNode { get; set; }
-    public string Hash() => CanonicalStateHash.Combine("structured-connection-v1", InputStepIndex, OutputStepIndex,
-        InputObjectId, OutputObjectId, InputFromSlot, InputToSlot, OutputFromSlot, OutputToSlot, Yaw, IsConnectionNode);
+    public string Hash()
+    {
+        var original = CanonicalStateHash.Combine("structured-connection-v1", InputStepIndex, OutputStepIndex,
+            InputObjectId, OutputObjectId, InputFromSlot, InputToSlot, OutputFromSlot, OutputToSlot, Yaw, IsConnectionNode);
+        return NativeModelIndex.HasValue
+            ? CanonicalStateHash.Combine("structured-native-model-v1", original, NativeModelIndex.Value) : original;
+    }
 }
 
 public sealed class StructuredConstructionControlState

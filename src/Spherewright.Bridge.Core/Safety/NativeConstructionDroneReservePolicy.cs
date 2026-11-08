@@ -5,6 +5,7 @@ namespace Spherewright.Bridge.Core.Safety;
 
 public sealed class NativeConstructionDroneFacts
 {
+    public bool VerticalStackTarget { get; set; }
     public bool TallStationTarget { get; set; }
     public int? MaximumMechaDrones { get; set; }
     public double? NativeSpeedMetersPerSecond { get; set; }
@@ -25,6 +26,7 @@ public sealed class NativeConstructionDroneFacts
 
 public sealed class NativeConstructionDroneReserve
 {
+    public bool VerticalStackTarget { get; internal set; }
     public bool TallStationTarget { get; internal set; }
     public bool Proved { get; internal set; }
     public string? BlockerCode { get; internal set; }
@@ -58,6 +60,11 @@ public static class NativeConstructionDroneReservePolicy
     public const double MaximumTallStationDroneDistanceMeters = 34d;
     public const double MaximumTallStationAnchorDisplacementMeters = .0025d;
     public const double MaximumTallStationEjectDisplacementMeters = .0029d;
+    // A separately bound vertical stack keeps the same stationary player and
+    // q/4 return theorem, but funds its actual taller outbound/return path.
+    // The runtime proves the native stack pose and lateral16m envelope first.
+    public const double MaximumVerticalStackTargetDistanceMeters = 46d;
+    public const double MaximumVerticalStackDroneDistanceMeters = 48d;
 
     public static double ReturnClosureFraction(double speedMetersPerSecond, double? fixedToLiveEjectDistanceMeters,
         bool tallStationTarget = false)
@@ -113,8 +120,12 @@ public static class NativeConstructionDroneReservePolicy
         var background = f.OtherMechaPowerUpperWatts.Value;
         var radius = f.AnchorRadiusMeters.Value;
         var reach = f.MaximumTargetDistanceMeters.Value;
-        var outer = f.TallStationTarget ? MaximumTallStationDroneDistanceMeters : MaximumDroneDistanceMeters;
-        var target = f.TallStationTarget ? MaximumTallStationTargetDistanceMeters : MaximumTargetDistanceMeters;
+        if (f.VerticalStackTarget && f.TallStationTarget)
+            return Blocked("native_drone_envelope_profiles_conflict");
+        var outer = f.VerticalStackTarget ? MaximumVerticalStackDroneDistanceMeters
+            : f.TallStationTarget ? MaximumTallStationDroneDistanceMeters : MaximumDroneDistanceMeters;
+        var target = f.VerticalStackTarget ? MaximumVerticalStackTargetDistanceMeters
+            : f.TallStationTarget ? MaximumTallStationTargetDistanceMeters : MaximumTargetDistanceMeters;
         var closure = ReturnClosureFraction(speed, f.FixedToLiveEjectDistanceMeters, f.TallStationTarget);
         if (f.TallStationTarget && closure != 2d / 3d)
             return Blocked("native_tall_station_strict_eject_or_speed_unproved");
@@ -135,14 +146,15 @@ public static class NativeConstructionDroneReservePolicy
         //anchor/eject premises are checked on every copied Native step.
         var ticks = 64d + (f.TallStationTarget ? Math.Ceiling(outer * 90d / speed) : closure > .25d
             ? Math.Ceiling(outer / (closure * speed / 60d))
-            : Math.Ceiling(4d * MaximumDroneDistanceMeters / speed * 60d)) + 32d;
+            : Math.Ceiling(4d * outer / speed * 60d)) + 32d;
         var power = n * (speed * rate + repair * 60d) + background;
         // Eject energy is a conservative allowance, not a claim that DSP's
         // mecha EjectMechaDrone path actually debits the battle-base eject cost.
         var margin = power * (ticks + 2d) / 60d + n * eject;
         if (!Finite(ticks) || ticks > 7200d || !Finite(power) || !Finite(margin))
             return Blocked("native_drone_tail_or_energy_bound_exceeded");
-        return new NativeConstructionDroneReserve { Proved = true, TallStationTarget = f.TallStationTarget, TailGameTicks = (long)ticks,
+        return new NativeConstructionDroneReserve { Proved = true, TallStationTarget = f.TallStationTarget,
+            VerticalStackTarget = f.VerticalStackTarget, TailGameTicks = (long)ticks,
             PowerUpperWatts = power, TailAndNextTickEnergyJoules = margin };
     }
 
@@ -153,10 +165,13 @@ public static class NativeConstructionDroneReservePolicy
     public static bool CopiedDroneStepPreservesEnvelope(int stage, double speedMetersPerSecond,
         double anchorDisplacementMeters, double droneDistanceMeters, double targetDistanceMeters,
         double nextDroneDistanceMeters, bool nativeWouldRecycle = false, double? fixedToLiveEjectDistanceMeters = null,
-        bool tallStationTarget = false)
+        bool tallStationTarget = false, bool verticalStackTarget = false)
     {
-        var outer = tallStationTarget ? MaximumTallStationDroneDistanceMeters : MaximumDroneDistanceMeters;
-        var target = tallStationTarget ? MaximumTallStationTargetDistanceMeters : MaximumTargetDistanceMeters;
+        if (verticalStackTarget && tallStationTarget) return false;
+        var outer = verticalStackTarget ? MaximumVerticalStackDroneDistanceMeters
+            : tallStationTarget ? MaximumTallStationDroneDistanceMeters : MaximumDroneDistanceMeters;
+        var target = verticalStackTarget ? MaximumVerticalStackTargetDistanceMeters
+            : tallStationTarget ? MaximumTallStationTargetDistanceMeters : MaximumTargetDistanceMeters;
         var anchor = tallStationTarget ? MaximumTallStationAnchorDisplacementMeters : MaximumAnchorDisplacementMeters;
         if (tallStationTarget && ReturnClosureFraction(speedMetersPerSecond, fixedToLiveEjectDistanceMeters, true) != 2d / 3d) return false;
         if (stage < 1 || stage > 4 || !Finite(speedMetersPerSecond) || speedMetersPerSecond < 6d

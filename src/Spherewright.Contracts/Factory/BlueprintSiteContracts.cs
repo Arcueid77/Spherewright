@@ -42,6 +42,8 @@ public sealed class BlueprintSiteSnapshot
 
 public sealed class BlueprintSiteObject
 {
+    public int? NativeModelIndex { get; set; }
+    public bool ShouldSerializeNativeModelIndex() => NativeModelIndex.HasValue;
     public int Index { get; set; }
     public int ItemId { get; set; }
     public int RecipeId { get; set; }

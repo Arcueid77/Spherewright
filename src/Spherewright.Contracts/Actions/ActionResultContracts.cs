@@ -16,6 +16,7 @@ public sealed class GetActionResultRequest
 
 public sealed class ActionResultSnapshot
 {
+    public Spherewright.Contracts.Factory.NativeStackSnapshot? StackConstructionReadback { get; set; }
     public StationCargoWithdrawalReadback? StationCargoWithdrawalReadback { get; set; }
     public Spherewright.Contracts.Players.NativeResumeFailureSnapshot? NativeFirstFailure { get; set; }
 

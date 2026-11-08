@@ -2,6 +2,9 @@ namespace Spherewright.Contracts.Factory;
 
 public sealed class BuildCatalog
 {
+    public List<NativeStackingCatalogEntry>? Stacking { get; set; }
+    public bool? StackingCatalogComplete { get; set; }
+    public List<string>? StackingCatalogBlockers { get; set; }
     public int PlanetId { get; set; }
 
     public long Revision { get; set; }

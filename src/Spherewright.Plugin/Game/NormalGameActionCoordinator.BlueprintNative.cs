@@ -13,7 +13,9 @@ internal sealed partial class NormalGameActionCoordinator
         var item = LDB.items.Select(step.ItemId);
         var result = new BuildPreview
         {
-            item = item, desc = item.prefabDesc, lpos = ToVector(step.Position), lpos2 = ToVector(step.Position2),
+            item = item, desc = NativeBuildModel(item, step.NativeModelIndex ?? 0)
+                ?? throw new InvalidOperationException("The approved native model is unavailable."),
+            lpos = ToVector(step.Position), lpos2 = ToVector(step.Position2),
             lrot = BlueprintRotation(step.Rotation), lrot2 = BlueprintRotation(step.Rotation2), tilt = step.Tilt,
             recipeId = step.RecipeId, filterId = step.FilterItemId, inputOffset = step.InputOffset,
             outputOffset = step.OutputOffset, parameters = step.Parameters.ToArray(), paramCount = step.Parameters.Length,
@@ -144,6 +146,7 @@ internal sealed partial class NormalGameActionCoordinator
         var belt = LDB.items.Select(spec.ItemId).prefabDesc.isBelt;
         var rotation = belt ? Maths.SphericalRotation(ToVector(spec.Position), 0) : BlueprintRotation(spec.Rotation);
         return p.id == id && !p.isDestroyed && p.protoId == spec.ItemId && p.itemRequired == 0
+            && (!spec.NativeModelIndex.HasValue || p.modelIndex == spec.NativeModelIndex.Value)
             && (p.pos - ToVector(spec.Position)).sqrMagnitude < 0.00001f
             && (p.pos2 - ToVector(belt ? spec.Position : spec.Position2)).sqrMagnitude < 0.00001f
             && Quaternion.Angle(p.rot, rotation) < .1f

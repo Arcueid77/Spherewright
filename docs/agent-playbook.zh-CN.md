@@ -580,3 +580,11 @@ Native Import 可将 double 宇宙坐标逆投影为 float 本地位置；普通
 以 `mode=enable-mecha-warper-auto-supply`、实体/配方0、新鲜玩家 `stateHash` 作为 `expectedFactoryStateHash`，其余参数保持默认值，调用 `prepare_configure_building`。必须获得可空回显 `plannedMechaWarperAutoSupplyEnabled=true`；缺失或false拒绝该组合。受管玩家须接地严格停稳、无手工制造或忙碌施工无人机、旅程已闭合，原生舱为精确的单格filtered1210/stack20。空舱、部分舱和满舱均可，因为此操作只把关闭的复选框打开，不调用 `AutoReplenishWarper` 或 `UseWarper`，不写库存或改变旅程储备。原动作的 `mechaWarperAutoSupplyReadback` 必须证明false→true，以及即时完整背包/舱count、inc守恒；读回不完整时可空after仍为未知。不得重放accepted或unknown写入。随后必须新鲜预览路线并重新prepare出航：只有经证明的原生自动设置才允许计入背包翘曲器，原额外/返航储备不变。
 
 此设置路径已按DSP0.10.35.29151核对：`UIMechaWindow.OnAutoReplenishButtonClick` 的case4切换原生标志；普通航行先尝试使用舱内物品，失败后才走自动空舱补给。该标志由正常原生导出/导入保存。源码/构建测试不代表实装或实机验收。
+
+## 原生垂直叠放
+
+`get_build_catalog.stacking`列出原生物品/模型样式、允许的下层物品、旋转规则、层数上限、解锁与背包数量。检查正数已建成锚点，并要求完整`stack`观察。选择器可指向任一已建成层或原生仓储挂件，返回顶层才是实际放置锚点。待建、循环或不可用的链须先重新核销，再考虑增加一层。
+
+调用`prepare_build`时提供`stackOnObjectId`、`expectedStackStateHash`和可选`preferredModelIndex`，省略地面、资源、传送带及源/目的连接参数。原生按下层模型真实接点偏移、上层兼容与朝向、当前仓储/研究站科技、放置条件及1个已有建筑物品预检。提交前要求匹配的`plannedStackConstruction`与`plannedModelIndex`。正常无人机完成待建体，原终态`stackConstructionReadback`证明整条结果链。逐类另读仓格/物品、液罐流体、研究站工作/矩阵点数以及分流器端口/过滤/优先级。只读目录本身不证明库存行为或实机验收。
+
+省略新可选字段的普通请求沿用原路径。远端高层叠放使用独立绑定的垂直无人机包络，支付实际返程/收尾能量并保留原横向范围。原动作、来源身份、原生就绪及有限物料/时间储备继续适用。

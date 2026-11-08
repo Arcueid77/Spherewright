@@ -153,6 +153,8 @@ public static class BlueprintSitePolicy
             site.QuarterTurns, site.NativeCheckPerformed, site.NativeCheckPassed, site.TechnologySatisfied, site.NativeBlueprintObjectLimit };
         foreach (var obj in site.Objects.OrderBy(o => o.Index))
         {
+              if (obj.NativeModelIndex.HasValue)
+                  parts.Add(CanonicalStateHash.Combine("native-site-model-v1", obj.NativeModelIndex.Value));
             parts.AddRange(new object[] { obj.Index, obj.ItemId, obj.RecipeId, obj.FilterItemId,
                 obj.Position.X, obj.Position.Y, obj.Position.Z, obj.Position2.X, obj.Position2.Y, obj.Position2.Z,
                 obj.Rotation.X, obj.Rotation.Y, obj.Rotation.Z, obj.Rotation.W,

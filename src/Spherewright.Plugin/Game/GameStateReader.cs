@@ -762,6 +762,12 @@ internal sealed partial class GameStateReader
                 snapshot.Ejector = CaptureEjectorState(factory, snapshot);
             if (snapshot is not null && factory.entityPool[request.ObjectId].siloId > 0)
                 snapshot.Silo = CaptureSiloState(factory, snapshot);
+            if (snapshot is not null)
+            {
+                var model = LDB.models.Select(factory.entityPool[request.ObjectId].modelIndex)?.prefabDesc;
+                if (model is not null && (model.multiLevel || model.addonType == EAddonType.Storage || model.isBattleBase))
+                    snapshot.Stack = CaptureNativeStack(factory, request.ObjectId);
+            }
             if (allowCurrentStarRemoteReadOnly && snapshot?.LogisticsStation is not null)
                 snapshot.LogisticsStation.ActiveVessels = CaptureActiveLogisticsVessels(factory, request.ObjectId);
         }
@@ -2868,6 +2874,9 @@ internal sealed partial class GameStateReader
             SandboxToolsEnabled = GameMain.sandboxToolsEnabled,
         };
 
+        result.Stacking = CaptureNativeStackingCatalog(out var stackingBlockers);
+        result.StackingCatalogComplete = stackingBlockers.Count == 0;
+        result.StackingCatalogBlockers = stackingBlockers;
         foreach (var item in LDB.items.dataArray)
         {
             if (item is null || !item.CanBuild || item.prefabDesc is null)
@@ -3170,6 +3179,7 @@ internal sealed partial class GameStateReader
             ObjectId = entityId,
             ObjectKind = FactoryObjectKinds.Entity,
             ItemId = entity.protoId,
+            ModelIndex = entity.modelIndex,
             Name = item?.name ?? string.Empty,
             ComponentKind = GetComponentKind(ref entity),
             Position = CaptureVector(entity.pos),

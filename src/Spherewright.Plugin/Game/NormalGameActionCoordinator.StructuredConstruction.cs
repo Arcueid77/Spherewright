@@ -47,6 +47,7 @@ internal sealed partial class NormalGameActionCoordinator
         {
             Kind = plan.BuildKind, JourneyId = journey.JourneyId, NativePlanHash = plan.ExpectedStateHash,
             EmptyBeltSource = sourceEvidence,
+            StackConstruction = plan.BuildSteps[0].StackConstruction,
             ResourceNodeId = plan.BuildResourceNodeId, ResourceStateHash = plan.BuildResourceStateHash,
             SourceObjectId = plan.SourceObjectId, DestinationObjectId = plan.DestinationObjectId,
             Steps = plan.BuildSteps.Select(s => new StructuredConstructionConnection
@@ -56,6 +57,7 @@ internal sealed partial class NormalGameActionCoordinator
                 InputFromSlot = s.InputFromSlot, InputToSlot = s.InputToSlot,
                 OutputFromSlot = s.OutputFromSlot, OutputToSlot = s.OutputToSlot,
                 Yaw = s.Yaw, IsConnectionNode = s.IsConnectionNode,
+                NativeModelIndex = s.ModelIndex == 0 ? null : s.ModelIndex,
             }).ToList(),
         };
         foreach (var id in new[] { plan.SourceObjectId, plan.DestinationObjectId }.Where(id => id > 0).Distinct())
@@ -80,6 +82,7 @@ internal sealed partial class NormalGameActionCoordinator
             Objects = plan.BuildSteps.Select((s, index) => new BlueprintSiteObject
             {
                 Index = index, ItemId = s.ItemId, FilterItemId = s.FilterItemId,
+                NativeModelIndex = s.ModelIndex == 0 ? null : s.ModelIndex,
                 Position = ConstructionVector(s.Position), Position2 = ConstructionVector(s.Position2),
                 Rotation = ConstructionRotation(s.Rotation), Rotation2 = ConstructionRotation(s.Rotation2),
                 Tilt = s.Tilt, InputOffset = s.InputOffset, OutputOffset = s.OutputOffset,

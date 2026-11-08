@@ -73,13 +73,17 @@ internal sealed partial class NormalGameActionCoordinator
         var reach = 0d; var groundSpan = 0d;
         foreach (var spec in build.Site.Objects)
         {
-            var desc = LDB.items.Select(spec.ItemId)?.prefabDesc;
+            var item = LDB.items.Select(spec.ItemId);
+            var desc = item is null ? null : NativeBuildModel(item, spec.NativeModelIndex ?? 0);
             if (desc is null || !FiniteConstruction(desc.selectSize.y)) { reach = double.NaN; break; }
             var position = ToVector(spec.Position);
             var target = position + position.normalized * (desc.selectSize.y + 1f);
             reach = Math.Max(reach, Vector3.Distance(ejectAnchor, target));
             // Both sorter poses must remain in the same finite local envelope.
-            groundSpan = Math.Max(groundSpan, Vector3.Distance(anchor, ToVector(spec.Position2)));
+            var offset = ToVector(spec.Position2) - anchor;
+            var span = build.StructuredConstruction?.StackConstruction is null
+                ? offset.magnitude : Vector3.ProjectOnPlane(offset, anchor.normalized).magnitude;
+            groundSpan = Math.Max(groundSpan, span);
             if (groundSpan > 16d) { reach = double.NaN; break; }
         }
         decision?.Number("construction_target_distance_m", reach);
@@ -106,12 +110,20 @@ internal sealed partial class NormalGameActionCoordinator
                 NativeConstructionDroneReservePolicy.MaximumTighterReturnEjectDisplacementMeters);
         var tallStation = build.Site.Objects.Count == 1 && build.Site.Objects[0].ItemId == 2104
             && reach > NativeConstructionDroneReservePolicy.MaximumTargetDistanceMeters;
+        var verticalStack = build.StructuredConstruction?.StackConstruction is not null
+            && reach > NativeConstructionDroneReservePolicy.MaximumTargetDistanceMeters;
+        if (verticalStack)
+            costHash = CanonicalStateHash.Combine("native-vertical-stack-drone-envelope-v1", costHash,
+                NativeStackingPolicy.PlanHash(build.StructuredConstruction!.StackConstruction),
+                NativeConstructionDroneReservePolicy.MaximumVerticalStackTargetDistanceMeters,
+                NativeConstructionDroneReservePolicy.MaximumVerticalStackDroneDistanceMeters);
         if (tallStation) costHash = CanonicalStateHash.Combine("native-single-ils-tight34m-return-v1", costHash,
             NativeConstructionDroneReservePolicy.MaximumTallStationAnchorDisplacementMeters,
             NativeConstructionDroneReservePolicy.MaximumTallStationEjectDisplacementMeters);
         return NativeConstructionDroneReservePolicy.Evaluate(new NativeConstructionDroneFacts
         {
             TallStationTarget = tallStation,
+            VerticalStackTarget = verticalStack,
             MaximumMechaDrones = module.droneCount, NativeSpeedMetersPerSecond = speed,
             NativeEnergyPerMeter = rate, NativeEjectEnergyJoules = eject, NativeRepairEnergyPerTick = repair,
             OtherMechaPowerUpperWatts = background, AnchorRadiusMeters = anchor.magnitude,
@@ -214,7 +226,8 @@ internal sealed partial class NormalGameActionCoordinator
                     drone.stage == 4 ? 0d : Vector3.Distance(target, fixedEject),
                     Math.Sqrt(Math.Pow(next.X - fixedEject.x, 2d) + Math.Pow(next.Y - fixedEject.y, 2d) + Math.Pow(next.Z - fixedEject.z, 2d)),
                     NativeConstructionDroneReservePolicy.CopiedStepWouldNativeRecycle(motion),
-                    Vector3.Distance(fixedEject, liveEject), action.Plan.ConstructionReserve?.TallStationTarget == true))
+                    Vector3.Distance(fixedEject, liveEject), action.Plan.ConstructionReserve?.TallStationTarget == true,
+                    action.Plan.ConstructionReserve?.VerticalStackTarget == true))
                 return false;
         }
         return true;
@@ -293,7 +306,8 @@ internal sealed partial class NormalGameActionCoordinator
     {
         if (id <= 0 || id >= factory.entityCursor || id >= factory.entityPool.Length) return false;
         ref var e = ref factory.entityPool[id];
-        if (e.id != id || e.protoId != spec.ItemId || Vector3.Distance(e.pos, ToVector(spec.Position)) > .003f) return false;
+        if (e.id != id || e.protoId != spec.ItemId || Vector3.Distance(e.pos, ToVector(spec.Position)) > .003f
+            || spec.NativeModelIndex.HasValue && e.modelIndex != spec.NativeModelIndex.Value) return false;
         if (spec.ItemId == 2001) return BlueprintEntityMatches(factory, id, spec);
         if (Quaternion.Angle(e.rot, BlueprintRotation(spec.Rotation)) > .1f) return false;
         if (spec.ItemId == 2011)
@@ -349,7 +363,7 @@ internal sealed partial class NormalGameActionCoordinator
     private static bool StructuredFactoryCoreComponentMatches(PlanetFactory factory, int id, int itemId)
     {
         ref var e = ref factory.entityPool[id];
-        var desc = LDB.items.Select(itemId)?.prefabDesc;
+        var desc = LDB.models.Select(e.modelIndex)?.prefabDesc;
         if (desc is null) return false;
         // Recipes and inventories may evolve through normal operation after a
         // build. The immutable construction receipt binds the component and
@@ -366,7 +380,7 @@ internal sealed partial class NormalGameActionCoordinator
                     && GameMain.history.RecipeUnlocked(recipe.ID))
                 && StructuredConsumerMatches(factory, id, e.powerConId, assembler.pcId);
         }
-        if (itemId == 2101)
+        if (itemId == 2101 || itemId == 2102)
         {
             var system = factory.factoryStorage;
             if (!desc.isStorage || system?.storagePool is null || e.storageId <= 0
@@ -382,6 +396,30 @@ internal sealed partial class NormalGameActionCoordinator
                 || e.tankId >= system.tankCursor || e.tankId >= system.tankPool.Length) return false;
             var tank = system.tankPool[e.tankId];
             return tank.id == e.tankId && tank.entityId == id;
+        }
+        if (desc.isLab)
+        {
+            var system = factory.factorySystem;
+            if (system?.labPool is null || e.labId <= 0 || e.labId >= system.labCursor
+                || e.labId >= system.labPool.Length) return false;
+            var lab = system.labPool[e.labId];
+            return lab.id == e.labId && lab.entityId == id;
+        }
+        if (desc.isSplitter)
+        {
+            var system = factory.cargoTraffic;
+            if (system?.splitterPool is null || e.splitterId <= 0 || e.splitterId >= system.splitterCursor
+                || e.splitterId >= system.splitterPool.Length) return false;
+            var splitter = system.splitterPool[e.splitterId];
+            return splitter.id == e.splitterId && splitter.entityId == id;
+        }
+        if (desc.isBattleBase)
+        {
+            var pool = factory.defenseSystem?.battleBases;
+            if (pool?.buffer is null || e.battleBaseId <= 0 || e.battleBaseId >= pool.cursor
+                || e.battleBaseId >= pool.buffer.Length) return false;
+            var battleBase = pool.buffer[e.battleBaseId];
+            return battleBase is not null && battleBase.id == e.battleBaseId && battleBase.entityId == id;
         }
         if (itemId == 2211)
         {

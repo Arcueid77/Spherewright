@@ -503,3 +503,9 @@ Move 地表预览是观察，不是寻路，180/600 tick 失败指导禁止重�
 以 `mode=enable-mecha-warper-auto-supply`、实体/配方0、新鲜玩家 `stateHash` 作为 `expectedFactoryStateHash`，其余参数保持默认值，调用 `prepare_configure_building`。必须获得可空回显 `plannedMechaWarperAutoSupplyEnabled=true`；缺失或false拒绝该组合。受管玩家须接地严格停稳、无手工制造或忙碌施工无人机、旅程已闭合，原生舱为精确的单格filtered1210/stack20。空舱、部分舱和满舱均可，因为此操作只把关闭的复选框打开，不调用 `AutoReplenishWarper` 或 `UseWarper`，不写库存或改变旅程储备。原动作的 `mechaWarperAutoSupplyReadback` 必须证明false→true，以及即时完整背包/舱count、inc守恒；读回不完整时可空after仍为未知。不得重放accepted或unknown写入。随后必须新鲜预览路线并重新prepare出航：只有经证明的原生自动设置才允许计入背包翘曲器，原额外/返航储备不变。
 
 此设置路径已按DSP0.10.35.29151核对：`UIMechaWindow.OnAutoReplenishButtonClick` 的case4切换原生标志；普通航行先尝试使用舱内物品，失败后才走自动空舱补给。该标志由正常原生导出/导入保存。源码/构建测试不代表实装或实机验收。
+
+## 原生垂直叠放
+
+现有建造调用新增可选`stackOnObjectId`、`expectedStackStateHash`、`preferredModelIndex`。叠放请求绑定当前完整已建成链和准确原生上层模型，与其他放置模式互斥。混装保护要求`plannedStackConstruction`及指定模型回显，合格后才暴露token。原生叠放沿用15→14槽、模型接点偏移、异型号朝向转换及当前原生高度条件。
+
+详细检查新增可空`modelIndex`/`stack`，建造目录新增可空`stacking`。旧工厂哈希继续使用原字段，新叠放/模型哈希域绑定批准施工及持久待建/完成记录，旧缺省字段哈希保持原形。终态`stackConstructionReadback`保留原观察切面。创建待建体的同tick核对既有层物品及工作内容，后续正常生产另记证据。

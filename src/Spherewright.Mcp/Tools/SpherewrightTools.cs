@@ -585,12 +585,20 @@ public static partial class SpherewrightTools
         BeltEndpointPreviewRequest? beltEndpointPreview = null,
         [Description("Optional READ-ONLY complete NEW2001 route qualification. Supply a fresh factory geometry hash, both exact existing endpoint/hash/slot bindings, positive runtime filter, separate ordinary2011/2012 source/destination grades and1..12 explicit native_grid/native_elevated_grid spans. Use previously observed native snap positions, identical shared endpoints/layers, each1.5..30m, total<=240m and<=192 distinct NEW points. No automatic search, cover, resource binding or legacy position/path arguments. Native validates the entire path, then ALL NEW belts and both exact sorters together. Returns tokenless beltRoutePreview/executable=false with every point and both bindings, or honest pre-guard/native failure stages; no action, prebuild or construction capability. Full native positive is not continuous production or power proof. Actual construction requires separate fresh ordinary plans. Mixed-cohort normal tokens are withheld.")]
         BeltRoutePreviewRequest? beltRoutePreview = null,
+        [Description("Optional positive built object in the selected native stack. Inspect its complete stack observation first. The current top, exact native model, whole stack hash, native height/compatibility, paid material and reciprocal layer links are bound before one ordinary drone-built addition.")]
+        int? stackOnObjectId = null,
+        string? expectedStackStateHash = null,
+        [Description("Optional exact runtime model index from get_build_catalog.stacking. It must belong to the requested item. Native model compatibility, rotation and collision checks remain required.")]
+        int? preferredModelIndex = null,
         CancellationToken cancellationToken = default)
     {
         var request = new PrepareBuildRequest
             {
                 PlanetId = planetId,
                 BuildingItemId = buildingItemId,
+                StackOnObjectId = stackOnObjectId,
+                ExpectedStackStateHash = expectedStackStateHash,
+                PreferredModelIndex = preferredModelIndex,
                 InitialSorterFilterItemId = initialSorterFilterItemId,
                 PreferredDistance = preferredDistance,
                 PreferredPosition = CreateOptionalVector(preferredPositionX, preferredPositionY, preferredPositionZ),
@@ -611,6 +619,11 @@ public static partial class SpherewrightTools
                 BeltEndpointPreview = beltEndpointPreview,
                 BeltRoutePreview = beltRoutePreview,
             };
+        var stackError = Spherewright.Bridge.Core.Factory.NativeStackingPolicy.ValidateRequest(request);
+        if (stackError is not null)
+            return ToToolResult(BridgeCallResult<PreparedNormalAction>.Failed(BridgeError.Create(
+                BridgeErrorCodes.InvalidRequest, stackError, false, "Inspect the complete native stack and select its runtime model.")),
+                "Native stack preparation rejected.");
         var routePreviewError = Spherewright.Bridge.Core.Factory.BeltRoutePreviewPolicy.ValidateRequest(request);
         if (routePreviewError is not null)
             return ToToolResult(BridgeCallResult<PreparedNormalAction>.Failed(BridgeError.Create(
@@ -632,6 +645,11 @@ public static partial class SpherewrightTools
                     ? Spherewright.Bridge.Core.Factory.BeltElevationPolicy.Recovery
                     : Spherewright.Bridge.Core.Factory.BeltPathRoutingPolicy.Recovery)), "No construction plan prepared.");
         var result = await bridgeClient.PrepareBuildAsync(sessionId, request, cancellationToken).ConfigureAwait(false);
+        if (result.Success && (!Spherewright.Bridge.Core.Factory.NativeStackingPolicy.ConfirmsPlan(request, result.Value)
+            || preferredModelIndex.HasValue && result.Value?.PlannedModelIndex != preferredModelIndex))
+            result = BridgeCallResult<PreparedNormalAction>.Failed(BridgeError.Create(
+                BridgeErrorCodes.BridgeNotReady, "The Plugin did not confirm the exact native stack/model binding.",
+                false, "Use matching Plugin/MCP files and a fresh complete stack observation."));
         if (beltRoutePreview is not null)
         {
             if (result.Success && !Spherewright.Bridge.Core.Factory.BeltRoutePreviewPolicy.ConfirmsReadOnlyEcho(request, result.Value, sessionId))

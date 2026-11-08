@@ -13,6 +13,42 @@ namespace Spherewright.Bridge.Core.Tests;
 public sealed class StructuredConstructionStoreIntegrationTests
 {
     [Fact]
+    public void NativeStackPendingStoreRetainsModelAnchorAndSinglePaidSubmission()
+    {
+        using var fixture = new Fixture();
+        var site = Site(1, 2101);
+        site.Objects[0].NativeModelIndex = 51;
+        var binding = Binding(1);
+        binding.SourceObjectId = 7;
+        binding.Endpoints.Add(new() { ObjectId = 7, ItemId = 2101 });
+        binding.Steps[0].NativeModelIndex = 51;
+        binding.Steps[0].InputObjectId = 7;
+        binding.Steps[0].InputFromSlot = 15;
+        binding.Steps[0].InputToSlot = 14;
+        binding.StackConstruction = new Spherewright.Contracts.Factory.NativeStackConstructionPlan
+        {
+            SelectedObjectId = 7, RootObjectId = 7, AnchorObjectId = 7,
+            BeforeStackStateHash = "sha256:synthetic-stack", BuildingItemId = 2101, ModelIndex = 51,
+            ExistingLayerCount = 1, ExistingObjectIds = new() { 7 }, MaximumLayers = 8,
+        };
+        var state = BlueprintBuildState.Create(site, structuredConstruction: binding);
+        Start(state);
+        state.BeforeStructuredSubmission(101, 3, "before");
+        state.ConfirmStructuredSubmission(new[] { 20 }, 2, "after");
+        Assert.True(fixture.Store().TryPut(state));
+        var restored = Assert.Single(fixture.Read());
+        Assert.Equal(51, restored.Site.Objects[0].NativeModelIndex);
+        Assert.Equal(7, restored.StructuredConstruction!.StackConstruction!.AnchorObjectId);
+        Assert.Equal(new[] { 7 }, restored.StructuredConstruction.StackConstruction.ExistingObjectIds);
+        Assert.Equal(20, restored.Objects[0].PrebuildId);
+        Assert.Equal(3, restored.Objects[0].InventoryBefore);
+        Assert.Equal(2, restored.Objects[0].InventoryAfter);
+        Assert.Throws<InvalidOperationException>(() => restored.BeforeStructuredSubmission(102, 2, "replay"));
+        restored.Site.Objects[0].NativeModelIndex = 52;
+        Assert.False(fixture.Store().TryPut(restored));
+    }
+
+    [Fact]
     public void LaterNativeStopAdmitsOnlyTheSamePaidPendingBatchAndAppendsTheUnknownControlUnchanged()
     {
         using var fixture = new Fixture(); var state = Pending(2); var original = state.ConstructionControl!;
