@@ -8,6 +8,13 @@ public static class NativeStackingPolicy
 {
     public const int MaximumObservedLayers = 256;
 
+    public static string? PlacementToolKind(int nativeBuildMode, string family)
+    {
+        // DSP29151 dispatches item BuildMode5 through the Native Addon tool.
+        if (family == "spraycoater") return nativeBuildMode == 5 ? "addon" : null;
+        return nativeBuildMode == 1 ? "click" : null;
+    }
+
     public static string? PlanHash(NativeStackConstructionPlan? plan)
     {
         if (plan is null) return null;

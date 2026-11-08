@@ -8,6 +8,19 @@ namespace Spherewright.Bridge.Core.Tests;
 
 public sealed class NativeStackingPolicyTests
 {
+    [Theory]
+    [InlineData(5, "spraycoater", "addon")]
+    [InlineData(9, "spraycoater", null)]
+    [InlineData(1, "spraycoater", null)]
+    [InlineData(1, "piler", "click")]
+    [InlineData(5, "piler", null)]
+    [InlineData(1, "storage", "click")]
+    [InlineData(0, "lab", null)]
+    public void PlacementUsesTheNativeItemBuildMode(int mode, string family, string? expected)
+    {
+        Assert.Equal(expected, NativeStackingPolicy.PlacementToolKind(mode, family));
+    }
+
     [Fact]
     public void OrdinaryRequestsKeepTheirLegacyShape()
     {

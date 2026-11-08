@@ -33,9 +33,10 @@ internal sealed partial class NormalGameActionCoordinator
         var transposes = desc.multiLevelAlternativeYawTransposes ?? Array.Empty<bool>();
         var alternative = Array.IndexOf(alternatives, top.protoId);
         var transpose = alternative >= 0 && alternative < transposes.Length && transposes[alternative];
-        var addonStack = desc.isSpraycoster && topDesc.isSpraycoster && item.BuildMode == 9;
-        if (item.BuildMode != 1 && !addonStack)
+        var toolKind = NativeStackingPolicy.PlacementToolKind(item.BuildMode, GameStateReader.NativeStackFamily(desc));
+        if (toolKind is null || toolKind == "addon" && !topDesc.isSpraycoster)
             return BuildPreparation.Failed(BridgeErrorCodes.InvalidRequest, "The native stack uses an unsupported placement tool.");
+        var addonStack = toolKind == "addon";
         // DSP29151's Addon.DeterminePreviews uses this explicit radial offset
         // for spraycoaters, rather than the model's zero lapJoint.
         var position = addonStack ? top.pos.normalized * (top.pos.magnitude + 2.666667f)
@@ -62,7 +63,7 @@ internal sealed partial class NormalGameActionCoordinator
             MaximumLayers = desc.isLab ? GameMain.history.labLevel
                 : desc.isStorage || desc.isTank || desc.isSplitter ? GameMain.history.storageLevel : null,
             HeightLimitKind = desc.isLab || desc.isStorage || desc.isTank || desc.isSplitter ? "technology" : "native_reach",
-            BuildToolKind = addonStack ? "addon" : "click",
+            BuildToolKind = toolKind,
         };
         if (addonStack) candidate.Parameters.AddRange(new int[128]);
         if (!TryValidateClickBuild(factory, player, item, candidate, 0, out var accepted, out var reason))

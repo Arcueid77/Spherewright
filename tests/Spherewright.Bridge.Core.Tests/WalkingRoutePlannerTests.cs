@@ -53,6 +53,24 @@ public sealed class WalkingRoutePlannerTests
     }
 
     [Theory]
+    [InlineData(10, false)]
+    [InlineData(12, true)]
+    public void DetourGoalRetainsTheArrivalAllowanceAfterItsLastCorner(float targetDistance, bool routeExpected)
+    {
+        var geometry = Geometry();
+        geometry.EffectiveTarget = Surface(0, targetDistance);
+        var obstacle = Box(0, 7, 1, 1);
+        obstacle.Shape = "sphere";
+        obstacle.Centre.Y = 200.8f;
+        obstacle.Extents = new();
+        obstacle.Radius = 1.2;
+        geometry.Colliders.Add(obstacle);
+        var route = Plan(geometry);
+        Assert.Equal(routeExpected, route.State == "route_candidate");
+        if (routeExpected) Assert.True(route.Waypoints.Count > 1);
+    }
+
+    [Theory]
     [InlineData(.8f, false)]
     [InlineData(1.6f, true)]
     public void CompoundActorWidthControlsNarrowCorridorAdmission(float gap, bool expectedRoute)
