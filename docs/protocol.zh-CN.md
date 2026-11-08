@@ -508,6 +508,8 @@ Move 地表预览是观察，不是寻路，180/600 tick 失败指导禁止重�
 
 目录记录`buildMode`、可空`maximumLayers`、`heightLimitKind`和`maximumConstructionHeightMetres`。原生自动集装机走Click放置，喷涂机走Addon放置，其`native_reach`上限仍须通过原生全局建造高度/可达范围检查。新计划绑定`buildToolKind`及`heightLimitKind`，省略的默认值保留原Click/technology计划哈希和持久记录。
 
+非空`existingAttachmentObjectIds`把保留仓储挂件绑定到叠放计划身份。`stack.attachments`回显双向父层、实体/模型/姿态及有界配送器配置/配送机/货物状态。缺省挂件列表保留原计划哈希，自动抬升由普通原生创建负责，并在同tick核对原挂件材料和能源。
+
 现有建造调用新增可选`stackOnObjectId`、`expectedStackStateHash`、`preferredModelIndex`。叠放请求绑定当前完整已建成链和准确原生上层模型，与其他放置模式互斥。混装保护要求`plannedStackConstruction`及指定模型回显，合格后才暴露token。原生叠放沿用15→14槽、模型接点偏移、异型号朝向转换及当前原生高度条件。
 
 详细检查新增可空`modelIndex`/`stack`，建造目录新增可空`stacking`。旧工厂哈希继续使用原字段，新叠放/模型哈希域绑定批准施工及持久待建/完成记录，旧缺省字段哈希保持原形。终态`stackConstructionReadback`保留原观察切面。创建待建体的同tick核对既有层物品及工作内容，后续正常生产另记证据。

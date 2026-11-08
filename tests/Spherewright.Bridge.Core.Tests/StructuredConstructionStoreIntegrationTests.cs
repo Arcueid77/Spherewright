@@ -13,10 +13,11 @@ namespace Spherewright.Bridge.Core.Tests;
 public sealed class StructuredConstructionStoreIntegrationTests
 {
     [Theory]
-    [InlineData(2101, 51, 8, "technology", "click")]
-    [InlineData(2040, 257, null, "native_reach", "click")]
-    [InlineData(2313, 120, null, "native_reach", "addon")]
-    public void NativeStackPendingStoreRetainsModelAnchorAndSinglePaidSubmission(int itemId, int model, int? cap, string limit, string tool)
+    [InlineData(2101, 51, 8, "technology", "click", false)]
+    [InlineData(2101, 51, 8, "technology", "click", true)]
+    [InlineData(2040, 257, null, "native_reach", "click", false)]
+    [InlineData(2313, 120, null, "native_reach", "addon", false)]
+    public void NativeStackPendingStoreRetainsModelAnchorAndSinglePaidSubmission(int itemId, int model, int? cap, string limit, string tool, bool attachment)
     {
         using var fixture = new Fixture();
         var site = Site(1, itemId);
@@ -34,6 +35,7 @@ public sealed class StructuredConstructionStoreIntegrationTests
             BeforeStackStateHash = "sha256:synthetic-stack", BuildingItemId = itemId, ModelIndex = model,
             ExistingLayerCount = 1, ExistingObjectIds = new() { 7 }, MaximumLayers = cap,
             HeightLimitKind = limit, BuildToolKind = tool,
+            ExistingAttachmentObjectIds = attachment ? new() { 8 } : new(),
         };
         var state = BlueprintBuildState.Create(site, structuredConstruction: binding);
         Start(state);
@@ -47,11 +49,14 @@ public sealed class StructuredConstructionStoreIntegrationTests
         Assert.Equal(cap, restored.StructuredConstruction.StackConstruction.MaximumLayers);
         Assert.Equal(tool, restored.StructuredConstruction.StackConstruction.BuildToolKind);
         Assert.Equal(limit, restored.StructuredConstruction.StackConstruction.HeightLimitKind);
+        Assert.Equal(attachment ? new[] { 8 } : Array.Empty<int>(), restored.StructuredConstruction.StackConstruction.ExistingAttachmentObjectIds);
         if (tool == "click" && limit == "technology")
         {
             Assert.DoesNotContain("buildToolKind", PluginJson.Serialize(restored.StructuredConstruction.StackConstruction));
             Assert.DoesNotContain("heightLimitKind", PluginJson.Serialize(restored.StructuredConstruction.StackConstruction));
         }
+        if (!attachment)
+            Assert.DoesNotContain("existingAttachmentObjectIds", PluginJson.Serialize(restored.StructuredConstruction.StackConstruction));
         Assert.Equal(20, restored.Objects[0].PrebuildId);
         Assert.Equal(3, restored.Objects[0].InventoryBefore);
         Assert.Equal(2, restored.Objects[0].InventoryAfter);

@@ -879,7 +879,7 @@ internal sealed partial class NormalGameActionCoordinator
         // same conservative occupied-volume check before calling the native
         // validator.  This also covers prebuilds created by ordinary gameplay.
         if (OverlapsExistingFactoryObject(factory, BuildStepDescription(candidate, item), candidate.Position, candidate.Rotation,
-                out var occupiedObjectId, candidate.StackConstruction?.AnchorObjectId ?? 0))
+                out var occupiedObjectId, candidate.StackConstruction?.AnchorObjectId ?? 0, item.ID))
         {
             rejection = $"The exact build-collider volume overlaps existing factory object {occupiedObjectId}.";
             if (evidence is not null) evidence.OccupiedObjectId = occupiedObjectId;
@@ -944,7 +944,8 @@ internal sealed partial class NormalGameActionCoordinator
         Vector3 candidatePosition,
         Quaternion candidateRotation,
         out int occupiedObjectId,
-        int stackAnchorObjectId = 0)
+        int stackAnchorObjectId = 0,
+        int stackBuildingItemId = 0)
     {
         occupiedObjectId = 0;
         var candidateColliders = CreateWorldBuildColliders(
@@ -969,6 +970,16 @@ internal sealed partial class NormalGameActionCoordinator
             if (description is null)
             {
                 continue;
+            }
+
+            if (stackAnchorObjectId > 0 && candidateDescription.isStorage && description.addonType == EAddonType.Storage)
+            {
+                factory.ReadObjectConn(entityId, 0, out var attachmentOutput, out var parent, out var parentSlot);
+                factory.ReadObjectConn(stackAnchorObjectId, 13, out var parentOutput, out var attachment, out var attachmentSlot);
+                if (!attachmentOutput && parent == stackAnchorObjectId && parentSlot == 13
+                    && parentOutput && attachment == entityId && attachmentSlot == 0
+                    && factory.entityPool[stackAnchorObjectId].protoId == stackBuildingItemId)
+                    continue;
             }
 
             if (BuildColliderSetsOverlap(
@@ -1685,8 +1696,9 @@ internal sealed partial class NormalGameActionCoordinator
                 });
 
             var stack = action.Plan.BuildSteps[0].StackConstruction;
+            var originalStackObjects = stack?.ExistingObjectIds.Concat(stack.ExistingAttachmentObjectIds).ToArray();
             var originalStackContents = stack is null ? null
-                : _reader.CaptureNativeStackContents(factory, stack.ExistingObjectIds);
+                : _reader.CaptureNativeStackContents(factory, originalStackObjects!);
             try { create(); }
             finally
             {
@@ -1704,7 +1716,7 @@ internal sealed partial class NormalGameActionCoordinator
                         && !action.PrebuildIds.Contains(-id)) action.PrebuildIds.Add(-id);
                 }
             }
-            if (stack is not null && originalStackContents != _reader.CaptureNativeStackContents(factory, stack.ExistingObjectIds))
+            if (stack is not null && originalStackContents != _reader.CaptureNativeStackContents(factory, originalStackObjects!))
                 throw new InvalidOperationException("Native stack creation changed existing inventory or work at the same tick; preserve this original action.");
             if (action.Plan.BuildKind == NormalBuildKinds.Belt
                 && action.Plan.BuildSteps[0].BeltPathMode == BeltPathModes.NativeElevatedGrid

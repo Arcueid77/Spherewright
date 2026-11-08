@@ -17,8 +17,11 @@ public static class NativeStackingPolicy
             plan.BuildingItemId, plan.ModelIndex, plan.ExistingLayerCount, plan.MaximumLayers,
             plan.InputFromSlot, plan.InputToSlot,
             CanonicalStateHash.Combine("existing-stack-members", plan.ExistingObjectIds.Cast<object>().ToArray()));
-        return plan.BuildToolKind == "click" && plan.HeightLimitKind == "technology" ? original
+        var placement = plan.BuildToolKind == "click" && plan.HeightLimitKind == "technology" ? original
             : CanonicalStateHash.Combine("native-stack-placement-v2", original, plan.BuildToolKind, plan.HeightLimitKind);
+        return plan.ExistingAttachmentObjectIds.Count == 0 ? placement
+            : CanonicalStateHash.Combine("native-stack-attachments-v1", placement,
+                CanonicalStateHash.Combine("original-attachments", plan.ExistingAttachmentObjectIds.Cast<object>().ToArray()));
     }
 
     public static void ValidatePlan(NativeStackConstructionPlan plan)
@@ -34,6 +37,9 @@ public static class NativeStackingPolicy
             || plan.ExistingObjectIds.Count != plan.ExistingLayerCount
             || plan.ExistingObjectIds.Any(id => id <= 0)
             || plan.ExistingObjectIds.Distinct().Count() != plan.ExistingLayerCount
+            || plan.ExistingAttachmentObjectIds is null || plan.ExistingAttachmentObjectIds.Count > MaximumObservedLayers
+            || plan.ExistingAttachmentObjectIds.Any(id => id <= 0 || plan.ExistingObjectIds.Contains(id))
+            || plan.ExistingAttachmentObjectIds.Distinct().Count() != plan.ExistingAttachmentObjectIds.Count
             || plan.ExistingObjectIds[0] != plan.RootObjectId
             || plan.ExistingObjectIds[plan.ExistingLayerCount - 1] != plan.AnchorObjectId
             || string.IsNullOrEmpty(plan.BeforeStackStateHash)

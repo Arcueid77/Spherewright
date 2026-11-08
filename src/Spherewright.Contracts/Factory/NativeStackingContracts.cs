@@ -33,6 +33,30 @@ public sealed class NativeStackSnapshot
     public int TopObjectId { get; set; }
     public string StateHash { get; set; } = string.Empty;
     public List<NativeStackLayerSnapshot> Layers { get; set; } = new();
+    public List<NativeStackAttachmentSnapshot> Attachments { get; set; } = new();
+}
+
+public sealed class NativeStackAttachmentSnapshot
+{
+    public int ParentObjectId { get; set; }
+    public FactoryEntitySnapshot Entity { get; set; } = new();
+    public NativeDispenserSnapshot Dispenser { get; set; } = new();
+}
+
+public sealed class NativeDispenserSnapshot
+{
+    public int ComponentId { get; set; }
+    public int StorageId { get; set; }
+    public int PlayerMode { get; set; }
+    public int StorageMode { get; set; }
+    public int FilterItemId { get; set; }
+    public int IdleCouriers { get; set; }
+    public int WorkingCouriers { get; set; }
+    public bool AutoReplenishCouriers { get; set; }
+    public long Energy { get; set; }
+    public int HeldItemCount { get; set; }
+    public List<FactoryBufferSnapshot> HeldCargo { get; set; } = new();
+    public List<FactoryBufferSnapshot> CourierCargo { get; set; } = new();
 }
 
 public sealed class NativeStackLayerSnapshot
@@ -102,6 +126,8 @@ public sealed class NativeStackConstructionPlan
     public int ModelIndex { get; set; }
     public int ExistingLayerCount { get; set; }
     public List<int> ExistingObjectIds { get; set; } = new();
+    public List<int> ExistingAttachmentObjectIds { get; set; } = new();
+    public bool ShouldSerializeExistingAttachmentObjectIds() => ExistingAttachmentObjectIds.Count > 0;
     public int? MaximumLayers { get; set; }
     public string HeightLimitKind { get; set; } = "technology";
     public string BuildToolKind { get; set; } = "click";

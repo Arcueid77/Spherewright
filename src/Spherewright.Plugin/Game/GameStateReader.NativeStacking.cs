@@ -160,6 +160,27 @@ internal sealed partial class GameStateReader
                 fields.Add(desc.lapJoint.x);
                 fields.Add(desc.lapJoint.y);
                 fields.Add(desc.lapJoint.z);
+                factory.ReadObjectConn(current, 13, out var attachmentOutput, out var attachmentId, out var attachmentSlot);
+                if (attachmentId != 0)
+                {
+                    if (!attachmentOutput || attachmentSlot != 0 || attachmentId <= 0)
+                        throw new InvalidOperationException("stack_storage_attachment_pending_or_unavailable");
+                    var attachment = StackEntity(factory, attachmentId);
+                    var attachmentDesc = LDB.models.Select(attachment.modelIndex)?.prefabDesc;
+                    factory.ReadObjectConn(attachmentId, 0, out var attachmentReverseOutput, out var parentId, out var parentSlot);
+                    if (!desc.isStorage || attachmentDesc?.addonType != EAddonType.Storage
+                        || attachmentReverseOutput || parentId != current || parentSlot != 13
+                        || result.Attachments.Any(value => value.Entity.ObjectId == attachmentId))
+                        throw new InvalidOperationException("stack_storage_attachment_not_reciprocal");
+                    var attachmentSnapshot = TryCaptureFactoryEntity(factory, attachmentId)
+                        ?? throw new InvalidOperationException("stack_storage_attachment_unavailable");
+                    attachmentSnapshot.ModelIndex = attachment.modelIndex;
+                    var dispenser = CaptureNativeDispenser(factory, attachment);
+                    result.Attachments.Add(new() { ParentObjectId = current, Entity = attachmentSnapshot, Dispenser = dispenser });
+                    fields.Add(attachmentId); fields.Add(attachment.modelIndex); fields.Add(attachmentSnapshot.EndpointStateHash);
+                    fields.Add(dispenser.ComponentId); fields.Add(dispenser.StorageId); fields.Add(dispenser.PlayerMode);
+                    fields.Add(dispenser.StorageMode); fields.Add(dispenser.FilterItemId); fields.Add(dispenser.AutoReplenishCouriers);
+                }
                 factory.ReadObjectConn(current, 15, out var output, out var upper, out var upperSlot);
                 if (upper == 0) break;
                 if (upper < 0 || !output || upperSlot != 14)
@@ -278,7 +299,7 @@ internal sealed partial class GameStateReader
 
     internal string CaptureNativeStackContents(PlanetFactory factory, IReadOnlyList<int> objectIds)
     {
-        if (objectIds.Count < 1 || objectIds.Count > NativeStackingPolicy.MaximumObservedLayers
+        if (objectIds.Count < 1 || objectIds.Count > 2 * NativeStackingPolicy.MaximumObservedLayers
             || objectIds.Distinct().Count() != objectIds.Count)
             throw new InvalidOperationException("stack_inventory_selection_invalid");
         var fields = new List<object?>();
@@ -304,6 +325,19 @@ internal sealed partial class GameStateReader
             fields.Add(device?.RemainingSprays);
             fields.Add(device?.ExtraSprays);
             fields.Add(device?.ProliferatorUsed);
+            var entity = StackEntity(factory, id);
+            if (entity.dispenserId > 0)
+            {
+                var dispenser = CaptureNativeDispenser(factory, entity);
+                fields.Add(dispenser.ComponentId); fields.Add(dispenser.IdleCouriers); fields.Add(dispenser.WorkingCouriers);
+                fields.Add(dispenser.Energy); fields.Add(dispenser.HeldItemCount);
+                fields.Add(dispenser.PlayerMode); fields.Add(dispenser.StorageMode); fields.Add(dispenser.FilterItemId);
+                fields.Add(dispenser.AutoReplenishCouriers); fields.Add(dispenser.StorageId);
+                foreach (var cargo in dispenser.HeldCargo.Concat(dispenser.CourierCargo))
+                {
+                    fields.Add(cargo.Role); fields.Add(cargo.ItemId); fields.Add(cargo.Count); fields.Add(cargo.Inc);
+                }
+            }
             foreach (var buffer in device?.CachedCargo ?? Enumerable.Empty<FactoryBufferSnapshot>())
             {
                 fields.Add(buffer.Role);
@@ -320,5 +354,35 @@ internal sealed partial class GameStateReader
             }
         }
         return CanonicalStateHash.Combine("native-stack-original-contents-v1", fields.ToArray());
+    }
+
+    private static NativeDispenserSnapshot CaptureNativeDispenser(PlanetFactory factory, EntityData entity)
+    {
+        var transport = factory.transport;
+        var id = entity.dispenserId;
+        if (id <= 0 || id >= transport.dispenserCursor || id >= transport.dispenserPool.Length
+            || transport.dispenserPool[id] is not { } dispenser || dispenser.id != id || dispenser.entityId != entity.id
+            || dispenser.workCourierDatas is null || dispenser.workCourierDatas.Length > 64
+            || dispenser.workCourierCount < 0 || dispenser.workCourierCount > dispenser.workCourierDatas.Length
+            || dispenser.holdupPackage is null || dispenser.holdupPackage.Length > 128)
+            throw new InvalidOperationException("stack_dispenser_component_unavailable");
+        var result = new NativeDispenserSnapshot
+        {
+            ComponentId = id, StorageId = dispenser.storageId, PlayerMode = (int)dispenser.playerMode,
+            StorageMode = (int)dispenser.storageMode, FilterItemId = dispenser.filter,
+            IdleCouriers = dispenser.idleCourierCount, WorkingCouriers = dispenser.workCourierCount,
+            AutoReplenishCouriers = dispenser.courierAutoReplenish, Energy = dispenser.energy, HeldItemCount = dispenser.holdupItemCount,
+        };
+        for (var index = 0; index < dispenser.holdupPackage.Length; index++)
+        {
+            var cargo = dispenser.holdupPackage[index];
+            result.HeldCargo.Add(new() { Role = "held-" + index, ItemId = cargo.itemId, Count = cargo.count, Inc = cargo.inc });
+        }
+        for (var index = 0; index < dispenser.workCourierCount; index++)
+        {
+            var cargo = dispenser.workCourierDatas[index];
+            result.CourierCargo.Add(new() { Role = "courier-" + index, ItemId = cargo.itemId, Count = cargo.itemCount, Inc = cargo.inc });
+        }
+        return result;
     }
 }

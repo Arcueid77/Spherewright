@@ -95,6 +95,9 @@ public sealed class NativeStackingPolicyTests
             plan => plan.AnchorObjectId++,
             plan => plan.InputFromSlot = 0,
             plan => plan.ModelIndex = 0,
+            plan => plan.ExistingAttachmentObjectIds = null!,
+            plan => plan.ExistingAttachmentObjectIds = new() { 1 },
+            plan => plan.ExistingAttachmentObjectIds = new() { 2, 2 },
         };
         foreach (var mutate in mutations)
         {
@@ -150,6 +153,20 @@ public sealed class NativeStackingPolicyTests
             plan.BuildingItemId, plan.ModelIndex, plan.ExistingLayerCount, plan.MaximumLayers,
             plan.InputFromSlot, plan.InputToSlot,
             CanonicalStateHash.Combine("existing-stack-members", plan.ExistingObjectIds.Cast<object>().ToArray()));
+        Assert.Equal(original, NativeStackingPolicy.PlanHash(plan));
+    }
+
+    [Fact]
+    public void NativeStorageAttachmentIdentityIsBoundSeparatelyFromOriginalStackMembers()
+    {
+        var plan = Plan();
+        var original = NativeStackingPolicy.PlanHash(plan);
+        plan.ExistingAttachmentObjectIds.Add(2);
+        var attached = NativeStackingPolicy.PlanHash(plan);
+        Assert.NotEqual(original, attached);
+        plan.ExistingAttachmentObjectIds[0] = 3;
+        Assert.NotEqual(attached, NativeStackingPolicy.PlanHash(plan));
+        plan.ExistingAttachmentObjectIds.Clear();
         Assert.Equal(original, NativeStackingPolicy.PlanHash(plan));
     }
 

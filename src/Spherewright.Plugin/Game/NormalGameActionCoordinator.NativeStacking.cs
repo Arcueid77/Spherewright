@@ -58,6 +58,7 @@ internal sealed partial class NormalGameActionCoordinator
             ModelIndex = modelIndex,
             ExistingLayerCount = before.Layers.Count,
             ExistingObjectIds = before.Layers.Select(layer => layer.ObjectId).ToList(),
+            ExistingAttachmentObjectIds = before.Attachments.Select(attachment => attachment.Entity.ObjectId).ToList(),
             MaximumLayers = desc.isLab ? GameMain.history.labLevel
                 : desc.isStorage || desc.isTank || desc.isSplitter ? GameMain.history.storageLevel : null,
             HeightLimitKind = desc.isLab || desc.isStorage || desc.isTank || desc.isSplitter ? "technology" : "native_reach",
@@ -99,7 +100,7 @@ internal sealed partial class NormalGameActionCoordinator
             return false;
         }
         if (OverlapsExistingFactoryObject(factory, BuildStepDescription(candidate, item), candidate.Position,
-            candidate.Rotation, out var occupied, plan?.AnchorObjectId ?? 0))
+            candidate.Rotation, out var occupied, plan?.AnchorObjectId ?? 0, item.ID))
         {
             rejection = "The addon stack overlaps another native object:" + occupied;
             return false;
@@ -170,6 +171,8 @@ internal sealed partial class NormalGameActionCoordinator
         if (!snapshot.Complete || snapshot.RootObjectId != plan.RootObjectId
             || snapshot.Layers.Count != plan.ExistingLayerCount + 1
             || !snapshot.Layers.Take(plan.ExistingLayerCount).Select(layer => layer.ObjectId).SequenceEqual(plan.ExistingObjectIds)
+            || !snapshot.Attachments.Select(attachment => attachment.Entity.ObjectId).OrderBy(id => id)
+                .SequenceEqual(plan.ExistingAttachmentObjectIds.OrderBy(id => id))
             || !NativeStackCompletionMatches(factory, plan, snapshot.TopObjectId))
             return false;
         action.StackConstructionReadback = snapshot;
