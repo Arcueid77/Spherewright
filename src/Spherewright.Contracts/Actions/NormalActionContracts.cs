@@ -106,6 +106,9 @@ public static class NormalActionStates
 
 public sealed class PrepareMoveRequest
 {
+    public bool PreviewWalkingRoute { get; set; }
+    public string? ExpectedWalkingGeometryHash { get; set; }
+    public List<Vector3Snapshot>? WalkingPreviewPoints { get; set; }
     public int PlanetId { get; set; }
 
     public Vector3Snapshot Target { get; set; } = new Vector3Snapshot();
@@ -377,6 +380,7 @@ public sealed class CommitNormalActionRequest
 
 public sealed class PreparedNormalAction
 {
+    public WalkingRoutePreview? WalkingRoutePreview { get; set; }
     public int? PlannedModelIndex { get; set; }
     public NativeStackConstructionPlan? PlannedStackConstruction { get; set; }
     public StationCargoWithdrawalPlan? StationCargoWithdrawal { get; set; }

@@ -509,3 +509,9 @@ Move 地表预览是观察，不是寻路，180/600 tick 失败指导禁止重�
 现有建造调用新增可选`stackOnObjectId`、`expectedStackStateHash`、`preferredModelIndex`。叠放请求绑定当前完整已建成链和准确原生上层模型，与其他放置模式互斥。混装保护要求`plannedStackConstruction`及指定模型回显，合格后才暴露token。原生叠放沿用15→14槽、模型接点偏移、异型号朝向转换及当前原生高度条件。
 
 详细检查新增可空`modelIndex`/`stack`，建造目录新增可空`stacking`。旧工厂哈希继续使用原字段，新叠放/模型哈希域绑定批准施工及持久待建/完成记录，旧缺省字段哈希保持原形。终态`stackConstructionReadback`保留原观察切面。创建待建体的同tick核对既有层物品及工作内容，后续正常生产另记证据。
+
+## 步行诊断与只读路线模式
+
+`prepare_move`新增可选`previewWalkingRoute=false`。新模式返回`walkingRoutePreview`、空planToken、commitAllowedNow=false和executable=false。内部有界地表读取使用`expectedWalkingGeometryHash`及1..64个`walkingPreviewPoints`，仍为只读。MCP先核对版本/上下文/目标回显，再进行规划，并拦截旧插件替代返回的移动token。三次绑定观察分别覆盖几何、候选地表及拟定路线地表。普通移动请求沿用原目标/指令路径。
+
+可空`movementDiagnostics`在首次记录失败建议时捕获，提供已观察的位置/目标/半径/容差及最多32个物理阻挡候选，并明确几何不完整和查询上限。完整切面要求原生碰撞池归属、实际模型形状、地形归属引用和碰撞层核验。路线是有界观察建议，实际执行须逐段新鲜准备并核对终点。

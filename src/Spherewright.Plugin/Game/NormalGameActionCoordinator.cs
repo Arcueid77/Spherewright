@@ -56,6 +56,8 @@ internal sealed partial class NormalGameActionCoordinator
         string? requestedSessionId,
         PrepareMoveRequest request)
     {
+        var previewError = WalkingRoutePlanner.ValidateRequest(request);
+        if (previewError is not null) return InvalidPlan(previewError);
         var common = ValidatePrepareCommon(requestedSessionId, request.PlanetId, request.StateHashVersion);
         if (common.Error is not null)
         {
@@ -77,6 +79,12 @@ internal sealed partial class NormalGameActionCoordinator
         }
 
         var player = playerResult.Value;
+        if (request.PreviewWalkingRoute)
+        {
+            if (request.ExpectedWalkingGeometryHash is null && request.ExpectedPlayerStateHash != player.StateHash)
+                return StalePlan("The walking-preview player changed after inspection.");
+            return PrepareWalkingGeometry(request, player);
+        }
         var driftInspection = request.AllowPassiveDrift ? _reader.LastPassiveDriftMoveInspection : null;
         if (request.AllowPassiveDrift)
         {
@@ -1077,10 +1085,11 @@ internal sealed partial class NormalGameActionCoordinator
         }
     }
 
-    private static void ApplyMovementFailureAdvice(
+    private void ApplyMovementFailureAdvice(
         ActionRecord action,
         MovementFailureRecoveryAdvice advice)
     {
+        CaptureMovementFailureDiagnostics(action);
         action.FailureKind = advice.FailureKind;
         action.StalledGameTicks = advice.StalledGameTicks;
         action.RemainingDistance = advice.RemainingDistance;
@@ -1713,6 +1722,7 @@ internal sealed partial class NormalGameActionCoordinator
             Stalled = action.Stalled,
             RecoveryRequired = action.RecoveryRequired,
             FailureKind = action.FailureKind,
+            MovementDiagnostics = action.MovementDiagnostics,
             StalledGameTicks = action.StalledGameTicks,
             RemainingDistance = action.RemainingDistance,
             DoNotRetrySameTarget = action.DoNotRetrySameTarget,
@@ -2466,6 +2476,7 @@ internal sealed partial class NormalGameActionCoordinator
         public OrderNode? PlayerOrder { get; set; }
         public long? PowerStarvedAtGameTick { get; set; }
         public MovementProgressWatchdog? MovementProgress { get; set; }
+        public MovementDiagnosticsSnapshot? MovementDiagnostics { get; set; }
         public Vector3? HarvestApproach { get; set; }
         public HarvestApproachProgressWatchdog? HarvestApproachProgress { get; set; }
         public long FlightLastControlGameTick { get; set; }

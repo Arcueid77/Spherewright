@@ -588,3 +588,11 @@ Native Import 可将 double 宇宙坐标逆投影为 float 本地位置；普通
 调用`prepare_build`时提供`stackOnObjectId`、`expectedStackStateHash`和可选`preferredModelIndex`，省略地面、资源、传送带及源/目的连接参数。原生按下层模型真实接点偏移、上层兼容与朝向、当前仓储/研究站科技、放置条件及1个已有建筑物品预检。提交前要求匹配的`plannedStackConstruction`与`plannedModelIndex`。正常无人机完成待建体，原终态`stackConstructionReadback`证明整条结果链。逐类另读仓格/物品、液罐流体、研究站工作/矩阵点数以及分流器端口/过滤/优先级。只读目录本身不证明库存行为或实机验收。
 
 省略新可选字段的普通请求沿用原路径。远端高层叠放使用独立绑定的垂直无人机包络，支付实际返程/收尾能量并保留原横向范围。原动作、来源身份、原生就绪及有限物料/时间储备继续适用。
+
+## 步行阻挡诊断与短路线预览
+
+Move/Harvest失败可在原失败tick保留`movementDiagnostics`。合读位置、实际目标、切向剩余距离、径向误差、到达容差及候选对象种类/ID。`current_scene_proximity`是原生重叠查询观察，`native_pool_clearance_candidate`来自复制后的几何，两者均为候选。`arrival_radius_mismatch`提示端点高差/容差问题。保留原失败动作，使用新鲜有界恢复。
+
+`prepare_move(previewWalkingRoute=true)`是无token的只读模式，要求静止、站在已观察地面的Walk，目标距角色16m以内。Native捕获复合角色碰撞体、有界完整Physics/Belt碰撞池切面和场景归属。MCP在Unity外计算有限可见图，再按同一几何哈希取得候选及最终地表采样。上限为64候选节点、16航点、48m路线与512附近碰撞体。`route_observed`要求完整几何、干地采样、有界坡度及保守扫掠净距。每段元数据包含对应到达容差的起点位置余量。结果是观察切面，执行须另行使用普通移动。
+
+每段开始前重新读取真实接地闲置角色及相关几何，核对上一段实际终点是否落在声明余量内，需要时从实际位置重新预览。沿用原已审容差。partial、unavailable、search_exhausted分别保留其证据范围。场景后续变化时，普通移动仍由原停滞看门狗核销。

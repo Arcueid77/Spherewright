@@ -1149,8 +1149,26 @@ public static partial class SpherewrightTools
         float arrivalTolerance = 1.5f,
         int stateHashVersion = 1,
         bool allowPassiveDrift = false,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        [Description("Read-only bounded walking preview for an idle grounded player, with goal within16m. Returns native physics-pool geometry, observed compound body dimensions, bounded candidate waypoints and per-segment clearance. MCP planning stays outside Unity. Candidate and final surface samples bind one geometry hash. No token or player order is returned. Partial/unknown geometry or surface coverage remains partial; actual motion still requires separate fresh ordinary moves.")]
+        bool previewWalkingRoute = false)
     {
+        var request = new PrepareMoveRequest
+        {
+            PlanetId = planetId, Target = new Vector3Snapshot { X = targetX, Y = targetY, Z = targetZ },
+            ArrivalTolerance = arrivalTolerance, ExpectedPlayerStateHash = expectedPlayerStateHash,
+            StateHashVersion = stateHashVersion, AllowPassiveDrift = allowPassiveDrift,
+            PreviewWalkingRoute = previewWalkingRoute,
+        };
+        var error = Spherewright.Bridge.Core.Safety.WalkingRoutePlanner.ValidateRequest(request);
+        if (error is not null)
+            return ToToolResult(BridgeCallResult<PreparedNormalAction>.Failed(BridgeError.Create(
+                BridgeErrorCodes.InvalidRequest, error, false, "Use a bounded stationary walking observation.")), "Walking preview rejected.");
+        if (previewWalkingRoute)
+        {
+            var preview = await ObserveWalkingRouteAsync(bridgeClient, sessionId, request, cancellationToken).ConfigureAwait(false);
+            return ToToolResult(preview, "Read-only walking-route observation. Inspect geometry and terrain coverage; use fresh ordinary moves for execution.");
+        }
         var result = await bridgeClient.PrepareMoveAsync(
             sessionId,
             new PrepareMoveRequest
