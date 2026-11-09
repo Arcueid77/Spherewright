@@ -10,12 +10,15 @@ internal sealed partial class NormalGameActionCoordinator
 {
     private static bool SavedFactoryPlayerMatches(Player player) => ReferenceEquals(player, GameMain.mainPlayer);
     private static bool SavedFactoryItemAvailable(int id) => LDB.items.Select(id) is not null && GameMain.history.ItemUnlocked(id);
-    private static bool ConstructionPlayerIdle(Player player, bool allowNativePause = false) => NativeWalkModeIsBounded(player, stationary: true,
+    private static bool ConstructionPlayerIdle(Player player, bool allowNativePause = false) =>
+        NativePlayerStationaryForSetting(player, allowNativePause) && VoyagerMechaWorkIdle(player);
+
+    private static bool NativePlayerStationaryForSetting(Player player, bool allowNativePause = false) => NativeWalkModeIsBounded(player, stationary: true,
             finiteWaterCostWithNativePause: true, allowBudgetedRecharge: true, allowNativePause: allowNativePause)
         && player.movementState == EMovementState.Walk && player.speed <= .1f
         && player.currentOrder is null && player.orders?.orderCount == 0
         && !player.warpCommand && player.warpState == 0f && !player.navigation.navigating
-        && BuildUiIsIdle(player) && VoyagerMechaWorkIdle(player)
+        && BuildUiIsIdle(player)
         && player.controller.input0.sqrMagnitude == 0f && player.controller.input1.sqrMagnitude == 0f;
 
     private bool ConstructionReferencesMatch(ActionRecord action) => action.ConstructionBinding is { } b
