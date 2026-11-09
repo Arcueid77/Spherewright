@@ -39,9 +39,12 @@ internal sealed partial class NormalGameActionCoordinator
         if (_flightCheckpoints.VoyagerJourney is {} j && !IsVoyagerJourneyClosed(j))
             return Stale("mecha_research_supply_requires_closed_journey");
         var p=GameMain.mainPlayer;
+        if (p is null) return Stale("mecha_research_supply_native_player_missing");
+        if (NativePlayerStationaryForSettingBlocker(p) is {} physicalBlocker)
+            return Stale(physicalBlocker);
         // This closed-journey setting explicitly starts or stops normal
         // research supply. Its queue can include normal completion rewards.
-        return p is not null && NativePlayerStationaryForSetting(p) && GameMain.history is not null
+        return GameMain.history is not null
             && p.mecha?.lab?.itemPoints?.items is {} points && points.All(x=>x.Key>0 && x.Value==0)
             && ReferenceEquals(p.mecha.lab.gameHistory,GameMain.history)
             ? null : Stale("mecha_research_supply_native_controller_or_empty_buffer_changed");

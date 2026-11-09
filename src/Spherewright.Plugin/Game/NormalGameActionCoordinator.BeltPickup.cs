@@ -34,9 +34,11 @@ internal sealed partial class NormalGameActionCoordinator
         if (factory is null || player?.package?.grids is null || !ReferenceEquals(player.factory, factory)
             || player.package.size < 1 || player.package.size > 512 || player.package.size > player.package.grids.Length
             || player.inhandItemId != 0 || player.inhandItemCount != 0 || player.inhandItemInc != 0
-            || !NativePlayerStationaryForSetting(player) || player.mecha.forge.tasks.Count != 0
+            || player.mecha.forge.tasks.Count != 0
             || _flightCheckpoints.VoyagerJourney is { } journey && !IsVoyagerJourneyClosed(journey))
             throw new InvalidOperationException("belt_pickup_requires_closed_journey_and_stationary_empty_hand");
+        if (NativePlayerStationaryForSettingBlocker(player) is {} physicalBlocker)
+            throw new InvalidOperationException(physicalBlocker);
         var inspected = _reader.InspectFactoryEntityOnMainThread(_sessions.SessionId,
             new InspectFactoryEntityRequest { PlanetId = factory.planetId, ObjectId = objectId,
                 MaterialInventoryObjectIds = new() { objectId } });

@@ -399,6 +399,20 @@ internal sealed partial class NormalGameActionCoordinator
         Action<NativePlayerGroundContactSnapshot>? captureGround = null, string groundStage = "native_guard",
         Action<bool>? captureSphere = null, bool allowNativePause = false)
     {
+        var physical = NativeWalkPhysicalModeBlocker(player, stationary, scene, finiteWaterCostWithNativePause,
+            allowDrift, captureGround, groundStage, captureSphere, allowNativePause);
+        if (physical is not null) return physical;
+        var independent = CaptureNativeMechaBackgroundCosts(player);
+        if (NativeMechaBackgroundCostPolicy.IndependentCombatCoreDebitsExcluded(independent)) return null;
+        if (!allowBudgetedRecharge) return "remote_idle_independent_mecha_cost_unproved";
+        return NativeMechaRechargeCostPolicy.Evaluate(CaptureNativeMechaRechargeFacts(player, independent)).BlockerCode;
+    }
+
+    private static string? NativeWalkPhysicalModeBlocker(Player player, bool stationary, NativeLocalWalkSceneBinding? scene,
+        bool finiteWaterCostWithNativePause, bool allowDrift,
+        Action<NativePlayerGroundContactSnapshot>? captureGround = null, string groundStage = "native_guard",
+        Action<bool>? captureSphere = null, bool allowNativePause = false)
+    {
         var c = player.controller; var w = c.actionWalk;
         var vertical = c.vertSpeed;
         if (!player.isAlive) return "remote_idle_player_not_alive";
@@ -412,13 +426,6 @@ internal sealed partial class NormalGameActionCoordinator
         if (c.actionSail.fastTravelling) return "remote_idle_fast_travel_active";
         var sceneBlocker = NativeLocalWalkSceneBlocker(player, scene, finiteWaterCostWithNativePause);
         if (sceneBlocker is not null) return sceneBlocker;
-        var independent = CaptureNativeMechaBackgroundCosts(player);
-        if (!NativeMechaBackgroundCostPolicy.IndependentCombatCoreDebitsExcluded(independent))
-        {
-            if (!allowBudgetedRecharge) return "remote_idle_independent_mecha_cost_unproved";
-            var bounded = NativeMechaRechargeCostPolicy.Evaluate(CaptureNativeMechaRechargeFacts(player, independent));
-            if (!bounded.Proved) return bounded.BlockerCode;
-        }
         if (!LocalRawMovementInputIdle()) return "remote_idle_raw_input_active";
         if (c.input0.sqrMagnitude != 0f || c.input1.sqrMagnitude != 0f) return "remote_idle_controller_input_active";
         if (w.jumpDelayTick > 0 || w.flyUpChance != 0f) return "remote_idle_jump_or_fly_pending";

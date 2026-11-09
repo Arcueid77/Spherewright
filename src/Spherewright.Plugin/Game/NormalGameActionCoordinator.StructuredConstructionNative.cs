@@ -11,11 +11,22 @@ internal sealed partial class NormalGameActionCoordinator
     private static bool SavedFactoryPlayerMatches(Player player) => ReferenceEquals(player, GameMain.mainPlayer);
     private static bool SavedFactoryItemAvailable(int id) => LDB.items.Select(id) is not null && GameMain.history.ItemUnlocked(id);
     private static bool ConstructionPlayerIdle(Player player, bool allowNativePause = false) =>
-        NativePlayerStationaryForSetting(player, allowNativePause) && VoyagerMechaWorkIdle(player);
-
-    private static bool NativePlayerStationaryForSetting(Player player, bool allowNativePause = false) => NativeWalkModeIsBounded(player, stationary: true,
+        NativeWalkModeIsBounded(player, stationary: true,
             finiteWaterCostWithNativePause: true, allowBudgetedRecharge: true, allowNativePause: allowNativePause)
-        && player.movementState == EMovementState.Walk && player.speed <= .1f
+        && NativePlayerLocalOrdersIdle(player) && VoyagerMechaWorkIdle(player);
+
+    // These closed-journey, same-tick UI operations do not drive the mecha or
+    // reserve future work ticks. A research queue may legitimately be active.
+    private static string? NativePlayerStationaryForSettingBlocker(Player player)
+    {
+        var physical = NativeWalkPhysicalModeBlocker(player, stationary: true, scene: null,
+            finiteWaterCostWithNativePause: true, allowDrift: false);
+        if (physical is not null) return physical;
+        return NativePlayerLocalOrdersIdle(player) ? null : "local_setting_orders_or_build_ui_active";
+    }
+
+    private static bool NativePlayerLocalOrdersIdle(Player player) =>
+        player.movementState == EMovementState.Walk && player.speed <= .1f
         && player.currentOrder is null && player.orders?.orderCount == 0
         && !player.warpCommand && player.warpState == 0f && !player.navigation.navigating
         && BuildUiIsIdle(player)
