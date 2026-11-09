@@ -506,6 +506,8 @@ Move 地表预览是观察，不是寻路，180/600 tick 失败指导禁止重�
 
 ## 原生垂直叠放
 
+现有transfer入口新增`belt-cargo-to-player`及item/count0形态，可选`beltCargoPickup`绑定完整独立路径、成员带、关联普通分拣器货物及全部返回物品。MCP仅在准确原生操作和完整预算回显一致时暴露token，由同tick背包/货物/成员证明核销原生回收。
+
 目录记录`buildMode`、可空`maximumLayers`、`heightLimitKind`和`maximumConstructionHeightMetres`。原生自动集装机走Click放置，喷涂机走Addon放置，其`native_reach`上限仍须通过原生全局建造高度/可达范围检查。新计划绑定`buildToolKind`及`heightLimitKind`，省略的默认值保留原Click/technology计划哈希和持久记录。
 
 非空`existingAttachmentObjectIds`把保留仓储挂件绑定到叠放计划身份。`stack.attachments`回显双向父层、实体/模型/姿态及有界配送器配置/配送机/货物状态。缺省挂件列表保留原计划哈希，自动抬升由普通原生创建负责，并在同tick核对原挂件材料和能源。

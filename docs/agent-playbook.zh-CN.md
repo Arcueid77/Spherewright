@@ -583,6 +583,8 @@ Native Import 可将 double 宇宙坐标逆投影为 float 本地位置；普通
 
 ## 原生垂直叠放
 
+有界运输库存回收使用`prepare_transfer(direction=belt-cargo-to-player, storageEntityId=<传送带>, itemId=0, count=0)`，披露完整独立开放路径及关联普通分拣器手持货物，须核对`beltCargoPickup`和完整item budget。该子集要求旅程闭合、空手、真实静止、零增产点货物、至多4096格/64带/1000路径物品及完整背包容量。由原生`CargoTraffic.PickupBeltItems`及`FactorySystem.TakeBackItems_Inserter`回收，原终态证明同tick完整背包数量/增产点、被收货物为空，以及成员姿态/连接/过滤保持。后置检查不完整时保留原动作。
+
 原生目录覆盖储仓、液罐、研究站、分流器样式、自动集装机和喷涂机。`maximumLayers=null`且`heightLimitKind=native_reach`时，由原生建造高度及可达范围决定准入；`maximumConstructionHeightMetres`回显当前原生高度额度。喷涂机使用原生Addon工具及径向2.666667米偏移。逐层核对集装机缓存物品/数量/增产点及模式，喷涂机传送带身份、增产剂余量/喷涂次数及工作状态。
 
 仓库叠放通过双向13→0连接绑定顶部物流配送器，普通原生创建负责把同一配送器抬升到新层。计划保留其原身份，终态整链回读包含新父层/姿态、配置、配送机和货物。创建同tick核对挂件及既有各层的材料与能源守恒，待建或未证实挂件阻止准备。

@@ -488,6 +488,8 @@ This setting path was checked against DSP0.10.35.29151: `UIMechaWindow.OnAutoRep
 
 ## Native vertical stacking
 
+The existing transfer entry accepts `belt-cargo-to-player` with item/count0. Additive `beltCargoPickup` binds one independent complete path, its member belts, associated ordinary inserter cargo and all returned items. MCP requires the exact Native operation and matching budget echo before exposing a token. Native same-tick package/cargo/member proofs cover collection.
+
 The catalog records `buildMode`, nullable `maximumLayers`, `heightLimitKind` and `maximumConstructionHeightMetres`. Native pilers use Click placement and spraycoaters use Addon placement. Their `native_reach` limit retains the Native global construction-height/reach checks. New plans bind `buildToolKind` and `heightLimitKind`; omitted defaults preserve the original Click/technology plan hashes and persisted records.
 
 Nonempty `existingAttachmentObjectIds` extends stack plan identity with retained storage attachments. `stack.attachments` reports their reciprocal parent, entity/model/pose and bounded distributor settings/courier/cargo state. An absent attachment list retains the original plan hash. Native creation owns automatic relocation and the original attachment materials/energy are reconciled at the same tick.

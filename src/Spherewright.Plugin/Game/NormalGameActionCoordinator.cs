@@ -454,7 +454,9 @@ internal sealed partial class NormalGameActionCoordinator
     public GameCallResult<PreparedNormalAction> PrepareTransferOnMainThread(
         string? requestedSessionId,
         PrepareTransferRequest request)
-        => request.Direction == TransferDirections.StationStorageToPlayer
+        => request.Direction == TransferDirections.BeltCargoToPlayer
+            ? PrepareNativeBeltPickup(requestedSessionId, request)
+            : request.Direction == TransferDirections.StationStorageToPlayer
             ? PrepareStationCargoWithdrawalOnMainThread(requestedSessionId, request)
             : request.Direction == TransferDirections.ProductionResetToPlayer
             ? PrepareProductionResetOnMainThread(requestedSessionId,request)
@@ -851,7 +853,8 @@ internal sealed partial class NormalGameActionCoordinator
                 CancelBlueprintBuildOnMainThread(action);
                 break;
             case NormalActionKinds.Transfer:
-                if (action.Plan.TransferDirection == TransferDirections.StationStorageToPlayer) ExecuteStationCargoWithdrawalOnMainThread(action);
+                if (action.Plan.TransferDirection == TransferDirections.BeltCargoToPlayer) ExecuteNativeBeltPickup(action);
+                else if (action.Plan.TransferDirection == TransferDirections.StationStorageToPlayer) ExecuteStationCargoWithdrawalOnMainThread(action);
                 else if (action.Plan.TransferDirection == TransferDirections.ProductionResetToPlayer) ExecuteProductionResetOnMainThread(action);
                 else if (action.Plan.TransferDirection == TransferDirections.PlayerToGeneratorFuel) ExecuteGeneratorColdStartFuelOnMainThread(action);
                 else ExecuteStorageTransferOnMainThread(action);
@@ -1384,7 +1387,9 @@ internal sealed partial class NormalGameActionCoordinator
             case NormalActionKinds.CancelBlueprintBuild:
                 return RevalidateBlueprintCancelOnMainThread(plan);
             case NormalActionKinds.Transfer:
-                return plan.TransferDirection == TransferDirections.StationStorageToPlayer
+                return plan.TransferDirection == TransferDirections.BeltCargoToPlayer
+                    ? RevalidateNativeBeltPickup(plan)
+                    : plan.TransferDirection == TransferDirections.StationStorageToPlayer
                     ? RevalidateStationCargoWithdrawalOnMainThread(plan)
                     : plan.TransferDirection == TransferDirections.ProductionResetToPlayer
                     ? RevalidateProductionResetOnMainThread(plan)

@@ -3,6 +3,7 @@ using System.Text.Json;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
 using Spherewright.Bridge.Core.Safety;
+using Spherewright.Bridge.Core.Factory;
 using Spherewright.Contracts.Actions;
 using Spherewright.Contracts.Celestial;
 using Spherewright.Contracts.Diagnostics;
@@ -793,7 +794,8 @@ public static partial class SpherewrightTools
         CancellationToken cancellationToken = default)
     {
         if (direction is not (TransferDirections.PlayerToStorage or TransferDirections.StorageToPlayer
-            or TransferDirections.PlayerToGeneratorFuel or TransferDirections.ProductionResetToPlayer or TransferDirections.StationStorageToPlayer))
+            or TransferDirections.PlayerToGeneratorFuel or TransferDirections.ProductionResetToPlayer
+            or TransferDirections.StationStorageToPlayer or TransferDirections.BeltCargoToPlayer))
             return ToToolResult(BridgeCallResult<PreparedNormalAction>.Failed(BridgeError.Create(BridgeErrorCodes.InvalidRequest,
                 "Transfer direction must use an exact supported lower-case value.",false,"Use the documented transfer direction; do not normalize an unknown mode.")),"Unsupported transfer direction.");
         if(direction==TransferDirections.ProductionResetToPlayer && (itemId!=0 || count!=0))
@@ -828,6 +830,11 @@ public static partial class SpherewrightTools
             result=BridgeCallResult<PreparedNormalAction>.Failed(BridgeError.Create(BridgeErrorCodes.BridgeNotReady,
                 "The Plugin did not disclose the exact idle production reset and whole Native package returns; no token is exposed.",false,
                 "Use matching Plugin/MCP bytes, itemId=0/count=0, an idle device with zero main/bonus progress and sufficient dedicated empty package slots."));
+        if (direction == TransferDirections.BeltCargoToPlayer && result.Success
+            && !NativeBeltPickupPolicy.HasMatchingEcho(storageEntityId, itemId, count, result.Value))
+            result = BridgeCallResult<PreparedNormalAction>.Failed(BridgeError.Create(BridgeErrorCodes.BridgeNotReady,
+                "The Plugin did not bind complete Native belt-cargo pickup; no transfer token is exposed.", false,
+                "Use matching Plugin/MCP bytes and fresh complete path/package observations."));
         return ToToolResult(result, "Exact transfer plan prepared without moving any item; cold-generator fuel requires its separate Native insertion echo.");
     }
 
