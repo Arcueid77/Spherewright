@@ -23,14 +23,14 @@
 
 ## 发行证据及边界
 
-- [0.4 验收](validation/v0.4.0.md) / [中文](validation/v0.4.0.zh-CN.md)：冻结源码/hash、本机验收与未验证分支。
-- [0.4 发行说明](release-notes/v0.4.0.md) / [中文](release-notes/v0.4.0.zh-CN.md)：已验收候选，不是正式发行。
-- [Lab 场景与证据](sample-validation.md) / [中文](sample-validation.zh-CN.md)：固定证据快照、只读产品锁与复现。
+- [0.4 验收](validation/v0.4.0.md) / [中文](validation/v0.4.0.zh-CN.md)：冻结生产验收源码、hash、本机证据与未验证分支。
+- [0.4 发行说明](release-notes/v0.4.0.md) / [中文](release-notes/v0.4.0.zh-CN.md)：已正式发布版本、最终双包/安装证据及支持限制。
+- [Lab 场景与证据](sample-validation.md) / [中文](sample-validation.zh-CN.md)：固定证据快照、当前 Lab 入口、只读产品锁与复现。
 - [暂缓远程验收](remote-validation.md) / [中文](remote-validation.zh-CN.md)：后续设计，不代表已部署远程能力。
-- [文档维护](documentation-audit.md) / [中文](documentation-audit.zh-CN.md)：审过的矛盾与核验边界。
+- [文档维护](documentation-audit.md) / [中文](documentation-audit.zh-CN.md)：2026-10-16 的定期审查及其核验边界。
 - [商店包模板](../packaging/thunderstore/README.md)及[历史包说明](../packaging/thunderstore/changelog/0.3.3.md)为页内双语。
 
-最新正式版本是 v0.3.3；已验收 0.4 候选源码为 `2a7a98d1932c404e3a7abc2c11233d9c0b8780d9`。main 文档可更新，不改变冻结 ZIP 或已安装组件。
+最新正式版本为 `v0.4.0`，源码 `b7c0002dbe2e8f5608c5ca140b0c6326a1818021`。较早的冻结生产验收源码 `2a7a98d1932c404e3a7abc2c11233d9c0b8780d9` 保留独立证据范围。main 文档可继续更新，不改变冻结 ZIP 或已安装组件。
 
 ## 原生研究
 

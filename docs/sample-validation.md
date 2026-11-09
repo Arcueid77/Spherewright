@@ -4,7 +4,11 @@
 
 [Spherewright-Lab](https://github.com/Arcueid77/Spherewright-Lab) owns scenarios, operational handoffs and detailed acceptance. The product builds, tests and packages without fetching or executing Lab.
 
-The immutable transfer snapshot is `14478a03c64c550e644c559405c8496b647552e7`, with product submodule `2a7a98d1932c404e3a7abc2c11233d9c0b8780d9`. No formal v0.4.0 tag exists, so the lock remains `status: provisional` / `releaseTag: null`. Imported operational facts come from product `e7d5f7d8661092b7c8089710488c448f290638be`, distinct from the earlier candidate source.
+## Current work and historical evidence
+
+For current work, start from Lab's [contributor rules](https://github.com/Arcueid77/Spherewright-Lab/blob/main/AGENTS.md), [active handoff](https://github.com/Arcueid77/Spherewright-Lab/blob/main/operations/active-handoff.md), [source lock](https://github.com/Arcueid77/Spherewright-Lab/blob/main/source-lock.json) and [Voyager snapshot](https://github.com/Arcueid77/Spherewright-Lab/blob/main/scenarios/v0.5-voyager/current-status.md). These entries change as reviewed facts advance; they do not reuse historical authorization.
+
+The immutable transfer snapshot below is `14478a03c64c550e644c559405c8496b647552e7`, with product submodule `2a7a98d1932c404e3a7abc2c11233d9c0b8780d9`. At that historical checkpoint its lock was `status: provisional` / `releaseTag: null`; imported operational facts came from product `e7d5f7d8661092b7c8089710488c448f290638be`. The later formal [`v0.4.0`](https://github.com/Arcueid77/Spherewright/releases/tag/v0.4.0) release is separately bound to `b7c0002dbe2e8f5608c5ca140b0c6326a1818021` and does not rewrite this fixed snapshot.
 
 ## Reproduce the fixed evidence check
 

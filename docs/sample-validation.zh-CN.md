@@ -4,7 +4,11 @@
 
 [Spherewright-Lab](https://github.com/Arcueid77/Spherewright-Lab) 维护场景、运行交接与完整验收。产品构建、测试和打包不拉取或执行 Lab。
 
-不可变迁移快照为 `14478a03c64c550e644c559405c8496b647552e7`，产品子模块固定 `2a7a98d1932c404e3a7abc2c11233d9c0b8780d9`。尚无正式 v0.4.0 tag，因此锁保持 `status: provisional` / `releaseTag: null`。导入运行事实来自产品 `e7d5f7d8661092b7c8089710488c448f290638be`，与更早候选源码不同。
+## 当前工作与历史证据
+
+当前工作从 Lab 的[协作规则](https://github.com/Arcueid77/Spherewright-Lab/blob/main/AGENTS.md)、[活动交接](https://github.com/Arcueid77/Spherewright-Lab/blob/main/operations/active-handoff.md)、[源码锁](https://github.com/Arcueid77/Spherewright-Lab/blob/main/source-lock.json)和 [Voyager 活动快照](https://github.com/Arcueid77/Spherewright-Lab/blob/main/scenarios/v0.5-voyager/current-status.md)开始。这些入口随已审事实推进，不沿用历史授权。
+
+下方不可变迁移快照为 `14478a03c64c550e644c559405c8496b647552e7`，产品子模块固定 `2a7a98d1932c404e3a7abc2c11233d9c0b8780d9`。在该历史截点，锁为 `status: provisional` / `releaseTag: null`，导入运行事实来自产品 `e7d5f7d8661092b7c8089710488c448f290638be`。之后正式发布的 [`v0.4.0`](https://github.com/Arcueid77/Spherewright/releases/tag/v0.4.0) 独立绑定 `b7c0002dbe2e8f5608c5ca140b0c6326a1818021`，不改写该固定快照。
 
 ## 复现固定证据检查
 
