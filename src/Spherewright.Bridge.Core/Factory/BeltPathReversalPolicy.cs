@@ -4,6 +4,10 @@ namespace Spherewright.Bridge.Core.Factory;
 
 public static class BeltPathReversalPolicy
 {
+    public static bool MatchesLinearMember(int mainInput, int output, IEnumerable<int> inputs, int previous, int next) =>
+        mainInput == previous && output == next
+        && inputs.Where(id => id != 0).SequenceEqual(previous == 0 ? Array.Empty<int>() : new[] { previous });
+
     public static int PilerMode(int firstBelt, int secondBelt, bool firstOutput, bool secondOutput) =>
         firstBelt > 0 && secondBelt > 0 && firstOutput != secondOutput ? firstOutput ? 1 : 2 : 0;
 

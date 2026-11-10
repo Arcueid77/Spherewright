@@ -84,7 +84,8 @@ internal sealed partial class NormalGameActionCoordinator
             var id = ordered[i]; var belt = binding.Belts[id];
             var previous = i > 0 ? binding.Belts[ordered[i - 1]].id : 0;
             var next = i + 1 < ordered.Count ? binding.Belts[ordered[i + 1]].id : 0;
-            if (belt.mainInputId != previous || belt.outputId != next || belt.leftInputId != 0 || belt.rightInputId != 0)
+            if (!BeltPathReversalPolicy.MatchesLinearMember(belt.mainInputId, belt.outputId,
+                    new[] { belt.backInputId, belt.leftInputId, belt.rightInputId }, previous, next))
                 throw new InvalidOperationException("belt_reversal_requires_simple_directed_path");
             for (var slot = 0; slot < 16; slot++)
             {
