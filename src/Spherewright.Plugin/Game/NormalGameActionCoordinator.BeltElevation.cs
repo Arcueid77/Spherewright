@@ -164,4 +164,28 @@ internal sealed partial class NormalGameActionCoordinator
         }
         return true;
     }
+
+    private static bool ElevatedPathHasAddonContact(PlanetFactory factory, IReadOnlyList<BuildStepPlan> steps)
+    {
+        if (factory.entityCursor > factory.entityPool.Length) return true;
+        for (var id = 1; id < factory.entityCursor; id++)
+        {
+            var entity = factory.entityPool[id];
+            if (entity.id != id) continue;
+            var desc = LDB.models.Select(entity.modelIndex)?.prefabDesc;
+            if (desc?.addonType != EAddonType.Belt) continue;
+            var poses = desc.addonAreaPoses; var boxes = desc.addonAreaColPoses; var sizes = desc.addonAreaSize;
+            if (poses is null || boxes is null || sizes is null || poses.Length < 1 || poses.Length > 16
+                || poses.Length != boxes.Length || poses.Length != sizes.Length) return true;
+            for (var i = 0; i < poses.Length; i++)
+            {
+                var centre = entity.pos + entity.rot * poses[i].position;
+                var inverse = Quaternion.Inverse(entity.rot * boxes[i].rotation);
+                foreach (var step in steps)
+                    if (BeltElevationPolicy.PotentialAddonContact(Snapshot(inverse * (step.Position - centre)), Snapshot(sizes[i])))
+                        return true;
+            }
+        }
+        return false;
+    }
 }

@@ -13,6 +13,13 @@ public static class BeltElevationPolicy
     public const string Recovery = "Choose one explicit 2001 native_elevated_grid span with start/end levels 0..3 (at least one raised), at most 30 m, flat ends and a native gentle slope. The sole bound subset is one exact empty independent raised 2001 tail, source ID/hash/position and a free destination. Retain the complete native path and its non-removing source cover; do not drop points, omit bindings or replay rejected coordinates. Complete native placement, material and connection checks remain mandatory.";
     private const double RadiusTolerance = .01;
 
+    public static bool PotentialAddonContact(Vector3Snapshot local, Vector3Snapshot halfExtents) =>
+        !Finite(local.X) || !Finite(local.Y) || !Finite(local.Z)
+        || !Finite(halfExtents.X) || !Finite(halfExtents.Y) || !Finite(halfExtents.Z)
+        || halfExtents.X < 0 || halfExtents.Y < 0 || halfExtents.Z < 0
+        || Math.Abs(local.X) <= halfExtents.X + .25 && Math.Abs(local.Y) <= halfExtents.Y + .25
+            && Math.Abs(local.Z) <= halfExtents.Z + .25;
+
     public static string? ValidateRequest(PrepareBuildRequest request, bool nativeBelt)
     {
         if (request.BeltPathMode != BeltPathModes.NativeElevatedGrid)

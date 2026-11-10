@@ -9,6 +9,18 @@ public sealed class BeltElevationPolicyTests
 {
     private const float GroundRadius = 200.2f;
 
+    [Theory]
+    [InlineData(0, 0, 0, true)]
+    [InlineData(.54f, 0, 0, true)]
+    [InlineData(.56f, 0, 0, false)]
+    [InlineData(0, .36f, 0, false)]
+    [InlineData(0, 0, 1f, false)]
+    public void FreeElevatedAdmissionRejectsPotentialNativeAddonContact(float x, float y, float z, bool expected)
+    {
+        Assert.Equal(expected, BeltElevationPolicy.PotentialAddonContact(
+            new() { X=x, Y=y, Z=z }, new() { X=.3f, Y=.1f, Z=.7f }));
+    }
+
     [Fact]
     public void RoutingEntryValidatesElevationInsteadOfFallingThroughToLegacyGrid()
     {

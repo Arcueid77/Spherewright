@@ -1388,6 +1388,11 @@ internal sealed partial class NormalGameActionCoordinator
                 rejection = "belt_elevation_native_adjustment_unsupported: the native validator changed the explicit free path or endpoint levels.";
                 return false;
             }
+            if (elevated && ElevatedPathHasAddonContact(factory, accepted))
+            {
+                rejection = "belt_elevation_addon_contact_unsupported: the free elevated span cannot add an unbound native addon connection.";
+                return false;
+            }
             if (geodesic && !CompletePreparedGroundBeltPath(accepted, factory.planet.realRadius + .2f, candidates))
             {
                 rejection = "belt_geodesic_native_adjustment_unsupported: native checking moved an endpoint or raised the free ground path.";
