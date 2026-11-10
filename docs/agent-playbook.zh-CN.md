@@ -583,6 +583,8 @@ Native Import 可将 double 宇宙坐标逆投影为 float 本地位置；普通
 
 ## 原生垂直叠放
 
+原生单件放带使用`prepare_transfer(direction=player-to-belt-cargo, storageEntityId=<传送带>, itemId=<背包物品>, count=1)`及新鲜完整玩家/带状态哈希。须核对`beltCargoInsertion`中准确的`CargoTraffic.PutItemOnBelt`操作、所选带、空的独立开放路径和单件背包扣除。此原生UI业务操作要求来源inc0、空手、真实静止、复制队列空、旅程闭合，以及完整路径全部成员位于建造交互距离内，路径上限4096格/64带。原终态证明同tick完整背包/路径的数量和增产点守恒，后续正常输送及设备消费单独观察。路径变化后重新准备。
+
 有界运输库存回收使用`prepare_transfer(direction=belt-cargo-to-player, storageEntityId=<传送带>, itemId=0, count=0)`，披露完整独立开放路径及关联普通分拣器手持货物，须核对`beltCargoPickup`和完整item budget。该子集要求旅程闭合、空手、真实静止、零增产点货物、至多4096格/64带/1000路径物品及完整背包容量。由原生`CargoTraffic.PickupBeltItems`及`FactorySystem.TakeBackItems_Inserter`回收，原终态证明同tick完整背包数量/增产点、被收货物为空，以及成员姿态/连接/过滤保持。后置检查不完整时保留原动作。
 
 原生目录覆盖储仓、液罐、研究站、分流器样式、自动集装机和喷涂机。`maximumLayers=null`且`heightLimitKind=native_reach`时，由原生建造高度及可达范围决定准入；`maximumConstructionHeightMetres`回显当前原生高度额度。喷涂机使用原生Addon工具及径向2.666667米偏移。逐层核对集装机缓存物品/数量/增产点及模式，喷涂机传送带身份、增产剂余量/喷涂次数及工作状态。

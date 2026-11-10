@@ -39,6 +39,7 @@ public static class NormalBuildKinds
 
 public static class TransferDirections
 {
+    public const string PlayerToBeltCargo = "player-to-belt-cargo";
     public const string BeltCargoToPlayer = "belt-cargo-to-player";
     public const string StationStorageToPlayer = "station-storage-to-player";
     public const string ProductionResetToPlayer = "production-reset-to-player";
@@ -382,6 +383,7 @@ public sealed class CommitNormalActionRequest
 public sealed class PreparedNormalAction
 {
     public NativeBeltPickupPlan? BeltCargoPickup { get; set; }
+    public NativeBeltInsertionPlan? BeltCargoInsertion { get; set; }
     public WalkingRoutePreview? WalkingRoutePreview { get; set; }
     public int? PlannedModelIndex { get; set; }
     public NativeStackConstructionPlan? PlannedStackConstruction { get; set; }
