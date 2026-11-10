@@ -2284,6 +2284,8 @@ internal sealed partial class NormalGameActionCoordinator
             return InvalidPlan("Ejector orbit parameters require ejector-orbit mode.");
         if (request.Mode == BuildingConfigurationModes.StorageCapacity)
             return PrepareStorageConfigurationOnMainThread(requestedSessionId, request, common.Session!);
+        if (request.Mode == BuildingConfigurationModes.ReverseBeltPath)
+            return PrepareBeltReversal(requestedSessionId, request, common.Session!);
         if (!string.IsNullOrEmpty(request.StorageOperation) || request.StorageBannedGridCount != -1)
             return InvalidPlan("Storage operation parameters require storage-capacity mode.");
 

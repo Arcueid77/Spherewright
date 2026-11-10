@@ -8,6 +8,9 @@ public sealed class StorageConfigurationReadback
 {
     public long CapturedAtGameTick { get; set; }
     public int EntityId { get; set; }
+    public int? SelectedObjectId { get; set; }
+    public bool? OtherLayersPreserved { get; set; }
+    public List<int>? PreservedLayerObjectIds { get; set; }
     public string Operation { get; set; } = string.Empty;
     public string EvidenceScope { get; set; } = "synchronous_native_configuration_boundary";
     public StorageConfigurationSnapshot ConfigurationBefore { get; set; } = new StorageConfigurationSnapshot();

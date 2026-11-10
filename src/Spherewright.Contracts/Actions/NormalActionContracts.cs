@@ -63,6 +63,7 @@ public static class LogisticsFleetItemIds
 
 public static class BuildingConfigurationModes
 {
+    public const string ReverseBeltPath = "reverse-belt-path";
     public const string Production = "production";
     public const string Research = "research";
     public const string SorterFilter = "sorter-filter";
@@ -384,6 +385,8 @@ public sealed class PreparedNormalAction
 {
     public NativeBeltPickupPlan? BeltCargoPickup { get; set; }
     public NativeBeltInsertionPlan? BeltCargoInsertion { get; set; }
+    public NativeStorageConfigurationPlan? NativeStorageConfiguration { get; set; }
+    public BeltPathReversalPlan? BeltPathReversal { get; set; }
     public WalkingRoutePreview? WalkingRoutePreview { get; set; }
     public int? PlannedModelIndex { get; set; }
     public NativeStackConstructionPlan? PlannedStackConstruction { get; set; }

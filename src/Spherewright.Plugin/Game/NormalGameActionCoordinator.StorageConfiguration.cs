@@ -4,6 +4,7 @@ using Spherewright.Contracts.Actions;
 using Spherewright.Contracts.Errors;
 using Spherewright.Contracts.Factory;
 using Spherewright.Contracts.Sessions;
+using Spherewright.Plugin.Transport;
 
 namespace Spherewright.Plugin.Game;
 
@@ -20,9 +21,16 @@ internal sealed partial class NormalGameActionCoordinator
             return StalePlan("The exact warehouse contents or configuration changed after inspection.");
         if (request.RecipeId != 0 || request.TechId != 0)
             return InvalidPlan("Storage capacity operations do not select recipes or technologies.");
-        if (!TryCaptureConfigurableStorage(request.EntityId, request.FilterItemId,
+        var targetId = StorageConfigurationSelectionPolicy.ResolveTarget(snapshot.Value);
+        if (targetId <= 0)
+            return InvalidPlan("Storage capacity configuration requires an observed ordinary small/large warehouse layer or its distributor selector.");
+        var target = targetId == request.EntityId ? snapshot
+            : _reader.InspectFactoryEntityOnMainThread(sessionId,
+                new InspectFactoryEntityRequest { PlanetId = request.PlanetId, ObjectId = targetId });
+        if (!target.Success || target.Value is null) return NotReadyPlan("The selected warehouse layer is unavailable.");
+        if (!TryCaptureConfigurableStorage(targetId, request.FilterItemId,
                 out var storage, out var before, out var sizes))
-            return InvalidPlan("Storage capacity configuration requires one unstacked ordinary2101 warehouse with bounded valid native grids.");
+            return InvalidPlan("Storage capacity configuration requires one ordinary2101/2102 layer with bounded valid Native grids.");
         StorageUiState after;
         try
         {
@@ -38,22 +46,39 @@ internal sealed partial class NormalGameActionCoordinator
             sessionId, request.PlanetId, request.EntityId, snapshot.Value.StateHash, snapshot.Value.EndpointStateHash, identityHash, beforeHash,
             request.Mode, request.StorageOperation, request.FilterItemId, request.StorageBannedGridCount,
             StorageConfigurationPolicy.Fingerprint(after));
-        var plan = NormalActionPlanPayload.StorageConfiguration(sessionId!, request.PlanetId, request.EntityId,
-            snapshot.Value.StateHash, snapshot.Value.EndpointStateHash, identityHash, beforeHash, expectedHash, request.StorageOperation,
+        var plan = NormalActionPlanPayload.StorageConfiguration(sessionId!, request.PlanetId, targetId,
+            target.Value.StateHash, target.Value.EndpointStateHash, identityHash, beforeHash, expectedHash, request.StorageOperation,
             request.FilterItemId, request.StorageBannedGridCount, after);
+        plan.StorageSelectionObjectId = request.EntityId;
+        plan.StorageSelectionStateHash = snapshot.Value.StateHash;
+        try { plan.StorageProtectedStackHash = CaptureStorageStackBoundary(request.EntityId, targetId); }
+        catch (InvalidOperationException error) { return InvalidPlan(error.Message); }
         var result = AddPreparedPlan(plan, session, 1,
             "One ordinary warehouse UI capacity/filter operation preserves every ordered item/count/inc and all topology. It does not move stock or guarantee throughput; bans count the final disabled automation grids.");
         if (result.Value is not null)
         {
-            result.Value.TargetObjectId = request.EntityId;
+            result.Value.TargetObjectId = targetId;
             result.Value.PlannedStorageOperation = request.StorageOperation;
             result.Value.PlannedStorageConfiguration = StorageConfigurationPolicy.ToSnapshot(after);
+            result.Value.NativeStorageConfiguration = new()
+            {
+                SelectedObjectId = request.EntityId, TargetObjectId = targetId,
+                RootObjectId = snapshot.Value.Stack!.RootObjectId, StorageItemId = target.Value.ItemId,
+                LayerObjectIds = snapshot.Value.Stack.Layers.Select(layer => layer.ObjectId).ToList(),
+                AttachmentObjectIds = snapshot.Value.Stack.Attachments.Select(value => value.Entity.ObjectId).ToList(),
+                PreservesOtherLayers = true,
+            };
         }
         return result;
     }
 
     private BridgeError? RevalidateStorageConfigurationOnMainThread(NormalActionPlanPayload plan)
     {
+        var selected = _reader.InspectFactoryEntityOnMainThread(plan.SessionId,
+            new InspectFactoryEntityRequest { PlanetId = plan.PlanetId, ObjectId = plan.StorageSelectionObjectId });
+        if (!selected.Success || selected.Value is null || selected.Value.StateHash != plan.StorageSelectionStateHash
+            || StorageConfigurationSelectionPolicy.ResolveTarget(selected.Value) != plan.EntityId)
+            return Stale("The warehouse layer or distributor selection changed.");
         var snapshot = _reader.InspectFactoryEntityOnMainThread(plan.SessionId,
             new InspectFactoryEntityRequest { PlanetId = plan.PlanetId, ObjectId = plan.EntityId });
         if (!snapshot.Success || snapshot.Value is null || snapshot.Value.StateHash != plan.FactoryStateHash
@@ -67,11 +92,13 @@ internal sealed partial class NormalGameActionCoordinator
         {
             var after = StorageConfigurationPolicy.Project(before!, plan.StorageOperation,
                 plan.ConfigureFilterItemId, plan.StorageBannedGridCount, sizes!);
-            return StorageFilterChangesUnlocked(before!, after) && plan.StorageExpectedAfter is not null
+            return CaptureStorageStackBoundary(plan.StorageSelectionObjectId, plan.EntityId) == plan.StorageProtectedStackHash
+                && StorageFilterChangesUnlocked(before!, after) && plan.StorageExpectedAfter is not null
                 && StorageConfigurationPolicy.Fingerprint(after) == StorageConfigurationPolicy.Fingerprint(plan.StorageExpectedAfter)
                 ? null : Stale("Storage filter unlocks or native stack sizes changed after preparation.");
         }
-        catch (ArgumentException) { return Stale("The warehouse UI operation is no longer applicable."); }
+        catch (Exception error) when (error is ArgumentException or InvalidOperationException)
+        { return Stale("The warehouse UI operation or protected stack is no longer applicable."); }
     }
 
     private void ExecuteStorageConfigurationOnMainThread(ActionRecord action)
@@ -121,6 +148,7 @@ internal sealed partial class NormalGameActionCoordinator
             || !ReferenceEquals(storage, sameStorage) || !ReferenceEquals(gridArrayBefore, storage.grids)
             || !entityBefore.Equals(factory.entityPool[plan.EntityId])
             || linksBefore != StorageLinksFingerprint(storage)
+            || CaptureStorageStackBoundary(plan.StorageSelectionObjectId, plan.EntityId) != plan.StorageProtectedStackHash
             || StorageConfigurationPolicy.Fingerprint(after!) != StorageConfigurationPolicy.Fingerprint(plan.StorageExpectedAfter)
             || CapturePlayerPackageState(GameMain.mainPlayer) != packageBefore
             || !readback.Success || readback.Value is null || readback.Value.EndpointStateHash != expectedEndpoint)
@@ -131,6 +159,10 @@ internal sealed partial class NormalGameActionCoordinator
         action.StorageConfigurationReadback = StorageConfigurationPolicy.CreateReadback(
             plan.EntityId, GameMain.gameTick, before!, after!, plan.StorageOperation,
             plan.ConfigureFilterItemId, plan.StorageBannedGridCount, stackSizes!, readback.Value.Connections.Count);
+        action.StorageConfigurationReadback.SelectedObjectId = plan.StorageSelectionObjectId;
+        action.StorageConfigurationReadback.OtherLayersPreserved = true;
+        action.StorageConfigurationReadback.PreservedLayerObjectIds = _reader.CaptureNativeStack(factory,
+            plan.StorageSelectionObjectId).Layers.Select(layer => layer.ObjectId).ToList();
         foreach (var buffer in action.StorageConfigurationReadback.BuffersBefore
                      .Concat(action.StorageConfigurationReadback.BuffersAfter))
             buffer.Name = LDB.items.Select(buffer.ItemId)?.name ?? string.Empty;
@@ -155,9 +187,9 @@ internal sealed partial class NormalGameActionCoordinator
         var factory = GameMain.localPlanet?.factory;
         if (factory is null || entityId <= 0 || entityId >= factory.entityCursor
             || entityId >= factory.entityPool.Length || factory.entityPool[entityId].id != entityId
-            || factory.entityPool[entityId].protoId != 2101 || !TryGetStorage(factory, entityId, out storage)
-            || storage is null || storage.isPlayerInventory || storage.previous != 0 || storage.next != 0
-            || storage.previousStorage is not null || storage.nextStorage is not null
+            || factory.entityPool[entityId].protoId is not (2101 or 2102) || !TryGetStorage(factory, entityId, out storage)
+            || storage is null || storage.id != factory.entityPool[entityId].storageId || storage.entityId != entityId
+            || storage.isPlayerInventory
             || storage.size < 1 || storage.size > BlueprintStoragePolicy.MaximumGridCount
             || storage.grids is null || storage.grids.Length != storage.size
             || (storage.type != EStorageType.Default && storage.type != EStorageType.Filtered)) return false;
@@ -177,6 +209,49 @@ internal sealed partial class NormalGameActionCoordinator
         return true;
     }
 
+    private string CaptureStorageStackBoundary(int selectedId, int targetId)
+    {
+        var factory = GameMain.localPlanet!.factory;
+        if (!EmptyStorageDismantlePolicy.BoundedPool(factory.factoryStorage.storageCursor, factory.factoryStorage.storagePool.Length))
+            throw new InvalidOperationException("storage_native_pool_unavailable");
+        var stack = _reader.CaptureNativeStack(factory, selectedId);
+        if (!stack.Complete || stack.State != "observed" || stack.Layers.Count(layer => layer.ObjectId == targetId) != 1)
+            throw new InvalidOperationException("storage_complete_stack_unavailable");
+        var links = new List<object?>();
+        stack.CapturedAtGameTick = 0; stack.StateHash = string.Empty;
+        foreach (var layer in stack.Layers)
+        {
+            layer.EndpointStateHash = string.Empty;
+            if (layer.ObjectId == targetId) layer.StorageConfiguration = null;
+            var storageId = factory.entityPool[layer.ObjectId].storageId;
+            if (storageId <= 0) continue;
+            var storage = factory.factoryStorage.storagePool[storageId];
+            if (storage is null || storage.id != storageId || storage.entityId != layer.ObjectId
+                || storage.size < 1 || storage.size > BlueprintStoragePolicy.MaximumGridCount
+                || storage.grids is null || storage.grids.Length < storage.size)
+                throw new InvalidOperationException("storage_stack_component_binding_unavailable");
+            foreach (var linked in new[] { storage.previousStorage, storage.nextStorage, storage.bottomStorage, storage.topStorage })
+                if (linked is not null && (linked.id <= 0 || linked.id >= factory.factoryStorage.storageCursor
+                    || !ReferenceEquals(factory.factoryStorage.storagePool[linked.id], linked)
+                    || !stack.Layers.Any(member => member.ObjectId == linked.entityId)))
+                    throw new InvalidOperationException("storage_stack_cached_reference_unavailable");
+            links.Add(StorageLinksFingerprint(storage));
+            if (layer.ObjectId != targetId)
+            {
+                links.Add(storage.type); links.Add(storage.bans);
+                foreach (var grid in storage.grids.Take(storage.size))
+                { links.Add(grid.itemId); links.Add(grid.count); links.Add(grid.inc); links.Add(grid.filter); links.Add(grid.stackSize); }
+            }
+        }
+        foreach (var attachment in stack.Attachments)
+        {
+            attachment.Entity.CapturedAtGameTick = 0;
+            attachment.Entity.StateHash = attachment.Entity.EndpointStateHash = attachment.Entity.ConfigurationStateHash = string.Empty;
+        }
+        return CanonicalStateHash.Combine("storage-protected-stack-v1", PluginJson.Serialize(stack),
+            CanonicalStateHash.Combine("storage-native-peer-links", links.ToArray()));
+    }
+
     private sealed partial class NormalActionPlanPayload
     {
         public string StorageOperation { get; private set; } = string.Empty;
@@ -185,6 +260,9 @@ internal sealed partial class NormalGameActionCoordinator
         public string StorageIdentityStateHash { get; private set; } = string.Empty;
         public string StorageEndpointStateHash { get; private set; } = string.Empty;
         public StorageUiState? StorageExpectedAfter { get; private set; }
+        public int StorageSelectionObjectId { get; set; }
+        public string StorageSelectionStateHash { get; set; } = string.Empty;
+        public string StorageProtectedStackHash { get; set; } = string.Empty;
 
         public static NormalActionPlanPayload StorageConfiguration(string sessionId, int planetId, int entityId,
             string factoryHash, string endpointHash, string identityHash, string nativeHash, string expectedHash, string operation, int filter, int bans,

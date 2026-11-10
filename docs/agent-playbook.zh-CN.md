@@ -568,6 +568,8 @@ Native Import 可将 double 宇宙坐标逆投影为 float 本地位置；普通
 当前原生物理观察额外复制帧移动模式、Walk/Drift RTS和手动速度、垂直速度、当前订单存在/targetReached及排队数量；它们不是动作凭据或可复用停稳证书。原生PlayerOrder到达采用随速度变化的水平测试，调用端arrivalTolerance则是三维条件。慢物理节奏下正常减速可停在更严终点之外；保留原停滞结果，选择不同的有界干燥落点并实读接地停稳，不重放原落点或改写速度。
 
 
+普通大小仓库可选择准确层，或通过其已安装配送器选择父层。须核对`nativeStorageConfiguration`的选择器、实际目标、完整层/挂件集合及其他层保全证明。每次操作修改所选层，原同tick的`storageConfigurationReadback`及`otherLayersPreserved`证明库存、配置与整链保全。
+
 ### 空闲生产设备重置与原生材料守恒退回
 
 使用 `prepare_transfer(direction=production-reset-to-player, storageEntityId=<准确设备>, itemId=0, count=0)`，绑定新鲜玩家与设备完整哈希。此独立披露动作调用正常界面的原生业务方法 `FactorySystem.TakeBackItems_Assembler` 或 `TakeBackItems_Lab`，退回全部已披露输入/产物，并将配方或功能重置为空。提交前核对 `productionReset` 及完整 `itemBudget`，只提交一次；后来物流或机甲自动补料导致数量变化不能作为重放理由。
@@ -582,6 +584,8 @@ Native Import 可将 double 宇宙坐标逆投影为 float 本地位置；普通
 此设置路径已按DSP0.10.35.29151核对：`UIMechaWindow.OnAutoReplenishButtonClick` 的case4切换原生标志；普通航行先尝试使用舱内物品，失败后才走自动空舱补给。该标志由正常原生导出/导入保存。源码/构建测试不代表实装或实机验收。
 
 ## 原生垂直叠放
+
+与1座集装机连接的独立空基础带路径可使用`prepare_configure_building(mode=reverse-belt-path, entityId=<传送带>, recipeId=0)`，绑定完整路径、无持货的普通分拣器及集装机叠放链。使用所选带新鲜完整`stateHash`，核对`beltPathReversal`后只提交一次。原生反向业务操作保全既有带实体和完整背包库存，反转路径方向、调整关联分拣器偏移并重新匹配集装机端口。核对`beltPathReversalReadback`后单独观察真实流转。范围上限64带/4096格，要求真实静止、空手及旅程闭合。
 
 原生单件放带使用`prepare_transfer(direction=player-to-belt-cargo, storageEntityId=<传送带>, itemId=<背包物品>, count=1)`及新鲜完整玩家/带状态哈希。须核对`beltCargoInsertion`中准确的`CargoTraffic.PutItemOnBelt`操作、所选带、空的独立开放路径和单件背包扣除。此原生UI业务操作要求来源inc0、空手、真实静止、复制队列空、旅程闭合，以及完整路径全部成员位于建造交互距离内，路径上限4096格/64带。原终态证明同tick完整背包/路径的数量和增产点守恒，后续正常输送及设备消费单独观察。路径变化后重新准备。
 

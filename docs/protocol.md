@@ -375,7 +375,9 @@ Both require `prepared=false`, `commitAllowedNow=false`, `executable=false`, exa
 <a id="warehouse-capacity-and-reservation-configuration-04-development-slice"></a>
 ## Configuration, transfer and dismantle
 
-Storage-capacity binds full state on unstacked `2101` using `set-bans`, `lock-occupied`, `filter-empty-or-matching` or `clear-filters`. Disabled tail grids do not freeze withdrawals/`TakeItem`. Prove projected filters, counts/inc/topology; compact buffers are not native indices.
+The `reverse-belt-path` configuration binds one exact empty independent basic-belt path, cargo-free ordinary sorters and one piler, bounded to64 belts/4096 cells. MCP requires `beltPathReversal`. Commit calls Native `UIBeltWindow.OnReverseButtonClick` and proves existing belt identity, reversed topology, protected other piler layers and complete package preservation. The same-tick result carries `beltPathReversalReadback`.
+
+Storage-capacity binds full state on a selected ordinary `2101`/`2102` layer or its distributor selector using `set-bans`, `lock-occupied`, `filter-empty-or-matching` or `clear-filters`. Disabled tail grids do not freeze withdrawals/`TakeItem`. Prove projected filters, counts/inc/topology; compact buffers are not native indices.
 
 Sorter-filter binds root config/held cargo, with supported empty Returning or ordinary `2011/2012` Inserting. Only filter/sign changes; held cargo still goes to the same destination. Confirmed inserter null readback is unfiltered; request `filterItemId=0` clears. This is not jam clearance.
 

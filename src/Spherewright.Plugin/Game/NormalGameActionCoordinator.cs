@@ -878,6 +878,11 @@ internal sealed partial class NormalGameActionCoordinator
                 ExecuteSaveOnMainThread(action);
                 break;
             case NormalActionKinds.ConfigureBuilding:
+                if (plan.ConfigureMode == BuildingConfigurationModes.ReverseBeltPath)
+                {
+                    ExecuteBeltReversal(action);
+                    break;
+                }
                 if (plan.ConfigureMode == BuildingConfigurationModes.EnableMechaWarperAutoSupply)
                 {
                     ExecuteMechaWarperAutoSupplyOnMainThread(action);
@@ -1411,6 +1416,8 @@ internal sealed partial class NormalGameActionCoordinator
             case NormalActionKinds.Save:
                 return RevalidateSaveOnMainThread(plan);
             case NormalActionKinds.ConfigureBuilding:
+                if (plan.ConfigureMode == BuildingConfigurationModes.ReverseBeltPath)
+                    return RevalidateBeltReversal(plan);
                 if (plan.ConfigureMode == BuildingConfigurationModes.StorageCapacity)
                     return RevalidateStorageConfigurationOnMainThread(plan);
                 if (plan.ConfigureMode == BuildingConfigurationModes.EnableMechaWarperAutoSupply)
@@ -1714,6 +1721,7 @@ internal sealed partial class NormalGameActionCoordinator
             } : null,
             ResearchQueueReadback = action.ResearchQueueReadback,
             StorageConfigurationReadback = action.StorageConfigurationReadback,
+            BeltPathReversalReadback = action.BeltPathReversalReadback,
             StackConstructionReadback = action.StackConstructionReadback,
             StationCargoWithdrawalReadback = action.StationCargoWithdrawalReadback,
             MechaWarperSupplyReadback = action.MechaWarperSupplyReadback,
@@ -2469,6 +2477,7 @@ internal sealed partial class NormalGameActionCoordinator
         public UpgradeReadback? UpgradeReadback { get; set; }
         public ResearchQueueReadback? ResearchQueueReadback { get; set; }
         public StorageConfigurationReadback? StorageConfigurationReadback { get; set; }
+        public BeltPathReversalReadback? BeltPathReversalReadback { get; set; }
         public NativeStackSnapshot? StackConstructionReadback { get; set; }
         public StationCargoWithdrawalReadback? StationCargoWithdrawalReadback { get; set; }
         public MechaWarperSupplyReadback? MechaWarperSupplyReadback { get; set; }

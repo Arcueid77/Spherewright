@@ -3951,6 +3951,10 @@ public sealed partial class SpherewrightToolsTests
                 result.Value.PlannedStorageOperation = request.StorageOperation;
                 result.Value.PlannedStorageConfiguration = new StorageConfigurationSnapshot
                     { GridCount = 30, BannedGridCount = request.StorageBannedGridCount, Mode = "default", GridFilterItemIds = Enumerable.Repeat(0, 30).ToList() };
+                result.Value.TargetObjectId = request.EntityId;
+                result.Value.NativeStorageConfiguration = new() { SelectedObjectId = request.EntityId,
+                    TargetObjectId = request.EntityId, RootObjectId = request.EntityId, StorageItemId = 2101,
+                    LayerObjectIds = [request.EntityId], PreservesOtherLayers = true };
             }
             return result;
         }

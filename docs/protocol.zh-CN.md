@@ -391,7 +391,9 @@ Foundry 接收目标、速率、可选外部供给和显式配方、建筑选择
 <a id="configuration-transfer-and-dismantle"></a>
 ## 配置、转移与拆除
 
-Storage-capacity 在未堆叠 `2101` 绑定完整状态，使用 `set-bans`、`lock-occupied`、`filter-empty-or-matching`、`clear-filters`。尾部禁格不冻结取出或 `TakeItem`。须证明投影过滤、数量、增产点、拓扑；紧凑缓冲不是原生格号。
+`reverse-belt-path`通过准确带完整哈希绑定独立空基础带路径、无持货普通分拣器和1座集装机，范围上限64带/4096格。MCP核对`beltPathReversal`后暴露token。提交调用原生`UIBeltWindow.OnReverseButtonClick`，证明既有带实体、反向拓扑、其他集装机层及完整背包守恒，原同tick回读为`beltPathReversalReadback`。
+
+Storage-capacity 在所选普通 `2101`/`2102` 层或通过其配送器选择的父层绑定完整状态，使用 `set-bans`、`lock-occupied`、`filter-empty-or-matching`、`clear-filters`。尾部禁格不冻结取出或 `TakeItem`。须证明投影过滤、数量、增产点、拓扑；紧凑缓冲不是原生格号。
 
 Sorter-filter 绑定根配置及手持货物，支持无货 Returning 或普通 `2011/2012` Inserting。只改过滤、标记，已持货仍去相同目的地。已确认 inserter 的 null 读回表示无过滤，请求 `filterItemId=0` 清过滤；这不是清堵。
 

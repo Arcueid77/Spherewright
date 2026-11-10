@@ -65,6 +65,7 @@ public sealed class ActionResultSnapshot
     public MainMenuReturnReadback? MainMenuReturnReadback { get; set; }
     public ResearchQueueReadback? ResearchQueueReadback { get; set; }
     public StorageConfigurationReadback? StorageConfigurationReadback { get; set; }
+    public BeltPathReversalReadback? BeltPathReversalReadback { get; set; }
     public MechaWarperSupplyReadback? MechaWarperSupplyReadback { get; set; }
     public NativeHomeReturnEffectSnapshot? NativeHomeReturnFirstEffect {get;set;}
     public MechaWarperAutoSupplyReadback? MechaWarperAutoSupplyReadback { get; set; }
