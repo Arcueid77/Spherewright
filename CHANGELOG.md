@@ -2,18 +2,16 @@
 
 [English](CHANGELOG.md) · [简体中文](CHANGELOG.zh-CN.md)
 
-## 0.5.0 — accepted Voyager baseline; first-sail/rocket extension in development
+## 0.5.0 — 2026-11-10
 
-- Adds bounded ordinary off-world factory cores and normal recipe/filter/storage/orbit configuration under the original Journey reserves. Saved-site admission proves all paid entity/prebuild receipts and their combined reciprocal graph. Explicit paid-pending readmission archives a safely stopped expired window without recreating objects or granting resources; default resume retains the old window.
-- Adds read-only silo, real rocket and receiving-node observations. Incomplete coverage stays unknown, animation is not a launch receipt, and inspection creates no structure or rocket. Source/fixture qualification remains separate from off-world runtime acceptance.
-- Cross-star travel, ordinary warper supply, bounded remote construction and active-vessel observations extend the original industrial foundation.
-- The original Voyager clauses are accepted at their recorded sources, including real remote mining, three delivery cycles, home consumption and save/recovery continuation. The accepted source is on main; baseline review archives remain immutable in Lab.
-- Owner direction of 2026-11-01 adds the first normally manufactured and actually launched solar sail. Ejector/swarm detail inspection and fixed-orbit configuration are under development; source checks are separate from installation and live launch evidence.
-- Adds an explicit enable-only native mecha construction-drone switch with a fresh player binding and matching-cohort echo. Ordinary construction rejects disabled/unavailable drones before creating a prebuild; existing paid prebuilds are retained and completed through normal game ticks.
-- Existing construction bounds remain, including the twelve-new-belt remote batch subset. The owner added the first carrier rocket and its minimum receiving structure to 0.5; general Dyson structural design and sustained launch networks remain in 0.6. No 0.5 tag, Release or registry upload is implied by this entry.
-- Bounded live acceptance on 2026-11-06 records local off-world manufacture, four sails launched into the swarm, one carrier rocket arrival with one added Native structure point, auxiliary interstellar delivery and normal save/cold continuation. Selected runtime and both review archives bind `d3b7ac897bb44d62c8a7ed54c51a55ff2b8de7b0`; this does not claim a separate full cold-install/recovery matrix for each distribution layout.
+- Bounded interstellar exploration, route budgets, ordinary flight/stop, warper supply, remote construction and station logistics.
+- Native first-sail/carrier-rocket inspection and configuration, with source-scoped local manufacture, launch, arrival and save/recovery evidence.
+- Native stack construction, model/host compatibility, complete per-layer observations and warehouse/distributor selection.
+- Exact small/large warehouse-layer filters and bans, Native empty piler-path reversal and conserved single-item belt placement.
+- Walking-stall diagnostics and tokenless bounded short-route previews.
+- Durable original-action reconciliation, owned-primary continuity and preserved Native/material/energy/return gates.
 
-See [current product scope](docs/project-status.md), [native first-sail research](docs/research/game-api-first-sail.md) and the [Lab active snapshot](https://github.com/Arcueid77/Spherewright-Lab/blob/main/scenarios/v0.5-voyager/current-status.md).
+[Release notes](docs/release-notes/v0.5.0.md)
 
 ## 0.4.0 — 2026-10-17
 

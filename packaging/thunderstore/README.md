@@ -4,84 +4,68 @@
 
 ## English
 
-Spherewright connects an external Agent to **Dyson Sphere Program** through MCP. This Windows x64 package contains Spherewright `{{VERSION}}`: a BepInEx Plugin, matching self-contained `Spherewright.Mcp.exe`, and the Agent playbook. End users need no source checkout or .NET SDK.
+Spherewright connects an external Agent to **Dyson Sphere Program** through MCP. This Windows x64 package contains Spherewright `{{VERSION}}`, a BepInEx Plugin, the matching self-contained `Spherewright.Mcp.exe` and the Agent playbook.
 
-### Version and support
+### Version and features
 
-This `{{VERSION}}` package targets DSP `0.10.35.29151` and BepInEx `5.4.17`. Its exact source commit and payload hashes are recorded in `spherewright-manifest.json`; keep every component from that build together.
+Supported native version is DSP `0.10.35.29151` with BepInEx `5.4.17`. The exact source commit and every payload hash are recorded in `spherewright-manifest.json`. Install the Plugin and MCP from one build.
 
-At archive generation/qualification checkpoint: **0.5 Voyager development preview, unpublished.** Native-visible catalogs and route previews preserve unknown resources and finite reserves. Previews remain tokenless and non-executable. Permitted normal native scans may populate visible caches without creating remote factories.
+- Observe production, power, logistics, research and exploration-visible star systems. Plan finite routes and factories with explicit materials, energy and return reserves.
+- Perform bounded ordinary interstellar travel, Native warper supply, local construction, station configuration and logistics observation through fresh prepare/commit actions.
+- Inspect and configure the first-sail/carrier-rocket chain, including real flight, swarm and minimum receiving-node observations.
+- Build and inspect Native building stacks and compatible host relations. Configure exact small/large warehouse layers or select the parent through its distributor. Observe per-layer stock, fluid, lab and device state.
+- Reverse an empty piler-connected belt path through the Native operation and place one owned item on an empty belt with exact count/inc conservation.
+- Diagnose stalled walking and request bounded tokenless short-route geometry previews. Execute each segment through a separate fresh ordinary move.
+- Resume the exact owned world with durable Journal continuity, original-action reconciliation and progress protection.
 
-The development/testing slice adds bounded native flight prepare/commit, stopping the original flight, and one-call native mecha-warper supply. These reuse the existing action/checkpoint coordinator; supply preserves the automatic setting, cancellation waits for actual warp exit/braking, and return uses the original protected journey's single remaining leg and reserves. Star markers do not disclose hidden planets or resources. Flight-checkpoint v2 binds whole-file evidence with a protected read-only adoption lease; missing/changed evidence and newer primary progress reject recovery. Further development covers native station-warper transfer, bounded read-only carrier details in an already-existing owned factory, and durable small structured-construction controls within the original journey reserves. These additions remain under development/offline review. Use only methods advertised by the exact installed build.
+The published interface exposes74 tools and1 Markdown playbook resource. Source/CI, installed modules, gameplay and package-layout evidence each retain their stated scope. Recorded local acceptance includes remote manufacturing and deliveries, normal solar-sail/rocket launches, nine selected stackable model rows with19 directed pairs, warehouse-layer filtering, real piler aggregation and save/recovery continuation. Detailed source-specific records are linked in the [0.5 review evidence](https://github.com/Arcueid77/Spherewright-Lab/blob/92c9eb4d59ce304df9085fb002f03683d783fdab/releases/v0.5.0/stacking-review-delivery-2026-11-10.md) and [first-sail/rocket evidence](https://github.com/Arcueid77/Spherewright-Lab/blob/92c9eb4d59ce304df9085fb002f03683d783fdab/releases/v0.5.0/expansion-review-delivery-2026-11-06.md).
 
-At archive generation/qualification checkpoint, the Lab records **2 of 3 historical Voyager gates complete**: the resource-return round trip on source `463fc888b1e4cf4a90e08cb1022d2b8896447700`, and controlled failed-flight/exact-checkpoint recovery with newer-primary protection on source `216f4075e983d78fa4d4f5d222bdd279813e1d86`. Sustained cross-star logistics remains open. Those source-specific records do not give this archive or its new additions live-acceptance credit. The final same-source manual/Thunderstore pair for owner review is still missing. Latest installation and final qualification follow the [Lab active evidence](https://github.com/Arcueid77/Spherewright-Lab/tree/main/scenarios/v0.5-voyager), beyond this checkpoint. Development archives support reviewed validation; they are not a formal Release or Thunderstore publication.
-
-Historical 0.4 evidence remains separate: formal `v0.4.0` is source `b7c0002dbe2e8f5608c5ca140b0c6326a1818021` on DSP `0.10.35.29151`. Older production-acceptance source `2a7a98d1932c404e3a7abc2c11233d9c0b8780d9` passed its declared 29145 local manual/Thunderstore-layout installation, runtime, same-version recovery and continuous-supply acceptance. See the [product status](https://github.com/Arcueid77/Spherewright/blob/main/docs/project-status.md), [validation summary](https://github.com/Arcueid77/Spherewright/blob/main/docs/validation/v0.4.0.md) and [native compatibility reports](https://github.com/Arcueid77/Spherewright/blob/main/docs/validation/native-29151-preflight.md). Evidence applies only to its stated source, native version and scope; it does not establish 0.5 acceptance. Existing 0.4 archives and their hashes remain unchanged.
-
-Supported gameplay is single-player peaceful mode. Sandbox/resource-multiplier settings are reported without adding sandbox actions. Actual 0.4 live evidence is limited to one owned non-sandbox 1× local world; v0.3.3's broader local import examples retain their historical scope. A separate Mod Manager/r2modman profile, another computer, installation transaction-crash recovery, Dark Fog/combat, multiplayer/Nebula and broad third-party Mod compatibility are unvalidated.
+Supported gameplay is single-player peaceful mode. Local acceptance used an owned non-sandbox1× world. Dark Fog/combat, multiplayer/Nebula, another computer, a separate Mod Manager/r2modman profile and installation transaction-crash restoration remain outside the verified scope.
 
 ### Install and connect
 
-1. Install the selected Spherewright package and its declared BepInEx dependency in your chosen profile; use a trusted release or reviewed local archive.
-2. Launch the selected modded profile once to create configuration and the protected runtime descriptor.
-3. Locate `BepInEx/plugins/{{TEAM_NAME}}-Spherewright/Spherewright.Mcp.exe` in that profile and register it as a **local stdio MCP server**.
-4. Never pass a descriptor, token or save identity on the command line. Keep Plugin and MCP from the same build.
-5. Default mode is observation-only. Enable `Safety.AllowWrites=true` for intended structured actions, then restart DSP normally. Never overwrite loaded DLLs.
+1. Install this package and its declared BepInEx dependency in the selected profile.
+2. Launch the modded profile once to generate configuration and the protected runtime descriptor.
+3. Register `BepInEx/plugins/{{TEAM_NAME}}-Spherewright/Spherewright.Mcp.exe` as a local stdio MCP server.
+4. Read `spherewright://agent/playbooks/opening-movement-v1` before operating. Keep descriptors, tokens and save identities in protected local storage.
+5. The default mode provides observations. Enable `Safety.AllowWrites=true` for intended structured actions, then restart DSP normally.
 
-### New, imported and owned worlds
+A new owned world uses the normal peaceful, non-sandbox1× flow. Importing a player-loaded supported save additionally uses `Safety.AllowUserSaveImport=true` and explicit prepare/confirmation/commit. Import creates a separately verified owned copy through normal saving. Owned recovery binds the exact protected ticket and durable Journal. Disclosed migration and exceptional recovery retain their applicable confirmation gates.
 
-For a new world, leave DSP at the idle menu and prepare the ordinary new-game flow: peaceful, non-sandbox, 1× `Spherewright_New_*`. Read the opening playbook before moving.
+Every write requires its fresh applicable Native plan. Keep the original accepted action ID and reconcile its terminal result before issuing dependent work. Materials, research, power, drones, game time and return reserves remain ordinary gameplay constraints. Historical failures and unknowns retain their original receipts.
 
-To import a player-loaded supported peaceful save, additionally enable `Safety.AllowUserSaveImport=true`, restart and manually load it. Prepare import, review the disclosure, then explicitly confirm in a later message. Commit creates and verifies an independent `Spherewright_Imported_*` copy through normal saving; the original is unchanged and Journal history begins at import.
-
-To resume an owned primary, use its exact protected ticket, identity and durable Journal from the idle menu. Same-version resume is the default. Disclosed migration/expired recovery needs later explicit confirmation. Reauthorization durably consumes its ticket before native loading; normal Journal-bound default resume consumes it after native adoption and confirmed Journal continuity. Reconcile failed/interrupted accepted actions without rekeying or replaying.
-
-### Agent use and limits
-
-Read `spherewright://agent/playbooks/opening-movement-v1` before acting. A useful request is: “Read the current state and playbook, explain the next bounded phase, and execute only actions already authorized for that phase. Reconcile every accepted action and save according to the declared rules.”
-
-Observation and planning do not grant write authority. No item/energy/technology injection, instant construction, teleportation, direct buffer editing, arbitrary save picker or autonomous expansion loop is provided. At archive generation/qualification checkpoint, current additions remain in development/testing; historical round-trip/recovery evidence retains its exact source scope, and sustained logistics and final same-source acceptance remain open. Use the Lab active evidence for subsequent qualification.
-
-[Installation](https://github.com/Arcueid77/Spherewright/blob/main/docs/release-installation.md) · [Releases](https://github.com/Arcueid77/Spherewright/releases) · [Source/issues](https://github.com/Arcueid77/Spherewright) · [Fixed Lab evidence](https://github.com/Arcueid77/Spherewright-Lab/tree/14478a03c64c550e644c559405c8496b647552e7). MIT licensed.
+[Installation](https://github.com/Arcueid77/Spherewright/blob/main/docs/release-installation.md) · [Release notes](https://github.com/Arcueid77/Spherewright/blob/main/docs/release-notes/v0.5.0.md) · [Releases](https://github.com/Arcueid77/Spherewright/releases) · [Source and issues](https://github.com/Arcueid77/Spherewright). MIT licensed.
 
 ## 中文
 
-Spherewright 通过 MCP 将外部 Agent 接入**《戴森球计划》**。此 Windows x64 包包含 Spherewright `{{VERSION}}`：BepInEx Plugin、配套自包含 `Spherewright.Mcp.exe` 及 Agent 指南。用户不需要源码或 .NET SDK。
+Spherewright 通过 MCP 将外部 Agent 接入**《戴森球计划》**。此 Windows x64 包包含 Spherewright `{{VERSION}}`、BepInEx Plugin、配套自包含 `Spherewright.Mcp.exe` 及 Agent 指南。
 
-### 版本与支持范围
+### 版本与能力
 
-此 `{{VERSION}}` 包面向 DSP `0.10.35.29151` 和 BepInEx `5.4.17`。准确源码提交与 payload hash 记录在 `spherewright-manifest.json`，全部组件须来自该同一构建。
+支持 DSP `0.10.35.29151` 和 BepInEx `5.4.17`。准确源码提交及各程序文件校验值记录在 `spherewright-manifest.json`，Plugin 与 MCP 须来自同一构建。
 
-**本包生成资格截点：0.5 Voyager 开发预览，未发布。** 原生可见目录和航线预览保留资源未知及有限储备；预览仍无 token、不可执行。许可的正常原生扫描可生成可见缓存，不创建远端工厂。
+- 观察生产、供电、物流、科研及原生探索可见恒星，按明确物料、能源及返航储备规划有限航线和工厂。
+- 通过新鲜 prepare/commit 执行有限正常跨星航行、原生翘曲器补给、当地施工、物流站配置及运输观察。
+- 检查和配置首帆/运载火箭链，观察真实飞行、太阳帆云及最小接收节点。
+- 建造和检查原生叠放及兼容宿主。配置准确的大小仓层，或通过配送器选择父层，逐层观察库存、液体、研究站及设备状态。
+- 使用原生业务操作反向空的集装机带路径，并以准确数量/增产点守恒将背包单件物品放入空带。
+- 诊断行走卡住，获取有界、无令牌的短路线几何预览，每段通过独立新鲜普通移动执行。
+- 以持久 Journal、原动作核销及进度保护恢复准确 owned 世界。
 
-开发/测试切片增加有限原生飞行 prepare/commit、停止原航程及单次原生机甲翘曲器补给接口，复用既有 action/checkpoint 协调器。补给保持自动设置，取消须核真实退出曲速/刹停，返程使用原受保护航程的剩余单腿及储备。恒星标记不泄露隐藏行星或资源。Flight checkpoint v2 以完整文件证据和受保护只读认领 lease 拒绝缺失/变化证据及较新 primary 回滚。后续开发还包括原生站点翘曲器转移、已存在 owned 工厂中的有限船只只读详情，以及受原航程储备约束的小批结构化施工持久控制；这些新增项仍在开发/离线复核。只使用准确实装构建公布的方法。
+公开接口为74工具和1份 Markdown 指南资源。源码/CI、已加载程序、玩法与包布局证据分别适用于声明范围。本机记录涵盖外星制造运输、正常首帆/火箭发射、9种选定叠放模型及19有向组合、仓储分层筛选、真实集装机合堆和保存恢复续接。具体来源见[0.5交审记录](https://github.com/Arcueid77/Spherewright-Lab/blob/92c9eb4d59ce304df9085fb002f03683d783fdab/releases/v0.5.0/stacking-review-delivery-2026-11-10.md)和[首帆/火箭记录](https://github.com/Arcueid77/Spherewright-Lab/blob/92c9eb4d59ce304df9085fb002f03683d783fdab/releases/v0.5.0/expansion-review-delivery-2026-11-06.md)。
 
-本包生成资格截点，Lab 已记录 **2/3 项历史 Voyager 实机门完成**：资源往返对应源码 `463fc888b1e4cf4a90e08cb1022d2b8896447700`，可控飞行失败/精确 checkpoint 恢复及较新主档保护对应源码 `216f4075e983d78fa4d4f5d222bdd279813e1d86`。持续跨星物流仍开放；这些有明确源码范围的历史记录不赋予本包或新增项实机验收信用。交所有者审核的最终同源手动/Thunderstore 双包仍缺失；此后最新安装及最终资格以 [Lab 活动证据](https://github.com/Arcueid77/Spherewright-Lab/tree/main/scenarios/v0.5-voyager)为准。开发包用于已审核验证，不代表正式 Release 或 Thunderstore 发布。
-
-历史 0.4 证据分开保留：正式 `v0.4.0` 对应源码 `b7c0002dbe2e8f5608c5ca140b0c6326a1818021`、DSP `0.10.35.29151`；旧生产验收源码 `2a7a98d1932c404e3a7abc2c11233d9c0b8780d9` 已通过规定的 29145 本机手动/Thunderstore 布局安装、运行、同版本恢复和连续供给验收，见[产品状态](https://github.com/Arcueid77/Spherewright/blob/main/docs/project-status.zh-CN.md)、[验收摘要](https://github.com/Arcueid77/Spherewright/blob/main/docs/validation/v0.4.0.zh-CN.md)及[原生兼容报告](https://github.com/Arcueid77/Spherewright/blob/main/docs/validation/native-29151-preflight.zh-CN.md)。证据只适用于声明的源码、原生版本和范围，不代表 0.5 验收；已有 0.4 包及其哈希保持不变。
-
-支持单人和平模式。沙盒和资源倍率会被报告，不增加沙盒动作。0.4 实机证据限于一个 owned、非沙盒、1× 本机世界；v0.3.3 较广的本机导入示例保留历史范围。独立 Mod Manager/r2modman profile、另一台计算机、安装事务崩溃恢复、黑雾战斗、多人/Nebula 和广泛第三方 Mod 兼容尚未验证。
+支持单人和平模式，本机验收使用 owned、非沙盒1×世界。黑雾战斗、多人/Nebula、另一台计算机、独立 Mod Manager/r2modman profile 和安装事务崩溃恢复仍在已验证范围之外。
 
 ### 安装与连接
 
-1. 在选定 profile 安装对应 Spherewright 包及其声明的 BepInEx 依赖，使用可信发行或已审核本地包。
-2. 从选定 modded profile 启动一次游戏，生成配置与受保护运行时描述文件。
-3. 在该 profile 找到 `BepInEx/plugins/{{TEAM_NAME}}-Spherewright/Spherewright.Mcp.exe`，注册为**本地 stdio MCP 服务**。
-4. 不在命令行传入描述文件、token 或存档身份。Plugin 与 MCP 必须来自同一构建。
-5. 默认仅观察。准备授权结构化动作时启用 `Safety.AllowWrites=true`，再正常重启 DSP。不要覆盖已加载 DLL。
+1. 在选定 profile 安装本包及声明的 BepInEx 依赖。
+2. 启动该 modded profile 一次，生成配置和受保护运行时描述文件。
+3. 将 `BepInEx/plugins/{{TEAM_NAME}}-Spherewright/Spherewright.Mcp.exe` 注册为本地 stdio MCP 服务。
+4. 操作前读取 `spherewright://agent/playbooks/opening-movement-v1`，将描述文件、令牌和存档身份保留于保护本地。
+5. 默认提供观察功能。需要结构化写入时启用 `Safety.AllowWrites=true`，再正常重启 DSP。
 
-### 新档、导入与 owned 世界
+新 owned 世界沿正常和平、非沙盒1×流程创建。导入玩家已载入的受支持存档另外启用 `Safety.AllowUserSaveImport=true`，并沿明确的 prepare/确认/commit 流程通过正常保存创建独立核验副本。Owned 恢复绑定准确保护票据和持久 Journal，已披露版本迁移及特殊恢复保留各自确认门。
 
-新档时让 DSP 停在空闲菜单，准备正常新建流程：和平、非沙盒、1× 的 `Spherewright_New_*` 世界。首次移动前阅读开局指南。
+每笔写入使用新鲜、适用的原生方案。保留原接受动作 ID，先核销其终态，再执行依赖步骤。物料、科研、电力、无人机、游戏时间及返航储备均沿正常玩法约束。历史失败和 unknown 保留原回执。
 
-导入玩家已载入的受支持和平存档时，另行启用 `Safety.AllowUserSaveImport=true`，重启并手动载入。prepare 后阅读披露，并在后续消息明确确认。commit 通过正常保存创建并核验独立 `Spherewright_Imported_*` 副本，原档不变，Journal 从导入开始。
-
-恢复 owned 主档时，在空闲菜单使用精确受保护票据、身份和 durable Journal。默认同版本恢复。已披露迁移或过期恢复须后续明确确认。重新授权在原生加载前持久消费票据；正常 Journal 绑定的默认恢复在原生接管并确认 Journal 连续性后消费。失败或中断的 accepted action 核原结果，不换键或重放。
-
-### Agent 使用与限制
-
-操作前阅读 `spherewright://agent/playbooks/opening-movement-v1`。可向 Agent 要求：“读取当前状态和指南，说明下一个有限阶段，只执行该阶段已授权动作，核销每个 accepted action，并按声明规则保存。”
-
-观察和规划不授予写入权限。不提供物品/能量/科技注入、瞬间施工、传送、直接缓冲编辑、任意选档或自主扩产。本包生成资格截点，当前新增项仍在开发/测试；历史往返/恢复证据保留准确源码范围，持续物流及最终同源验收仍开放。后续资格以 Lab 活动证据为准。
-
-[安装](https://github.com/Arcueid77/Spherewright/blob/main/docs/release-installation.zh-CN.md) · [发行](https://github.com/Arcueid77/Spherewright/releases) · [源码与反馈](https://github.com/Arcueid77/Spherewright) · [固定 Lab 证据](https://github.com/Arcueid77/Spherewright-Lab/tree/14478a03c64c550e644c559405c8496b647552e7)。使用 MIT 许可。
+[安装](https://github.com/Arcueid77/Spherewright/blob/main/docs/release-installation.zh-CN.md) · [发行说明](https://github.com/Arcueid77/Spherewright/blob/main/docs/release-notes/v0.5.0.zh-CN.md) · [发行下载](https://github.com/Arcueid77/Spherewright/releases) · [源码与反馈](https://github.com/Arcueid77/Spherewright)。MIT 许可。
