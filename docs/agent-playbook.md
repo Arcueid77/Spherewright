@@ -571,6 +571,8 @@ Warehouse stacking binds attached logistics distributors through reciprocal13→
 
 Use `prepare_build` with `stackOnObjectId`, `expectedStackStateHash` and optional `preferredModelIndex`. Omit ground/resource/belt/source/destination arguments. Native uses the lower model's actual joint offset, upper model compatibility and orientation, current storage/lab technology, placement and one owned building item. Require `plannedStackConstruction` and matching `plannedModelIndex` before committing. Native drones finish the prebuild. The terminal `stackConstructionReadback` proves the resulting whole chain. Observe storage grids/items, tank fluid, lab work/matrix points and splitter ports/filter/priority independently. Read-only metadata is not an inventory or live-acceptance result.
 
+For a new distributor2107, the same explicit stack selector binds an attachment-free ordinary storage top after the journey closes. The Native Addon tool places and normally charges one owned distributor through13→0 links. Its prepared plan declares these slots, `buildToolKind=addon` and `heightLimitKind=native_reach`. Completion preserves the storage layers and exposes the one new attachment in `stackConstructionReadback`. A later warehouse addition may select that distributor and retains its identity while Native raises it.
+
 Ordinary requests without these optional fields keep their existing path. Remote tall stacks use a separately bound vertical drone envelope with paid return/tail energy and the existing lateral limit. The original action, source identity, native readiness and finite material/time reserves remain required.
 
 ## Walking obstruction diagnostics and short route previews

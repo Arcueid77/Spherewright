@@ -133,6 +133,8 @@ public sealed class NativeStackConstructionPlan
     public string BuildToolKind { get; set; } = "click";
     public bool ShouldSerializeHeightLimitKind() => HeightLimitKind != "technology";
     public bool ShouldSerializeBuildToolKind() => BuildToolKind != "click";
+    // Ordinary layers use15-to14. A newly built distributor uses13-to0 and
+    // leaves ExistingObjectIds/the storage top intact in the full readback.
     public int InputFromSlot { get; set; } = 15;
     public int InputToSlot { get; set; } = 14;
 }

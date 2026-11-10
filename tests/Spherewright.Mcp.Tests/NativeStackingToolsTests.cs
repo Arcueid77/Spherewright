@@ -9,6 +9,28 @@ namespace Spherewright.Mcp.Tests;
 
 public sealed class NativeStackingToolsTests
 {
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task NewDistributorRequiresItsExactNativeStorageJoint(bool wrongJoint)
+    {
+        var bridge = DispatchProxy.Create<IBridgeClient, StackBridgeProxy>();
+        var proxy = (StackBridgeProxy)(object)bridge;
+        proxy.Response = new PreparedNormalAction { Prepared = true, PlannedModelIndex = 371,
+            PlanToken = "synthetic-attachment-token", PlannedStackConstruction = new()
+            {
+                SelectedObjectId = 1, RootObjectId = 1, AnchorObjectId = 1,
+                BeforeStackStateHash = "sha256:stack", BuildingItemId = 2107, ModelIndex = 371,
+                ExistingLayerCount = 1, ExistingObjectIds = new() { 1 },
+                BuildToolKind = "addon", HeightLimitKind = "native_reach", MaximumLayers = null,
+                InputFromSlot = wrongJoint ? 15 : 13, InputToSlot = wrongJoint ? 14 : 0,
+            } };
+        var result = await SpherewrightTools.PrepareBuildAsync(bridge, "synthetic-session", 104, 2107,
+            "player-state", stackOnObjectId: 1, expectedStackStateHash: "sha256:stack", preferredModelIndex: 371);
+        Assert.Equal(wrongJoint, result.IsError);
+        if (wrongJoint) Assert.DoesNotContain("synthetic-attachment-token", result.StructuredContent!.Value.GetRawText());
+    }
+
     [Fact]
     public async Task AmbiguousPlacementStopsBeforeBridgeDispatch()
     {

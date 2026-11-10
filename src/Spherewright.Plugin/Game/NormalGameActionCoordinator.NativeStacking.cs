@@ -17,6 +17,8 @@ internal sealed partial class NormalGameActionCoordinator
                 before.ReasonCode ?? "The selected stack changed after inspection.");
         var modelIndex = request.PreferredModelIndex ?? item.ModelIndex;
         var desc = NativeBuildModel(item, modelIndex);
+        if (desc?.isDispenser == true && desc.addonType == EAddonType.Storage)
+            return TryPrepareStorageAttachmentBuild(factory, player, item, request, before, desc);
         if (desc is null || !desc.multiLevel || string.IsNullOrEmpty(GameStateReader.NativeStackFamily(desc)))
             return BuildPreparation.Failed(BridgeErrorCodes.InvalidRequest,
                 "The selected runtime model does not support ordinary vertical stacking.");
@@ -95,7 +97,9 @@ internal sealed partial class NormalGameActionCoordinator
         accepted = candidate;
         rejection = string.Empty;
         var plan = candidate.StackConstruction;
-        if (!BuildStepDescription(candidate, item).isSpraycoster || !BuildUiIsIdle(player))
+        var description = BuildStepDescription(candidate, item);
+        if (!(description.isSpraycoster || description.isDispenser && plan is not null
+                && NativeStackingPolicy.IsStorageAttachment(plan)) || !BuildUiIsIdle(player))
         {
             rejection = "The exact idle native addon stack is unavailable.";
             return false;
@@ -169,14 +173,59 @@ internal sealed partial class NormalGameActionCoordinator
         var factory = GameMain.localPlanet?.factory;
         if (factory is null) return false;
         var snapshot = _reader.CaptureNativeStack(factory, plan.SelectedObjectId);
-        if (!snapshot.Complete || snapshot.RootObjectId != plan.RootObjectId
-            || snapshot.Layers.Count != plan.ExistingLayerCount + 1
-            || !snapshot.Layers.Take(plan.ExistingLayerCount).Select(layer => layer.ObjectId).SequenceEqual(plan.ExistingObjectIds)
-            || !snapshot.Attachments.Select(attachment => attachment.Entity.ObjectId).OrderBy(id => id)
-                .SequenceEqual(plan.ExistingAttachmentObjectIds.OrderBy(id => id))
-            || !NativeStackCompletionMatches(factory, plan, snapshot.TopObjectId))
+        if (!NativeStackingPolicy.ConfirmsCompletedMembers(plan, snapshot, out var createdObjectId)
+            || NativeStackingPolicy.IsStorageAttachment(plan) && !action.TargetObjectIds.Contains(createdObjectId)
+            || !NativeStackCompletionMatches(factory, plan, createdObjectId))
             return false;
         action.StackConstructionReadback = snapshot;
         return true;
+    }
+
+    private BuildPreparation TryPrepareStorageAttachmentBuild(PlanetFactory factory, Player player, ItemProto item,
+        PrepareBuildRequest request, NativeStackSnapshot before, PrefabDesc description)
+    {
+        if (item.ID != 2107 || item.BuildMode != 5 || request.PreferredYaw.HasValue
+            || before.Attachments.Count != 0
+            || _flightCheckpoints.VoyagerJourney is { } journey && !IsVoyagerJourneyClosed(journey))
+            return BuildPreparation.Failed(BridgeErrorCodes.InvalidRequest,
+                "Storage attachment requires a closed journey, an attachment-free stack and the native host orientation.");
+        var host = factory.entityPool[before.TopObjectId];
+        var hostDescription = LDB.models.Select(host.modelIndex)?.prefabDesc;
+        if (hostDescription is null || !hostDescription.isStorage || hostDescription.isBattleBase
+            || hostDescription.colliders is null || hostDescription.colliders.Length == 0)
+            return BuildPreparation.Failed(BridgeErrorCodes.InvalidRequest,
+                "The native distributor requires an ordinary built storage host.");
+        // Exact BuildTool_Addon.DeterminePreviews storage-addon pose and SetDefaultParams.
+        var height = hostDescription.colliders[0].pos.y + hostDescription.colliders[0].ext.y;
+        if (!IsFinite(height) || height <= 0 || description.workEnergyPerTick < 0
+            || description.workEnergyPerTick > int.MaxValue)
+            return BuildPreparation.Failed(BridgeErrorCodes.InvalidRequest, "The native attachment metadata is unavailable.");
+        var candidate = BuildStepPlan.Core(item.ID, host.pos.normalized * (host.pos.magnitude + height), host.rot, 0);
+        candidate.ModelIndex = request.PreferredModelIndex ?? item.ModelIndex;
+        candidate.InputObjectId = host.id;
+        candidate.InputFromSlot = 13;
+        candidate.InputToSlot = 0;
+        candidate.Parameters.AddRange(new int[128]);
+        candidate.Parameters[0] = 2;
+        candidate.Parameters[2] = (int)description.workEnergyPerTick;
+        candidate.StackConstruction = new NativeStackConstructionPlan
+        {
+            SelectedObjectId = request.StackOnObjectId!.Value, RootObjectId = before.RootObjectId,
+            AnchorObjectId = host.id, BeforeStackStateHash = before.StateHash,
+            BuildingItemId = item.ID, ModelIndex = candidate.ModelIndex,
+            ExistingLayerCount = before.Layers.Count, ExistingObjectIds = before.Layers.Select(layer => layer.ObjectId).ToList(),
+            MaximumLayers = null, HeightLimitKind = "native_reach", BuildToolKind = "addon",
+            InputFromSlot = 13, InputToSlot = 0,
+        };
+        if (!TryValidateClickBuild(factory, player, item, candidate, 0, out var accepted, out var reason))
+            return BuildPreparation.Failed(BridgeErrorCodes.BuildLocationInvalid, reason);
+        var endpoint = _reader.InspectFactoryEntityOnMainThread(_sessions.SessionId,
+            new InspectFactoryEntityRequest { PlanetId = factory.planetId, ObjectId = host.id });
+        if (!endpoint.Success || endpoint.Value is null)
+            return BuildPreparation.Failed(BridgeErrorCodes.StaleState, "The native storage host became unavailable.");
+        var result = BuildPreparation.Succeeded(NormalBuildKinds.Core, new[] { accepted });
+        result.SourceObjectId = host.id;
+        result.SourceEndpointHash = endpoint.Value.EndpointStateHash;
+        return result;
     }
 }

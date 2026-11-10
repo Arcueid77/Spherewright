@@ -593,6 +593,8 @@ Native Import 可将 double 宇宙坐标逆投影为 float 本地位置；普通
 
 调用`prepare_build`时提供`stackOnObjectId`、`expectedStackStateHash`和可选`preferredModelIndex`，省略地面、资源、传送带及源/目的连接参数。原生按下层模型真实接点偏移、上层兼容与朝向、当前仓储/研究站科技、放置条件及1个已有建筑物品预检。提交前要求匹配的`plannedStackConstruction`与`plannedModelIndex`。正常无人机完成待建体，原终态`stackConstructionReadback`证明整条结果链。逐类另读仓格/物品、液罐流体、研究站工作/矩阵点数以及分流器端口/过滤/优先级。只读目录本身不证明库存行为或实机验收。
 
+新安装物流配送器2107时，同一显式选择器在旅程关闭后绑定无挂件的普通仓库顶层。原生Addon工具按13→0连接放置并正常扣除1个自有配送器，准备计划明确这些接点、`buildToolKind=addon`及`heightLimitKind=native_reach`。终态保留原仓层，在`stackConstructionReadback`中回读唯一新增挂件。后续加仓可选择该配送器，由原生抬升并保留其身份。
+
 省略新可选字段的普通请求沿用原路径。远端高层叠放使用独立绑定的垂直无人机包络，支付实际返程/收尾能量并保留原横向范围。原动作、来源身份、原生就绪及有限物料/时间储备继续适用。
 
 ## 步行阻挡诊断与短路线预览

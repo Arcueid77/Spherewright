@@ -9,6 +9,79 @@ namespace Spherewright.Bridge.Core.Tests;
 public sealed class NativeStackingPolicyTests
 {
     [Theory]
+    [InlineData("none", true)]
+    [InlineData("layer_slots", false)]
+    [InlineData("wrong_item", false)]
+    [InlineData("click_tool", false)]
+    [InlineData("technology_cap", false)]
+    [InlineData("existing_attachment", false)]
+    public void DistributorEchoBindsTheNativeAttachmentJoint(string fault, bool expected)
+    {
+        var plan = AttachmentPlan();
+        switch (fault)
+        {
+            case "layer_slots": plan.InputFromSlot = 15; plan.InputToSlot = 14; break;
+            case "wrong_item": plan.BuildingItemId = 2101; break;
+            case "click_tool": plan.BuildToolKind = "click"; break;
+            case "technology_cap": plan.MaximumLayers = 3; plan.HeightLimitKind = "technology"; break;
+            case "existing_attachment": plan.ExistingAttachmentObjectIds.Add(7); break;
+        }
+        var request = Request(); request.BuildingItemId = 2107; request.PreferredModelIndex = 371;
+        Assert.Equal(expected, NativeStackingPolicy.ConfirmsPlan(request,
+            new PreparedNormalAction { PlannedStackConstruction = plan }));
+    }
+
+    [Theory]
+    [InlineData("none", true)]
+    [InlineData("missing", false)]
+    [InlineData("extra_layer", false)]
+    [InlineData("parent", false)]
+    [InlineData("model", false)]
+    [InlineData("member_identity", false)]
+    public void NewAttachmentPreservesStorageLayersAndRequiresItsExactReadback(string fault, bool expected)
+    {
+        var plan = AttachmentPlan();
+        var snapshot = new NativeStackSnapshot
+        {
+            Complete = true, RootObjectId = 1, TopObjectId = 1,
+            Layers = new() { new() { ObjectId = 1 } },
+            Attachments = new() { new() { ParentObjectId = 1,
+                Entity = new() { ObjectId = 2, ItemId = 2107, ModelIndex = 371 } } },
+        };
+        switch (fault)
+        {
+            case "missing": snapshot.Attachments.Clear(); break;
+            case "extra_layer": snapshot.Layers.Add(new() { ObjectId = 3 }); snapshot.TopObjectId = 3; break;
+            case "parent": snapshot.Attachments[0].ParentObjectId = 3; break;
+            case "model": snapshot.Attachments[0].Entity.ModelIndex++; break;
+            case "member_identity": snapshot.Layers[0].ObjectId = 3; break;
+        }
+        Assert.Equal(expected, NativeStackingPolicy.ConfirmsCompletedMembers(plan, snapshot, out var created));
+        if (expected) Assert.Equal(2, created);
+    }
+
+    [Fact]
+    public void OrdinaryLayerCompletionPreservesAnExistingAttachmentIdentity()
+    {
+        var plan = Plan(); plan.ExistingAttachmentObjectIds.Add(7);
+        var snapshot = new NativeStackSnapshot { Complete = true, RootObjectId = 1, TopObjectId = 2,
+            Layers = new() { new() { ObjectId = 1 }, new() { ObjectId = 2 } },
+            Attachments = new() { new() { ParentObjectId = 2, Entity = new() { ObjectId = 7 } } } };
+        Assert.True(NativeStackingPolicy.ConfirmsCompletedMembers(plan, snapshot, out var created));
+        Assert.Equal(2, created);
+        snapshot.Attachments[0].Entity.ObjectId = 8;
+        Assert.False(NativeStackingPolicy.ConfirmsCompletedMembers(plan, snapshot, out _));
+    }
+
+    private static NativeStackConstructionPlan AttachmentPlan()
+    {
+        var plan = Plan(); plan.BuildingItemId = 2107; plan.ModelIndex = 371;
+        plan.MaximumLayers = null; plan.HeightLimitKind = "native_reach"; plan.BuildToolKind = "addon";
+        plan.InputFromSlot = 13; plan.InputToSlot = 0;
+        return plan;
+    }
+
+    [Theory]
     [InlineData(5, "spraycoater", "addon")]
     [InlineData(9, "spraycoater", null)]
     [InlineData(1, "spraycoater", null)]

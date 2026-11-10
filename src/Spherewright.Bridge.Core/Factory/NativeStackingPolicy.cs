@@ -8,6 +8,9 @@ public static class NativeStackingPolicy
 {
     public const int MaximumObservedLayers = 256;
 
+    public static bool IsStorageAttachment(NativeStackConstructionPlan plan) =>
+        plan.BuildingItemId == 2107 && plan.InputFromSlot == 13 && plan.InputToSlot == 0;
+
     public static string? PlacementToolKind(int nativeBuildMode, string family)
     {
         // DSP29151 dispatches item BuildMode5 through the Native Addon tool.
@@ -33,6 +36,7 @@ public static class NativeStackingPolicy
 
     public static void ValidatePlan(NativeStackConstructionPlan plan)
     {
+        var attachment = IsStorageAttachment(plan);
         if (plan.EvidenceVersion != 1 || plan.SelectedObjectId <= 0 || plan.RootObjectId <= 0
             || plan.AnchorObjectId <= 0 || plan.BuildingItemId <= 0 || plan.ModelIndex <= 0
             || plan.ExistingLayerCount < 1 || plan.ExistingLayerCount >= MaximumObservedLayers
@@ -51,8 +55,38 @@ public static class NativeStackingPolicy
             || plan.ExistingObjectIds[plan.ExistingLayerCount - 1] != plan.AnchorObjectId
             || string.IsNullOrEmpty(plan.BeforeStackStateHash)
             || !plan.BeforeStackStateHash.StartsWith("sha256:", StringComparison.Ordinal)
-            || plan.InputFromSlot != 15 || plan.InputToSlot != 14)
+            || (attachment
+                ? plan.BuildToolKind != "addon" || plan.HeightLimitKind != "native_reach"
+                    || plan.ExistingAttachmentObjectIds.Count != 0
+                : plan.BuildingItemId == 2107 || plan.InputFromSlot != 15 || plan.InputToSlot != 14))
             throw new InvalidDataException("Invalid native stack construction identity.");
+    }
+
+    public static bool ConfirmsCompletedMembers(NativeStackConstructionPlan plan, NativeStackSnapshot snapshot,
+        out int createdObjectId)
+    {
+        createdObjectId = 0;
+        var attachment = IsStorageAttachment(plan);
+        if (!snapshot.Complete || snapshot.RootObjectId != plan.RootObjectId
+            || snapshot.Layers.Count != plan.ExistingLayerCount + (attachment ? 0 : 1)
+            || !snapshot.Layers.Take(plan.ExistingLayerCount).Select(layer => layer.ObjectId).SequenceEqual(plan.ExistingObjectIds))
+            return false;
+        if (attachment)
+        {
+            if (snapshot.TopObjectId != plan.AnchorObjectId || snapshot.Attachments.Count != 1) return false;
+            var added = snapshot.Attachments[0];
+            if (added.ParentObjectId != plan.AnchorObjectId || added.Entity.ItemId != plan.BuildingItemId
+                || added.Entity.ModelIndex != plan.ModelIndex || plan.ExistingObjectIds.Contains(added.Entity.ObjectId))
+                return false;
+            createdObjectId = added.Entity.ObjectId;
+        }
+        else
+        {
+            if (!snapshot.Attachments.Select(value => value.Entity.ObjectId).OrderBy(id => id)
+                .SequenceEqual(plan.ExistingAttachmentObjectIds.OrderBy(id => id))) return false;
+            createdObjectId = snapshot.TopObjectId;
+        }
+        return createdObjectId > 0;
     }
 
     public static string? ValidateRequest(PrepareBuildRequest request)
@@ -83,6 +117,7 @@ public static class NativeStackingPolicy
         try { ValidatePlan(plan); }
         catch (InvalidDataException) { return false; }
         return plan is { EvidenceVersion: 1, AnchorObjectId: > 0, RootObjectId: > 0, ModelIndex: > 0 }
+            && IsStorageAttachment(plan) == (request.BuildingItemId == 2107)
             && plan.SelectedObjectId == request.StackOnObjectId
             && plan.BuildingItemId == request.BuildingItemId
             && plan.BeforeStackStateHash == request.ExpectedStackStateHash

@@ -8,13 +8,15 @@ internal sealed class SpherewrightAddonBuildTool : BuildTool_Addon
         cursorTarget = preview.lpos;
         castGroundPos = preview.lpos;
         castGroundPosSnapped = preview.lpos;
-        multiLevelCovering = preview.inputObjId > 0 && preview.inputToSlot == 14;
+        multiLevelCovering = preview.inputObjId > 0 && (preview.inputToSlot == 14
+            || preview.desc.addonType == EAddonType.Storage && preview.inputToSlot == 0 && preview.inputFromSlot == 13);
         castObjectId = multiLevelCovering ? preview.inputObjId : 0;
     }
 
     public bool CheckPreparedBuildConditions()
     {
-        for (var index = 0; index < buildPreviews.Count; index++) FindPotentialBeltStrict(index);
+        if (handPrefabDesc.addonType == EAddonType.Belt)
+            for (var index = 0; index < buildPreviews.Count; index++) FindPotentialBeltStrict(index);
         return CheckBuildConditions();
     }
 

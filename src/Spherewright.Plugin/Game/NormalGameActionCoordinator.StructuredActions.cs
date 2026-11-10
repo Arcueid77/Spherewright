@@ -245,6 +245,9 @@ internal sealed partial class NormalGameActionCoordinator
         ItemProto item,
         PrepareBuildRequest request)
     {
+        if (item.prefabDesc.isDispenser)
+            return BuildPreparation.Failed(BridgeErrorCodes.InvalidRequest,
+                "A distributor requires stackOnObjectId and the current complete storage stack hash.");
         if (request.ResourceNodeId.HasValue || request.SourceObjectId.HasValue
             || request.DestinationObjectId.HasValue || request.PathEnd is not null)
         {
@@ -864,7 +867,7 @@ internal sealed partial class NormalGameActionCoordinator
     {
         accepted = candidate;
         rejection = string.Empty;
-        if (BuildStepDescription(candidate, item).isSpraycoster)
+        if (BuildStepDescription(candidate, item).isSpraycoster || BuildStepDescription(candidate, item).isDispenser)
             return TryValidateNativeAddonBuild(factory, player, item, candidate, out accepted, out rejection);
         if (!BuildUiIsIdle(player))
         {
@@ -1593,7 +1596,8 @@ internal sealed partial class NormalGameActionCoordinator
                 tool._Free();
             };
         }
-        else if (BuildStepDescription(action.Plan.BuildSteps[0], item).isSpraycoster)
+        else if (BuildStepDescription(action.Plan.BuildSteps[0], item).isSpraycoster
+            || BuildStepDescription(action.Plan.BuildSteps[0], item).isDispenser)
         {
             var tool = new SpherewrightAddonBuildTool();
             tool._Init(GameMain.data!);
