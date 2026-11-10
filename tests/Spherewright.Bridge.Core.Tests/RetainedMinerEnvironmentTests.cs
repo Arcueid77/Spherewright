@@ -7,6 +7,7 @@ using Xunit;
 
 namespace Spherewright.Bridge.Core.Tests;
 
+[Collection("Owned resume native substitutes")]
 public sealed class RetainedMinerEnvironmentTests
 {
     private const string Blocker = "remote_resume_charge_native_construction_not_empty";
