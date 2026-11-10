@@ -23,6 +23,7 @@
 
 ## 发行证据及边界
 
+- [0.5发行说明](release-notes/v0.5.0.md) / [中文](release-notes/v0.5.0.zh-CN.md)汇总Voyager、发射、叠放和包来源。
 - [0.4 验收](validation/v0.4.0.md) / [中文](validation/v0.4.0.zh-CN.md)：冻结生产验收源码、hash、本机证据与未验证分支。
 - [0.4 发行说明](release-notes/v0.4.0.md) / [中文](release-notes/v0.4.0.zh-CN.md)：已正式发布版本、最终双包/安装证据及支持限制。
 - [Lab 场景与证据](sample-validation.md) / [中文](sample-validation.zh-CN.md)：固定证据快照、当前 Lab 入口、只读产品锁与复现。
@@ -30,7 +31,7 @@
 - [文档维护](documentation-audit.md) / [中文](documentation-audit.zh-CN.md)：2026-10-16 的定期审查及其核验边界。
 - [商店包模板](../packaging/thunderstore/README.md)及[历史包说明](../packaging/thunderstore/changelog/0.3.3.md)为页内双语。
 
-最新正式版本为 `v0.4.0`，源码 `b7c0002dbe2e8f5608c5ca140b0c6326a1818021`。较早的冻结生产验收源码 `2a7a98d1932c404e3a7abc2c11233d9c0b8780d9` 保留独立证据范围。main 文档可继续更新，不改变冻结 ZIP 或已安装组件。
+最新正式版本为 [`v0.5.0`](https://github.com/Arcueid77/Spherewright/releases/tag/v0.5.0)，源码 `b574c616346c4e087b433de3633e23fb12075add`，生成清单分别记录最终包离线资格和实现源码实机验收。较早的冻结生产验收源码 `2a7a98d1932c404e3a7abc2c11233d9c0b8780d9` 保留独立证据范围。main 文档可继续更新，不改变冻结 ZIP 或已安装组件。
 
 ## 原生研究
 

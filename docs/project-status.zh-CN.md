@@ -2,7 +2,7 @@
 
 [English](project-status.md) · [简体中文](project-status.zh-CN.md)
 
-**发布准备，2026-11-10。** 所有者已授权0.5标签、GitHub发行和Thunderstore网页提交。交审实现19cd5eb5通过6347项源码检查、分层仓储筛选、真实集装机合堆及本机两种包布局独立冷恢复。正在同步随包发布说明与该已验收范围。[0.5发行说明](release-notes/v0.5.0.zh-CN.md)汇总能力，下列较早截点保留各自日期和源码。
+**已发布，2026-11-10。** [GitHub0.5.0](https://github.com/Arcueid77/Spherewright/releases/tag/v0.5.0)绑定源码 `b574c616346c4e087b433de3633e23fb12075add`，注解标签及6个附件分别通过草稿/公开回下载校验。Native构建、6347项源码测试、准确CI、双包布局及其74工具/1资源MCP入口通过。与已实机验收19cd5eb5之间仅8份Markdown差异，发行清单保留准确的玩法/包证据范围。2026-11-10的Thunderstore仍显示0.4.0，0.5网页提交待完成。下列旧截点保留原日期和源码。
 
 **当前交审截点（2026-11-06）。** 首帆/首火箭扩展已有界实机闭合：外星当地正常制造、4帆真实发射并转换入云、1枚运载火箭实际抵达且增加1个原生结构点、跨星辅料真实到货、普通保存及冷恢复续接。最终选择的实装及两份交审包均绑定源码`d3b7ac897bb44d62c8a7ed54c51a55ff2b8de7b0`；准确源码CI、Native构建、同源安装、中英文/内嵌指南检查及233项程序载荷逐字节一致性通过。[固定Lab交审记录](https://github.com/Arcueid77/Spherewright-Lab/blob/b78ff30448bf98383a86020b327de2df36da3763/releases/v0.5.0/expansion-review-delivery-2026-11-06.md)列出具体证据与边界，不声称已分别重做两种发行布局的完整冷安装/恢复矩阵。未创建tag、Release或平台上传。
 

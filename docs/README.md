@@ -23,6 +23,7 @@ Maintained guides have equivalent English and Simplified Chinese editions. Open 
 
 ## Release evidence and boundaries
 
+- [0.5 release notes](release-notes/v0.5.0.md) / [中文](release-notes/v0.5.0.zh-CN.md) summarize Voyager, launch, stacking and package provenance.
 - [0.4 validation](validation/v0.4.0.md) / [中文](validation/v0.4.0.zh-CN.md): frozen production-acceptance source, hashes, local evidence and unverified branches.
 - [0.4 release notes](release-notes/v0.4.0.md) / [中文](release-notes/v0.4.0.zh-CN.md): the published release, final package/install evidence and support limits.
 - [Lab scenarios/evidence](sample-validation.md) / [中文](sample-validation.zh-CN.md): fixed evidence snapshot, current Lab entry points, read-only product lock and reproduction.
@@ -30,7 +31,7 @@ Maintained guides have equivalent English and Simplified Chinese editions. Open 
 - [Documentation maintenance](documentation-audit.md) / [中文](documentation-audit.zh-CN.md): the dated 2026-10-16 review and its verification boundary.
 - [Store package template](../packaging/thunderstore/README.md) and [historical package notes](../packaging/thunderstore/changelog/0.3.3.md) are inline bilingual.
 
-The latest formal release is `v0.4.0`, sourced from `b7c0002dbe2e8f5608c5ca140b0c6326a1818021`. The earlier frozen production-acceptance source `2a7a98d1932c404e3a7abc2c11233d9c0b8780d9` retains its distinct evidence scope. Main documentation can advance without altering frozen ZIPs or updating installed components.
+The latest formal release is [`v0.5.0`](https://github.com/Arcueid77/Spherewright/releases/tag/v0.5.0), sourced from `b574c616346c4e087b433de3633e23fb12075add`. Its generation manifest separates final-archive offline qualification from implementation-source live acceptance. The earlier frozen production-acceptance source `2a7a98d1932c404e3a7abc2c11233d9c0b8780d9` retains its distinct evidence scope. Main documentation can advance without altering frozen ZIPs or updating installed components.
 
 ## Native research
 

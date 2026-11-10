@@ -10,15 +10,16 @@ Plugin, MCP, Contracts and Bridge.Core form one version-coupled monorepo. [Spher
 
 | Item | Current state |
 | --- | --- |
-| Latest formal release | [`v0.4.0`](https://github.com/Arcueid77/Spherewright/releases/tag/v0.4.0), published 2026-10-17 from `b7c0002dbe2e8f5608c5ca140b0c6326a1818021` for DSP `0.10.35.29151` and BepInEx `5.4.17.0` |
+| Latest formal release | [`v0.5.0`](https://github.com/Arcueid77/Spherewright/releases/tag/v0.5.0), published 2026-11-10 from `b574c616346c4e087b433de3633e23fb12075add` for DSP `0.10.35.29151` and BepInEx `5.4.17.0` |
 | Voyager baseline | All three original clauses are accepted within their recorded source scopes; the same-source review pair is retained in Lab |
 | First-sail/carrier-rocket extension | Bounded live acceptance recorded 2026-11-06: local off-world manufacture, four sails launched into the swarm, one carrier rocket arrival with one added Native structure point, auxiliary delivery and normal save/cold continuation |
-| Selected extension runtime/review source | `d3b7ac897bb44d62c8a7ed54c51a55ff2b8de7b0`; exact-source CI, Native builds, coherent installation and package payload checks passed within the recorded scope |
-| 0.5 publication | No tag, Release or platform upload; later development source remains separate from the selected runtime and review archives |
+| First-sail/rocket implementation source | `d3b7ac897bb44d62c8a7ed54c51a55ff2b8de7b0`; exact-source CI, Native builds, coherent installation and package payload checks passed within the recorded scope |
+| Stacking implementation source | `19cd5eb505ffd30f4832f3bfbf0ced9ddad4a889`, with9 models/19 directed pairs, warehouse-layer filters and real piler aggregation. Both implementation layouts passed cold continuation with47 members and the complete backpack preserved |
+| 0.5 publication | GitHub tag and six release assets are published and downloaded-byte-verified. The release source adds eight Markdown files to the live-accepted implementation. Thunderstore website submission remains pending |
 
-The GitHub release provides the manual ZIP, Thunderstore-layout ZIP, checksums and generation manifest. Use the manual package for a direct installation. The last recorded Thunderstore check on 2026-10-17 showed `0.3.3`; the owner's later website-upload result remains separately tracked and unverified here.
+The GitHub release provides the manual ZIP, Thunderstore-layout ZIP, checksums and generation manifest. Use the manual package for a direct installation. The Thunderstore public page showed `0.4.0` on2026-11-10. Its0.5 website submission remains separately tracked. [Thunderstore listing](https://thunderstore.io/c/dyson-sphere-program/p/Arcueid_77/Spherewright/)
 
-Development source, fixed Lab adoption, actual installation, final candidates and historical acceptance are different states. Later source or documentation commits do not change published package identity or inherit earlier live credit. See [product status](docs/project-status.md), [ROADMAP](ROADMAP.md) and the [Lab active snapshot](https://github.com/Arcueid77/Spherewright-Lab/blob/main/scenarios/v0.5-voyager/current-status.md) for their respective scopes.
+Development source, fixed Lab adoption, actual installation, final candidates and historical acceptance are different states. Later source or documentation commits do not change published package identity or inherit earlier live credit. See [product status](docs/project-status.md), [ROADMAP](ROADMAP.md) and the [Lab active snapshot](https://github.com/Arcueid77/Spherewright-Lab/blob/main/scenarios/v0.5-stacking-navigation/current-status.md) for their respective scopes.
 
 ## Capabilities and boundaries
 
@@ -38,7 +39,7 @@ Every write requires fresh native prepare, plan-bound commit, original-action/id
 3. Follow the [Agent playbook](docs/agent-playbook.md); it is also embedded in MCP and included in packages.
 4. Check the [protocol](docs/protocol.md), [safety model](docs/safety-model.md) and [architecture](docs/architecture.md) when integrating or reviewing behavior.
 
-Release evidence is separated by source and purpose: [0.4 release notes](docs/release-notes/v0.4.0.md), [0.4 validation](docs/validation/v0.4.0.md), [29151 compatibility evidence](docs/validation/native-29151-preflight.md) and the [fixed source-specific runtime report](https://github.com/Arcueid77/Spherewright-Lab/blob/74a4ec3d91608467911460eaf0d317800e60309b/operations/formal-release-2026-10-17.md). The complete documentation index is in [docs/README.md](docs/README.md).
+Release evidence is separated by source and purpose. [0.5 release notes](docs/release-notes/v0.5.0.md), [0.4 release notes](docs/release-notes/v0.4.0.md), [0.4 validation](docs/validation/v0.4.0.md), [29151 compatibility evidence](docs/validation/native-29151-preflight.md) and the [fixed source-specific runtime report](https://github.com/Arcueid77/Spherewright-Lab/blob/74a4ec3d91608467911460eaf0d317800e60309b/operations/formal-release-2026-10-17.md). The complete documentation index is in [docs/README.md](docs/README.md).
 
 ## Develop
 
