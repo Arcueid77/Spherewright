@@ -288,6 +288,7 @@ internal sealed partial class GameStateReader
             return new NativeStackDeviceState
             {
                 NativeBeltIds = new() { coater.cargoBeltId, coater.incBeltId },
+                NativeBeltSlots = CaptureNativeAddonBeltSlots(entity),
                 ProliferatorItemId = coater.incItemId, ProliferatorAbility = coater.incAbility,
                 SprayTimesPerItem = coater.incSprayTimes, RemainingSprays = coater.incCount,
                 ExtraSprays = coater.extraIncCount, SprayCapacity = coater.incCapacity,
@@ -295,6 +296,29 @@ internal sealed partial class GameStateReader
             };
         }
         return null;
+    }
+
+    private static List<NativeAddonBeltSlotSnapshot> CaptureNativeAddonBeltSlots(EntityData entity)
+    {
+        var desc = LDB.models.Select(entity.modelIndex)?.prefabDesc;
+        var poses = desc?.addonAreaPoses;
+        var boxes = desc?.addonAreaColPoses;
+        var sizes = desc?.addonAreaSize;
+        if (poses is null || boxes is null || sizes is null || poses.Length < 1 || poses.Length > 16
+            || boxes.Length != poses.Length || sizes.Length != poses.Length)
+            throw new InvalidOperationException("stack_addon_belt_geometry_unavailable");
+        var slots = new List<NativeAddonBeltSlotSnapshot>();
+        for (var i = 0; i < poses.Length; i++)
+        {
+            var rotation = entity.rot * boxes[i].rotation;
+            slots.Add(new()
+            {
+                Index = i, Position = CaptureVector(entity.pos + entity.rot * poses[i].position),
+                Forward = CaptureVector(rotation * UnityEngine.Vector3.forward),
+                Up = CaptureVector(rotation * UnityEngine.Vector3.up), HalfExtents = CaptureVector(sizes[i]),
+            });
+        }
+        return slots;
     }
 
     internal string CaptureNativeStackContents(PlanetFactory factory, IReadOnlyList<int> objectIds)

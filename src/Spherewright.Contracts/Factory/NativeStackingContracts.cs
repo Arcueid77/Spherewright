@@ -101,6 +101,7 @@ public sealed class NativeStackDeviceState
     public List<int>? NativeBeltIds { get; set; }
     public List<int>? NativeInputBeltIds { get; set; }
     public List<int>? NativeOutputBeltIds { get; set; }
+    public List<NativeAddonBeltSlotSnapshot>? NativeBeltSlots { get; set; }
     public int? PilerMode { get; set; }
     public int? CooldownTicks { get; set; }
     public int? WorkProgress { get; set; }
@@ -113,6 +114,15 @@ public sealed class NativeStackDeviceState
     public int? SprayCapacity { get; set; }
     public bool? ProliferatorUsed { get; set; }
     public int? CargoBeltItemId { get; set; }
+}
+
+public sealed class NativeAddonBeltSlotSnapshot
+{
+    public int Index { get; set; }
+    public Vector3Snapshot Position { get; set; } = new();
+    public Vector3Snapshot Forward { get; set; } = new();
+    public Vector3Snapshot Up { get; set; } = new();
+    public Vector3Snapshot HalfExtents { get; set; } = new();
 }
 
 public sealed class NativeStackConstructionPlan

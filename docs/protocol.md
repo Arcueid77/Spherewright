@@ -496,6 +496,8 @@ Nonempty `existingAttachmentObjectIds` extends stack plan identity with retained
 
 Additive fields extend the existing build call: `stackOnObjectId`, `expectedStackStateHash`, `preferredModelIndex`. A stack request binds a complete current built chain and one exact native upper model. Other placement modes are mutually exclusive. The mixed-cohort guard requires `plannedStackConstruction` and the requested native-model echo before exposing a token. Native stacking uses slots15→14, model joint offsets, alternative-item yaw transforms and current Native height conditions.
 
+For distributor2107, the same selector binds one new Native Addon attachment through13→0 after the journey closes. The top ordinary storage must have no existing attachment. The prepared plan binds its unchanged layer IDs and top. Terminal readback contains the same layers and one new distributor with exact model and reciprocal host links. Spraycoater `deviceState.nativeBeltSlots` copies at most16 Native addon centre-line positions, forward/up directions and area half-extents in world space. These nullable read-only observations guide height/orientation selection and grant no placement authority.
+
 Detail inspection adds nullable `modelIndex` and `stack`; the build catalog adds nullable `stacking`. The original factory hashes keep their existing fields. New stack/model domains bind approved construction and durable pending/completed records without changing legacy absent-field hashes. Terminal `stackConstructionReadback` retains its original capture. Native item/work contents of existing layers are checked at the same creation tick. Later normal production is separate evidence.
 
 ## Walking diagnostics and read-only route mode
