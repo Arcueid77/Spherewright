@@ -16,6 +16,7 @@ public sealed class GetActionResultRequest
 
 public sealed class ActionResultSnapshot
 {
+    public Spherewright.Contracts.Celestial.DysonStructureReadback? DysonStructureReadback { get; set; }
     public MovementDiagnosticsSnapshot? MovementDiagnostics { get; set; }
     public Spherewright.Contracts.Factory.NativeStackSnapshot? StackConstructionReadback { get; set; }
     public StationCargoWithdrawalReadback? StationCargoWithdrawalReadback { get; set; }

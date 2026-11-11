@@ -4,6 +4,8 @@
 
 **0.6 Ascension开发，2026-11-11。** 所有者要求继续推进0.6。首个切片增加当前恒星的有界戴森拓扑/进度观察及原生射线接收器实际电力数据，接口共75工具。原生程序集仍为29151，源码资格与后续场景按Lab中的Ascension计划推进。2026-11-11的Thunderstore公开页已显示0.5.0。[原生研究](research/game-api-dyson-state.zh-CN.md)
 
+设计源码切片增加独立多对象原生成本预览，以及经既有普通配置动作逐项prepare的节点/框架/壳面创建，保留完整几何、应力、原型、分配器、原动作及守恒检查。源码资格、实装及正向发射/接收/保存验收分别按Lab对应边界记录。
+
 源码 `ee810a699b71db44bfe11ae1e4e71b9370f79353`已完成6389项回归、Native构建及准确CI，并同源开发实装。正式过期主档重新授权后58.719秒完成真实普通操作，准确源码冷恢复观察保全原叠放/设备状态和完整背包，随后正常保存退出。正向接收功率及通用设计阶段按[原生记录](https://github.com/Arcueid77/Spherewright-Lab/blob/e0023fabe84cb989f6498e99636cd83bfb64d03b/scenarios/v0.6-ascension/current-status.md)继续。
 
 **已发布，2026-11-10。** [GitHub0.5.0](https://github.com/Arcueid77/Spherewright/releases/tag/v0.5.0)绑定源码 `b574c616346c4e087b433de3633e23fb12075add`，注解标签及6个附件分别通过草稿/公开回下载校验。Native构建、6347项源码测试、准确CI、双包布局及其74工具/1资源MCP入口通过。与已实机验收19cd5eb5之间仅8份Markdown差异，发行清单保留准确的玩法/包证据范围。2026-11-10的Thunderstore仍显示0.4.0，0.5网页提交待完成。下列旧截点保留原日期和源码。

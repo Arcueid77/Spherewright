@@ -2268,6 +2268,10 @@ internal sealed partial class NormalGameActionCoordinator
             return GameCallResult<PreparedNormalAction>.Failed(common.Error);
         }
 
+        if (request.DysonStructure is not null && request.Mode != BuildingConfigurationModes.DysonStructure)
+            return InvalidPlan("Dyson structure parameters require dyson-structure mode.");
+        if (request.Mode == BuildingConfigurationModes.DysonStructure)
+            return PrepareDysonStructureOnMainThread(requestedSessionId, request, common.Session!);
         if(request.Mode!=BuildingConfigurationModes.LogisticsStationDelivery && request.StationVesselDeliveryMinimumPercent!=-1)
             return InvalidPlan("Vessel delivery percentage requires logistics-station-delivery mode.");
         if (request.Mode == BuildingConfigurationModes.EnableMechaWarperAutoSupply)

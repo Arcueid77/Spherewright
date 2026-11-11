@@ -903,6 +903,11 @@ internal sealed partial class NormalGameActionCoordinator
                     ExecuteStorageConfigurationOnMainThread(action);
                     break;
                 }
+                if (plan.ConfigureMode == BuildingConfigurationModes.DysonStructure)
+                {
+                    ExecuteDysonStructureOnMainThread(action);
+                    break;
+                }
                 ApplyBuildingConfigurationOnMainThread(plan);
                 action.TargetObjectId = plan.EntityId;
                 action.TargetItemId = plan.ConfigureMode == BuildingConfigurationModes.SorterFilter
@@ -1416,6 +1421,8 @@ internal sealed partial class NormalGameActionCoordinator
             case NormalActionKinds.Save:
                 return RevalidateSaveOnMainThread(plan);
             case NormalActionKinds.ConfigureBuilding:
+                if (plan.ConfigureMode == BuildingConfigurationModes.DysonStructure)
+                    return RevalidateDysonStructureOnMainThread(plan);
                 if (plan.ConfigureMode == BuildingConfigurationModes.ReverseBeltPath)
                     return RevalidateBeltReversal(plan);
                 if (plan.ConfigureMode == BuildingConfigurationModes.StorageCapacity)
@@ -1720,6 +1727,7 @@ internal sealed partial class NormalGameActionCoordinator
                 FailedPredicate = menu.Readback.FailedPredicate,
             } : null,
             ResearchQueueReadback = action.ResearchQueueReadback,
+            DysonStructureReadback = action.DysonStructureReadback,
             StorageConfigurationReadback = action.StorageConfigurationReadback,
             BeltPathReversalReadback = action.BeltPathReversalReadback,
             StackConstructionReadback = action.StackConstructionReadback,
@@ -2476,6 +2484,7 @@ internal sealed partial class NormalGameActionCoordinator
         public int? AfterTargetAmount { get; set; }
         public UpgradeReadback? UpgradeReadback { get; set; }
         public ResearchQueueReadback? ResearchQueueReadback { get; set; }
+        public Spherewright.Contracts.Celestial.DysonStructureReadback? DysonStructureReadback { get; set; }
         public StorageConfigurationReadback? StorageConfigurationReadback { get; set; }
         public BeltPathReversalReadback? BeltPathReversalReadback { get; set; }
         public NativeStackSnapshot? StackConstructionReadback { get; set; }

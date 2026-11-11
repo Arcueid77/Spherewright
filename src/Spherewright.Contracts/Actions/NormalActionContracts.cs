@@ -74,6 +74,7 @@ public static class BuildingConfigurationModes
     public const string LogisticsStationDelivery = "logistics-station-delivery";
     public const string EjectorOrbit = "ejector-orbit";
     public const string MinimalDysonReceivingNode = "dyson-minimal-receiving-node";
+    public const string DysonStructure = "dyson-structure";
     public const string EnableMechaConstructionDrones = "enable-mecha-construction-drones";
     public const string DisableMechaResearchAutoSupply = "disable-mecha-research-auto-supply";
     public const string EnableMechaResearchAutoSupply = "enable-mecha-research-auto-supply";
@@ -222,6 +223,7 @@ public sealed class PrepareBuildRequest
 
 public sealed class PrepareConfigureBuildingRequest
 {
+    public Spherewright.Contracts.Celestial.DysonStructureRequest? DysonStructure { get; set; }
     public int PlanetId { get; set; }
 
     public int EntityId { get; set; }
@@ -413,6 +415,7 @@ public sealed class PreparedNormalAction
     public StorageConfigurationSnapshot? PlannedStorageConfiguration { get; set; }
     public EjectorOrbitPlanSnapshot? PlannedEjectorOrbit { get; set; }
     public MinimalDysonTargetSnapshot? PlannedMinimalDysonTarget { get; set; }
+    public Spherewright.Contracts.Celestial.DysonStructurePlan? PlannedDysonStructure { get; set; }
 
     public bool? PlannedMechaConstructionDronesEnabled { get; set; }
 

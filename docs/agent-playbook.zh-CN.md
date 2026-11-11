@@ -620,3 +620,15 @@ Move/Harvest失败可在原失败tick保留`movementDiagnostics`。合读位置�
 已建成射线接收器可通过工厂详情 `rayReceiver`或恒星接收器列表检查。最近实际电能取 `generatedEnergyPerTick`，按每秒60个tick换算瓦特。容量 `capacityEnergyPerTick`、光子产品、预热和透镜缓冲分别记账，光子模式电力发电量为0。持续验收须先声明游戏tick区间，并在全程保持接收器身份、电网成员及采样覆盖。
 
 观察无令牌，`executable=false`、`commitAllowedNow=false`。原生结构写入通过各自新鲜准备的正常动作执行。原生依据见[观察研究](https://github.com/Arcueid77/Spherewright/blob/main/docs/research/game-api-dyson-state.zh-CN.md)。
+
+## Ascension设计与建造
+
+先通过 `spherewright_get_dyson_state`读取一个已有层，再将其 `designStateHash`绑定到可选的 `designPreview.expectedDesignStateHash`。提供1..64个有序步骤，各有唯一负数 `localId`和一个 `structure`。后续步骤通过负数引用前序拟建节点，正数ID选择已有节点。读取 `designPreview.geometryComplete`、`technologyAllowsNow`、`requiredNodeLatitudeDegrees`、`requiredCarrierRockets`、`requiredSolarSails`和 `issues`。完整几何提供新设计的准确需求，科技就绪值记录当前应力限制。成本预览使用独立原生几何，保持只读且无动作令牌。
+
+执行前取得实际用料/科研额度并完成正常前置条件。每个后续对象均重新读取该层，再调用 `spherewright_prepare_configure_building`，指定 `mode=dyson-structure`、`entityId=0`、`recipeId=0`、`expectedFactoryStateHash=所选层designStateHash`及 `dysonStructure`。kind为 `node`、`frame`或 `shell`。节点使用已有半径上的准确层内位置。框架引用两个实际已有节点，可设 `euler=true`。壳面使用3..32个按闭环顺序排列的实际边界节点，连接框架须已存在。其余配置参数保持默认。`previewOnly=true`返回单项已检查成本且无令牌。
+
+要求 `plannedDysonStructure.evidenceVersion=1`、`nativeChecksComplete=true`及准确请求/hash、原生操作、计划对象ID和成本。使用 `spherewright_commit_configure_building`提交原令牌一次，然后轮询原动作。要求 `dysonStructureReadback`的方案绑定、计划/返回ID一致，`exactNativeObjectVerified`、`existingStructurePreserved`、`inventoryPreserved`通过，新增结构/细胞容量准确。后续步骤使用该实际对象ID并逐项重新prepare。预览预测ID描述此前的分配器观察。已调用而结果不完整的动作保留原回执和隔离边界，按原动作核销。
+
+设计创建时已交付进度为0。继续观察正常火箭/太阳帆制造、供料、发射及交付，再按预声明游戏tick区间验证接收电力。正常保存/冷恢复需保全设计并能继续普通运行。
+
+有限外星原生无人机施工范围同时接受2208射线接收站，并核对准确发电组件/模型完成证明。设计配置沿原单tick即时旅程工作预算，建筑物品、科研、供料和返航储备继续计入声明场景额度。

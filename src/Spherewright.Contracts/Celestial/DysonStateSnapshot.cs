@@ -4,6 +4,7 @@ namespace Spherewright.Contracts.Celestial;
 
 public sealed class GetDysonStateRequest
 {
+    public DysonDesignPreviewRequest? DesignPreview { get; set; }
     public int PlanetId { get; set; }
     public int LayerId { get; set; }
     public int StateHashVersion { get; set; } = 1;
@@ -11,6 +12,7 @@ public sealed class GetDysonStateRequest
 
 public sealed class DysonStateSnapshot
 {
+    public DysonDesignPreview? DesignPreview { get; set; }
     public string SessionId { get; set; } = string.Empty;
     public int PlanetId { get; set; }
     public int StarId { get; set; }
@@ -19,6 +21,9 @@ public sealed class DysonStateSnapshot
     public bool? SelectedLayerPresent { get; set; }
     public bool SphereAvailable { get; set; }
     public bool NativeBindingVerified { get; set; }
+    public float? UnlockedNodeLatitudeDegrees { get; set; }
+    public int? NodePrototypeCount { get; set; }
+    public int? FramePrototypeCount { get; set; }
     public bool StructureCoverageComplete { get; set; }
     public List<DysonLayerSnapshot> Layers { get; set; } = new();
     public long? StructurePoints { get; set; }

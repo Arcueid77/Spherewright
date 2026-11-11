@@ -422,7 +422,7 @@ public static partial class SpherewrightTools
 
     [McpServerTool(
         Name = "spherewright_prepare_configure_building",
-        Title = "Prepare a device configuration",
+        Title = "Prepare a Native configuration or Dyson structure",
         ReadOnly = false,
         Destructive = false,
         Idempotent = false,
@@ -434,9 +434,9 @@ public static partial class SpherewrightTools
         int planetId,
         int entityId,
         int recipeId,
-        [Description("For mode=sorter-filter use the inspected root configurationStateHash, NOT stateHash, despite this parameter's name. For mode=storage-capacity use the full stateHash. Follow the documented hash domain for each other mode.")]
+        [Description("For mode=sorter-filter use the inspected root configurationStateHash, NOT stateHash, despite this parameter's name. For mode=storage-capacity use the full stateHash. For mode=dyson-structure use get_dyson_state.designStateHash from the exact selected layer. Follow the documented hash domain for each other mode.")]
         string expectedFactoryStateHash,
-        [Description("production, research, sorter-filter, storage-capacity, logistics-station-storage, logistics-station-belt, logistics-station-charge, logistics-station-delivery, ejector-orbit, dyson-minimal-receiving-node, enable-mecha-construction-drones, disable-mecha-research-auto-supply, enable-mecha-research-auto-supply, or enable-mecha-warper-auto-supply. The warper mode requires entityId=0, recipeId=0, expectedFactoryStateHash=the fresh player stateHash and all other arguments at defaults, an owned grounded idle player and closed journey. It enables the native checkbox without moving items or directly replenishing a partial chamber; nullable plannedMechaWarperAutoSupplyEnabled=true is required from the Plugin. The research supply modes require entityId=0, recipeId=0, expectedFactoryStateHash=the fresh player stateHash, an empty mecha research point buffer and all other arguments at defaults. They toggle the ordinary native backpack research supply setting in a closed-journey home session; factory labs keep researching. Disabling never clears partial research points. For the minimal receiving node use one empty local2312 silo, recipeId=0 and expectedFactoryStateHash=silo.minimalReceivingTarget.configurationStateHash; leave other arguments at defaults. It creates one equatorial planned node on an existing pristine Native layer, never delivered points or rockets. The enable-only mecha mode requires entityId=0, recipeId=0, expectedFactoryStateHash=the fresh player stateHash and all other arguments at defaults. It calls the normal native switch from OFF to ON and can schedule existing ordinary construction/repair; it does not create or instantly build anything. For ejector-orbit use recipeId=0, ejectorOrbitId and the detail ejector.configurationStateHash; leave the other mode parameters at defaults.")]
+        [Description("production, research, sorter-filter, storage-capacity, logistics-station-storage, logistics-station-belt, logistics-station-charge, logistics-station-delivery, ejector-orbit, dyson-structure, dyson-minimal-receiving-node, enable-mecha-construction-drones, disable-mecha-research-auto-supply, enable-mecha-research-auto-supply, or enable-mecha-warper-auto-supply. The warper mode requires entityId=0, recipeId=0, expectedFactoryStateHash=the fresh player stateHash and all other arguments at defaults, an owned grounded idle player and closed journey. It enables the native checkbox without moving items or directly replenishing a partial chamber; nullable plannedMechaWarperAutoSupplyEnabled=true is required from the Plugin. The research supply modes require entityId=0, recipeId=0, expectedFactoryStateHash=the fresh player stateHash, an empty mecha research point buffer and all other arguments at defaults. They toggle the ordinary native backpack research supply setting in a closed-journey home session; factory labs keep researching. Disabling never clears partial research points. For the minimal receiving node use one empty local2312 silo, recipeId=0 and expectedFactoryStateHash=silo.minimalReceivingTarget.configurationStateHash; leave other arguments at defaults. It creates one equatorial planned node on an existing pristine Native layer, never delivered points or rockets. The enable-only mecha mode requires entityId=0, recipeId=0, expectedFactoryStateHash=the fresh player stateHash and all other arguments at defaults. It calls the normal native switch from OFF to ON and can schedule existing ordinary construction/repair; it does not create or instantly build anything. For ejector-orbit use recipeId=0, ejectorOrbitId and the detail ejector.configurationStateHash; leave the other mode parameters at defaults.")]
         string mode = BuildingConfigurationModes.Production,
         int techId = 0,
         int filterItemId = 0,
@@ -456,7 +456,9 @@ public static partial class SpherewrightTools
         int storageBannedGridCount = -1,
         [Description("Only mode=ejector-orbit: use an inspected fixed-mode2311 ejector, recipeId=0 and expectedFactoryStateHash=ejector.configurationStateHash. Select one enabled native orbit ID, or0 to stop fixed targeting. Leave all other mode parameters at defaults. The Plugin confirms plannedEjectorOrbit; configuration consumes no sails and is not launch proof. Native supply/power/line of sight still determine actual automatic firing.")]
         int ejectorOrbitId = -1,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        [Description("Only mode=dyson-structure, entityId=0 and recipeId=0. Read get_dyson_state for the exact layer and use its designStateHash as expectedFactoryStateHash. Specify one node (layer-local position at the layer radius), frame (two existing node IDs, optional Euler curve), or shell (3..32 unique boundary node IDs in cycle order with existing frames). Native stress, spacing, intersections, closed-face geometry, prototypes and complete topology must pass. previewOnly=true returns exact Native rocket/sail requirements without a token. Require plannedDysonStructure with exact request/cost binding before committing once. Creation plans geometry with zero delivered progress. Launch and power require normal materials and separate observations.")]
+        DysonStructureRequest? dysonStructure = null)
     {
         var request = new PrepareConfigureBuildingRequest
             {
@@ -481,8 +483,22 @@ public static partial class SpherewrightTools
                 ExpectedStationConfigurationStateHash = expectedStationConfigurationStateHash,
                 ExpectedFactoryStateHash = expectedFactoryStateHash,
                 StateHashVersion = stateHashVersion,
+                DysonStructure = dysonStructure,
             };
+        var dysonRequestError = mode == BuildingConfigurationModes.DysonStructure
+            ? Spherewright.Bridge.Core.Celestial.DysonStructurePolicy.ValidateRequest(request)
+            : dysonStructure is not null ? "Dyson structure parameters require dyson-structure mode." : null;
+        if (dysonRequestError is not null)
+            return ToToolResult(BridgeCallResult<PreparedNormalAction>.Failed(BridgeError.Create(
+                BridgeErrorCodes.InvalidRequest, dysonRequestError, false,
+                "Use one exact Dyson structure request with the fresh selected-layer design hash.")), string.Empty);
+        request.DysonStructure = dysonStructure?.Copy();
         var result = await bridgeClient.PrepareConfigureBuildingAsync(sessionId, request, cancellationToken).ConfigureAwait(false);
+        if (mode == BuildingConfigurationModes.DysonStructure && result.Success
+            && !Spherewright.Bridge.Core.Celestial.DysonStructurePolicy.ConfirmsPreparedEcho(sessionId, request, result.Value))
+            result = BridgeCallResult<PreparedNormalAction>.Failed(BridgeError.Create(BridgeErrorCodes.BridgeNotReady,
+                "The Plugin did not bind the exact Native Dyson geometry, cost and preview mode.", false,
+                "Use coherent Plugin/MCP files and fresh selected-layer observations."));
         if(mode==BuildingConfigurationModes.LogisticsStationDelivery && result.Success
             && !Spherewright.Bridge.Core.Factory.LogisticsStationDeliveryPolicy.ConfirmsEcho(request,result.Value))
             result=BridgeCallResult<PreparedNormalAction>.Failed(BridgeError.Create(BridgeErrorCodes.BridgeNotReady,

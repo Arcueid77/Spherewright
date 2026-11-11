@@ -7,6 +7,26 @@ namespace Spherewright.Mcp.Tests;
 public sealed partial class SpherewrightToolsTests
 {
     [Fact]
+    public async Task DesignPreviewCopiesItsGraphAndRequiresAnExplicitPluginResult()
+    {
+        var request = new Spherewright.Contracts.Celestial.DysonDesignPreviewRequest
+        {
+            ExpectedDesignStateHash = "synthetic-design",
+            Steps = new() { new() { LocalId = -1, Structure = new()
+            {
+                Kind = "node", LayerId = 1, LocalPosition = new() { X = 11000 },
+            }}},
+        };
+        var bridge = new FakeBridgeClient(SuccessResult());
+        var result = await SpherewrightTools.GetDysonStateAsync(bridge, "synthetic", 104, layerId: 1, designPreview: request);
+        Assert.True(result.IsError);
+        Assert.NotSame(request, bridge.LastDysonRequest!.DesignPreview);
+        request.Steps[0].Structure.LocalPosition!.X++;
+        Assert.Equal(11000, bridge.LastDysonRequest.DesignPreview!.Steps[0].Structure.LocalPosition!.X);
+        Assert.Null(bridge.LastConfigureRequest);
+    }
+
+    [Fact]
     public async Task DysonToolForwardsTheExactOwnedScopeAndReturnsTokenlessData()
     {
         var bridge = new FakeBridgeClient(SuccessResult());

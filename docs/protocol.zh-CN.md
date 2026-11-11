@@ -537,3 +537,7 @@ Move 地表预览是观察，不是寻路，180/600 tick 失败指导禁止重�
 已建成射线接收器可通过工厂详情 `rayReceiver`或恒星接收器列表检查。最近实际电能取 `generatedEnergyPerTick`，按每秒60个tick换算瓦特。容量 `capacityEnergyPerTick`、光子产品、预热和透镜缓冲分别记账，光子模式电力发电量为0。持续验收须先声明游戏tick区间，并在全程保持接收器身份、电网成员及采样覆盖。
 
 观察无令牌，`executable=false`、`commitAllowedNow=false`。原生结构写入通过各自新鲜准备的正常动作执行。原生依据见[观察研究](https://github.com/Arcueid77/Spherewright/blob/main/docs/research/game-api-dyson-state.zh-CN.md)。
+
+## Ascension设计动作
+
+可选 `get_dyson_state.designPreview`绑定所选单层hash及至多64个有序步骤，使用请求内负数ID，返回独立原生几何/成本计算、可空火箭/太阳帆总需求、当前应力就绪值且无token。`prepare_configure_building(mode=dyson-structure, entityId=0, recipeId=0)`接受单个类型化 `dysonStructure`，通过 `expectedFactoryStateHash`绑定该层 `designStateHash`。节点、框架及3..32节点壳面请求具有互斥参数。可选 `previewOnly`请求返回单项已检查成本且无token。可执行请求须有 `plannedDysonStructure`、请求绑定hash及新鲜原生几何/科技/原型/分配证明。普通 `commit_configure_building`执行单次原操作，`dysonStructureReadback`保留方案/对象身份、调用边界、容量增量、已有进度和背包证明。后续对象使用新鲜prepare及前序实际回读。详见[设计流程](agent-playbook.zh-CN.md#ascension设计与建造)。

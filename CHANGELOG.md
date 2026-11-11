@@ -7,6 +7,7 @@
 - Added tokenless local-star Dyson node/frame/shell observations with bounded coverage, source-bound design hashes and delivered/ordered structure/cell progress.
 - Added ray-receiver detail and current-star receiver coverage with Native recent electrical generation, capacity, photon buffers and catalyst accounting.
 - Preserved nullable totals for incomplete identities, topology or scan coverage.
+- Added bounded read-only multi-object design/cost previews and individually prepared Native node/frame/shell creation, with exact geometry, technology, allocation and original-action readbacks.
 
 ## 0.5.0 — 2026-11-10
 

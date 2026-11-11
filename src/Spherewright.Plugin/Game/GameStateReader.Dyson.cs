@@ -15,6 +15,10 @@ internal sealed partial class GameStateReader
             return GameCallResult<DysonStateSnapshot>.Failed(InvalidRequest(
                 "Dyson observations require state-hash version 1 and layerId 0 through 10.",
                 "Use 0 for all existing layers or one exact Native layer ID."));
+        if (request.DesignPreview is not null
+            && DysonDesignPreviewPolicy.ValidateRequest(request.LayerId, request.DesignPreview) is { } previewError)
+            return GameCallResult<DysonStateSnapshot>.Failed(InvalidRequest(previewError,
+                "Use a bounded selected-layer design preview with fresh topology and prior-node references."));
 
         var data = GameMain.data;
         var star = factory?.planet?.star;
@@ -27,6 +31,14 @@ internal sealed partial class GameStateReader
         {
             SessionId = _sessions.SessionId!, PlanetId = factory!.planetId, StarId = star.id,
             SelectedLayerId = request.LayerId, CapturedAtGameTick = GameMain.gameTick,
+            UnlockedNodeLatitudeDegrees = GameMain.history is { } history
+                && !float.IsNaN(history.dysonNodeLatitude) && !float.IsInfinity(history.dysonNodeLatitude)
+                && history.dysonNodeLatitude >= 0 && history.dysonNodeLatitude <= 90
+                    ? history.dysonNodeLatitude : null,
+            NodePrototypeCount = DysonSphereSegmentRenderer.nodeProtoCount > 0
+                ? DysonSphereSegmentRenderer.nodeProtoCount : null,
+            FramePrototypeCount = DysonSphereSegmentRenderer.frameProtoCount > 0
+                ? DysonSphereSegmentRenderer.frameProtoCount : null,
         };
         var spheres = data.dysonSpheres;
         var sphere = spheres is not null && star.index < spheres.Length ? spheres[star.index] : null;
@@ -54,6 +66,10 @@ internal sealed partial class GameStateReader
 
         CaptureStarRayReceivers(data, star, result);
         DysonObservationPolicy.Complete(result);
+        if (request.DesignPreview is not null)
+            result.DesignPreview = DysonDesignPreviewReader.Capture(
+                sphere?.layersIdBased is { Length: 11 } existingLayers ? existingLayers[request.LayerId] : null,
+                result, request.DesignPreview);
         return GameCallResult<DysonStateSnapshot>.Succeeded(result);
     }
 

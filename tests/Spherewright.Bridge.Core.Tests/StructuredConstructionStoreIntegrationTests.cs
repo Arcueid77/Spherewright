@@ -175,7 +175,7 @@ public sealed class StructuredConstructionStoreIntegrationTests
 
     [Theory]
     [InlineData(2302)] [InlineData(2304)] [InlineData(2309)] [InlineData(2101)]
-    [InlineData(2106)] [InlineData(2211)] [InlineData(2311)] [InlineData(2312)]
+    [InlineData(2106)] [InlineData(2211)] [InlineData(2311)] [InlineData(2312)] [InlineData(2208)]
     public void PaidFactoryCoreKeepsItsOriginalPrebuildAndDebitAcrossStoreRestart(int itemId)
     {
         using var fixture = new Fixture();

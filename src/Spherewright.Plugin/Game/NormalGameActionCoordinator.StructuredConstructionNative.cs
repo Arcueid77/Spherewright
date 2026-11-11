@@ -449,6 +449,15 @@ internal sealed partial class NormalGameActionCoordinator
             var battleBase = pool.buffer[e.battleBaseId];
             return battleBase is not null && battleBase.id == e.battleBaseId && battleBase.entityId == id;
         }
+        if (itemId == 2208)
+        {
+            var system = factory.powerSystem;
+            if (!desc.isPowerGen || !desc.gammaRayReceiver || system?.genPool is null || e.powerGenId <= 0
+                || e.powerGenId >= system.genCursor || e.powerGenId >= system.genPool.Length) return false;
+            var receiver = system.genPool[e.powerGenId];
+            return receiver.id == e.powerGenId && receiver.entityId == id && receiver.gamma
+                && LDB.models.Select(e.modelIndex)?.prefabDesc?.gammaRayReceiver == true;
+        }
         if (itemId == 2211)
         {
             var system = factory.powerSystem;
