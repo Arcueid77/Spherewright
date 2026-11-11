@@ -5,6 +5,63 @@ namespace Spherewright.Bridge.Core.Tests;
 
 public sealed class VoyagerMechaWorkQuiescencePolicyTests
 {
+    [Theory]
+    [InlineData(0)] [InlineData(1)] [InlineData(3599)] [InlineData(3600)]
+    [InlineData(46800)] [InlineData(int.MaxValue)]
+    public void PricedRecipeOnlyNavigationResearchPreservesObservedBufferedPoints(int points)
+    {
+        var facts = Good();
+        facts.ResearchBufferPointCounts = new[] { points };
+        var decision = VoyagerMechaWorkQuiescencePolicy.Evaluate(facts, allowRecipeOnlyMechaResearch: true);
+        Assert.True(decision.Proved);
+        Assert.Equal(points == 0, decision.FactoryOnlyResearch);
+        Assert.Equal(points, facts.ResearchBufferPointCounts[0]);
+        Assert.Equal(points == 0, VoyagerMechaWorkQuiescencePolicy.Evaluate(facts).Proved);
+    }
+
+    [Theory]
+    [InlineData(-1)] [InlineData(int.MinValue)]
+    public void PricedResearchStillRejectsNegativeNativeBufferCounts(int points)
+    {
+        var facts = Good();
+        facts.ResearchBufferPointCounts = new[] { points };
+        Assert.False(VoyagerMechaWorkQuiescencePolicy.Evaluate(facts, allowRecipeOnlyMechaResearch: true).Proved);
+    }
+
+    [Theory]
+    [InlineData(0, true)] [InlineData(600, true)] [InlineData(-1, false)]
+    public void PricedRecipeOnlyResearchIncludesAvailableMatrices(int count, bool expected)
+    {
+        var facts = Good();
+        facts.QueuedResearch![0].RequiredItemPackageCounts![0] = count;
+        var decision = VoyagerMechaWorkQuiescencePolicy.Evaluate(facts, allowRecipeOnlyMechaResearch: true);
+        Assert.Equal(expected, decision.Proved);
+        if (expected) Assert.Equal(count == 0, decision.FactoryOnlyResearch);
+    }
+
+    [Theory]
+    [InlineData("forge")] [InlineData("binding")] [InlineData("effects")]
+    [InlineData("award")] [InlineData("coverage")] [InlineData("prototype")]
+    [InlineData("nonlab")] [InlineData("recipes")] [InlineData("points")]
+    public void PricedResearchRetainsCompleteNativeEffectAndIdentityChecks(string fault)
+    {
+        var facts = Good();
+        facts.ResearchBufferPointCounts = new[] { 46800 };
+        switch (fault)
+        {
+            case "forge": facts.ForgeTaskCount = 1; break;
+            case "binding": facts.MechaLabBindingVerified = false; break;
+            case "effects": facts.QueuedResearch![0].UnlockFunctionCount = 1; break;
+            case "award": facts.QueuedResearch![0].CompletionAwardCount = 1; break;
+            case "coverage": facts.QueuedResearch = null; break;
+            case "prototype": facts.QueuedResearch![0].NativeIdentityVerified = false; break;
+            case "nonlab": facts.QueuedResearch![0].IsLabTechnology = false; break;
+            case "recipes": facts.QueuedResearch![0].RecipeUnlocksVerified = false; break;
+            case "points": facts.QueuedResearch![0].RequiredItemPointsPerHash = new[] { 0, 12 }; break;
+        }
+        Assert.False(VoyagerMechaWorkQuiescencePolicy.Evaluate(facts, allowRecipeOnlyMechaResearch: true).Proved);
+    }
+
     private static VoyagerMechaWorkFacts Good() => new()
     {
         ForgeObserved = true, HistoryObserved = true, QueuedTechnologyIds = new[] { 42 },

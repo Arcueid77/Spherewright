@@ -589,10 +589,13 @@ internal sealed partial class NormalGameActionCoordinator
 
         if (_actions.ActiveValues.Any(a => !a.Terminal && a.Plan.NativeNavigation is not null)
             && (plan.ActionKind == NormalActionKinds.Build || plan.ActionKind == NormalActionKinds.BlueprintBuild
-                || plan.ConfigureMode == BuildingConfigurationModes.EnableMechaConstructionDrones))
+                || plan.ActionKind == NormalActionKinds.Handcraft || plan.ActionKind == NormalActionKinds.SelectResearch
+                || plan.ConfigureMode == BuildingConfigurationModes.EnableMechaConstructionDrones
+                || plan.ConfigureMode == BuildingConfigurationModes.EnableMechaResearchAutoSupply
+                || plan.ConfigureMode == BuildingConfigurationModes.DisableMechaResearchAutoSupply))
             return GameCallResult<NormalActionCommitResult>.Failed(BridgeError.Create(BridgeErrorCodes.ServerBusy,
                 "Native navigation owns its finite flight/landing energy window.", true,
-                "Poll the original navigation to its grounded terminal result before scheduling drone work."));
+                "Poll the original navigation to its grounded terminal result before changing mecha work."));
 
         var activePlayerOrder = _actions.ActiveValues.FirstOrDefault(action =>
             !action.Terminal && IsPlayerOrderAction(action.ActionKind));

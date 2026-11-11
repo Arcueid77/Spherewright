@@ -354,13 +354,15 @@ internal sealed partial class NormalGameActionCoordinator
         };
     }
 
-    private static NativeMechaRechargeFacts CaptureNativeMechaRechargeFacts(Player player, NativeMechaBackgroundCostFacts background)
+    private static NativeMechaRechargeFacts CaptureNativeMechaRechargeFacts(Player player, NativeMechaBackgroundCostFacts background,
+        bool allowRecipeOnlyMechaResearch = false)
     {
         var result = new NativeMechaRechargeFacts { Background = background };
         try
         {
             var m = player.mecha; var c = player.controller; var history = GameMain.history;
-            result.StableCostInputs = history?.techQueue is { Length: 32 } && VoyagerMechaWorkIdle(player)
+            result.StableCostInputs = history?.techQueue is { Length: 32 }
+                && VoyagerMechaWorkQuiescencePolicy.Evaluate(CaptureVoyagerMechaWork(player), allowRecipeOnlyMechaResearch).Proved
                 && LocalRawMovementInputIdle()
                 && c.input0.sqrMagnitude == 0f && c.input1.sqrMagnitude == 0f;
             result.CoreEnergyJoules = m.coreEnergy; result.CoreCapacityJoules = m.coreEnergyCap;

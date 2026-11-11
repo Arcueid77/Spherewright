@@ -55,10 +55,13 @@ internal sealed partial class NormalGameActionCoordinator
             return NavigationFailed("native_navigation_surface_target_required");
         var target = requested.normalized * player.position.magnitude;
         var arc = PlayerNavigation.SphericalDistance(player.position, target, planet.realRadius, false);
-        var energy = CaptureNavigationTickCost(player);
-        if (!energy.HasValue || !NativeSurfaceNavigationPolicy.CanFund(arc, nav.flyThreshold, nav.sailThreshold,
-            energy.Value, player.mecha.coreEnergy, CalculateAvailableFlightEnergy(player.mecha), 0))
-            return NavigationFailed("native_navigation_threshold_or_complete_energy_budget_unproved");
+        var energy = CaptureNavigationTickCost(player, out var costBlocker);
+        if (!energy.HasValue) return NavigationFailed(costBlocker!);
+        var loadedEnergy = CalculateAvailableFlightEnergy(player.mecha);
+        if (!NativeSurfaceNavigationPolicy.CanFund(arc, nav.flyThreshold, nav.sailThreshold,
+            energy.Value, player.mecha.coreEnergy, loadedEnergy, 0))
+            return NavigationFailed(FormattableString.Invariant(
+                $"native_navigation_threshold_or_complete_energy_budget_unproved (arc={arc:R}, fly={nav.flyThreshold:R}, sail={nav.sailThreshold:R}, joulesPerTick={energy.Value:R}, coreJoules={player.mecha.coreEnergy:R}, loadedJoules={loadedEnergy:R})"));
         var plan = new NativeSurfaceNavigationPlan
         {
             PlanetId = request.PlanetId, SessionId = sessionId, PlayerActionStateHash = actionHash,
@@ -88,18 +91,31 @@ internal sealed partial class NormalGameActionCoordinator
         && player.controller.velocity.sqrMagnitude <= .01f && player.controller.actionWalk.isGrounded
         && player.controller.softLandingRecover >= .99f;
 
-    private static double? CaptureNavigationTickCost(Player player)
+    private static double? CaptureNavigationTickCost(Player player, out string? blocker)
     {
+        blocker = null;
+        var work = VoyagerMechaWorkQuiescencePolicy.Evaluate(CaptureVoyagerMechaWork(player),
+            allowRecipeOnlyMechaResearch: true);
+        if (!work.Proved)
+        {
+            blocker = work.BlockerCode;
+            return null;
+        }
         var background = CaptureNativeMechaBackgroundCosts(player);
         double independent = 0;
         if (!NativeMechaBackgroundCostPolicy.IndependentCombatCoreDebitsExcluded(background))
         {
-            var recharge = NativeMechaRechargeCostPolicy.Evaluate(CaptureNativeMechaRechargeFacts(player, background));
-            if (!recharge.Proved) return null;
+            var recharge = NativeMechaRechargeCostPolicy.Evaluate(CaptureNativeMechaRechargeFacts(player, background,
+                allowRecipeOnlyMechaResearch: true));
+            if (!recharge.Proved)
+            {
+                blocker = recharge.BlockerCode;
+                return null;
+            }
             independent = recharge.PerNativeTickEnergyUpperJoules!.Value;
         }
         var controller = player.controller;
-        return NativeLandingTickEnergyPolicy.Evaluate(new()
+        var cost = NativeLandingTickEnergyPolicy.Evaluate(new()
         {
             OwnedOrderAndNoManualInput = NativeNavigationInputsIdle(player), JumpAndGuideExcluded = !GameMain.data.guideRunning,
             WalkSpeed = player.mecha.walkSpeed,
@@ -114,6 +130,8 @@ internal sealed partial class NormalGameActionCoordinator
             // pending-jump guards exclude PlayerMove_Walk.UseJumpEnergy.
             PotentialJumpEnergy = 0,
         });
+        if (!cost.HasValue) blocker = "native_navigation_tick_cost_inputs_unproved";
+        return cost;
     }
 
     private BridgeError? RevalidateNativeNavigationOnMainThread(NormalActionPlanPayload payload)
@@ -204,7 +222,7 @@ internal sealed partial class NormalGameActionCoordinator
             }
             else
             {
-                var cost = CaptureNavigationTickCost(player);
+                var cost = CaptureNavigationTickCost(player, out _);
                 if (!player.mecha.constructionModule.allDronesIdle
                     || !cost.HasValue || cost.Value > binding.Plan.EnergyUpperPerTickJoules * (1 + 1e-8)
                     || player.mecha.coreEnergy < binding.Plan.EnergyUpperPerTickJoules * 2
