@@ -16,7 +16,8 @@
     <None Update="Fixtures\paused-saved-sail-momentum.json" CopyToOutputDirectory="PreserveNewest" />
     <ProjectReference Include="..\..\src\Spherewright.Bridge.Core\Spherewright.Bridge.Core.csproj" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" />
-    <PackageReference Include="Newtonsoft.Json" />
+    <PackageReference Include="Newtonsoft.Json" GeneratePathProperty="true" />
+    <None Include="$(PkgNewtonsoft_Json)/lib/net45/Newtonsoft.Json.dll" Link="classic-runtime/Newtonsoft.Json.dll" CopyToOutputDirectory="PreserveNewest" />
     <PackageReference Include="xunit" />
     <PackageReference Include="xunit.runner.visualstudio" PrivateAssets="all" />
   </ItemGroup>

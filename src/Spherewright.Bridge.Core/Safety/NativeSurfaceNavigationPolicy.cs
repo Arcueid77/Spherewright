@@ -28,10 +28,10 @@ public static class NativeSurfaceNavigationPolicy
 
     public static string Hash(string sessionId, string playerHash, NativeSurfaceNavigationPlan plan)
         => CanonicalStateHash.Combine("native-surface-navigation-v1", sessionId, playerHash, plan.PlanetId,
-            plan.Target.X, plan.Target.Y, plan.Target.Z, plan.ArcDistanceMetres,
-            plan.NativeFlyThresholdMetres, plan.NativeSailThresholdMetres, plan.ArrivalToleranceMetres,
-            plan.MaximumGameTicks, plan.LandingReserveGameTicks, plan.EnergyUpperPerTickJoules,
-            plan.RequiredLoadedEnergyJoules, plan.ProtectedEnergyFloorJoules);
+            ScalarBits(plan.Target.X), ScalarBits(plan.Target.Y), ScalarBits(plan.Target.Z), ScalarBits(plan.ArcDistanceMetres),
+            ScalarBits(plan.NativeFlyThresholdMetres), ScalarBits(plan.NativeSailThresholdMetres), ScalarBits(plan.ArrivalToleranceMetres),
+            plan.MaximumGameTicks, plan.LandingReserveGameTicks, ScalarBits(plan.EnergyUpperPerTickJoules),
+            ScalarBits(plan.RequiredLoadedEnergyJoules), ScalarBits(plan.ProtectedEnergyFloorJoules));
 
     public static bool ConfirmsEcho(string sessionId, PrepareMoveRequest request, PreparedNormalAction? prepared)
     {
@@ -60,4 +60,9 @@ public static class NativeSurfaceNavigationPolicy
     }
 
     private static bool Finite(double value) => !double.IsNaN(value) && !double.IsInfinity(value);
+
+    // Classic Unity/.NET and current MCP runtimes format floating-point text
+    // differently. Integer IEEE754 bits bind every scalar across those hosts.
+    // JSON may normalize negative zero, whose surface/energy meaning is zero.
+    private static long ScalarBits(double value) => value == 0 ? 0 : BitConverter.DoubleToInt64Bits(value);
 }
