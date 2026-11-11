@@ -613,6 +613,8 @@ The finite remote native-drone construction subset also accepts ray receiver2208
 
 Handcraft preparation advertises `handcraftReadbackVersion=1`. Its original terminal includes `handcraftReadback`, binding the recipe and requested executions to the retained Native `ForgeTask`. Completion requires the task to leave the queue with zero remaining executions and an empty delivery buffer. Cancellation preserves unfinished execution counts. `inventoryProductsObserved` and ordinary `itemDeltas` separately describe package readback. Inspect package stock, automatic research buffers and technology progress when crafted products enter Native automatic use. Plan later transfers from actual package stock. Missing legacy readback keeps its original evidence scope.
 
+Native `MechaForge.AddTaskIterate` may merge a request into the existing same-recipe tail. `handcraftReadback.initialTaskExecutions` then includes its previously queued remainder and the new request. Completion waits for that exact task's full remaining execution count and delivery buffer to clear.
+
 ## Native planetary navigation
 
 Normal warehouse transfers and handcraft may retain a recent server inspection during order-free local Drift or low-speed Fly. `moveStateBinding` discloses the original two-second inspection,0.05m displacement and0.15m/s speed limits. Inventory, held items, fuel state, liveness, capacity and session remain bound, and transfer range is checked again at commit. Fresh inspection provides a new plan after an unaccepted stale refusal.

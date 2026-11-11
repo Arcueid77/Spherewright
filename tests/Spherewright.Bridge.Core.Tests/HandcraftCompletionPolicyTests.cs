@@ -52,11 +52,31 @@ public sealed class HandcraftCompletionPolicyTests
     [Theory]
     [InlineData(0)]
     [InlineData(4)]
-    [InlineData(6)]
-    public void AChangedInitialExecutionCountIsUnproven(int initial)
+    public void AnInitialTaskSmallerThanTheRequestIsUnproven(int initial)
     {
         var value = Finished(); value.InitialTaskExecutions = initial;
         Assert.Equal(HandcraftCompletionState.Unproven, HandcraftCompletionPolicy.Evaluate(value));
+    }
+
+    [Theory]
+    [InlineData(6)]
+    [InlineData(25)]
+    [InlineData(1005)]
+    public void NativeMergedRootsCompleteAfterAllQueuedExecutions(int initial)
+    {
+        var value = Finished(); value.InitialTaskExecutions = initial;
+        Assert.Equal(HandcraftCompletionState.Completed, HandcraftCompletionPolicy.Evaluate(value));
+        value.NativeTaskInQueue = true; value.RemainingExecutions = initial;
+        Assert.Equal(HandcraftCompletionState.Pending, HandcraftCompletionPolicy.Evaluate(value));
+    }
+
+    [Theory]
+    [InlineData(1)]
+    [InlineData(6)]
+    public void ACancelledMergedRootRetainsItsIncompleteOutcome(int remaining)
+    {
+        var value = Finished(); value.InitialTaskExecutions = 10; value.RemainingExecutions = remaining;
+        Assert.Equal(HandcraftCompletionState.Incomplete, HandcraftCompletionPolicy.Evaluate(value));
     }
 
     [Fact]
