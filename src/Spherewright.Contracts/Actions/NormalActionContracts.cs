@@ -110,6 +110,7 @@ public static class NormalActionStates
 
 public sealed class PrepareMoveRequest
 {
+    public bool UseNativeNavigation { get; set; }
     public bool PreviewWalkingRoute { get; set; }
     public string? ExpectedWalkingGeometryHash { get; set; }
     public List<Vector3Snapshot>? WalkingPreviewPoints { get; set; }
@@ -385,6 +386,7 @@ public sealed class CommitNormalActionRequest
 
 public sealed class PreparedNormalAction
 {
+    public NativeSurfaceNavigationPlan? NativeSurfaceNavigation { get; set; }
     public NativeBeltPickupPlan? BeltCargoPickup { get; set; }
     public NativeBeltInsertionPlan? BeltCargoInsertion { get; set; }
     public NativeStorageConfigurationPlan? NativeStorageConfiguration { get; set; }

@@ -540,4 +540,6 @@ Move 地表预览是观察，不是寻路，180/600 tick 失败指导禁止重�
 
 ## Ascension设计动作
 
+既有移动动作族支持显式 `useNativeNavigation=true`，要求arrivalTolerance3..5、owned当前星球上的接地停稳角色及已关闭旅程。`nativeSurfaceNavigation`绑定当前原生阈值、完整3600tick能耗窗口和900tick落地储备，`nativeSurfaceNavigationReadback`核对实际Fly、原生抵达及接地停稳释放。提交前参阅[普通导航流程](agent-playbook.zh-CN.md#原生行星导航)。
+
 可选 `get_dyson_state.designPreview`绑定所选单层hash及至多64个有序步骤，使用请求内负数ID，返回独立原生几何/成本计算、可空火箭/太阳帆总需求、当前应力就绪值且无token。`prepare_configure_building(mode=dyson-structure, entityId=0, recipeId=0)`接受单个类型化 `dysonStructure`，通过 `expectedFactoryStateHash`绑定该层 `designStateHash`。节点、框架及3..32节点壳面请求具有互斥参数。可选 `previewOnly`请求返回单项已检查成本且无token。可执行请求须有 `plannedDysonStructure`、请求绑定hash及新鲜原生几何/科技/原型/分配证明。普通 `commit_configure_building`执行单次原操作，`dysonStructureReadback`保留方案/对象身份、调用边界、容量增量、已有进度和背包证明。后续对象使用新鲜prepare及前序实际回读。详见[设计流程](agent-playbook.zh-CN.md#ascension设计与建造)。

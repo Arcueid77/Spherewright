@@ -632,3 +632,9 @@ Move/Harvest失败可在原失败tick保留`movementDiagnostics`。合读位置�
 设计创建时已交付进度为0。继续观察正常火箭/太阳帆制造、供料、发射及交付，再按预声明游戏tick区间验证接收电力。正常保存/冷恢复需保全设计并能继续普通运行。
 
 有限外星原生无人机施工范围同时接受2208射线接收站，并核对准确发电组件/模型完成证明。设计配置沿原单tick即时旅程工作预算，建筑物品、科研、供料和返航储备继续计入声明场景额度。
+
+## 原生行星导航
+
+对已关闭旅程中的owned接地停稳角色，`spherewright_prepare_move(useNativeNavigation=true, arrivalTolerance=3..5)`选择游戏普通行星导航器。先重新读取角色hash，声明当前星球上的一个表面目标。原生阈值决定可用距离，须超过Fly阈值及20m，并保持在Sail阈值及500m以内。核对 `nativeSurfaceNavigation`的准确请求/会话绑定、当前阈值、完整3600tick能耗预算及900tick落地储备，并使用匹配Plugin/MCP及已解锁推进器。
+
+原移动令牌提交一次，轮询同一动作直至原生Fly、抵达及接地停稳。要求 `nativeSurfaceNavigationReadback.nativeFlyObserved`、`nativeArrivalObserved`、`groundedStopVerified`及 `nativeNavigationReleased`通过，终点距离满足声明值。导航保留游戏正常物理及资源消耗，原unknown结果沿原动作隔离核销。源码与原生依据见[行星导航研究](research/game-api-native-surface-navigation.zh-CN.md)。

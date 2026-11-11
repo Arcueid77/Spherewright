@@ -608,3 +608,9 @@ Require `plannedDysonStructure.evidenceVersion=1`, `nativeChecksComplete=true`, 
 Design creation begins at zero delivered progress. Observe normal rocket/sail manufacture, supply, launch and arrival, then receiver electricity over the declared game-tick interval. Normal save/cold continuation must preserve the design and allow ordinary operation to continue.
 
 The finite remote native-drone construction subset also accepts ray receiver2208 with exact generator/model completion proof. Design configuration retains the original one-tick immediate journey work budget. Building items, research, supplies and return reserves remain part of the declared scenario allowance.
+
+## Native planetary navigation
+
+For an owned stationary grounded player with a closed journey, `spherewright_prepare_move(useNativeNavigation=true, arrivalTolerance=3..5)` selects the game's normal planetary navigator. Fresh-read the player hash and declare one same-planet surface target. Native thresholds determine the supported distance above the Fly threshold and20m, through the Sail threshold and500m. Read `nativeSurfaceNavigation` for its request/session binding, current thresholds, complete3600-tick energy budget and900-tick landing reserve. A matching Plugin/MCP cohort and unlocked thruster are required.
+
+Commit the original move token once and poll the same action through Native Fly, arrival and grounded stop. Require `nativeSurfaceNavigationReadback.nativeFlyObserved`, `nativeArrivalObserved`, `groundedStopVerified` and `nativeNavigationReleased`, plus the declared final distance. The navigator retains ordinary game physics and resource consumption. Any original unknown outcome remains quarantined for reconciliation. Source and Native control evidence are in [planetary navigation research](research/game-api-native-surface-navigation.md).

@@ -64,6 +64,9 @@ internal sealed partial class NormalGameActionCoordinator
             return GameCallResult<PreparedNormalAction>.Failed(common.Error);
         }
 
+        if (request.UseNativeNavigation)
+            return PrepareNativeNavigationOnMainThread(requestedSessionId, request, common.Session!);
+
         if (!IsFinite(request.Target.X) || !IsFinite(request.Target.Y) || !IsFinite(request.Target.Z)
             || request.ArrivalTolerance < 0.5f || request.ArrivalTolerance > 5f)
         {
@@ -584,6 +587,13 @@ internal sealed partial class NormalGameActionCoordinator
         var journeyError = ValidateVoyagerJourneyLocalCommit(plan);
         if (journeyError is not null) return GameCallResult<NormalActionCommitResult>.Failed(journeyError);
 
+        if (_actions.ActiveValues.Any(a => !a.Terminal && a.Plan.NativeNavigation is not null)
+            && (plan.ActionKind == NormalActionKinds.Build || plan.ActionKind == NormalActionKinds.BlueprintBuild
+                || plan.ConfigureMode == BuildingConfigurationModes.EnableMechaConstructionDrones))
+            return GameCallResult<NormalActionCommitResult>.Failed(BridgeError.Create(BridgeErrorCodes.ServerBusy,
+                "Native navigation owns its finite flight/landing energy window.", true,
+                "Poll the original navigation to its grounded terminal result before scheduling drone work."));
+
         var activePlayerOrder = _actions.ActiveValues.FirstOrDefault(action =>
             !action.Terminal && IsPlayerOrderAction(action.ActionKind));
         if (IsPlayerOrderAction(plan.ActionKind) && activePlayerOrder is not null)
@@ -771,6 +781,11 @@ internal sealed partial class NormalGameActionCoordinator
         switch (action.ActionKind)
         {
             case NormalActionKinds.Move:
+                if (plan.NativeNavigation is not null)
+                {
+                    StartNativeNavigation(action);
+                    break;
+                }
                 CaptureVoyagerMoveStrictStart(action);
                 action.MovementProgress = new MovementProgressWatchdog(
                     GameMain.gameTick,
@@ -982,6 +997,11 @@ internal sealed partial class NormalGameActionCoordinator
 
     private void UpdateActionOnMainThread(ActionRecord action)
     {
+        if (action.Plan.NativeNavigation is not null)
+        {
+            if (!action.Terminal) UpdateNativeNavigation(action);
+            return;
+        }
         if (action.ActionKind == NormalActionKinds.ReturnToMainMenu)
         {
             if (!action.Terminal) UpdateReturnToMainMenuOnMainThread(action);
@@ -1318,6 +1338,7 @@ internal sealed partial class NormalGameActionCoordinator
                 return RevalidateCancelVoyagerFlightOnMainThread(plan);
             case NormalActionKinds.Move:
             case NormalActionKinds.Handcraft:
+                if (plan.NativeNavigation is not null) return RevalidateNativeNavigationOnMainThread(plan);
                 var player = _reader.GetPlayerStateOnMainThread(
                     plan.SessionId,
                     new LocalPlanetRequest { PlanetId = plan.PlanetId });
@@ -1727,6 +1748,7 @@ internal sealed partial class NormalGameActionCoordinator
                 FailedPredicate = menu.Readback.FailedPredicate,
             } : null,
             ResearchQueueReadback = action.ResearchQueueReadback,
+            NativeSurfaceNavigationReadback = action.NativeSurfaceNavigationReadback,
             DysonStructureReadback = action.DysonStructureReadback,
             StorageConfigurationReadback = action.StorageConfigurationReadback,
             BeltPathReversalReadback = action.BeltPathReversalReadback,
@@ -1762,6 +1784,9 @@ internal sealed partial class NormalGameActionCoordinator
         if (IsStructuredConstruction(action.Plan) && !ConstructionReferencesMatch(action) && action.AfterInventory is null)
             return result;
         if (action.Plan.VoyagerLocalDeadlineGameTick.HasValue && !VoyagerLocalReferencesMatch(action) && action.AfterInventory is null)
+            return result;
+        if (action.Plan.NativeNavigation is { } nativeNavigation && action.AfterInventory is null
+            && (!ReferenceEquals(GameMain.data, nativeNavigation.World) || !ReferenceEquals(GameMain.mainPlayer, nativeNavigation.Player)))
             return result;
         var after = action.AfterInventory ?? CaptureInventory(GameMain.mainPlayer);
         foreach (var itemId in action.BeforeInventory.Keys.Concat(after.Keys).Distinct().OrderBy(id => id))

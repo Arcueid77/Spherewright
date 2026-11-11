@@ -1183,7 +1183,9 @@ public static partial class SpherewrightTools
         bool allowPassiveDrift = false,
         CancellationToken cancellationToken = default,
         [Description("Read-only bounded walking preview for an idle grounded player, with goal within16m. Returns native physics-pool geometry, observed compound body dimensions, bounded candidate waypoints and per-segment clearance. MCP planning stays outside Unity. Candidate and final surface samples bind one geometry hash. No token or player order is returned. Partial/unknown geometry or surface coverage remains partial; actual motion still requires separate fresh ordinary moves.")]
-        bool previewWalkingRoute = false)
+        bool previewWalkingRoute = false,
+        [Description("Opt-in Native same-planet navigation through PlayerNavigation.Navigate. Requires a grounded idle owned player, unlocked thruster, no active journey, no existing navigation/order, arrivalTolerance3..5 and distance above the current Native fly threshold through the sail threshold (at most500m). The Plugin preserves the current thresholds and proves complete flight/landing energy. Require nativeSurfaceNavigation evidence before committing once. Poll the original action through Native Fly, arrival and grounded stationary landing. Native path physics remains active.")]
+        bool useNativeNavigation = false)
     {
         var request = new PrepareMoveRequest
         {
@@ -1191,11 +1193,26 @@ public static partial class SpherewrightTools
             ArrivalTolerance = arrivalTolerance, ExpectedPlayerStateHash = expectedPlayerStateHash,
             StateHashVersion = stateHashVersion, AllowPassiveDrift = allowPassiveDrift,
             PreviewWalkingRoute = previewWalkingRoute,
+            UseNativeNavigation = useNativeNavigation,
         };
+        var navigationError = NativeSurfaceNavigationPolicy.ValidateRequest(request);
+        if (navigationError is not null)
+            return ToToolResult(BridgeCallResult<PreparedNormalAction>.Failed(BridgeError.Create(
+                BridgeErrorCodes.InvalidRequest, navigationError, false,
+                "Use exclusive Native navigation arguments with arrivalTolerance3..5.")), "Native navigation rejected.");
         var error = Spherewright.Bridge.Core.Safety.WalkingRoutePlanner.ValidateRequest(request);
         if (error is not null)
             return ToToolResult(BridgeCallResult<PreparedNormalAction>.Failed(BridgeError.Create(
                 BridgeErrorCodes.InvalidRequest, error, false, "Use a bounded stationary walking observation.")), "Walking preview rejected.");
+        if (useNativeNavigation)
+        {
+            var navigation = await bridgeClient.PrepareMoveAsync(sessionId, request, cancellationToken).ConfigureAwait(false);
+            if (navigation.Success && !NativeSurfaceNavigationPolicy.ConfirmsEcho(sessionId, request, navigation.Value))
+                navigation = BridgeCallResult<PreparedNormalAction>.Failed(BridgeError.Create(BridgeErrorCodes.BridgeNotReady,
+                    "The Plugin did not confirm the exact funded Native planetary navigation plan.", false,
+                    "Use coherent Plugin/MCP files and fresh player/threshold evidence."));
+            return ToToolResult(navigation, "Native planetary navigation prepared with grounded landing proof required.");
+        }
         if (previewWalkingRoute)
         {
             var preview = await ObserveWalkingRouteAsync(bridgeClient, sessionId, request, cancellationToken).ConfigureAwait(false);
