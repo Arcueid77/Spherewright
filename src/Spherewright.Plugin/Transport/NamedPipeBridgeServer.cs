@@ -447,6 +447,19 @@ internal sealed class NamedPipeBridgeServer : IDisposable
                             cancellationToken).ConfigureAwait(false);
                         break;
                     }
+                case BridgeMethods.GetDysonState:
+                    {
+                        var request = PluginJson.Deserialize<BridgeRequestEnvelope<Spherewright.Contracts.Celestial.GetDysonStateRequest>>(requestJson);
+                        if (request?.Payload is null)
+                        {
+                            await WriteInvalidPayloadAsync(pipe, header.RequestId, cancellationToken).ConfigureAwait(false);
+                            break;
+                        }
+                        await DispatchAndWriteAsync(pipe, header.RequestId, header.SessionId,
+                            () => _gameStateReader.GetDysonStateOnMainThread(header.SessionId, request.Payload),
+                            cancellationToken).ConfigureAwait(false);
+                        break;
+                    }
                 case BridgeMethods.GetPowerSummary:
                     {
                         var request = PluginJson.Deserialize<BridgeRequestEnvelope<LocalPlanetRequest>>(requestJson);

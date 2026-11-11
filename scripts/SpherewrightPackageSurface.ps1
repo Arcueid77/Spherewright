@@ -337,6 +337,34 @@ function Assert-SpherewrightPackageSurface {
             }
         }
     }
+    if ($Version -ge [version]'0.6.0') {
+        $dysonTools = @($Tools | Where-Object { $_.name -ceq 'spherewright_get_dyson_state' })
+        if ($dysonTools.Count -ne 1) { throw 'The Ascension package requires exactly one Dyson observation tool.' }
+        $dyson = $dysonTools[0]
+        $annotations = $dyson.PSObject.Properties['annotations']
+        foreach ($annotation in @(@('readOnlyHint',$true), @('destructiveHint',$false), @('idempotentHint',$true), @('openWorldHint',$false))) {
+            $member = if ($annotations) { $annotations.Value.PSObject.Properties[$annotation[0]] } else { $null }
+            if (-not $member -or $member.Value -isnot [bool] -or $member.Value -ne $annotation[1]) {
+                throw 'The Ascension Dyson observation tool requires read-only annotations.'
+            }
+        }
+        $description = $dyson.PSObject.Properties['description']
+        foreach ($rule in @('READ-ONLY','tokenless','executable=false','commitAllowedNow=false')) {
+            if (-not $description -or ([string]$description.Value).IndexOf($rule,[StringComparison]::Ordinal) -lt 0) {
+                throw "The Ascension Dyson observation lacks $rule."
+            }
+        }
+        $schemaProperty = $dyson.PSObject.Properties['inputSchema']
+        if (-not $schemaProperty) { throw 'The Ascension Dyson observation input schema is missing.' }
+        foreach ($field in @(@('sessionId','string'), @('planetId','integer'), @('layerId','integer'), @('stateHashVersion','integer'))) {
+            $null = Get-RequiredPackageSchemaNode $schemaProperty.Value $field[0] $field[1]
+        }
+        foreach ($rule in @('spherewright_get_dyson_state','generatedEnergyPerTick','capacityEnergyPerTick','receiverCoverageComplete')) {
+            if ($ResourcePlaybook.IndexOf($rule,[StringComparison]::Ordinal) -lt 0) {
+                throw "The Ascension playbook lacks $rule."
+            }
+        }
+    }
     if ($Version.Major -eq 0 -and $Version.Minor -eq 4) {
         $toolNames = @($Tools | ForEach-Object { $_.name })
         if ($Tools.Count -ne 64 -or @($toolNames | Where-Object { $_ -isnot [string] -or [string]::IsNullOrWhiteSpace($_) }).Count -gt 0 -or

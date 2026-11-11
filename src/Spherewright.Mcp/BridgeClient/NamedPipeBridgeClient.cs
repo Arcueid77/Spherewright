@@ -160,6 +160,13 @@ internal sealed class NamedPipeBridgeClient : IBridgeClient
             cancellationToken).ConfigureAwait(false);
     }
 
+    public Task<BridgeCallResult<DysonStateSnapshot>> GetDysonStateAsync(
+        string sessionId,
+        GetDysonStateRequest request,
+        CancellationToken cancellationToken) =>
+        CallAsync<GetDysonStateRequest, DysonStateSnapshot>(BridgeMethods.GetDysonState,
+            sessionId, request, cancellationToken);
+
     public async Task<BridgeCallResult<PowerSummarySnapshot>> GetPowerSummaryAsync(
         string sessionId,
         LocalPlanetRequest request,

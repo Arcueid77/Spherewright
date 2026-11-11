@@ -110,6 +110,8 @@ public sealed class FactoryEntitySnapshot
     // from existing action/configuration hashes. Missing coverage is unknown.
     public SiloStateSnapshot? Silo { get; set; }
 
+    public Spherewright.Contracts.Celestial.RayReceiverStateSnapshot? RayReceiver { get; set; }
+
     public List<FactoryConnectionSnapshot> Connections { get; set; } = new List<FactoryConnectionSnapshot>();
 
     public List<FactoryBufferSnapshot> Buffers { get; set; } = new List<FactoryBufferSnapshot>();

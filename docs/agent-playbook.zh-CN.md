@@ -20,7 +20,7 @@
 
 默认主档须覆盖票据及同 owned 固定 LastExit 的已知进度。仅在用户明确接受舍弃准确未保存区间时，额外传 `acceptUnstoredProgressLoss=true`，`minimumRecoveryGameTick` 为准确已知进度下限，`expectedRecoveryGameTick` 为精确完整主档 tick；核对 `discardedUnstoredProgressGameTicks`。来源或下限变化须重新准备匹配计划，不回退检查点/自动档，不编辑票据。身份、Journal、同 Native、持久消费或原生完成证据缺失仍拒绝。只轮询本次唯一动作；completed 表示存档已打开且旧自动任务停止，不代表旧任务恢复或发生保存。离线加载器/Pause 替身不证明 Unity 实机执行。
 
-本指南描述 DSP `0.10.35.29151` 的 0.5.0 开发接口，保留 0.4 协议接口；逐源码的离线及实机证据见[原生兼容验证](https://github.com/Arcueid77/Spherewright/blob/main/docs/validation/native-29151-preflight.zh-CN.md)。历史 29145 生产验收仍固定于 `2a7a98d1932c404e3a7abc2c11233d9c0b8780d9`。准确构建身份应读取已安装组件版本与包清单，正式版本见[发行](https://github.com/Arcueid77/Spherewright/releases)。修改本指南不会更新已安装 MCP 或冻结包。能力、当前授权、原生可执行性和最终验收是不同事实。本指南不授予游戏、加载、恢复、安装、部署或发布权限。
+本指南描述 DSP `0.10.35.29151` 的 0.6.0 开发接口，保留 0.4 协议接口；逐源码的离线及实机证据见[原生兼容验证](https://github.com/Arcueid77/Spherewright/blob/main/docs/validation/native-29151-preflight.zh-CN.md)。历史 29145 生产验收仍固定于 `2a7a98d1932c404e3a7abc2c11233d9c0b8780d9`。准确构建身份应读取已安装组件版本与包清单，正式版本见[发行](https://github.com/Arcueid77/Spherewright/releases)。修改本指南不会更新已安装 MCP 或冻结包。能力、当前授权、原生可执行性和最终验收是不同事实。本指南不授予游戏、加载、恢复、安装、部署或发布权限。
 
 <a id="session-entry-and-ownership"></a>
 ## 远端主档的新有限恢复授权
@@ -610,3 +610,13 @@ Move/Harvest失败可在原失败tick保留`movementDiagnostics`。合读位置�
 `prepare_move(previewWalkingRoute=true)`是无token的只读模式，要求静止、站在已观察地面的Walk，目标距角色16m以内。Native捕获复合角色碰撞体、有界完整Physics/Belt碰撞池切面和场景归属。MCP在Unity外计算有限可见图，再按同一几何哈希取得候选及最终地表采样。上限为64候选节点、16航点、48m路线与512附近碰撞体。`route_observed`要求完整几何、干地采样、有界坡度及保守扫掠净距。每段元数据包含对应到达容差的起点位置余量。结果是观察切面，执行须另行使用普通移动。
 
 每段开始前重新读取真实接地闲置角色及相关几何，核对上一段实际终点是否落在声明余量内，需要时从实际位置重新预览。沿用原已审容差。partial、unavailable、search_exhausted分别保留其证据范围。场景后续变化时，普通移动仍由原停滞看门狗核销。
+
+## Ascension结构与接收器观察
+
+对当前owned本地恒星使用 `spherewright_get_dyson_state(sessionId, planetId, layerId=0)`，正层ID1..10可缩小结构范围。使用汇总值前先核对 `structureCoverageComplete`、`receiverCoverageComplete` 和 `coverageIssues`。覆盖不完整时汇总保持可空、完整设计hash为空，池扫描与返回拓扑均有明确上限。
+
+节点贡献已交付 `structurePoints`，框架两端合计一次，壳层已交付 `cellPoints`各计一次。`orderedStructurePoints`记录在途订单。`designStateHash`绑定会话/恒星/所选范围及静态拓扑，施工进度与发电采样值随正常运行更新。
+
+已建成射线接收器可通过工厂详情 `rayReceiver`或恒星接收器列表检查。最近实际电能取 `generatedEnergyPerTick`，按每秒60个tick换算瓦特。容量 `capacityEnergyPerTick`、光子产品、预热和透镜缓冲分别记账，光子模式电力发电量为0。持续验收须先声明游戏tick区间，并在全程保持接收器身份、电网成员及采样覆盖。
+
+观察无令牌，`executable=false`、`commitAllowedNow=false`。原生结构写入通过各自新鲜准备的正常动作执行。原生依据见[观察研究](https://github.com/Arcueid77/Spherewright/blob/main/docs/research/game-api-dyson-state.zh-CN.md)。

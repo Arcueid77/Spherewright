@@ -527,3 +527,13 @@ Move 地表预览是观察，不是寻路，180/600 tick 失败指导禁止重�
 `prepare_move`新增可选`previewWalkingRoute=false`。新模式返回`walkingRoutePreview`、空planToken、commitAllowedNow=false和executable=false。内部有界地表读取使用`expectedWalkingGeometryHash`及1..64个`walkingPreviewPoints`，仍为只读。MCP先核对版本/上下文/目标回显，再进行规划，并拦截旧插件替代返回的移动token。三次绑定观察分别覆盖几何、候选地表及拟定路线地表。普通移动请求沿用原目标/指令路径。
 
 可空`movementDiagnostics`在首次记录失败建议时捕获，提供已观察的位置/目标/半径/容差及最多32个物理阻挡候选，并明确几何不完整和查询上限。完整切面要求原生碰撞池归属、实际模型形状、地形归属引用和碰撞层核验。路线是有界观察建议，实际执行须逐段新鲜准备并核对终点。
+
+## Ascension结构与接收器观察
+
+对当前owned本地恒星使用 `spherewright_get_dyson_state(sessionId, planetId, layerId=0)`，正层ID1..10可缩小结构范围。使用汇总值前先核对 `structureCoverageComplete`、`receiverCoverageComplete` 和 `coverageIssues`。覆盖不完整时汇总保持可空、完整设计hash为空，池扫描与返回拓扑均有明确上限。
+
+节点贡献已交付 `structurePoints`，框架两端合计一次，壳层已交付 `cellPoints`各计一次。`orderedStructurePoints`记录在途订单。`designStateHash`绑定会话/恒星/所选范围及静态拓扑，施工进度与发电采样值随正常运行更新。
+
+已建成射线接收器可通过工厂详情 `rayReceiver`或恒星接收器列表检查。最近实际电能取 `generatedEnergyPerTick`，按每秒60个tick换算瓦特。容量 `capacityEnergyPerTick`、光子产品、预热和透镜缓冲分别记账，光子模式电力发电量为0。持续验收须先声明游戏tick区间，并在全程保持接收器身份、电网成员及采样覆盖。
+
+观察无令牌，`executable=false`、`commitAllowedNow=false`。原生结构写入通过各自新鲜准备的正常动作执行。原生依据见[观察研究](https://github.com/Arcueid77/Spherewright/blob/main/docs/research/game-api-dyson-state.zh-CN.md)。

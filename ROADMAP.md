@@ -10,7 +10,7 @@ Documentation reviewed 2026-11-10. This roadmap owns version scope and acceptanc
 
 | Item | Current baseline | Remaining work / boundary |
 | --- | --- | --- |
-| Latest formal release | `v0.4.0`, source `b7c0002dbe2e8f5608c5ca140b0c6326a1818021`, DSP `0.10.35.29151`, BepInEx `5.4.17.0`; GitHub release contains both package layouts | Thunderstore website upload verification is a separate 0.4 publication task; it does not block Voyager or authorize republication |
+| Latest formal release | `v0.5.0`, source `b574c616346c4e087b433de3633e23fb12075add`, DSP `0.10.35.29151` / BepInEx `5.4.17.0` | GitHub publication is complete. Thunderstore publicly lists 0.5.0 on 2026-11-11 |
 | Voyager baseline | All three original clauses are accepted within their recorded source scopes; the same-source review pair is retained in Lab | Preserve accepted evidence; do not replay the original gates to manufacture progress |
 | First-sail/carrier-rocket extension | Bounded live acceptance recorded 2026-11-06 on selected runtime/review source `d3b7ac897bb44d62c8a7ed54c51a55ff2b8de7b0` | General Dyson structural design and sustained launch networks remain in 0.6; each later source requires separate qualification |
 | Development line | Off-world ordinary manufacture/construction, observations, configuration and recovery continue to evolve | Validate each exact source before installation or runtime claims; tool counts and offline tests are not live acceptance |
@@ -195,7 +195,7 @@ Detailed scenario evidence and the active snapshot belong in [Spherewright-Lab V
 
 The narrow first-sail slice was brought forward into 0.5 by the owner's 2026-11-01 direction. Reuse its qualified evidence when available; 0.6 retains sustained rocket networks and general Dyson node/frame/shell design, sustained receiver power and the remaining gates below.
 
-Status: **planned**, moved intact from former `0.8.0`.
+Status is **in development** following the owner's 2026-11-11 continuation request. The first slice observes Dyson structure/progress and actual receiver electricity. The remaining work follows the scope and gates below, retaining the full former `0.8.0` scope.
 
 ### Goal and scope
 

@@ -2,6 +2,12 @@
 
 [English](CHANGELOG.md) · [简体中文](CHANGELOG.zh-CN.md)
 
+## 0.6.0 — Ascension development
+
+- Added tokenless local-star Dyson node/frame/shell observations with bounded coverage, source-bound design hashes and delivered/ordered structure/cell progress.
+- Added ray-receiver detail and current-star receiver coverage with Native recent electrical generation, capacity, photon buffers and catalyst accounting.
+- Preserved nullable totals for incomplete identities, topology or scan coverage.
+
 ## 0.5.0 — 2026-11-10
 
 - Bounded interstellar exploration, route budgets, ordinary flight/stop, warper supply, remote construction and station logistics.

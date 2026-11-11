@@ -757,7 +757,10 @@ internal sealed partial class GameStateReader
             if (snapshot?.ComponentKind == "belt")
                 snapshot.BeltCargo = CaptureBeltCargo(factory, request.ObjectId);
             if (snapshot?.ComponentKind == "power-generator")
+            {
                 snapshot.FuelPowerState = CaptureFuelPowerState(factory, request.ObjectId);
+                snapshot.RayReceiver = CaptureRayReceiverState(factory, request.ObjectId);
+            }
             if (snapshot is not null && factory.entityPool[request.ObjectId].ejectorId > 0)
                 snapshot.Ejector = CaptureEjectorState(factory, snapshot);
             if (snapshot is not null && factory.entityPool[request.ObjectId].siloId > 0)

@@ -509,3 +509,13 @@ Detail inspection adds nullable `modelIndex` and `stack`; the build catalog adds
 `prepare_move` adds optional `previewWalkingRoute=false`. The new mode returns `walkingRoutePreview`, empty planToken, commitAllowedNow=false and executable=false. Internal bounded terrain passes use `expectedWalkingGeometryHash` and1..64 `walkingPreviewPoints`; they remain read-only. MCP verifies the cohort/context/goal echo before planning and withholds legacy substituted movement tokens. Three bound observations cover geometry, candidate terrain and the proposed route surface. Existing ordinary-move requests keep their original target/order path.
 
 `movementDiagnostics` is nullable and captured once when failure advice is recorded. It reports available position/target/radius/tolerance evidence and at most32 physical-obstruction candidates, with explicit incomplete geometry and query bounds. Native pool ownership, actual model shapes, terrain owner references and collision layers are checked before a complete cut is claimed. A route is bounded advisory evidence, with fresh per-segment execution and endpoint readback.
+
+## Ascension structure and receiver observations
+
+Use `spherewright_get_dyson_state(sessionId, planetId, layerId=0)` for the owned current local star. A positive layer ID1..10 narrows the structural scope. Read `structureCoverageComplete`, `receiverCoverageComplete` and `coverageIssues` before using totals. Partial coverage keeps totals nullable and the complete design hash empty. Pool scans and returned topology have explicit limits.
+
+Nodes contribute their delivered `structurePoints`; frames contribute both ends once; shells contribute delivered `cellPoints` once. `orderedStructurePoints` records in-flight commitments. `designStateHash` binds the session/star/scope and static topology, while construction progress and sampled generation can change during normal running.
+
+Inspect a completed ray receiver through factory detail `rayReceiver` or the star-wide receiver list. Use `generatedEnergyPerTick` and its60-tick-per-second watt conversion for recent useful electrical generation. Keep `capacityEnergyPerTick`, photon products, warmup and catalyst buffers in their own accounting. Photon mode has zero electrical generation. For sustained acceptance, declare the game-tick interval and preserve receiver identity, network membership and sampling coverage throughout.
+
+The observation is tokenless with `executable=false` and `commitAllowedNow=false`. Native structural writes use their separately prepared normal actions. See [Native observation research](https://github.com/Arcueid77/Spherewright/blob/main/docs/research/game-api-dyson-state.md).

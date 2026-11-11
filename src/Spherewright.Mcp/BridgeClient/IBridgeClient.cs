@@ -89,6 +89,11 @@ public interface IBridgeClient
         InspectFactoryEntityRequest request,
         CancellationToken cancellationToken);
 
+    Task<BridgeCallResult<DysonStateSnapshot>> GetDysonStateAsync(
+        string sessionId,
+        GetDysonStateRequest request,
+        CancellationToken cancellationToken);
+
     Task<BridgeCallResult<PowerSummarySnapshot>> GetPowerSummaryAsync(
         string sessionId,
         LocalPlanetRequest request,

@@ -2,5 +2,5 @@ namespace Spherewright.Contracts.Versioning;
 
 public static class SpherewrightProduct
 {
-    public const string CurrentVersion = "0.5.0";
+    public const string CurrentVersion = "0.6.0";
 }

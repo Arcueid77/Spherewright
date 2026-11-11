@@ -508,7 +508,7 @@ public sealed partial class SpherewrightToolsTests
         using var provider = services.BuildServiceProvider();
         var tools = provider.GetServices<McpServerTool>().ToArray();
         var tool = Assert.Single(tools, t => t.ProtocolTool.Name == "spherewright_prepare_resume_owned_game");
-        Assert.Equal(74, tools.Length);
+        Assert.Equal(75, tools.Length);
         var schema = tool.ProtocolTool.InputSchema;
         var names = new[] { "recoveryDeadlineUtc", "recoveryScope", "maximumChargeGameTicks", "maximumChargeWallSeconds" };
         foreach (var name in names)
@@ -2082,6 +2082,7 @@ public sealed partial class SpherewrightToolsTests
                 "spherewright_get_action_result",
                 "spherewright_get_blueprint_builds",
                 "spherewright_get_build_catalog",
+            "spherewright_get_dyson_state",
                 "spherewright_get_foundry_plan",
                 "spherewright_get_gameplay_journal",
                 "spherewright_get_governor_plan",
@@ -3763,6 +3764,19 @@ public sealed partial class SpherewrightToolsTests
                 SessionId = sessionId,
                 PlanetId = request.PlanetId,
                 ObjectId = request.ObjectId,
+            }));
+        }
+
+        public GetDysonStateRequest? LastDysonRequest { get; private set; }
+
+        public Task<BridgeCallResult<DysonStateSnapshot>> GetDysonStateAsync(
+            string sessionId, GetDysonStateRequest request, CancellationToken cancellationToken)
+        {
+            LastSessionId = sessionId;
+            LastDysonRequest = request;
+            return Task.FromResult(BridgeCallResult<DysonStateSnapshot>.Succeeded(new DysonStateSnapshot
+            {
+                SessionId = sessionId, PlanetId = request.PlanetId, SelectedLayerId = request.LayerId,
             }));
         }
 
