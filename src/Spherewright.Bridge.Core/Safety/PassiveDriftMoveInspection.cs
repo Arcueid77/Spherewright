@@ -4,7 +4,9 @@ using Spherewright.Contracts.Players;
 
 namespace Spherewright.Bridge.Core.Safety;
 
-// One immutable, server-originated inspection for an explicitly opted-in Move.
+// One immutable server observation. Default capture serves an explicitly
+// opted-in Drift Move. Hover capture serves separately retained low-speed
+// inventory interactions through the same bounded inspection contract.
 // It never renews its lifetime at prepare or commit and cannot choose a target.
 public sealed class PassiveDriftMoveInspection
 {
@@ -18,8 +20,9 @@ public sealed class PassiveDriftMoveInspection
     private readonly double _capturedAtSeconds;
     private readonly double _coreEnergyCapacity;
     private readonly long _capturedAtGameTick;
+    private readonly bool _allowHover;
 
-    private PassiveDriftMoveInspection(PlayerStateSnapshot player, double nowSeconds, DateTimeOffset utcNow)
+    private PassiveDriftMoveInspection(PlayerStateSnapshot player, double nowSeconds, DateTimeOffset utcNow, bool allowHover)
     {
         StateHash = player.StateHash;
         _sessionId = player.SessionId;
@@ -28,6 +31,7 @@ public sealed class PassiveDriftMoveInspection
         _capturedAtSeconds = nowSeconds;
         _coreEnergyCapacity = player.CoreEnergyCapacity;
         _capturedAtGameTick = player.CapturedAtGameTick;
+        _allowHover = allowHover;
         ExpiresAtUtc = utcNow.AddSeconds(MaximumAgeSeconds);
     }
 
@@ -35,15 +39,15 @@ public sealed class PassiveDriftMoveInspection
     public DateTimeOffset ExpiresAtUtc { get; }
 
     public static PassiveDriftMoveInspection? Capture(
-        PlayerStateSnapshot player, double nowSeconds, DateTimeOffset utcNow) =>
-        IsFinite(nowSeconds) && nowSeconds >= 0d && Eligible(player)
+        PlayerStateSnapshot player, double nowSeconds, DateTimeOffset utcNow, bool allowHover = false) =>
+        IsFinite(nowSeconds) && nowSeconds >= 0d && Eligible(player, allowHover)
             && string.Equals(player.StateHash, CanonicalStateHash.PlayerAction(player), StringComparison.Ordinal)
-            ? new PassiveDriftMoveInspection(player, nowSeconds, utcNow) : null;
+            ? new PassiveDriftMoveInspection(player, nowSeconds, utcNow, allowHover) : null;
 
     public bool Allows(string expectedInspectionHash, PlayerStateSnapshot current, double nowSeconds)
     {
         var age = nowSeconds - _capturedAtSeconds;
-        if (!IsFinite(age) || age < 0d || age > MaximumAgeSeconds || !Eligible(current)
+        if (!IsFinite(age) || age < 0d || age > MaximumAgeSeconds || !Eligible(current, _allowHover)
             || !string.Equals(expectedInspectionHash, StateHash, StringComparison.Ordinal)
             || !string.Equals(current.SessionId, _sessionId, StringComparison.Ordinal)
             || current.PlanetId != _planetId || current.CoreEnergyCapacity != _coreEnergyCapacity)
@@ -72,11 +76,12 @@ public sealed class PassiveDriftMoveInspection
 
     private Vector3Snapshot Origin() => new Vector3Snapshot { X = _x, Y = _y, Z = _z };
 
-    private static bool Eligible(PlayerStateSnapshot player) =>
+    private static bool Eligible(PlayerStateSnapshot player, bool allowHover) =>
         !string.IsNullOrWhiteSpace(player.SessionId) && player.PlanetId > 0
         && player.StateHashVersion == CanonicalStateHash.Version
-        && player.IsAlive && player.IsOnPlanet && !player.IsFlying && !player.IsSailing
-        && string.Equals(player.MovementState, "Drift", StringComparison.Ordinal)
+        && player.IsAlive && player.IsOnPlanet && !player.IsSailing
+        && ((!player.IsFlying && string.Equals(player.MovementState, "Drift", StringComparison.Ordinal))
+            || allowHover && player.IsFlying && string.Equals(player.MovementState, "Fly", StringComparison.Ordinal))
         && IsFinite(player.Position.X) && IsFinite(player.Position.Y) && IsFinite(player.Position.Z)
         && IsFinite(player.Speed) && player.Speed >= 0f && player.Speed <= MaximumSpeedMetresPerSecond
         && IsFinite(player.CoreEnergy) && player.CoreEnergy > 0d

@@ -2069,7 +2069,7 @@ internal sealed partial class NormalGameActionCoordinator
         }
 
         var storageSnapshot = storageResult.Value;
-        if (!string.Equals(playerResult.Value.StateHash, request.ExpectedPlayerStateHash, StringComparison.Ordinal)
+        if (!MatchesPlayerInteraction(request.ExpectedPlayerStateHash, playerResult.Value, out var interactionInspection)
             || !string.Equals(storageSnapshot.StateHash, request.ExpectedStorageStateHash, StringComparison.Ordinal))
         {
             return StalePlan("Player inventory or exact storage contents changed after inspection.");
@@ -2135,6 +2135,7 @@ internal sealed partial class NormalGameActionCoordinator
             request.Direction,
             request.ItemId,
             request.Count);
+        payload.PlayerInteractionInspection = interactionInspection;
         var prepared = AddPreparedPlan(
             payload,
             common.Session!,
@@ -2149,6 +2150,7 @@ internal sealed partial class NormalGameActionCoordinator
                 ? request.StorageEntityId
                 : (int?)null;
             prepared.Value.EstimatedDistance = distance;
+            prepared.Value.MoveStateBinding = interactionInspection?.Describe();
             prepared.Value.ItemBudget.Add(new ActionItemBudget
             {
                 ItemId = request.ItemId,
@@ -2179,7 +2181,7 @@ internal sealed partial class NormalGameActionCoordinator
             return storageResult.Error;
         }
 
-        if (!string.Equals(CanonicalStateHash.PlayerAction(playerResult.Value), plan.PlayerStateHash, StringComparison.Ordinal)
+        if (!PlayerInteractionMatchesPlan(plan, playerResult.Value)
             || !string.Equals(storageResult.Value.StateHash, plan.TransferStorageStateHash, StringComparison.Ordinal))
         {
             return Stale("Player inventory or storage contents changed after transfer preparation.");
@@ -2189,6 +2191,7 @@ internal sealed partial class NormalGameActionCoordinator
         var player = GameMain.mainPlayer;
         if (factory is null || player?.package is null
             || !TryGetStorage(factory, plan.TransferStorageEntityId, out var storage)
+            || Vector3.Distance(player.position, ToVector(storageResult.Value.Position)) > player.mecha.buildArea
             || !CanTransferExactly(player.package, storage!, plan.TransferDirection, plan.TransferItemId, plan.Count, out _))
         {
             return Stale("Transfer source count, destination capacity, or exact storage identity changed.");

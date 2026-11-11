@@ -45,6 +45,17 @@ public sealed class NativeSurfaceNavigationPolicyTests
     };
 
     [Theory]
+    [InlineData(false)] [InlineData(true)]
+    public void DescentContinuesIndependentlyOfTheArrivalResult(bool descentRequested)
+    {
+        var result = Arrived();
+        result.MovementState = "Fly";
+        result.NativeDescentRequested = descentRequested;
+        result.GroundedStopVerified = false;
+        Assert.True(NativeSurfaceNavigationPolicy.HasArrived(result, 4));
+    }
+
+    [Theory]
     [InlineData(51, true)] [InlineData(200, true)] [InlineData(50, false)] [InlineData(201, false)]
     [InlineData(double.NaN, false)] [InlineData(double.PositiveInfinity, false)]
     public void NativeThresholdsDetermineTheFundedFlySubset(double distance, bool expected)

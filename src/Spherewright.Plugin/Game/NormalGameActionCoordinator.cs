@@ -305,7 +305,7 @@ internal sealed partial class NormalGameActionCoordinator
         }
 
         var player = playerResult.Value;
-        if (!string.Equals(request.ExpectedPlayerStateHash, player.StateHash, StringComparison.Ordinal))
+        if (!MatchesPlayerInteraction(request.ExpectedPlayerStateHash, player, out var interactionInspection))
         {
             return StalePlan("Player inventory or forge state changed after inspection; inspect and prepare again.");
         }
@@ -334,6 +334,7 @@ internal sealed partial class NormalGameActionCoordinator
             playerActionHash,
             request.RecipeId,
             request.Count);
+        payload.PlayerInteractionInspection = interactionInspection;
         var prepared = AddPreparedPlan(
             payload,
             common.Session!,
@@ -342,6 +343,7 @@ internal sealed partial class NormalGameActionCoordinator
         if (prepared.Success && prepared.Value is not null)
         {
             AddRecipeBudget(prepared.Value, recipe, request.Count);
+            prepared.Value.MoveStateBinding = interactionInspection?.Describe();
         }
 
         return prepared;
@@ -1356,7 +1358,7 @@ internal sealed partial class NormalGameActionCoordinator
                         && GameMain.mainPlayer.currentOrder is null
                         && plan.PassiveDriftInspection.Allows(plan.PassiveDriftInspection.StateHash,
                             player.Value, GameStateReader.PassiveDriftClockSeconds())
-                    : string.Equals(CanonicalStateHash.PlayerAction(player.Value), plan.PlayerStateHash, StringComparison.Ordinal);
+                    : PlayerInteractionMatchesPlan(plan, player.Value);
                 if (!matchesPlayerState)
                 {
                     return Stale("Player state no longer matches the prepared action.");

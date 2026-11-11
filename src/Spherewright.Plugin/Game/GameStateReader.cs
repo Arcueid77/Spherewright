@@ -46,6 +46,7 @@ internal sealed partial class GameStateReader
     private readonly OverseerLogisticsProgressStore _overseerLogisticsProgressStore;
     private readonly GovernorDeclarationStore _governorDeclarationStore;
     internal PassiveDriftMoveInspection? LastPassiveDriftMoveInspection { get; private set; }
+    internal PassiveDriftMoveInspection? LastPlayerInteractionInspection { get; private set; }
 
     internal static double PassiveDriftClockSeconds() =>
         System.Diagnostics.Stopwatch.GetTimestamp() / (double)System.Diagnostics.Stopwatch.Frequency;
@@ -286,9 +287,15 @@ internal sealed partial class GameStateReader
         result.StateHash = CanonicalStateHash.PlayerAction(result);
         result.StateHashVersion = CanonicalStateHash.Version;
         if (captureMoveInspection)
+        {
             LastPassiveDriftMoveInspection = player.currentOrder is null
                 ? PassiveDriftMoveInspection.Capture(result, PassiveDriftClockSeconds(), DateTimeOffset.UtcNow)
                 : null;
+            LastPlayerInteractionInspection = player.currentOrder is null && player.navigation is { } navigation
+                && !navigation.hasTask && !navigation.navigating
+                ? PassiveDriftMoveInspection.Capture(result, PassiveDriftClockSeconds(), DateTimeOffset.UtcNow, allowHover: true)
+                : null;
+        }
         return GameCallResult<PlayerStateSnapshot>.Succeeded(result);
     }
 

@@ -635,7 +635,9 @@ Move/Harvest失败可在原失败tick保留`movementDiagnostics`。合读位置�
 
 ## 原生行星导航
 
-对已关闭旅程中的owned本地接地停稳角色，`spherewright_prepare_move(useNativeNavigation=true, arrivalTolerance=3..5)`选择游戏普通行星导航器。先重新读取角色hash，声明当前星球上接近当前径向高度的目标。原生阈值决定可用距离，须超过Fly阈值及20m，并保持在Sail阈值及500m以内。核对 `nativeSurfaceNavigation`的准确请求/会话绑定、当前阈值、完整3600tick能耗预算及900tick储备，并使用匹配Plugin/MCP及已解锁推进器。
+普通仓储转移与手搓可在本地Drift或低速Fly、无移动指令时保留新鲜服务器观察。`moveStateBinding`披露原始两秒观察、0.05m位移和0.15m/s速度界。库存、手持物、燃料状态、存活、容量和会话继续绑定，提交时重新核对转移距离。未接受的过期拒绝后，可重新观察并准备新方案。
+
+对已关闭旅程中的owned本地接地角色，或具有新鲜服务器有界观察且控制已释放的低速Drift/Fly角色，`spherewright_prepare_move(useNativeNavigation=true, arrivalTolerance=3..5)`选择游戏普通行星导航器。先重新读取角色hash，声明当前星球上接近当前径向高度或地表的目标。漂浮起点保留原始两秒观察、0.05m位移及0.15m/s速度界。原生阈值决定可用距离，须超过Fly阈值及20m，并保持在Sail阈值及500m以内。核对 `nativeSurfaceNavigation`的准确请求/会话绑定、当前阈值、完整3600tick能耗预算及900tick储备，并使用匹配Plugin/MCP及已解锁推进器。
 
 完整证明的队列科研仅解锁配方、属性函数和物品奖励均为0时，可保留正常矩阵缓冲，并将科研工作计入导航能源预算。准备拒绝保留具体工作或充能前提。启动无人机施工、手搓或修改科研设置前，等待原导航任务释放并终结。
 

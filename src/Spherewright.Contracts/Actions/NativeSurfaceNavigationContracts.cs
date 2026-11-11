@@ -31,6 +31,7 @@ public sealed class NativeSurfaceNavigationReadback
     public bool NativeArrivalObserved { get; set; }
     public bool GroundedStopVerified { get; set; }
     public bool NativeNavigationReleased { get; set; }
+    public bool NativeDescentRequested { get; set; }
     public long NativeGameTicks { get; set; }
     public double? FinalDistanceMetres { get; set; }
     public double? FinalSurfaceDistanceMetres { get; set; }

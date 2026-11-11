@@ -21,13 +21,18 @@ internal sealed partial class NormalGameActionCoordinator
         var result = AddPreparedPlan(NormalActionPlanPayload.ForNativeNavigation(binding), session,
             NativeSurfaceNavigationPolicy.MaximumGameTicks,
             "Native planetary navigation observes Fly, surface-projected arrival and release of its task on the same owned planet. Normal flight or water drift may continue.");
-        if (result.Value is not null) result.Value.NativeSurfaceNavigation = binding.Plan;
+        if (result.Value is not null)
+        {
+            result.Value.NativeSurfaceNavigation = binding.Plan;
+            result.Value.MoveStateBinding = binding.MotionInspection?.Describe();
+        }
         return result;
     }
 
     private GameCallResult<NativeNavigationBinding> CaptureNativeNavigation(string sessionId,
-        PrepareMoveRequest request, string? expectedActionHash = null)
+        PrepareMoveRequest request, NativeNavigationBinding? expected = null)
     {
+        var motionInspection = expected?.MotionInspection ?? _reader.LastPlayerInteractionInspection;
         var observed = _reader.GetPlayerStateOnMainThread(sessionId, new LocalPlanetRequest { PlanetId = request.PlanetId });
         if (!observed.Success || observed.Value is null) return GameCallResult<NativeNavigationBinding>.Failed(observed.Error!);
         var snapshot = observed.Value;
@@ -37,24 +42,37 @@ internal sealed partial class NormalGameActionCoordinator
         var nav = player?.navigation;
         if (player?.mecha is null || controller is null || nav is null || planet is null || planet.id != request.PlanetId
             || planet.type == EPlanetType.Gas || !ReferenceEquals(player.planetData, planet)
-            || player.mecha.thrusterLevel < 1 || !NativeNavigationGroundedStop(player)
+            || player.mecha.thrusterLevel < 1
             || nav.navigating || nav.hasTask || player.currentOrder is not null || GameMain.data.guideRunning
             || player.orders is null || player.orders.orderCount != 0
             || !NativeNavigationInputsIdle(player) || !player.mecha.constructionModule.allDronesIdle
             || snapshot.ConstructionDrones.PendingBuildTargets != 0 || snapshot.ConstructionDrones.PendingRepairTargets != 0)
-            return NavigationFailed("native_navigation_grounded_idle_binding_required");
+            return NavigationFailed("native_navigation_idle_binding_required");
         var astros = GameMain.galaxy?.astrosData;
         if (astros is null || planet.id < 1 || planet.id >= astros.Length
             || !IsFinite(astros[planet.id].uRadius) || Math.Abs(astros[planet.id].uRadius - planet.realRadius) > .01)
             return NavigationFailed("native_navigation_current_astro_radius_unproved");
         var actionHash = CanonicalStateHash.PlayerAction(snapshot);
-        if (expectedActionHash is null ? request.ExpectedPlayerStateHash != snapshot.StateHash : expectedActionHash != actionHash)
-            return NavigationFailed("native_navigation_player_changed");
+        var requestedHash = expected?.InspectionStateHash ?? request.ExpectedPlayerStateHash;
+        if (expected?.MotionInspection is null && NativeNavigationGroundedStop(player))
+        {
+            motionInspection = null;
+            if (expected is null ? requestedHash != snapshot.StateHash : expected.PlayerHash != actionHash)
+                return NavigationFailed("native_navigation_player_changed");
+        }
+        else
+        {
+            if (motionInspection is null || !ReferenceEquals(motionInspection, _reader.LastPlayerInteractionInspection)
+                || !motionInspection.Allows(requestedHash, snapshot, GameStateReader.PassiveDriftClockSeconds()))
+                return NavigationFailed("native_navigation_recent_low_speed_inspection_required");
+            actionHash = motionInspection.StateHash;
+        }
         var requested = ToVector(request.Target);
         if (!IsFinite(requested.x) || !IsFinite(requested.y) || !IsFinite(requested.z)
-            || requested.magnitude < 1 || Mathf.Abs(requested.magnitude - player.position.magnitude) > 8)
+            || requested.magnitude < 1 || Math.Min(Mathf.Abs(requested.magnitude - player.position.magnitude),
+                Mathf.Abs(requested.magnitude - planet.realRadius)) > 8)
             return NavigationFailed("native_navigation_surface_target_required");
-        var target = requested.normalized * player.position.magnitude;
+        var target = expected is null ? requested.normalized * player.position.magnitude : ToVector(expected.Plan.Target);
         var arc = PlayerNavigation.SphericalDistance(player.position, target, planet.realRadius, false);
         var energy = CaptureNavigationTickCost(player, out var costBlocker);
         if (!energy.HasValue) return NavigationFailed(costBlocker!);
@@ -63,6 +81,17 @@ internal sealed partial class NormalGameActionCoordinator
             energy.Value, player.mecha.coreEnergy, loadedEnergy, 0))
             return NavigationFailed(FormattableString.Invariant(
                 $"native_navigation_threshold_or_complete_energy_budget_unproved (arc={arc:R}, fly={nav.flyThreshold:R}, sail={nav.sailThreshold:R}, joulesPerTick={energy.Value:R}, coreJoules={player.mecha.coreEnergy:R}, loadedJoules={loadedEnergy:R})"));
+        if (expected is not null)
+        {
+            if (!ReferenceEquals(GameMain.data, expected.World) || !ReferenceEquals(player, expected.Player)
+                || !ReferenceEquals(planet, expected.Planet) || !ReferenceEquals(controller, expected.Controller)
+                || !ReferenceEquals(nav, expected.Navigation) || !ReferenceEquals(player.mecha, expected.Mecha)
+                || nav.flyThreshold != expected.Plan.NativeFlyThresholdMetres || nav.sailThreshold != expected.Plan.NativeSailThresholdMetres
+                || energy.Value > expected.Plan.EnergyUpperPerTickJoules
+                || loadedEnergy < expected.Plan.RequiredLoadedEnergyJoules)
+                return NavigationFailed("native_navigation_bound_threshold_or_funding_changed");
+            return GameCallResult<NativeNavigationBinding>.Succeeded(expected);
+        }
         var plan = new NativeSurfaceNavigationPlan
         {
             PlanetId = request.PlanetId, SessionId = sessionId, PlayerActionStateHash = actionHash,
@@ -78,6 +107,7 @@ internal sealed partial class NormalGameActionCoordinator
         {
             Plan = plan, SessionId = sessionId, PlayerHash = actionHash, World = GameMain.data, Planet = planet,
             Player = player, Mecha = player.mecha, Controller = controller, Navigation = nav,
+            MotionInspection = motionInspection, InspectionStateHash = requestedHash,
         });
     }
 
@@ -145,7 +175,7 @@ internal sealed partial class NormalGameActionCoordinator
         {
             PlanetId = payload.PlanetId, UseNativeNavigation = true, Target = expected.Plan.Target,
             ArrivalTolerance = expected.Plan.ArrivalToleranceMetres,
-        }, expected.PlayerHash);
+        }, expected);
         return captured.Success && captured.Value is { } actual && actual.Plan.BindingHash == expected.Plan.BindingHash
             && ReferenceEquals(actual.World, expected.World) && ReferenceEquals(actual.Player, expected.Player)
             && ReferenceEquals(actual.Controller, expected.Controller) && ReferenceEquals(actual.Navigation, expected.Navigation)
@@ -240,6 +270,15 @@ internal sealed partial class NormalGameActionCoordinator
         readback.NativeNavigationReleased = !binding.Navigation.hasTask && !binding.Navigation.navigating;
         if (readback.NativeNavigationReleased)
         {
+            // Native Arrive's callback writes movementStateInFrame. This pump
+            // runs outside PlayerController.GameTick, whose next tick resets
+            // that field. Retain ordinary descent through its persistent Native
+            // altitude control while reporting arrival/task release immediately.
+            if (player.movementState == EMovementState.Fly)
+            {
+                player.controller.actionFly.targetAltitude = 1f;
+                readback.NativeDescentRequested = true;
+            }
             if (action.NavigationFailure is null && NativeSurfaceNavigationPolicy.HasArrived(readback, action.Plan.ArrivalTolerance))
                 Complete(action, "Native planetary navigation arrived and released its original task. Normal movement may continue on this planet.");
             else
@@ -281,6 +320,8 @@ internal sealed partial class NormalGameActionCoordinator
         public NativeSurfaceNavigationPlan Plan { get; set; } = null!;
         public string SessionId { get; set; } = string.Empty;
         public string PlayerHash { get; set; } = string.Empty;
+        public string InspectionStateHash { get; set; } = string.Empty;
+        public PassiveDriftMoveInspection? MotionInspection { get; set; }
         public GameData World { get; set; } = null!;
         public PlanetData Planet { get; set; } = null!;
         public Player Player { get; set; } = null!;

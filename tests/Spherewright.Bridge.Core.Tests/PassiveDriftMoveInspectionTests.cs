@@ -10,6 +10,50 @@ public sealed class PassiveDriftMoveInspectionTests
     private static readonly DateTimeOffset Utc = new(2026, 10, 10, 0, 0, 0, TimeSpan.Zero);
 
     [Fact]
+    public void ReleasedLowSpeedHoverCanBindAnInventoryInteraction()
+    {
+        var player = Hovering();
+        var hash = player.StateHash;
+        Assert.Null(PassiveDriftMoveInspection.Capture(player, 10, Utc));
+        var inspection = PassiveDriftMoveInspection.Capture(player, 10, Utc, allowHover: true)!;
+        player.Position.X += .011f;
+        player.CoreEnergy -= 4000;
+        Assert.True(inspection.Allows(hash, player, 10.4));
+        Assert.Equal(Utc.AddSeconds(2), inspection.ExpiresAtUtc);
+    }
+
+    [Theory]
+    [InlineData("speed")] [InlineData("space")] [InlineData("inventory")] [InlineData("mode")]
+    [InlineData("expired")] [InlineData("distance")] [InlineData("drone")]
+    public void HoverInteractionRetainsItsOriginalMotionIdentityAndInventoryBounds(string change)
+    {
+        var player = Hovering();
+        var hash = player.StateHash;
+        var inspection = PassiveDriftMoveInspection.Capture(player, 10, Utc, allowHover: true)!;
+        var now = 10.4;
+        switch (change)
+        {
+            case "speed": player.Speed = .151f; break;
+            case "space": player.IsOnPlanet = false; break;
+            case "inventory": player.Inventory[0].Count++; break;
+            case "mode": player.MovementState = "Drift"; player.IsFlying = false; break;
+            case "expired": now = 12.001; break;
+            case "distance": player.Position.X += .051f; break;
+            case "drone": player.ConstructionDrones.Working = 1; break;
+        }
+        Assert.False(inspection.Allows(hash, player, now));
+    }
+
+    private static PlayerStateSnapshot Hovering()
+    {
+        var player = Player();
+        player.MovementState = "Fly";
+        player.IsFlying = true;
+        player.StateHash = CanonicalStateHash.PlayerAction(player);
+        return player;
+    }
+
+    [Fact]
     public void CentimetreBucketCrossingKeepsDefaultHashStrictButAllowsBoundedIdleDrift()
     {
         var player = Player();
