@@ -339,7 +339,7 @@ internal sealed partial class NormalGameActionCoordinator
             payload,
             common.Session!,
             (long)recipe.TimeSpend * request.Count,
-            "The original native replicator task exhausts its requested executions and clears its delivery buffer; inventory changes are observed separately.");
+            "The original native replicator task exhausts its requested executions and clears its delivery buffer. Inventory changes are observed separately.");
         if (prepared.Success && prepared.Value is not null)
         {
             prepared.Value.HandcraftReadbackVersion = 1;
