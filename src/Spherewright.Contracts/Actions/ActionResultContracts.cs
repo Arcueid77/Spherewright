@@ -66,6 +66,7 @@ public sealed class ActionResultSnapshot
     public UpgradeReadback? UpgradeReadback { get; set; }
     public MainMenuReturnReadback? MainMenuReturnReadback { get; set; }
     public ResearchQueueReadback? ResearchQueueReadback { get; set; }
+    public HandcraftCompletionReadback? HandcraftReadback { get; set; }
     public StorageConfigurationReadback? StorageConfigurationReadback { get; set; }
     public BeltPathReversalReadback? BeltPathReversalReadback { get; set; }
     public MechaWarperSupplyReadback? MechaWarperSupplyReadback { get; set; }

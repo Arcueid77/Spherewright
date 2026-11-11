@@ -446,6 +446,7 @@ public sealed class PreparedNormalAction
     // Zero/missing is legacy or unproved. Version 1 advertises an ordinary
     // enqueue's same-tick queue, research-progress and material readback.
     public int ResearchQueueReadbackVersion { get; set; }
+    public int HandcraftReadbackVersion { get; set; }
 
     public double EstimatedDistance { get; set; }
 

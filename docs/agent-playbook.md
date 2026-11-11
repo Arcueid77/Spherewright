@@ -609,6 +609,10 @@ Design creation begins at zero delivered progress. Observe normal rocket/sail ma
 
 The finite remote native-drone construction subset also accepts ray receiver2208 with exact generator/model completion proof. Design configuration retains the original one-tick immediate journey work budget. Building items, research, supplies and return reserves remain part of the declared scenario allowance.
 
+## Handcraft completion evidence
+
+Handcraft preparation advertises `handcraftReadbackVersion=1`. Its original terminal includes `handcraftReadback`, binding the recipe and requested executions to the retained Native `ForgeTask`. Completion requires the task to leave the queue with zero remaining executions and an empty delivery buffer. Cancellation preserves unfinished execution counts. `inventoryProductsObserved` and ordinary `itemDeltas` separately describe package readback. Inspect package stock, automatic research buffers and technology progress when crafted products enter Native automatic use. Plan later transfers from actual package stock. Missing legacy readback keeps its original evidence scope.
+
 ## Native planetary navigation
 
 For an owned stationary grounded player with a closed journey, `spherewright_prepare_move(useNativeNavigation=true, arrivalTolerance=3..5)` selects the game's normal planetary navigator. Fresh-read the player hash and declare one same-planet target near the current radial height. Native thresholds determine the supported distance above the Fly threshold and20m, through the Sail threshold and500m. Read `nativeSurfaceNavigation` for its request/session binding, current thresholds, complete3600-tick energy budget and900-tick reserve. A matching Plugin/MCP cohort and unlocked thruster are required.

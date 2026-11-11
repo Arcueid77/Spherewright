@@ -45,3 +45,9 @@ Same-system flight uses native launch/navigation/landing and a pre-flight checkp
 ## Excluded and unproven paths
 
 `BasicProductionLineCoordinator.cs` is explicitly removed from Plugin compilation. Its historical item grants, direct `BuildFinally` and buffer insertion are not normal primitives and must not return through Foundry. Logistics-distributor add-ons and courier primitives are a separate unsupported gap; station fleets do not prove them. Current acceptance remains the bounded local candidate described in final validation, without arbitrary saves, all Mods, another-computer or universal native-API compatibility claims.
+
+## Native handcraft completion, DSP29151
+
+The inspected `Assembly-CSharp.dll` SHA-256 is `EF314425DADE51F529F184F07BE136CD3C2660A6A81515603C7226FBE7AB1D8C`. `ForgeTask.recipeId`, `count` and `produced` are public instance fields. `ForgeTask.Produce()` decrements `count` once per recipe execution. `MechaForge.GameTick(long,float)` delivers the root task's products before removing a task whose count reached0. `MechaForge.CancelTask(int)` returns reserved inputs and removes the range while preserving the cancelled task's remaining count. `TaskDeliver` clears delivered product buffers after the Native package/trash path.
+
+The Plugin retains the exact task returned by `AddTask(int,int)` and captures its initial execution count on the main thread. The terminal policy verifies recipe/count binding, queue release and zero undelivered buffer. Inventory presence is a separate diagnostic because automatic research may collect delivered products immediately. The DTO is copied before publication. Source-backed offline cases cover automatic consumption, ordinary inventory, pending, partial/cancelled, undelivered and invalid binding states. These checks do not establish live acceptance or update an installed cohort.

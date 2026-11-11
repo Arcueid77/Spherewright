@@ -45,3 +45,9 @@ per-save 玩法 Journal 记录已观察首次事件和持久检查点，覆盖�
 ## 排除与未证明路径
 
 `BasicProductionLineCoordinator.cs` 被显式排除 Plugin 编译，其历史物品授予、直接 `BuildFinally` 和缓冲插入不属于正常原语，也不得借 Foundry 恢复。物流配送器 add-on 与运输机原语仍是独立未支持缺口，物流站机队不证明它们。当前验收限于最终摘要中的有界本机候选，不承诺任意存档、全部 Mod、异机或通用原生 API 兼容。
+
+## DSP29151 原生手工制造完成
+
+已检查的 `Assembly-CSharp.dll` SHA-256 为 `EF314425DADE51F529F184F07BE136CD3C2660A6A81515603C7226FBE7AB1D8C`。`ForgeTask.recipeId`、`count`、`produced` 为公开实例字段。`ForgeTask.Produce()` 每完成一次配方执行就递减 `count`。`MechaForge.GameTick(long,float)` 先交付根任务产物，再移除计数归0的任务。`MechaForge.CancelTask(int)` 退还已预留输入并移除任务范围，保留被取消任务的剩余次数。`TaskDeliver` 经过原生背包/丢弃路径后清空已交付产物缓冲。
+
+Plugin 在主线程保留 `AddTask(int,int)` 返回的准确原任务并捕获初始执行次数。终态策略验证配方/次数绑定、队列释放及零未交付缓冲。背包产物存在性作为单独诊断，因为自动科研可能立即收取已交付产物。发布前复制 DTO。基于源码的离线用例覆盖自动消耗、普通背包、在途、部分完成/取消、未交付和无效绑定。这些检查保留离线范围，尚未构成实机验收或更新实装程序组。

@@ -633,6 +633,10 @@ Move/Harvest失败可在原失败tick保留`movementDiagnostics`。合读位置�
 
 有限外星原生无人机施工范围同时接受2208射线接收站，并核对准确发电组件/模型完成证明。设计配置沿原单tick即时旅程工作预算，建筑物品、科研、供料和返航储备继续计入声明场景额度。
 
+## 手工制造完成证据
+
+手工制造预检声明 `handcraftReadbackVersion=1`。原终态中的 `handcraftReadback` 将配方和请求执行次数绑定到保留的原生 `ForgeTask`。完成要求原任务离开队列、剩余执行次数为0且交付缓冲为空。取消任务保留未完成次数。`inventoryProductsObserved` 与普通 `itemDeltas` 分别记录背包读回。产物进入原生自动用途时，继续核对背包实物、自动科研缓存和科技进度。后续转移采用实际背包库存，旧版缺少该读回的记录保留原证据范围。
+
 ## 原生行星导航
 
 对已关闭旅程中的owned本地接地停稳角色，`spherewright_prepare_move(useNativeNavigation=true, arrivalTolerance=3..5)`选择游戏普通行星导航器。先重新读取角色hash，声明当前星球上接近当前径向高度的目标。原生阈值决定可用距离，须超过Fly阈值及20m，并保持在Sail阈值及500m以内。核对 `nativeSurfaceNavigation`的准确请求/会话绑定、当前阈值、完整3600tick能耗预算及900tick储备，并使用匹配Plugin/MCP及已解锁推进器。
