@@ -7,6 +7,44 @@ namespace Spherewright.Bridge.Core.Tests;
 public sealed class NativeSurfaceNavigationPolicyTests
 {
     [Theory]
+    [InlineData("Walk", true)] [InlineData("Drift", false)] [InlineData("Fly", false)]
+    public void NativeSurfaceArrivalAllowsNormalMovementToContinue(string movement, bool grounded)
+    {
+        var result = Arrived();
+        result.MovementState = movement;
+        result.GroundedStopVerified = grounded;
+        result.FinalDistanceMetres = 15;
+        Assert.True(NativeSurfaceNavigationPolicy.HasArrived(result, 4));
+    }
+
+    [Theory]
+    [InlineData("start")] [InlineData("fly")] [InlineData("arrival")] [InlineData("release")]
+    [InlineData("range")] [InlineData("nonfinite")] [InlineData("mode")] [InlineData("expired")]
+    public void UnprovedOrUnreleasedNavigationDoesNotComplete(string missing)
+    {
+        var result = Arrived();
+        switch (missing)
+        {
+            case "start": result.NativeNavigationStarted = false; break;
+            case "fly": result.NativeFlyObserved = false; break;
+            case "arrival": result.NativeArrivalObserved = false; break;
+            case "release": result.NativeNavigationReleased = false; break;
+            case "range": result.FinalSurfaceDistanceMetres = 5; break;
+            case "nonfinite": result.FinalSurfaceDistanceMetres = double.NaN; break;
+            case "mode": result.MovementState = "Sail"; break;
+            case "expired": result.NativeGameTicks = NativeSurfaceNavigationPolicy.MaximumGameTicks + 1; break;
+        }
+        Assert.False(NativeSurfaceNavigationPolicy.HasArrived(result, 4));
+    }
+
+    private static NativeSurfaceNavigationReadback Arrived() => new()
+    {
+        NativeNavigationStarted = true, NativeFlyObserved = true, NativeArrivalObserved = true,
+        NativeNavigationReleased = true, NativeGameTicks = 120, MovementState = "Drift",
+        FinalSurfaceDistanceMetres = 2,
+    };
+
+    [Theory]
     [InlineData(51, true)] [InlineData(200, true)] [InlineData(50, false)] [InlineData(201, false)]
     [InlineData(double.NaN, false)] [InlineData(double.PositiveInfinity, false)]
     public void NativeThresholdsDetermineTheFundedFlySubset(double distance, bool expected)

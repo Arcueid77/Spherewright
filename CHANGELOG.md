@@ -7,6 +7,7 @@
 - Added opt-in funded Native same-planet navigation through the existing move action, with current threshold binding, Fly/arrival/grounded-stop readback and owned-task failure isolation.
 - Funded recipe-only mecha research during planetary navigation while preserving buffered matrix points, complete queued-effect checks and specific preparation blockers.
 - Made planetary-navigation numeric bindings portable between classic game and current MCP runtimes, with a cross-runtime prepared-DTO serialization regression.
+- Completed Native navigation on surface-projected arrival and task release across Walk/Drift/Fly, with movement/ground observations and continued water-to-land movement.
 
 - Added tokenless local-star Dyson node/frame/shell observations with bounded coverage, source-bound design hashes and delivered/ordered structure/cell progress.
 - Added ray-receiver detail and current-star receiver coverage with Native recent electrical generation, capacity, photon buffers and catalyst accounting.

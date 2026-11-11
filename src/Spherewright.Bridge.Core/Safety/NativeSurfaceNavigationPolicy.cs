@@ -26,6 +26,15 @@ public static class NativeSurfaceNavigationPolicy
             && core >= perTick * 2 && loaded >= floor + perTick * MaximumGameTicks
             && Finite(floor + perTick * MaximumGameTicks);
 
+    public static bool HasArrived(NativeSurfaceNavigationReadback readback, float tolerance)
+        => readback.EvidenceVersion == 1 && readback.NativeNavigationStarted && readback.NativeFlyObserved
+            && readback.NativeArrivalObserved && readback.NativeNavigationReleased
+            && readback.MovementState is "Walk" or "Drift" or "Fly"
+            && readback.NativeGameTicks >= 0 && readback.NativeGameTicks <= MaximumGameTicks
+            && Finite(tolerance) && tolerance >= 3 && tolerance <= 5
+            && readback.FinalSurfaceDistanceMetres is { } distance && Finite(distance)
+            && distance >= 0 && distance <= tolerance;
+
     public static string Hash(string sessionId, string playerHash, NativeSurfaceNavigationPlan plan)
         => CanonicalStateHash.Combine("native-surface-navigation-v1", sessionId, playerHash, plan.PlanetId,
             ScalarBits(plan.Target.X), ScalarBits(plan.Target.Y), ScalarBits(plan.Target.Z), ScalarBits(plan.ArcDistanceMetres),

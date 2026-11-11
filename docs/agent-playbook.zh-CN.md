@@ -635,8 +635,8 @@ Move/Harvest失败可在原失败tick保留`movementDiagnostics`。合读位置�
 
 ## 原生行星导航
 
-对已关闭旅程中的owned接地停稳角色，`spherewright_prepare_move(useNativeNavigation=true, arrivalTolerance=3..5)`选择游戏普通行星导航器。先重新读取角色hash，声明当前星球上的一个表面目标。原生阈值决定可用距离，须超过Fly阈值及20m，并保持在Sail阈值及500m以内。核对 `nativeSurfaceNavigation`的准确请求/会话绑定、当前阈值、完整3600tick能耗预算及900tick落地储备，并使用匹配Plugin/MCP及已解锁推进器。
+对已关闭旅程中的owned本地接地停稳角色，`spherewright_prepare_move(useNativeNavigation=true, arrivalTolerance=3..5)`选择游戏普通行星导航器。先重新读取角色hash，声明当前星球上接近当前径向高度的目标。原生阈值决定可用距离，须超过Fly阈值及20m，并保持在Sail阈值及500m以内。核对 `nativeSurfaceNavigation`的准确请求/会话绑定、当前阈值、完整3600tick能耗预算及900tick储备，并使用匹配Plugin/MCP及已解锁推进器。
 
-完整证明的队列科研仅解锁配方、属性函数和物品奖励均为0时，可保留正常矩阵缓冲，并将科研工作计入导航能源预算。准备拒绝保留具体工作或充能前提。启动无人机施工、手搓或修改科研设置前，等待原导航接地终结。
+完整证明的队列科研仅解锁配方、属性函数和物品奖励均为0时，可保留正常矩阵缓冲，并将科研工作计入导航能源预算。准备拒绝保留具体工作或充能前提。启动无人机施工、手搓或修改科研设置前，等待原导航任务释放并终结。
 
-原移动令牌提交一次，轮询同一动作直至原生Fly、抵达及接地停稳。要求 `nativeSurfaceNavigationReadback.nativeFlyObserved`、`nativeArrivalObserved`、`groundedStopVerified`及 `nativeNavigationReleased`通过，终点距离满足声明值。导航保留游戏正常物理及资源消耗，原unknown结果沿原动作隔离核销。源码与原生依据见[行星导航研究](research/game-api-native-surface-navigation.zh-CN.md)。
+原移动令牌提交一次，轮询同一动作直至原生Fly、地表投影抵达及任务释放。要求 `nativeSurfaceNavigationReadback.nativeFlyObserved`、`nativeArrivalObserved`及 `nativeNavigationReleased`通过，`finalSurfaceDistanceMetres`满足声明容差。`movementState`报告Walk、Drift或Fly，`groundedStopVerified`单独报告实际接地观察。抵达水面后，可用 `allowPassiveDrift=true`新鲜准备普通移动前往陆地，或准备符合条件的新导航目标。导航保留游戏正常物理及资源消耗，原unknown结果沿原动作隔离核销。源码与原生依据见[行星导航研究](research/game-api-native-surface-navigation.zh-CN.md)。

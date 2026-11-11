@@ -33,4 +33,6 @@ public sealed class NativeSurfaceNavigationReadback
     public bool NativeNavigationReleased { get; set; }
     public long NativeGameTicks { get; set; }
     public double? FinalDistanceMetres { get; set; }
+    public double? FinalSurfaceDistanceMetres { get; set; }
+    public string MovementState { get; set; } = string.Empty;
 }

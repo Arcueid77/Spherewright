@@ -20,7 +20,7 @@ internal sealed partial class NormalGameActionCoordinator
         var binding = captured.Value;
         var result = AddPreparedPlan(NormalActionPlanPayload.ForNativeNavigation(binding), session,
             NativeSurfaceNavigationPolicy.MaximumGameTicks,
-            "Native planetary navigation observes Fly, native arrival and a grounded stationary stop on the same owned planet.");
+            "Native planetary navigation observes Fly, surface-projected arrival and release of its task on the same owned planet. Normal flight or water drift may continue.");
         if (result.Value is not null) result.Value.NativeSurfaceNavigation = binding.Plan;
         return result;
     }
@@ -39,6 +39,7 @@ internal sealed partial class NormalGameActionCoordinator
             || planet.type == EPlanetType.Gas || !ReferenceEquals(player.planetData, planet)
             || player.mecha.thrusterLevel < 1 || !NativeNavigationGroundedStop(player)
             || nav.navigating || nav.hasTask || player.currentOrder is not null || GameMain.data.guideRunning
+            || player.orders is null || player.orders.orderCount != 0
             || !NativeNavigationInputsIdle(player) || !player.mecha.constructionModule.allDronesIdle
             || snapshot.ConstructionDrones.PendingBuildTargets != 0 || snapshot.ConstructionDrones.PendingRepairTargets != 0)
             return NavigationFailed("native_navigation_grounded_idle_binding_required");
@@ -178,7 +179,7 @@ internal sealed partial class NormalGameActionCoordinator
             || !ReferenceEquals(GameMain.localPlanet, binding.Planet) || !_sessions.IsCurrentSessionOwned
             || _sessions.SessionId != action.SessionId || !ReferenceEquals(player.controller, binding.Controller)
             || !ReferenceEquals(player.navigation, binding.Navigation) || !ReferenceEquals(player.mecha, binding.Mecha)
-            || player.planetId != action.PlanetId)
+            || player.planetId != action.PlanetId || !FiniteNativePosition(player.position))
         {
             UnknownNativeNavigation(action, "Native navigation lost its original world/player/planet binding.");
             return;
@@ -188,13 +189,18 @@ internal sealed partial class NormalGameActionCoordinator
         readback.NativeGameTicks = GameMain.gameTick - action.StartedAtGameTick;
         var distance = Vector3.Distance(player.position, ToVector(binding.Plan.Target));
         readback.FinalDistanceMetres = distance;
+        var surfaceDistance = Vector3.Distance(player.position.normalized * binding.Planet.realRadius,
+            ToVector(binding.Plan.Target).normalized * binding.Planet.realRadius);
+        readback.FinalSurfaceDistanceMetres = surfaceDistance;
+        readback.MovementState = player.movementState.ToString();
+        readback.GroundedStopVerified = NativeNavigationGroundedStop(player);
         readback.NativeFlyObserved |= player.movementState == EMovementState.Fly;
         if (!NativeNavigationInputsIdle(player) || player.currentOrder is not null || player.movementState >= EMovementState.Sail)
         {
             UnknownNativeNavigation(action, "Native navigation encountered foreign input/order or an unexpected Sail transition.");
             return;
         }
-        if (!action.NavigationLanding)
+        if (!action.NavigationEnding)
         {
             if (binding.Navigation.flyThreshold != binding.Plan.NativeFlyThresholdMetres
                 || binding.Navigation.sailThreshold != binding.Plan.NativeSailThresholdMetres
@@ -205,20 +211,18 @@ internal sealed partial class NormalGameActionCoordinator
             }
             if (!OwnsNativeNavigation(binding))
             {
-                var horizontal = Vector3.Distance(player.position.normalized * binding.Planet.realRadius,
-                    ToVector(binding.Plan.Target).normalized * binding.Planet.realRadius);
-                if (horizontal < 3.01f && readback.NativeFlyObserved)
+                if (surfaceDistance < 3.01f && readback.NativeFlyObserved)
                 {
                     readback.NativeArrivalObserved = true;
-                    action.NavigationLanding = true;
+                    action.NavigationEnding = true;
                 }
-                else BeginNativeNavigationLanding(action, "The original Native navigation task ended before owned arrival proof.");
+                else BeginNativeNavigationRelease(action, "The original Native navigation task ended before owned arrival proof.");
             }
             else if (binding.Navigation.DetermineArrive())
             {
                 binding.Navigation.Arrive();
                 readback.NativeArrivalObserved = true;
-                action.NavigationLanding = true;
+                action.NavigationEnding = true;
             }
             else
             {
@@ -229,30 +233,27 @@ internal sealed partial class NormalGameActionCoordinator
                     || CalculateAvailableFlightEnergy(player.mecha) < binding.Plan.EnergyUpperPerTickJoules * binding.Plan.LandingReserveGameTicks
                     || readback.NativeGameTicks >= binding.Plan.MaximumGameTicks - binding.Plan.LandingReserveGameTicks
                     || DateTimeOffset.UtcNow >= action.NavigationDeadline.AddSeconds(-30))
-                    BeginNativeNavigationLanding(action, "The bounded navigation work or energy allowance ended.");
+                    BeginNativeNavigationRelease(action, "The bounded navigation work or energy allowance ended.");
             }
         }
-        if (!action.NavigationLanding) return;
-        if (player.movementState == EMovementState.Fly) player.controller.actionFly.targetAltitude = 1f;
+        if (!action.NavigationEnding) return;
         readback.NativeNavigationReleased = !binding.Navigation.hasTask && !binding.Navigation.navigating;
-        if (readback.NativeNavigationReleased && NativeNavigationGroundedStop(player))
+        if (readback.NativeNavigationReleased)
         {
-            readback.GroundedStopVerified = true;
-            if (action.NavigationFailure is null && readback.NativeArrivalObserved && readback.NativeFlyObserved
-                && distance <= action.Plan.ArrivalTolerance)
-                Complete(action, "Native planetary navigation flew, arrived and settled on the original planet.");
+            if (action.NavigationFailure is null && NativeSurfaceNavigationPolicy.HasArrived(readback, action.Plan.ArrivalTolerance))
+                Complete(action, "Native planetary navigation arrived and released its original task. Normal movement may continue on this planet.");
             else
-                Fail(action, action.NavigationFailure ?? "Native navigation settled outside the declared arrival tolerance.");
+                Fail(action, action.NavigationFailure ?? "Native navigation released its task without the declared surface-arrival proof.");
         }
         else if (readback.NativeGameTicks > binding.Plan.MaximumGameTicks || DateTimeOffset.UtcNow > action.NavigationDeadline)
-            UnknownNativeNavigation(action, "The original Native navigation landing has no bounded grounded-stop proof.");
+            UnknownNativeNavigation(action, "The original Native navigation has no bounded task-release proof.");
     }
 
-    private static void BeginNativeNavigationLanding(ActionRecord action, string failure)
+    private static void BeginNativeNavigationRelease(ActionRecord action, string failure)
     {
         var binding = action.Plan.NativeNavigation!;
         action.NavigationFailure = failure;
-        action.NavigationLanding = true;
+        action.NavigationEnding = true;
         if (OwnsNativeNavigation(binding)) binding.Navigation.Abort();
     }
 
@@ -305,7 +306,7 @@ internal sealed partial class NormalGameActionCoordinator
         public NativeSurfaceNavigationReadback? NativeSurfaceNavigationReadback { get; set; }
         public DateTimeOffset NavigationDeadline { get; set; }
         public long NavigationLastTick { get; set; }
-        public bool NavigationLanding { get; set; }
+        public bool NavigationEnding { get; set; }
         public string? NavigationFailure { get; set; }
     }
 }
