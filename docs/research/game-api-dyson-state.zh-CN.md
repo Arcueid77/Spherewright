@@ -26,4 +26,4 @@ Gamma的 `capacityCurrentTick`来自原生日照、预热、透镜及戴森响�
 
 持续输出验证使用预声明游戏tick区间，并保持接收器身份、模式和电网成员关系。记录各样本的游戏tick、实际交付电能、缓冲变化及拓扑。观察接口提供只读数据，`executable=false`、`commitAllowedNow=false`。原生设计写入、产线供给及保存恢复验收按各自正常执行路径推进。
 
-本切片已具备离线结构/功率策略测试、MCP转发/模式检查及Native构建。0.6实装运行和玩法证据将通过Spherewright-Lab中的Ascension场景记录。
+源码 `ee810a699b71db44bfe11ae1e4e71b9370f79353`通过6389项源码回归和准确CI。同源0.6开发程序完成owned世界的正常冷恢复，观察接口返回当前恒星初始空结构和空接收器集合的完整覆盖。正向接收发电及非空设计验证按后续Ascension阶段推进。[本源码原生记录](https://github.com/Arcueid77/Spherewright-Lab/blob/e0023fabe84cb989f6498e99636cd83bfb64d03b/scenarios/v0.6-ascension/current-status.md)
