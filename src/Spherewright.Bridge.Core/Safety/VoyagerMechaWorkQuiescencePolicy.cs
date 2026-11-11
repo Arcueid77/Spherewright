@@ -2,8 +2,8 @@ namespace Spherewright.Bridge.Core.Safety;
 
 // Copied complete Native facts only. This policy never pauses research,
 // changes a queue or spends/returns matrix items.
-// The navigation opt-in prices mecha research separately and permits only
-// recipe unlocks with no attribute functions or completion-item awards.
+// Navigation prices mecha research separately. Its additional Dyson opt-in
+// verifies the Native latitude-only effect before permitting queued research.
 public sealed class VoyagerMechaWorkFacts
 {
     public bool ForgeObserved { get; set; }
@@ -22,6 +22,8 @@ public sealed class VoyagerQueuedResearchFacts
     public bool IsLabTechnology { get; set; }
     public bool RecipeUnlocksVerified { get; set; }
     public int? UnlockFunctionCount { get; set; }
+    public int[]? UnlockFunctionIds { get; set; }
+    public double[]? UnlockFunctionValues { get; set; }
     public int? CompletionAwardCount { get; set; }
     public int[]? RequiredItemIds { get; set; }
     public int[]? RequiredItemPointsPerHash { get; set; }
@@ -41,9 +43,11 @@ public static class VoyagerMechaWorkQuiescencePolicy
     public const int MaximumResearchItems = 16;
     public const int MaximumBufferedItems = 64;
 
-    public static VoyagerMechaWorkDecision Evaluate(VoyagerMechaWorkFacts? facts, bool allowRecipeOnlyMechaResearch = false)
+    public static VoyagerMechaWorkDecision Evaluate(VoyagerMechaWorkFacts? facts,
+        bool allowRecipeOnlyMechaResearch = false, bool allowDysonLatitudeResearch = false)
     {
         VoyagerMechaWorkDecision Reject(string code) => new() { BlockerCode = code };
+        var pricedResearch = allowRecipeOnlyMechaResearch || allowDysonLatitudeResearch;
         if (facts is null || !facts.ForgeObserved || facts.ForgeTaskCount != 0 || !facts.HistoryObserved
             || facts.QueuedTechnologyIds is null || facts.QueuedTechnologyIds.Length > MaximumQueuedTechnologies
             || facts.QueuedTechnologyIds.Any(id => id <= 0)
@@ -54,7 +58,7 @@ public static class VoyagerMechaWorkQuiescencePolicy
         if (facts.QueuedTechnologyIds.Length == 0) return new() { Proved = true };
         if (!facts.MechaLabBindingVerified || facts.ResearchBufferPointCounts is null
             || facts.ResearchBufferPointCounts.Length > MaximumBufferedItems
-            || facts.ResearchBufferPointCounts.Any(count => count < 0 || !allowRecipeOnlyMechaResearch && count != 0))
+            || facts.ResearchBufferPointCounts.Any(count => count < 0 || !pricedResearch && count != 0))
             return Reject("mecha_research_buffer_not_empty");
         if (facts.QueuedResearch is null || facts.QueuedResearch.Count != facts.QueuedTechnologyIds.Length)
             return Reject("queued_research_coverage_unknown");
@@ -62,9 +66,15 @@ public static class VoyagerMechaWorkQuiescencePolicy
         for (var i = 0; i < facts.QueuedTechnologyIds.Length; i++)
         {
             var tech = facts.QueuedResearch[i];
+            var dysonLatitudeOnly = allowDysonLatitudeResearch && tech is not null
+                && tech.UnlockFunctionCount == 1
+                && tech.UnlockFunctionIds is { Length: 1 } functions && functions[0] == 26
+                && tech.UnlockFunctionValues is { Length: 1 } values
+                && !double.IsNaN(values[0]) && !double.IsInfinity(values[0])
+                && values[0] > 0 && values[0] <= 90;
             if (tech is null || tech.TechnologyId != facts.QueuedTechnologyIds[i] || !tech.NativeIdentityVerified
                 || !tech.IsLabTechnology || !tech.RecipeUnlocksVerified
-                || tech.UnlockFunctionCount != 0 || tech.CompletionAwardCount != 0)
+                || (tech.UnlockFunctionCount != 0 && !dysonLatitudeOnly) || tech.CompletionAwardCount != 0)
                 return Reject("queued_research_native_effects_unproved");
             var ids = tech.RequiredItemIds;
             var points = tech.RequiredItemPointsPerHash;
@@ -73,7 +83,7 @@ public static class VoyagerMechaWorkQuiescencePolicy
                 || points.Length != ids.Length || stock.Length != ids.Length
                 || ids.Any(id => id <= 0) || ids.Distinct().Count() != ids.Length || points.Any(count => count <= 0))
                 return Reject("queued_research_inputs_unknown");
-            if (stock.Any(count => count < 0 || !allowRecipeOnlyMechaResearch && count != 0))
+            if (stock.Any(count => count < 0 || !pricedResearch && count != 0))
                 return Reject("mecha_research_inputs_available");
             factoryOnly &= stock.All(count => count == 0);
         }

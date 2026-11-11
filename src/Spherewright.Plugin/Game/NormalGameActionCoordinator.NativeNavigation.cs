@@ -126,7 +126,7 @@ internal sealed partial class NormalGameActionCoordinator
     {
         blocker = null;
         var work = VoyagerMechaWorkQuiescencePolicy.Evaluate(CaptureVoyagerMechaWork(player),
-            allowRecipeOnlyMechaResearch: true);
+            allowRecipeOnlyMechaResearch: true, allowDysonLatitudeResearch: true);
         if (!work.Proved)
         {
             blocker = work.BlockerCode;
@@ -137,7 +137,7 @@ internal sealed partial class NormalGameActionCoordinator
         if (!NativeMechaBackgroundCostPolicy.IndependentCombatCoreDebitsExcluded(background))
         {
             var recharge = NativeMechaRechargeCostPolicy.Evaluate(CaptureNativeMechaRechargeFacts(player, background,
-                allowRecipeOnlyMechaResearch: true));
+                allowRecipeOnlyMechaResearch: true, allowDysonLatitudeResearch: true));
             if (!recharge.Proved)
             {
                 blocker = recharge.BlockerCode;

@@ -49,7 +49,7 @@ internal sealed partial class NormalGameActionCoordinator
                 || tech.Items is null || tech.ItemPoints is null || tech.Items.Length < 1
                 || tech.Items.Length > VoyagerMechaWorkQuiescencePolicy.MaximumResearchItems
                 || tech.ItemPoints.Length != tech.Items.Length || tech.Items.Any(item => LDB.items.Select(item) is null)
-                || tech.UnlockRecipes is null || tech.UnlockRecipes.Length < 1 || tech.UnlockRecipes.Length > 64
+                || tech.UnlockRecipes is null || tech.UnlockRecipes.Length > 64
                 || tech.UnlockRecipes.Any(recipe => recipe <= 0 || LDB.recipes.Select(recipe) is null)
                 || tech.UnlockFunctions is null || tech.UnlockValues is null || tech.AddItems is null || tech.AddItemCounts is null
                 || tech.UnlockFunctions.Length != tech.UnlockValues.Length || tech.AddItems.Length != tech.AddItemCounts.Length) return facts;
@@ -57,6 +57,8 @@ internal sealed partial class NormalGameActionCoordinator
             {
                 TechnologyId = id, NativeIdentityVerified = true, IsLabTechnology = tech.IsLabTech,
                 RecipeUnlocksVerified = true, UnlockFunctionCount = tech.UnlockFunctions.Length,
+                UnlockFunctionIds = tech.UnlockFunctions.ToArray(),
+                UnlockFunctionValues = tech.UnlockValues.Select(value => (double)value).ToArray(),
                 CompletionAwardCount = tech.AddItems.Length, RequiredItemIds = tech.Items.ToArray(),
                 RequiredItemPointsPerHash = tech.ItemPoints.ToArray(),
                 RequiredItemPackageCounts = tech.Items.Select(item => package.GetItemCount(item)).ToArray(),

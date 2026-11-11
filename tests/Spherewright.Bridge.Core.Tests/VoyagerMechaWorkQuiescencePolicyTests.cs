@@ -6,6 +6,87 @@ namespace Spherewright.Bridge.Core.Tests;
 public sealed class VoyagerMechaWorkQuiescencePolicyTests
 {
     [Theory]
+    [InlineData(0)]
+    [InlineData(7200)]
+    [InlineData(5760000)]
+    public void NavigationPricesVerifiedDysonLatitudeResearchWithKnownRecipeMetadata(int bufferedPoints)
+    {
+        var facts = Good();
+        facts.ResearchBufferPointCounts = new[] { bufferedPoints };
+        var tech = facts.QueuedResearch![0];
+        tech.UnlockFunctionCount = 1;
+        tech.UnlockFunctionIds = new[] { 26 };
+        tech.UnlockFunctionValues = new[] { 15d };
+        tech.RequiredItemIds = new[] { 6001, 6002, 6003, 6004, 6005 };
+        tech.RequiredItemPointsPerHash = new[] { 20, 20, 20, 20, 20 };
+        tech.RequiredItemPackageCounts = new[] { 0, 0, 0, 0, 0 };
+
+        Assert.True(VoyagerMechaWorkQuiescencePolicy.Evaluate(facts,
+            allowRecipeOnlyMechaResearch: true, allowDysonLatitudeResearch: true).Proved);
+        Assert.False(VoyagerMechaWorkQuiescencePolicy.Evaluate(facts,
+            allowRecipeOnlyMechaResearch: true).Proved);
+        Assert.False(VoyagerMechaWorkQuiescencePolicy.Evaluate(facts).Proved);
+        Assert.Equal(bufferedPoints, facts.ResearchBufferPointCounts[0]);
+        Assert.Equal(new[] { 26 }, tech.UnlockFunctionIds);
+    }
+
+    [Theory]
+    [InlineData(1)]
+    [InlineData(25)]
+    [InlineData(27)]
+    public void DysonOptInRejectsOtherNativeUnlockFunctions(int function)
+    {
+        var facts = Good();
+        var tech = facts.QueuedResearch![0];
+        tech.UnlockFunctionCount = 1;
+        tech.UnlockFunctionIds = new[] { function };
+        tech.UnlockFunctionValues = new[] { 15d };
+        Assert.False(VoyagerMechaWorkQuiescencePolicy.Evaluate(facts,
+            allowDysonLatitudeResearch: true).Proved);
+    }
+
+    [Theory]
+    [InlineData(double.NaN)]
+    [InlineData(double.PositiveInfinity)]
+    [InlineData(double.NegativeInfinity)]
+    [InlineData(-1d)]
+    [InlineData(0d)]
+    [InlineData(91d)]
+    public void DysonLatitudeRequiresFiniteNativeIncrement(double value)
+    {
+        var facts = Good();
+        var tech = facts.QueuedResearch![0];
+        tech.UnlockFunctionCount = 1;
+        tech.UnlockFunctionIds = new[] { 26 };
+        tech.UnlockFunctionValues = new[] { value };
+        Assert.False(VoyagerMechaWorkQuiescencePolicy.Evaluate(facts,
+            allowDysonLatitudeResearch: true).Proved);
+    }
+
+    [Fact]
+    public void DysonLatitudeRetainsCompleteCoverageAndAwardChecks()
+    {
+        var facts = Good();
+        var tech = facts.QueuedResearch![0];
+        tech.UnlockFunctionCount = 1;
+        tech.UnlockFunctionIds = new[] { 26 };
+        tech.UnlockFunctionValues = new[] { 15d };
+        Assert.True(VoyagerMechaWorkQuiescencePolicy.Evaluate(facts,
+            allowDysonLatitudeResearch: true).Proved);
+        tech.CompletionAwardCount = 1;
+        Assert.False(VoyagerMechaWorkQuiescencePolicy.Evaluate(facts,
+            allowDysonLatitudeResearch: true).Proved);
+        tech.CompletionAwardCount = 0;
+        tech.UnlockFunctionValues = null;
+        Assert.False(VoyagerMechaWorkQuiescencePolicy.Evaluate(facts,
+            allowDysonLatitudeResearch: true).Proved);
+        tech.UnlockFunctionValues = new[] { 15d };
+        tech.UnlockFunctionIds = new[] { 26, 26 };
+        Assert.False(VoyagerMechaWorkQuiescencePolicy.Evaluate(facts,
+            allowDysonLatitudeResearch: true).Proved);
+    }
+
+    [Theory]
     [InlineData(0)] [InlineData(1)] [InlineData(3599)] [InlineData(3600)]
     [InlineData(46800)] [InlineData(int.MaxValue)]
     public void PricedRecipeOnlyNavigationResearchPreservesObservedBufferedPoints(int points)
