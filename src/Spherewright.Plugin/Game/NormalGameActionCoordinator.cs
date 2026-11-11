@@ -339,9 +339,10 @@ internal sealed partial class NormalGameActionCoordinator
             payload,
             common.Session!,
             (long)recipe.TimeSpend * request.Count,
-            "The accepted normal replicator task leaves the forge queue and its runtime recipe products are reread in inventory.");
+            "The original native replicator task exhausts its requested executions and clears its delivery buffer; inventory changes are observed separately.");
         if (prepared.Success && prepared.Value is not null)
         {
+            prepared.Value.HandcraftReadbackVersion = 1;
             AddRecipeBudget(prepared.Value, recipe, request.Count);
             prepared.Value.MoveStateBinding = interactionInspection?.Describe();
         }
@@ -842,6 +843,8 @@ internal sealed partial class NormalGameActionCoordinator
                     break;
                 }
 
+                action.InitialForgeExecutions = action.ForgeTask.count;
+
                 action.State = NormalActionStates.WaitingForGame;
                 action.Message = "DSP accepted the recipe into the normal replicator queue.";
                 break;
@@ -1308,23 +1311,44 @@ internal sealed partial class NormalGameActionCoordinator
     private void UpdateHandcraft(ActionRecord action)
     {
         var player = GameMain.mainPlayer;
-        var queueContainsTask = action.ForgeTask is not null && player.mecha.forge.tasks.Contains(action.ForgeTask);
-        if (queueContainsTask)
-        {
-            return;
-        }
-
+        var task = action.ForgeTask;
+        if (task is not null && player.mecha.forge.tasks.Contains(task)) return;
         var after = CaptureInventory(player);
         var expectedProducts = GetRecipeProducts(action.Plan.RecipeId, action.Plan.Count);
-        var productsObserved = expectedProducts.All(pair =>
-            GetCount(after, pair.Key) - GetCount(action.BeforeInventory, pair.Key) >= pair.Value);
-        if (productsObserved)
+        action.HandcraftReadback = new HandcraftCompletionReadback
         {
-            Complete(action, "The normal replicator task completed and all runtime recipe products were reread in player inventory.");
+            CapturedAtGameTick = GameMain.gameTick,
+            RecipeId = action.Plan.RecipeId,
+            RequestedExecutions = action.Plan.Count,
+            OriginalTaskBound = task is not null,
+            NativeTaskRecipeId = task?.recipeId ?? 0,
+            InitialTaskExecutions = action.InitialForgeExecutions,
+            RemainingExecutions = task?.count ?? -1,
+            NativeTaskInQueue = false,
+            UndeliveredProductCount = task?.produced is { } products && products.All(count => count >= 0)
+                ? products.Sum(count => (long)count) : -1,
+            InventoryProductsObserved = expectedProducts.All(pair =>
+                GetCount(after, pair.Key) - GetCount(action.BeforeInventory, pair.Key) >= pair.Value),
+        };
+        var state = HandcraftCompletionPolicy.Evaluate(action.HandcraftReadback);
+        if (state == HandcraftCompletionState.Pending) return;
+        if (state == HandcraftCompletionState.Completed)
+        {
+            Complete(action, "The original native replicator task exhausted its requested executions and cleared its delivery buffer. Inventory deltas separately record package changes and automatic use.");
+        }
+        else if (state == HandcraftCompletionState.Incomplete)
+        {
+            Fail(action, "The original native replicator task left the queue with unfinished executions or undelivered products.");
         }
         else
         {
-            Fail(action, "The replicator task left the queue, but the expected products were not all present in player inventory.");
+            action.State = NormalActionStates.OutcomeUnknown;
+            action.Terminal = true;
+            action.CompletedAtGameTick = GameMain.gameTick;
+            action.Message = "The original native replicator task completion binding could not be proven.";
+            action.OriginalOutcomeMessage = action.Message;
+            action.AfterInventory = after;
+            _sessions.QuarantineWritesOnMainThread(action.ActionId, action.Message);
         }
     }
 
@@ -1753,6 +1777,7 @@ internal sealed partial class NormalGameActionCoordinator
                 FailedPredicate = menu.Readback.FailedPredicate,
             } : null,
             ResearchQueueReadback = action.ResearchQueueReadback,
+            HandcraftReadback = action.HandcraftReadback?.Copy(),
             NativeSurfaceNavigationReadback = action.NativeSurfaceNavigationReadback,
             DysonStructureReadback = action.DysonStructureReadback,
             StorageConfigurationReadback = action.StorageConfigurationReadback,
@@ -2531,6 +2556,8 @@ internal sealed partial class NormalGameActionCoordinator
         public Dictionary<int, int>? AfterInventory { get; set; }
         public int[] ExpectedYieldItemIds { get; set; } = Array.Empty<int>();
         public ForgeTask? ForgeTask { get; set; }
+        public int InitialForgeExecutions { get; set; }
+        public HandcraftCompletionReadback? HandcraftReadback { get; set; }
         public OrderNode? PlayerOrder { get; set; }
         public long? PowerStarvedAtGameTick { get; set; }
         public MovementProgressWatchdog? MovementProgress { get; set; }
