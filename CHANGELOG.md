@@ -4,6 +4,7 @@
 
 ## 0.6.0 — Ascension development
 
+- Corrected empty-belt dismantling to detect every retained quaternion component change before exact Native renderer/collider verification.
 - Added opt-in funded Native same-planet navigation through the existing move action, with current threshold binding, Fly/arrival/grounded-stop readback and owned-task failure isolation.
 - Funded recipe-only mecha research during planetary navigation while preserving buffered matrix points, complete queued-effect checks and specific preparation blockers.
 - Made planetary-navigation numeric bindings portable between classic game and current MCP runtimes, with a cross-runtime prepared-DTO serialization regression.

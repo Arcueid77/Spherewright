@@ -165,7 +165,10 @@ internal sealed partial class NormalGameActionCoordinator
         {
             if (id == removedId) continue;
             var expected = before.Entities[id]; // Copy only; never write a native pool.
-            if (remainingIds.Take(2).Contains(id) && expected.rot != factory.entityPool[id].rot)
+            // Unity's quaternion operators use an angular tolerance. The full
+            // entity comparison below is exact, so even a small component
+            // change must first pass the native renderer/collider proof.
+            if (remainingIds.Take(2).Contains(id) && !expected.rot.Equals(factory.entityPool[id].rot))
             {
                 if (!ProvesNativeBeltRotation(factory, id, requireColliderExtent: true))
                     throw new InvalidOperationException("A touched surviving belt rotation lacks exact native renderer/collider proof.");
