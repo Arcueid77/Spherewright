@@ -38,7 +38,7 @@ internal sealed partial class NormalGameActionCoordinator
         var player = GameMain.mainPlayer;
         var mechaWork = CaptureVoyagerMechaWork(player);
         var mechaWorkDecision = VoyagerMechaWorkQuiescencePolicy.Evaluate(mechaWork);
-        if (!mechaWorkDecision.Proved) return InvalidPlan("Finite flight requires idle native mecha work. Queued factory research is supported only with a proved empty mecha research buffer, no carried required research items, and complete recipe-only/no-award technology metadata.");
+        if (!mechaWorkDecision.Proved) return InvalidPlan("Finite flight requires idle native mecha work. A normally paused queue may retain verified research buffers when no required research items are carried. Active queued factory research requires empty buffers, no carried inputs and complete recipe-only/no-award metadata.");
         var journey = _flightCheckpoints.VoyagerJourney;
         var returning = !string.IsNullOrWhiteSpace(request.JourneyId);
         if (returning != budget.IsReturnLeg || request.JourneyId != inspectedRequest!.JourneyId)
@@ -69,6 +69,7 @@ internal sealed partial class NormalGameActionCoordinator
             result.Value.VoyagerMechaWork = new VoyagerMechaWorkSnapshot
             {
                 QuiescenceProved = true, FactoryOnlyResearch = mechaWorkDecision.FactoryOnlyResearch,
+                PausedResearch = mechaWorkDecision.PausedResearch,
                 QueuedTechnologyIds = mechaWork.QueuedTechnologyIds!.ToList(),
                 NativeResearchOrInventoryMutationPerformed = false,
             };

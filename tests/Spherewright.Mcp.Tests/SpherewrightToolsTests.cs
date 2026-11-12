@@ -2644,6 +2644,34 @@ public sealed partial class SpherewrightToolsTests
     }
 
     [Theory]
+    [InlineData(true, true, 1, true)]
+    [InlineData(false, false, 1, true)]
+    [InlineData(true, null, 1, false)]
+    [InlineData(false, null, 1, false)]
+    [InlineData(true, false, 1, false)]
+    [InlineData(false, true, 1, false)]
+    [InlineData(true, true, 0, false)]
+    public async Task ResearchPauseRequiresMatchingDirectionAndMaterialReadback(
+        bool paused, bool? echo, int version, bool expected)
+    {
+        var bridge = new FakeBridgeClient(SuccessResult())
+        {
+            ResearchPreparedOverride = new PreparedNormalAction
+            {
+                Prepared = true, CommitAllowedNow = true, PlanToken = "research-pause-plan",
+                PlannedResearchPaused = echo, ResearchQueueReadbackVersion = version,
+            },
+        };
+        var result = await SpherewrightTools.PrepareSelectResearchAsync(
+            bridge, "synthetic-session", 104, 1001, "sha256:selection", researchPaused: paused);
+
+        Assert.Equal(paused, bridge.LastSelectResearchRequest?.ResearchPaused);
+        Assert.Equal(!expected, result.IsError);
+        if (!expected)
+            Assert.DoesNotContain("research-pause-plan", JsonSerializer.Serialize(result), StringComparison.Ordinal);
+    }
+
+    [Theory]
     [InlineData(null)]
     [InlineData(false)]
     [InlineData(true)]
@@ -3874,12 +3902,16 @@ public sealed partial class SpherewrightToolsTests
             CommitNormalActionRequest request,
             CancellationToken cancellationToken) => Committed(sessionId, request, NormalActionKinds.Handcraft);
 
+        public PreparedNormalAction? ResearchPreparedOverride { get; set; }
+
         public Task<BridgeCallResult<PreparedNormalAction>> PrepareSelectResearchAsync(
             string sessionId,
             PrepareSelectResearchRequest request,
             CancellationToken cancellationToken)
         {
             LastSelectResearchRequest = request;
+            if (ResearchPreparedOverride is not null)
+                return Task.FromResult(BridgeCallResult<PreparedNormalAction>.Succeeded(ResearchPreparedOverride));
             return Prepared(sessionId, NormalActionKinds.SelectResearch);
         }
 

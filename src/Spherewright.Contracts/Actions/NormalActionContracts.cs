@@ -167,6 +167,8 @@ public sealed class PrepareSelectResearchRequest
 
     public bool PrioritizeQueued { get; set; }
 
+    public bool? ResearchPaused { get; set; }
+
     public int StateHashVersion { get; set; } = 1;
 }
 
@@ -444,8 +446,9 @@ public sealed class PreparedNormalAction
     public bool CommitAllowedNow { get; set; }
 
     // Zero/missing is legacy or unproved. Version 1 advertises an ordinary
-    // enqueue's same-tick queue, research-progress and material readback.
+    // queue control's same-tick queue, research-progress and material readback.
     public int ResearchQueueReadbackVersion { get; set; }
+    public bool? PlannedResearchPaused { get; set; }
     public int HandcraftReadbackVersion { get; set; }
 
     public double EstimatedDistance { get; set; }

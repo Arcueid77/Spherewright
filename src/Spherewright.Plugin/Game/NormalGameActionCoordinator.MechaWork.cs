@@ -20,7 +20,9 @@ internal sealed partial class NormalGameActionCoordinator
             else if (id < 0 || emptySlotSeen) return facts;
         }
         facts.QueuedTechnologyIds = history.techQueue.Where(id => id > 0).ToArray();
-        if (history.currentTech != (facts.QueuedTechnologyIds.Length > 0 ? facts.QueuedTechnologyIds[0] : 0))
+        facts.ResearchQueuePaused = history.currentTech == 0 && facts.QueuedTechnologyIds.Length > 0;
+        if (!facts.ResearchQueuePaused
+            && history.currentTech != (facts.QueuedTechnologyIds.Length > 0 ? facts.QueuedTechnologyIds[0] : 0))
         { facts.QueuedTechnologyIds = null; return facts; }
         if (facts.ForgeTaskCount != 0 || facts.QueuedTechnologyIds.Length == 0) return facts;
         if (facts.QueuedTechnologyIds.Length > VoyagerMechaWorkQuiescencePolicy.MaximumQueuedTechnologies

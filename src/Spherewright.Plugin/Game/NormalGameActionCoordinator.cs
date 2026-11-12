@@ -387,8 +387,15 @@ internal sealed partial class NormalGameActionCoordinator
             return InvalidPlan("The requested technology is already unlocked.");
         }
 
+        if (request.PrioritizeQueued && request.ResearchPaused.HasValue)
+            return InvalidPlan("Choose queue priority or pause control in one prepared operation.");
         int[]? researchOrder = null;
-        if (request.PrioritizeQueued)
+        if (request.ResearchPaused.HasValue)
+        {
+            if (!CanPrepareResearchPause(request.TechId, request.ResearchPaused.Value))
+                return InvalidPlan("Research pause control requires the exact queued head, a valid queue, completed prerequisites and a changed pause state.");
+        }
+        else if (request.PrioritizeQueued)
         {
             researchOrder = TryPrepareResearchPriority(request.TechId);
             if (researchOrder is null)
@@ -403,7 +410,10 @@ internal sealed partial class NormalGameActionCoordinator
                 "Complete prerequisite technology or free a research queue slot, then inspect and prepare again."));
         }
 
-        var expectedHash = CanonicalStateHash.Combine(
+        var expectedHash = request.ResearchPaused.HasValue
+            ? CanonicalStateHash.Combine("research-pause-control-v1", _sessions.SessionId,
+                request.PlanetId, progression.SelectionStateHash, request.TechId, request.ResearchPaused.Value)
+            : CanonicalStateHash.Combine(
             NormalActionKinds.SelectResearch,
             _sessions.SessionId,
             request.PlanetId,
@@ -416,17 +426,22 @@ internal sealed partial class NormalGameActionCoordinator
             expectedHash,
             progression.SelectionStateHash,
             request.TechId,
-            researchOrder);
+            researchOrder,
+            request.ResearchPaused);
         var prepared = AddPreparedPlan(
             payload,
             common.Session!,
-            techState.HashRequired - techState.HashUploaded,
-            request.PrioritizeQueued
+            request.ResearchPaused.HasValue ? 1 : techState.HashRequired - techState.HashUploaded,
+            request.ResearchPaused.HasValue
+                ? "DSP's normal research pause control changes the current head state while preserving the complete queue, progress and materials."
+                : request.PrioritizeQueued
                 ? "Native queue priority only: requested technology becomes head; all other order, research progress and inventory remain unchanged. This does not complete research."
                 : "DSP's normal technology queue contains the requested technology and currentTech reflects the queue head.");
         if (prepared.Success && prepared.Value is not null)
         {
             if (!request.PrioritizeQueued) prepared.Value.ResearchQueueReadbackVersion = 1;
+            prepared.Value.PlannedResearchPaused = request.ResearchPaused;
+            if (request.ResearchPaused.HasValue) return prepared;
             foreach (var requirement in techState.ItemRequirements)
             {
                 prepared.Value.ItemBudget.Add(new ActionItemBudget
@@ -849,6 +864,11 @@ internal sealed partial class NormalGameActionCoordinator
                 action.Message = "DSP accepted the recipe into the normal replicator queue.";
                 break;
             case NormalActionKinds.SelectResearch:
+                if (plan.ResearchPaused.HasValue)
+                {
+                    ExecuteResearchPauseOnMainThread(action);
+                    break;
+                }
                 if (plan.ResearchQueueOrder is not null)
                 {
                     ExecuteResearchPriorityOnMainThread(action);
@@ -1434,6 +1454,10 @@ internal sealed partial class NormalGameActionCoordinator
                     return progression.Error;
                 }
 
+                if (plan.ResearchPaused.HasValue)
+                    return progression.Value.SelectionStateHash == plan.ProgressionSelectionStateHash
+                        && CanPrepareResearchPause(plan.TechId, plan.ResearchPaused.Value)
+                        ? null : Stale("Research queue, prerequisites or pause state changed after prepare.");
                 return string.Equals(progression.Value.SelectionStateHash, plan.ProgressionSelectionStateHash, StringComparison.Ordinal)
                     && (plan.ResearchQueueOrder is null ? GameMain.history.CanEnqueueTech(plan.TechId)
                         : TryPrepareResearchPriority(plan.TechId)?.SequenceEqual(plan.ResearchQueueOrder) == true)
@@ -2620,6 +2644,7 @@ internal sealed partial class NormalGameActionCoordinator
         public int RecipeId { get; private set; }
         public int TechId { get; private set; }
         public int[]? ResearchQueueOrder { get; private set; }
+        public bool? ResearchPaused { get; private set; }
         public int BuildingItemId { get; private set; }
         public string BuildKind { get; private set; } = string.Empty;
         public string BuildResourceStateHash { get; private set; } = string.Empty;
@@ -2755,7 +2780,8 @@ internal sealed partial class NormalGameActionCoordinator
             string expectedStateHash,
             string progressionSelectionStateHash,
             int techId,
-            int[]? researchQueueOrder = null) => new NormalActionPlanPayload
+            int[]? researchQueueOrder = null,
+            bool? researchPaused = null) => new NormalActionPlanPayload
             {
                 ActionKind = NormalActionKinds.SelectResearch,
                 SessionId = sessionId,
@@ -2764,6 +2790,7 @@ internal sealed partial class NormalGameActionCoordinator
                 ProgressionSelectionStateHash = progressionSelectionStateHash,
                 TechId = techId,
                 ResearchQueueOrder = researchQueueOrder?.ToArray(),
+                ResearchPaused = researchPaused,
             };
 
         public static NormalActionPlanPayload Build(

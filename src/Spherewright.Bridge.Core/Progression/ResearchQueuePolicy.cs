@@ -7,6 +7,46 @@ namespace Spherewright.Bridge.Core.Progression;
 
 public static class ResearchQueuePolicy
 {
+    public static bool CanSetPaused(IReadOnlyList<int>? queue, int currentTech,
+        int targetTech, bool paused)
+    {
+        if (queue is null || queue.Count < 1 || queue.Count > 64 || targetTech <= 0
+            || queue[0] != targetTech || currentTech != (paused ? targetTech : 0)
+            || queue.Any(id => id < 0))
+            return false;
+        var technologies = queue.Where(id => id > 0).ToArray();
+        return technologies.Distinct().Count() == technologies.Length
+            && queue.Take(technologies.Length).SequenceEqual(technologies);
+    }
+
+    public static ResearchQueueReadback ProvePausedState(ProgressionStateSnapshot before,
+        ProgressionStateSnapshot after, PlayerStateSnapshot playerBefore,
+        PlayerStateSnapshot playerAfter, int targetTech, bool paused)
+    {
+        if (before is null || after is null || playerBefore is null || playerAfter is null
+            || string.IsNullOrWhiteSpace(before.SessionId) || before.PlanetId <= 0
+            || after.SessionId != before.SessionId || playerBefore.SessionId != before.SessionId
+            || playerAfter.SessionId != before.SessionId || after.PlanetId != before.PlanetId
+            || playerBefore.PlanetId != before.PlanetId || playerAfter.PlanetId != before.PlanetId
+            || before.CapturedAtGameTick < 0 || after.CapturedAtGameTick != before.CapturedAtGameTick
+            || playerBefore.CapturedAtGameTick != before.CapturedAtGameTick
+            || playerAfter.CapturedAtGameTick != before.CapturedAtGameTick
+            || !CanSetPaused(before.TechQueue, before.CurrentTechId, targetTech, paused)
+            || after.TechQueue is null || !after.TechQueue.SequenceEqual(before.TechQueue)
+            || after.CurrentTechId != (paused ? 0 : targetTech)
+            || ProgressHash(before.Technologies) != ProgressHash(after.Technologies)
+            || ResearchMaterialHash(playerBefore) != ResearchMaterialHash(playerAfter))
+            throw new InvalidOperationException("Native research pause state, queue, progress or material preservation could not be proved.");
+
+        return new ResearchQueueReadback
+        {
+            CapturedAtGameTick = after.CapturedAtGameTick,
+            BeforeQueue = before.TechQueue.ToList(), AfterQueue = after.TechQueue.ToList(),
+            PreviousCurrentTechId = before.CurrentTechId, CurrentTechId = after.CurrentTechId,
+            ResearchProgressPreserved = true, InventoryPreserved = true,
+        };
+    }
+
     public static ResearchQueueReadback ProveEnqueue(ProgressionStateSnapshot before,
         ProgressionStateSnapshot after, PlayerStateSnapshot playerBefore,
         PlayerStateSnapshot playerAfter, int targetTech)

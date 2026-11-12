@@ -5,6 +5,51 @@ namespace Spherewright.Bridge.Core.Tests;
 
 public sealed class VoyagerMechaWorkQuiescencePolicyTests
 {
+    [Fact]
+    public void NativePausedResearchRetainsBufferedPointsWithoutRunningUnlockEffects()
+    {
+        var facts = Good();
+        facts.ResearchQueuePaused = true;
+        facts.ResearchBufferPointCounts = new[] { 3601, 7200000 };
+        facts.QueuedResearch![0].UnlockFunctionCount = 1;
+        facts.QueuedResearch[0].UnlockFunctionIds = new[] { 26 };
+        facts.QueuedResearch[0].UnlockFunctionValues = new[] { 15d };
+        var result = VoyagerMechaWorkQuiescencePolicy.Evaluate(facts);
+
+        Assert.True(result.Proved);
+        Assert.True(result.PausedResearch);
+        Assert.False(result.FactoryOnlyResearch);
+        Assert.Equal(new[] { 3601, 7200000 }, facts.ResearchBufferPointCounts);
+        facts.ResearchQueuePaused = false;
+        Assert.False(VoyagerMechaWorkQuiescencePolicy.Evaluate(facts).Proved);
+    }
+
+    [Theory]
+    [InlineData("forge")] [InlineData("binding")] [InlineData("carried-input")]
+    [InlineData("negative-buffer")] [InlineData("unknown-effects")]
+    [InlineData("unknown-awards")] [InlineData("queue-empty")]
+    [InlineData("coverage")]
+    public void PausedResearchStillRequiresCompleteNativeBindingAndNoAutoSupplyInputs(string fault)
+    {
+        var facts = Good();
+        facts.ResearchQueuePaused = true;
+        facts.ResearchBufferPointCounts = new[] { 7200 };
+        switch (fault)
+        {
+            case "forge": facts.ForgeTaskCount = 1; break;
+            case "binding": facts.MechaLabBindingVerified = false; break;
+            case "carried-input": facts.QueuedResearch![0].RequiredItemPackageCounts![0] = 1; break;
+            case "negative-buffer": facts.ResearchBufferPointCounts[0] = -1; break;
+            case "unknown-effects": facts.QueuedResearch![0].UnlockFunctionCount = null; break;
+            case "unknown-awards": facts.QueuedResearch![0].CompletionAwardCount = null; break;
+            case "queue-empty": facts.QueuedTechnologyIds = Array.Empty<int>(); break;
+            case "coverage": facts.QueuedResearch = null; break;
+        }
+        Assert.False(VoyagerMechaWorkQuiescencePolicy.Evaluate(facts).Proved);
+        Assert.False(VoyagerMechaWorkQuiescencePolicy.Evaluate(facts,
+            allowRecipeOnlyMechaResearch: true, allowDysonLatitudeResearch: true).Proved);
+    }
+
     [Theory]
     [InlineData(0)]
     [InlineData(7200)]

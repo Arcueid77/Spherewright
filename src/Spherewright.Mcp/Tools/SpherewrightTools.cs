@@ -1440,7 +1440,7 @@ public static partial class SpherewrightTools
         Destructive = false,
         Idempotent = false,
         OpenWorld = false)]
-    [Description("Validates a runtime technology, prerequisites, level, and queue without mutation. Default enqueues normally and advertises researchQueueReadbackVersion=1 for its immediate queue/progress/material preservation receipt; missing/zero is legacy or unproved. itemBudget research-consumption is this level's native total requirement, not an enqueue debit or remaining cost; int.MaxValue may be a capped projection. Explicit prioritizeQueued=true only moves an already queued non-head technology with all native prerequisites completed to the front, preserving other queue order, progress and inventory. Fresh selection hash required; paused, duplicate-level or invalid queues reject. No research progress or unlocks are granted.")]
+    [Description("Validates a runtime technology, prerequisites, level, and queue without mutation. Default enqueues normally and advertises researchQueueReadbackVersion=1 for its immediate queue/progress/material preservation receipt; missing/zero is legacy or unproved. itemBudget research-consumption is this level's native total requirement, not an enqueue debit or remaining cost; int.MaxValue may be a capped projection. Explicit prioritizeQueued=true moves an already queued non-head technology to the front. Optional researchPaused=true pauses the existing queue through Native PauseTechQueue; false resumes through ResumeTechQueue. Pause control binds techId to the existing head, preserves the complete queue, progress, inventory and research buffers, and requires matching plannedResearchPaused plus version1 readback. Priority and pause control are mutually exclusive. A paused queue retains its matrix buffers. Fresh selection hash required; duplicate-level or invalid queues reject. No research progress or unlocks are granted.")]
     public static async Task<CallToolResult> PrepareSelectResearchAsync(
         IBridgeClient bridgeClient,
         string sessionId,
@@ -1449,7 +1449,8 @@ public static partial class SpherewrightTools
         string expectedSelectionStateHash,
         int stateHashVersion = 1,
         bool prioritizeQueued = false,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        bool? researchPaused = null)
     {
         var result = await bridgeClient.PrepareSelectResearchAsync(
             sessionId,
@@ -1459,9 +1460,19 @@ public static partial class SpherewrightTools
                 TechId = techId,
                 ExpectedSelectionStateHash = expectedSelectionStateHash,
                 PrioritizeQueued = prioritizeQueued,
+                ResearchPaused = researchPaused,
                 StateHashVersion = stateHashVersion,
             },
             cancellationToken).ConfigureAwait(false);
+        if (researchPaused.HasValue && result.Success
+            && (result.Value is null || result.Value.PlannedResearchPaused != researchPaused
+                || result.Value.ResearchQueueReadbackVersion != 1))
+            return ToToolResult(BridgeCallResult<PreparedNormalAction>.Failed(BridgeError.Create(
+                BridgeErrorCodes.BridgeNotReady,
+                "Native research pause and material-preservation proof is unavailable for this cohort.",
+                false,
+                "Use a coherent Plugin/MCP cohort with the requested pause direction and version1 readback.")),
+                "Native research pause proof unavailable.");
         return ToToolResult(result, "Normal technology-selection plan prepared; research state is unchanged.");
     }
 

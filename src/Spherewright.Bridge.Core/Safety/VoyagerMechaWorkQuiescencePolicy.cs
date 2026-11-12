@@ -9,6 +9,7 @@ public sealed class VoyagerMechaWorkFacts
     public bool ForgeObserved { get; set; }
     public int ForgeTaskCount { get; set; }
     public bool HistoryObserved { get; set; }
+    public bool ResearchQueuePaused { get; set; }
     public int[]? QueuedTechnologyIds { get; set; }
     public bool MechaLabBindingVerified { get; set; }
     public int[]? ResearchBufferPointCounts { get; set; }
@@ -34,6 +35,7 @@ public sealed class VoyagerMechaWorkDecision
 {
     public bool Proved { get; internal set; }
     public bool FactoryOnlyResearch { get; internal set; }
+    public bool PausedResearch { get; internal set; }
     public string? BlockerCode { get; internal set; }
 }
 
@@ -55,14 +57,16 @@ public static class VoyagerMechaWorkQuiescencePolicy
             return Reject("native_mecha_work_unproved");
         // Preserve the existing empty-queue path. The additive path below is
         // deliberately narrower than arbitrary factory research.
-        if (facts.QueuedTechnologyIds.Length == 0) return new() { Proved = true };
+        if (facts.QueuedTechnologyIds.Length == 0)
+            return facts.ResearchQueuePaused ? Reject("paused_research_queue_empty") : new() { Proved = true };
         if (!facts.MechaLabBindingVerified || facts.ResearchBufferPointCounts is null
             || facts.ResearchBufferPointCounts.Length > MaximumBufferedItems
-            || facts.ResearchBufferPointCounts.Any(count => count < 0 || !pricedResearch && count != 0))
+            || facts.ResearchBufferPointCounts.Any(count => count < 0
+                || !pricedResearch && !facts.ResearchQueuePaused && count != 0))
             return Reject("mecha_research_buffer_not_empty");
         if (facts.QueuedResearch is null || facts.QueuedResearch.Count != facts.QueuedTechnologyIds.Length)
             return Reject("queued_research_coverage_unknown");
-        var factoryOnly = facts.ResearchBufferPointCounts.All(count => count == 0);
+        var factoryOnly = !facts.ResearchQueuePaused && facts.ResearchBufferPointCounts.All(count => count == 0);
         for (var i = 0; i < facts.QueuedTechnologyIds.Length; i++)
         {
             var tech = facts.QueuedResearch[i];
@@ -72,9 +76,13 @@ public static class VoyagerMechaWorkQuiescencePolicy
                 && tech.UnlockFunctionValues is { Length: 1 } values
                 && !double.IsNaN(values[0]) && !double.IsInfinity(values[0])
                 && values[0] > 0 && values[0] <= 90;
+            var nativeEffectsKnown = tech is not null && tech.UnlockFunctionCount is >= 0
+                && tech.CompletionAwardCount is >= 0;
+            var effectsIdle = facts.ResearchQueuePaused || tech is not null
+                && (tech.UnlockFunctionCount == 0 || dysonLatitudeOnly) && tech.CompletionAwardCount == 0;
             if (tech is null || tech.TechnologyId != facts.QueuedTechnologyIds[i] || !tech.NativeIdentityVerified
                 || !tech.IsLabTechnology || !tech.RecipeUnlocksVerified
-                || (tech.UnlockFunctionCount != 0 && !dysonLatitudeOnly) || tech.CompletionAwardCount != 0)
+                || !nativeEffectsKnown || !effectsIdle)
                 return Reject("queued_research_native_effects_unproved");
             var ids = tech.RequiredItemIds;
             var points = tech.RequiredItemPointsPerHash;
@@ -83,10 +91,10 @@ public static class VoyagerMechaWorkQuiescencePolicy
                 || points.Length != ids.Length || stock.Length != ids.Length
                 || ids.Any(id => id <= 0) || ids.Distinct().Count() != ids.Length || points.Any(count => count <= 0))
                 return Reject("queued_research_inputs_unknown");
-            if (stock.Any(count => count < 0 || !pricedResearch && count != 0))
+            if (stock.Any(count => count < 0 || (!pricedResearch || facts.ResearchQueuePaused) && count != 0))
                 return Reject("mecha_research_inputs_available");
             factoryOnly &= stock.All(count => count == 0);
         }
-        return new() { Proved = true, FactoryOnlyResearch = factoryOnly };
+        return new() { Proved = true, FactoryOnlyResearch = factoryOnly, PausedResearch = facts.ResearchQueuePaused };
     }
 }

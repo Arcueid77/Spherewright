@@ -7,6 +7,7 @@ public sealed class VoyagerMechaWorkSnapshot
 {
     public bool QuiescenceProved { get; set; }
     public bool FactoryOnlyResearch { get; set; }
+    public bool PausedResearch { get; set; }
     public List<int> QueuedTechnologyIds { get; set; } = new();
     public bool NativeResearchOrInventoryMutationPerformed { get; set; }
 }

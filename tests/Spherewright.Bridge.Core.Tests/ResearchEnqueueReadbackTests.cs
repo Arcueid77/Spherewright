@@ -8,6 +8,76 @@ namespace Spherewright.Bridge.Core.Tests;
 public sealed class ResearchEnqueueReadbackTests
 {
     [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void PauseControlPreservesQueueProgressAndFractionalResearchPoints(bool paused)
+    {
+        var before = Progress();
+        var after = Progress();
+        before.TechQueue = new() { 1001, 1002 };
+        after.TechQueue = new() { 1001, 1002 };
+        before.CurrentTechId = paused ? 1001 : 0;
+        after.CurrentTechId = paused ? 0 : 1001;
+        var playerBefore = Player();
+        var playerAfter = Player();
+
+        var proof = ResearchQueuePolicy.ProvePausedState(
+            before, after, playerBefore, playerAfter, 1001, paused);
+
+        Assert.True(proof.InventoryPreserved);
+        Assert.True(proof.ResearchProgressPreserved);
+        Assert.Equal(after.CurrentTechId, proof.CurrentTechId);
+        Assert.Equal(new[] { 1001, 1002 }, proof.AfterQueue);
+        Assert.Equal(36, playerAfter.MechaResearchItemBuffer[0].PointCount);
+        after.TechQueue.Clear();
+        Assert.Equal(new[] { 1001, 1002 }, proof.AfterQueue);
+    }
+
+    [Theory]
+    [InlineData("already-paused")] [InlineData("wrong-head")]
+    [InlineData("reorder")] [InlineData("dequeue")]
+    [InlineData("progress")] [InlineData("inventory")]
+    [InlineData("buffer")] [InlineData("context")]
+    [InlineData("tick")] [InlineData("duplicate")]
+    public void PauseProofRejectsUnchangedDirectionAndUndisclosedEffects(string fault)
+    {
+        var before = Progress();
+        var after = Progress();
+        before.TechQueue = new() { 1001, 1002 };
+        after.TechQueue = new() { 1001, 1002 };
+        before.CurrentTechId = 1001;
+        var playerBefore = Player();
+        var playerAfter = Player();
+        switch (fault)
+        {
+            case "already-paused": before.CurrentTechId = 0; break;
+            case "wrong-head": after.CurrentTechId = 1002; break;
+            case "reorder": after.TechQueue.Reverse(); break;
+            case "dequeue": after.TechQueue.RemoveAt(0); break;
+            case "progress": after.Technologies[0].HashUploaded++; break;
+            case "inventory": playerAfter.Inventory[0].Count++; break;
+            case "buffer": playerAfter.MechaResearchItemBuffer[0].PointCount--; break;
+            case "context": after.SessionId = "different-session"; break;
+            case "tick": playerAfter.CapturedAtGameTick++; break;
+            case "duplicate": before.TechQueue[1] = 1001; break;
+        }
+        Assert.Throws<InvalidOperationException>(() => ResearchQueuePolicy.ProvePausedState(
+            before, after, playerBefore, playerAfter, 1001, true));
+    }
+
+    [Fact]
+    public void PauseTransitionBindsTheHeadAndCompleteNativeQueue()
+    {
+        var queue = new[] { 1001, 1002, 0, 0 };
+        Assert.True(ResearchQueuePolicy.CanSetPaused(queue, 1001, 1001, true));
+        Assert.True(ResearchQueuePolicy.CanSetPaused(queue, 0, 1001, false));
+        Assert.False(ResearchQueuePolicy.CanSetPaused(queue, 1001, 1002, true));
+        Assert.False(ResearchQueuePolicy.CanSetPaused(queue, 1001, 1001, false));
+        Assert.False(ResearchQueuePolicy.CanSetPaused(new[] { 1001, 0, 1002 }, 1001, 1001, true));
+        Assert.Equal(new[] { 1001, 1002, 0, 0 }, queue);
+    }
+
+    [Theory]
     [InlineData("empty")]
     [InlineData("active")]
     [InlineData("paused")]
