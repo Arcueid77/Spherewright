@@ -23,6 +23,7 @@
 本指南描述 DSP `0.10.35.29151` 的 0.5.0 开发接口，保留 0.4 协议接口；逐源码的离线及实机证据见[原生兼容验证](https://github.com/Arcueid77/Spherewright/blob/main/docs/validation/native-29151-preflight.zh-CN.md)。历史 29145 生产验收仍固定于 `2a7a98d1932c404e3a7abc2c11233d9c0b8780d9`。准确构建身份应读取已安装组件版本与包清单，正式版本见[发行](https://github.com/Arcueid77/Spherewright/releases)。修改本指南不会更新已安装 MCP 或冻结包。能力、当前授权、原生可执行性和最终验收是不同事实。本指南不授予游戏、加载、恢复、安装、部署或发布权限。
 
 <a id="session-entry-and-ownership"></a>
+
 ## 远端主档的新有限恢复授权
 
 只有用户另行授予新的有界自动恢复窗口时，才在空闲主菜单准备 `recoveryMode=authorize_remote_primary_recovery`，提供准确 `recoveryDeadlineUtc`、`recoveryScope=continue_original_finite_task` 和有限自然充能上限。此路径在披露并确认准确 digest 后建立新授权。普通读档、旧成功动作、消费记录或泛化的“继续”都不提供新的墙钟预算。它可使用已过期或仅读档的受保护归属来源；旧续接模式仍保留原限制。
@@ -246,6 +247,8 @@ Foundry 材料读取不可执行。机器网格通过不含物流、电力设施
 分拣器时序按档位区分：`inserter` 的 `progressRequired` 是原生 STT，**不是已过游戏 tick**。与同物品目录的 `inserterSttRaw`、`inserterGrade` 对照；支持跨度 1–3 的原生 STT 为 `max(10000, inserterSttRaw * span)`。已验证目录中，普通 2011 基础值 200000、跨度 3 得 600000；高速 2012 基础值 100000、跨度 3 得 300000。不能把高速枚举套普通分拣器，也不能仅以此值诊断停滞。基本单物品档满电理想周期为 `max(4, ceil(2 * STT / 10000))` 游戏 tick（普通跨度 3 为 120），不是实测吞吐。缺料、输出阻塞、电力均可降低实际速率；仍须核对原生终态、材料、精确双向端点、过滤、实际功率和流量。调用器后检在原生成功后失败时，保留原 action 并唯一读回完成对象；**绝不能重放成功建造**来修复断言。
 
 拆除仅公布子集。空默认 2101 要全部 30 原生格为空、默认，无堆叠、连接、预建造、缓存引用，不自动重建。空 2001 链头最多 16 带、512 格，完整空独立路且无外部引用。先正常断开外部分拣器，不能移中段或相连尾。原生返还、幸存对象证明仍必需。
+
+迁移风机时先检查单座已建2203和玩家，再以 `prepare_dismantle(previewOnly=true)` 读取 `windTurbineDismantle`，核对发电损失、预计电网、受影响/断开供电连接的消费者及未满足条件。对准确风机重新执行普通准备/提交，要求 `windTurbineDismantleReadback` 证明目标消失、建筑物品精确回收、增产点/世界对象/连接保全及电网连接核验。超时或未知结果持续保留原动作。成功回收后再检查当前库存和选址，独立准备普通建造。原生重新编号后通过实体成员核对电网。
 
 <a id="governor-measurement-and-acceptance"></a>
 ## Governor 测量与验收
