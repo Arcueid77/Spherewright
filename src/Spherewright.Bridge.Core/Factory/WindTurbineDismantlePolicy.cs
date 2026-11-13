@@ -16,7 +16,14 @@ public static class WindTurbineDismantlePolicy
         && target.ObjectKind == FactoryObjectKinds.Entity && target.ObjectId > 0
         && target.ItemId == ItemId && target.ComponentKind == "power-generator"
         && target.RecipeId == 0 && target.Connections is not null && target.Connections.Count == 0
-        && target.Buffers is not null && target.Buffers.Count == 0;
+        && target.Buffers is not null && target.Buffers.Count <= 1
+        && target.Buffers.All(IsWindGenerationObservation);
+
+    private static bool IsWindGenerationObservation(FactoryBufferSnapshot buffer) => buffer is not null
+        && buffer.Role == FactoryBufferSemantics.PowerGenerationRole && buffer.ItemId == 0
+        && buffer.Count >= 0 && buffer.Inc == 0
+        && (buffer.CountUnit == "joules_per_tick" && buffer.UnitsPerItem == 0
+            || buffer.CountUnit == "items" && buffer.UnitsPerItem == 1);
 
     public static WindPowerProjection Project(WindPowerState before, int removedNodeId)
     {
