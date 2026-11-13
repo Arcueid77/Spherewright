@@ -16,6 +16,50 @@ public sealed class WindTurbineDismantlePolicyTests
     }
 
     [Theory]
+    [InlineData(0)]
+    [InlineData(1800)]
+    public void NativePowerGenerationObservationsAreNotInventory(int energy)
+    {
+        var wind = WindSnapshot();
+        wind.Buffers.Add(FactoryBufferSemantics.PowerGeneration(energy, 0, string.Empty));
+        Assert.True(WindTurbineDismantlePolicy.SupportsSnapshot(wind));
+    }
+
+    [Fact]
+    public void LegacyPowerObservationLabelsKeepTheirNonInventoryMeaning()
+    {
+        var wind = WindSnapshot();
+        var power = FactoryBufferSemantics.PowerGeneration(1800, 0, string.Empty);
+        power.CountUnit = "items";
+        power.UnitsPerItem = 1;
+        wind.Buffers.Add(power);
+        Assert.True(WindTurbineDismantlePolicy.SupportsSnapshot(wind));
+    }
+
+    [Fact]
+    public void MaterialOrMalformedBuffersAreNotAdmittedAsWindGeneration()
+    {
+        var observations = new[]
+        {
+            FactoryBufferSemantics.PowerGeneration(100, 1120, "hydrogen"),
+            new FactoryBufferSnapshot { Role = "fuel", ItemId = 1101, Count = 1 },
+            new FactoryBufferSnapshot { Role = FactoryBufferSemantics.PowerGenerationRole, CountUnit = "items", UnitsPerItem = 0 },
+            new FactoryBufferSnapshot { Role = FactoryBufferSemantics.PowerGenerationRole, CountUnit = "joules_per_tick", UnitsPerItem = 0, Inc = 1 },
+            new FactoryBufferSnapshot { Role = FactoryBufferSemantics.PowerGenerationRole, CountUnit = "joules_per_tick", UnitsPerItem = 0, Count = -1 },
+        };
+        foreach (var observation in observations)
+        {
+            var wind = WindSnapshot();
+            wind.Buffers.Add(observation);
+            Assert.False(WindTurbineDismantlePolicy.SupportsSnapshot(wind));
+        }
+        var duplicate = WindSnapshot();
+        duplicate.Buffers.Add(FactoryBufferSemantics.PowerGeneration(100, 0, string.Empty));
+        duplicate.Buffers.Add(FactoryBufferSemantics.PowerGeneration(100, 0, string.Empty));
+        Assert.False(WindTurbineDismantlePolicy.SupportsSnapshot(duplicate));
+    }
+
+    [Theory]
     [InlineData(2201)]
     [InlineData(2204)]
     [InlineData(2205)]
