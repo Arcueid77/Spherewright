@@ -2,6 +2,15 @@
 
 [English](CHANGELOG.md) · [简体中文](CHANGELOG.zh-CN.md)
 
+## 0.5.1 — 2026-11-13
+
+- Native recovery of individual wind turbines with complete power-topology binding and exact item/inc conservation.
+- Read-only power-impact previews include generation loss, projected networks, affected consumers and readiness conditions.
+- Rebuilding uses a fresh ordinary construction action, with original-action reconciliation and preserved unrelated world/power connections.
+- Compatible legacy request defaults and additive preview/readback fields.
+
+[Release notes](docs/release-notes/v0.5.1.md)
+
 ## 0.5.0 — 2026-11-10
 
 - Bounded interstellar exploration, route budgets, ordinary flight/stop, warper supply, remote construction and station logistics.

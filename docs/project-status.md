@@ -1,5 +1,7 @@
 # Product status
 
+Current maintenance line is0.5.1, based onv0.5.0. It adds native wind recovery, tokenless power-impact preview and topology-bound recovery/readback for Issue #5. [0.5.1 release notes](release-notes/v0.5.1.md).
+
 [English](project-status.md) · [简体中文](project-status.zh-CN.md)
 
 **Publication preparation, 2026-11-10.** The owner authorized the0.5 tag, GitHub release and Thunderstore website submission. The reviewed19cd5eb5 implementation passed6347 source cases, warehouse-layer filtering, real piler aggregation and separate local manual/Thunderstore cold checks. Release-facing package documentation is being aligned with this accepted scope. [0.5 release notes](release-notes/v0.5.0.md) summarize capabilities. The earlier checkpoints below keep their recorded dates and sources.

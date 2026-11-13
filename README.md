@@ -10,13 +10,13 @@ Plugin, MCP, Contracts and Bridge.Core form one version-coupled monorepo. [Spher
 
 | Item | Current state |
 | --- | --- |
-| Latest formal release | [`v0.4.0`](https://github.com/Arcueid77/Spherewright/releases/tag/v0.4.0), published 2026-10-17 from `b7c0002dbe2e8f5608c5ca140b0c6326a1818021` for DSP `0.10.35.29151` and BepInEx `5.4.17.0` |
+| Maintenance release line | [`v0.5.1`](https://github.com/Arcueid77/Spherewright/releases/tag/v0.5.1), native wind recovery and power-impact preview for DSP `0.10.35.29151` / BepInEx `5.4.17.0` |
 | Voyager baseline | All three original clauses are accepted within their recorded source scopes; the same-source review pair is retained in Lab |
 | First-sail/carrier-rocket extension | Bounded live acceptance recorded 2026-11-06: local off-world manufacture, four sails launched into the swarm, one carrier rocket arrival with one added Native structure point, auxiliary delivery and normal save/cold continuation |
 | Selected extension runtime/review source | `d3b7ac897bb44d62c8a7ed54c51a55ff2b8de7b0`; exact-source CI, Native builds, coherent installation and package payload checks passed within the recorded scope |
-| 0.5 publication | No tag, Release or platform upload; later development source remains separate from the selected runtime and review archives |
+| Wind maintenance | Single-turbine prepare/commit/readback, tokenless impact preview and independent normal rebuilding. [0.5.1 notes](docs/release-notes/v0.5.1.md) |
 
-The GitHub release provides the manual ZIP, Thunderstore-layout ZIP, checksums and generation manifest. Use the manual package for a direct installation. The last recorded Thunderstore check on 2026-10-17 showed `0.3.3`; the owner's later website-upload result remains separately tracked and unverified here.
+The release provides a manual ZIP, Thunderstore-layout ZIP, checksums and generation manifest. Use the manual package for a direct installation and follow its matching installation/playbook files.
 
 Development source, fixed Lab adoption, actual installation, final candidates and historical acceptance are different states. Later source or documentation commits do not change published package identity or inherit earlier live credit. See [product status](docs/project-status.md), [ROADMAP](ROADMAP.md) and the [Lab active snapshot](https://github.com/Arcueid77/Spherewright-Lab/blob/main/scenarios/v0.5-voyager/current-status.md) for their respective scopes.
 

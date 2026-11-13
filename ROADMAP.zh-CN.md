@@ -1,5 +1,7 @@
 # Spherewright 0.3–1.0 路线图
 
+0.5.1维护版为0.5线增加Issue #5风机原生回收和电网影响预览，相同修复同步到0.6开发线。[0.5.1说明](docs/release-notes/v0.5.1.zh-CN.md)。
+
 [English](ROADMAP.md) | [简体中文](ROADMAP.zh-CN.md)
 
 本路线图定义从历史 Post-M0 基线走向 `1.0.0` 的已批准能力顺序、验收门和发行规则，不授予游戏执行或发布权限。产品贡献规则见 [AGENTS.md](AGENTS.md)；场景执行从 Spherewright-Lab 开始，并遵循其当前范围。

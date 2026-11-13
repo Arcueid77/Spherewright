@@ -10,13 +10,13 @@ Plugin、MCP、Contracts 和 Bridge.Core 构成一个版本强耦合的 monorepo
 
 | 项目 | 当前状态 |
 | --- | --- |
-| 最新正式版本 | [`v0.4.0`](https://github.com/Arcueid77/Spherewright/releases/tag/v0.4.0)，2026-10-17 发布，源码 `b7c0002dbe2e8f5608c5ca140b0c6326a1818021`，面向 DSP `0.10.35.29151`、BepInEx `5.4.17.0` |
+| 维护发行线 | [`v0.5.1`](https://github.com/Arcueid77/Spherewright/releases/tag/v0.5.1)，面向 DSP `0.10.35.29151` / BepInEx `5.4.17.0` 的风机原生回收及电网影响预览 |
 | Voyager 基线 | 原三项条款已在各自源码范围内验收，同源交审双包保留于 Lab |
 | 首帆/首枚运载火箭扩展 | 2026-11-06 记录有界实机验收：外星当地制造、4 帆真实入云、1 枚火箭抵达并增加 1 个原生结构点、辅料送达及普通保存/冷恢复续接 |
 | 选定扩展实装/交审源码 | `d3b7ac897bb44d62c8a7ed54c51a55ff2b8de7b0`；准确源码 CI、Native 构建、同源安装和包载荷检查在记录范围内通过 |
-| 0.5 发布 | 未创建 tag、Release 或平台上传；后续开发源码与选定实装和交审档案分别标识 |
+| 风机维护 | 单座风机准备/提交/回读、只读影响预览及独立普通重建。[0.5.1说明](docs/release-notes/v0.5.1.zh-CN.md) |
 
-GitHub Release 提供手动 ZIP、Thunderstore 布局 ZIP、校验和及生成清单。直接安装请使用手动包。2026-10-17 最后一次有记录的 Thunderstore 核查显示 `0.3.3`；所有者此后的网站上传结果另行跟踪，此处仍未核验。
+发行物包含手动 ZIP、Thunderstore 布局 ZIP、校验和及生成清单。直接安装使用手动包，并遵循同包配套的安装与 Agent 指南。
 
 开发源码、Lab 固定采用、实际安装、最终候选和历史验收是不同状态。后续源码或文档提交不改变已发布包身份，也不自动继承历史实机信用。各自范围见[产品状态](docs/project-status.zh-CN.md)、[ROADMAP](ROADMAP.zh-CN.md)和 [Lab 活动快照](https://github.com/Arcueid77/Spherewright-Lab/blob/main/scenarios/v0.5-voyager/current-status.md)。
 

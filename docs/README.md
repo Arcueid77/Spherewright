@@ -1,5 +1,7 @@
 # Documentation
 
+Current maintenance release documentation covers0.5.1 wind recovery and power-impact preview. [0.5.1 release notes](release-notes/v0.5.1.md).
+
 [English](README.md) · [简体中文](README.zh-CN.md)
 
 Maintained guides have equivalent English and Simplified Chinese editions. Open the language link at the top of each page. Short compatibility redirects and store templates contain both languages in one file. The original English MIT license is authoritative; [its Chinese translation](../LICENSE.zh-CN.md) is explanatory.

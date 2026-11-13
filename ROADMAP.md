@@ -1,5 +1,7 @@
 # Spherewright 0.3–1.0 Roadmap
 
+The0.5.1 maintenance release adds Issue #5 native wind recovery and power-impact preview to the0.5 line. The shared fix is synchronized to0.6 development. [0.5.1 notes](docs/release-notes/v0.5.1.md).
+
 [English](ROADMAP.md) | [简体中文](ROADMAP.zh-CN.md)
 
 This roadmap defines the approved capability sequence, acceptance gates and release rules from the historical Post-M0 baseline to `1.0.0`. It does not grant gameplay or publication authority. Product contribution rules are in [AGENTS.md](AGENTS.md); scenario execution begins in Spherewright-Lab under its current scope.

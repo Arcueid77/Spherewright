@@ -17,6 +17,7 @@ Supported native version is DSP `0.10.35.29151` with BepInEx `5.4.17`. The exact
 - Reverse an empty piler-connected belt path through the Native operation and place one owned item on an empty belt with exact count/inc conservation.
 - Diagnose stalled walking and request bounded tokenless short-route geometry previews. Execute each segment through a separate fresh ordinary move.
 - Resume the exact owned world with durable Journal continuity, original-action reconciliation and progress protection.
+- Preview individual wind-turbine removal, recover its building item through Native dismantling and verify power/world preservation before a separately prepared normal rebuild.
 
 The published interface exposes74 tools and1 Markdown playbook resource. Source/CI, installed modules, gameplay and package-layout evidence each retain their stated scope. Recorded local acceptance includes remote manufacturing and deliveries, normal solar-sail/rocket launches, nine selected stackable model rows with19 directed pairs, warehouse-layer filtering, real piler aggregation and save/recovery continuation. Detailed source-specific records are linked in the [0.5 review evidence](https://github.com/Arcueid77/Spherewright-Lab/blob/92c9eb4d59ce304df9085fb002f03683d783fdab/releases/v0.5.0/stacking-review-delivery-2026-11-10.md) and [first-sail/rocket evidence](https://github.com/Arcueid77/Spherewright-Lab/blob/92c9eb4d59ce304df9085fb002f03683d783fdab/releases/v0.5.0/expansion-review-delivery-2026-11-06.md).
 
@@ -34,7 +35,7 @@ A new owned world uses the normal peaceful, non-sandbox1× flow. Importing a pla
 
 Every write requires its fresh applicable Native plan. Keep the original accepted action ID and reconcile its terminal result before issuing dependent work. Materials, research, power, drones, game time and return reserves remain ordinary gameplay constraints. Historical failures and unknowns retain their original receipts.
 
-[Installation](https://github.com/Arcueid77/Spherewright/blob/main/docs/release-installation.md) · [Release notes](https://github.com/Arcueid77/Spherewright/blob/main/docs/release-notes/v0.5.0.md) · [Releases](https://github.com/Arcueid77/Spherewright/releases) · [Source and issues](https://github.com/Arcueid77/Spherewright). MIT licensed.
+[Installation](https://github.com/Arcueid77/Spherewright/blob/main/docs/release-installation.md) · [Release notes](https://github.com/Arcueid77/Spherewright/blob/v0.5.1/docs/release-notes/v0.5.1.md) · [Releases](https://github.com/Arcueid77/Spherewright/releases) · [Source and issues](https://github.com/Arcueid77/Spherewright). MIT licensed.
 
 ## 中文
 
@@ -51,6 +52,7 @@ Spherewright 通过 MCP 将外部 Agent 接入**《戴森球计划》**。此 Wi
 - 使用原生业务操作反向空的集装机带路径，并以准确数量/增产点守恒将背包单件物品放入空带。
 - 诊断行走卡住，获取有界、无令牌的短路线几何预览，每段通过独立新鲜普通移动执行。
 - 以持久 Journal、原动作核销及进度保护恢复准确 owned 世界。
+- 预览单座风机拆除影响，经原生拆除回收建筑物品，核对电网/世界对象保全后，另外准备普通重建。
 
 公开接口为74工具和1份 Markdown 指南资源。源码/CI、已加载程序、玩法与包布局证据分别适用于声明范围。本机记录涵盖外星制造运输、正常首帆/火箭发射、9种选定叠放模型及19有向组合、仓储分层筛选、真实集装机合堆和保存恢复续接。具体来源见[0.5交审记录](https://github.com/Arcueid77/Spherewright-Lab/blob/92c9eb4d59ce304df9085fb002f03683d783fdab/releases/v0.5.0/stacking-review-delivery-2026-11-10.md)和[首帆/火箭记录](https://github.com/Arcueid77/Spherewright-Lab/blob/92c9eb4d59ce304df9085fb002f03683d783fdab/releases/v0.5.0/expansion-review-delivery-2026-11-06.md)。
 
@@ -68,4 +70,4 @@ Spherewright 通过 MCP 将外部 Agent 接入**《戴森球计划》**。此 Wi
 
 每笔写入使用新鲜、适用的原生方案。保留原接受动作 ID，先核销其终态，再执行依赖步骤。物料、科研、电力、无人机、游戏时间及返航储备均沿正常玩法约束。历史失败和 unknown 保留原回执。
 
-[安装](https://github.com/Arcueid77/Spherewright/blob/main/docs/release-installation.zh-CN.md) · [发行说明](https://github.com/Arcueid77/Spherewright/blob/main/docs/release-notes/v0.5.0.zh-CN.md) · [发行下载](https://github.com/Arcueid77/Spherewright/releases) · [源码与反馈](https://github.com/Arcueid77/Spherewright)。MIT 许可。
+[安装](https://github.com/Arcueid77/Spherewright/blob/main/docs/release-installation.zh-CN.md) · [发行说明](https://github.com/Arcueid77/Spherewright/blob/v0.5.1/docs/release-notes/v0.5.1.zh-CN.md) · [发行下载](https://github.com/Arcueid77/Spherewright/releases) · [源码与反馈](https://github.com/Arcueid77/Spherewright)。MIT 许可。
