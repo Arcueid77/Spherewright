@@ -1808,6 +1808,7 @@ internal sealed partial class NormalGameActionCoordinator
             BeltPathReversalReadback = action.BeltPathReversalReadback,
             StackConstructionReadback = action.StackConstructionReadback,
             StationCargoWithdrawalReadback = action.StationCargoWithdrawalReadback,
+            WindTurbineDismantleReadback = action.WindTurbineDismantleReadback,
             MechaWarperSupplyReadback = action.MechaWarperSupplyReadback,
             NativeHomeReturnFirstEffect=action.NativeHomeReturnFirstEffect,
             MechaWarperAutoSupplyReadback = action.MechaWarperAutoSupplyReadback,
@@ -2568,6 +2569,7 @@ internal sealed partial class NormalGameActionCoordinator
         public BeltPathReversalReadback? BeltPathReversalReadback { get; set; }
         public NativeStackSnapshot? StackConstructionReadback { get; set; }
         public StationCargoWithdrawalReadback? StationCargoWithdrawalReadback { get; set; }
+        public WindTurbineDismantleReadback? WindTurbineDismantleReadback { get; set; }
         public MechaWarperSupplyReadback? MechaWarperSupplyReadback { get; set; }
         public MechaWarperAutoSupplyReadback? MechaWarperAutoSupplyReadback { get; set; }
         public Spherewright.Bridge.Core.Factory.BlueprintBuildState? BlueprintBuild { get; set; }

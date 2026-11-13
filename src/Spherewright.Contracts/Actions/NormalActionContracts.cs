@@ -315,6 +315,7 @@ public sealed class PrepareSaveRequest
 
 public sealed class PrepareDismantleRequest
 {
+    public bool PreviewOnly { get; set; }
     public int PlanetId { get; set; }
 
     public int ObjectId { get; set; }
@@ -389,6 +390,7 @@ public sealed class CommitNormalActionRequest
 public sealed class PreparedNormalAction
 {
     public NativeSurfaceNavigationPlan? NativeSurfaceNavigation { get; set; }
+    public WindTurbineDismantlePreview? WindTurbineDismantle { get; set; }
     public NativeBeltPickupPlan? BeltCargoPickup { get; set; }
     public NativeBeltInsertionPlan? BeltCargoInsertion { get; set; }
     public NativeStorageConfigurationPlan? NativeStorageConfiguration { get; set; }

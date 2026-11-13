@@ -3074,6 +3074,19 @@ public sealed partial class SpherewrightToolsTests
         Assert.Equal(17, bridge.LastDismantleRequest?.ObjectId);
         Assert.Equal("sha256:endpoint", bridge.LastDismantleRequest?.ExpectedEndpointStateHash);
         Assert.Equal("sha256:player", bridge.LastDismantleRequest?.ExpectedPlayerStateHash);
+        Assert.False(bridge.LastDismantleRequest?.PreviewOnly);
+    }
+
+    [Fact]
+    public async Task WindDismantlePreview_MapsTheExplicitTokenlessRequest()
+    {
+        var bridge = new FakeBridgeClient(SuccessResult());
+        var result = await SpherewrightTools.PrepareDismantleAsync(bridge, "session-wind", 102, 31,
+            "sha256:wind-endpoint", "sha256:player", 1, CancellationToken.None, previewOnly: true);
+        Assert.False(result.IsError);
+        Assert.True(bridge.LastDismantleRequest?.PreviewOnly);
+        Assert.Equal(31, bridge.LastDismantleRequest?.ObjectId);
+        Assert.Equal("sha256:wind-endpoint", bridge.LastDismantleRequest?.ExpectedEndpointStateHash);
     }
 
     [Fact]

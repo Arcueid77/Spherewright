@@ -741,12 +741,12 @@ public static partial class SpherewrightTools
 
     [McpServerTool(
         Name = "spherewright_prepare_dismantle",
-        Title = "Prepare one supported miner, sorter, empty storage or empty belt head",
+        Title = "Prepare supported recovery or preview wind power impact",
         ReadOnly = false,
         Destructive = false,
         Idempotent = false,
         OpenWorld = false)]
-    [Description("Re-reads one exact completed resource miner, ordinary2011/2012 sorter, empty default2101 storage, or isolated empty2001 chain head and the settled local player; verifies endpoint identity, native build range, idle manual build UI and conservative package capacity. Storage requires all30 grids completely empty/default, no layers or add-on, and no outgoing/incoming entity/prebuild or cached references; native identity/content are bound and rechecked. Belt head requires a complete same-tick empty open independent path of at most16 basic2001 belts/512 cells, a simple reciprocal chain, no external entity/prebuild/cached references or add-ons; complete native geometry/cargo/topology are bound and rechecked. Middle/tail, cargo, joins and higher belt grades reject. Sorters require native recoverable cargo, bounded inbound-reference checks and reciprocity of every PRESENT edge. Missing sorter ends are allowed; mismatched present edges, advanced stacking, prebuild targets and native instant-dismantle are rejected. Prepare removes nothing and returns no item; no automatic rebuild.")]
+    [Description("Re-reads one exact completed resource miner, ordinary2011/2012 sorter, empty default2101 storage, or isolated empty2001 chain head and the settled local player; verifies endpoint identity, native build range, idle manual build UI and conservative package capacity. Storage requires all30 grids completely empty/default, no layers or add-on, and no outgoing/incoming entity/prebuild or cached references; native identity/content are bound and rechecked. Belt head requires a complete same-tick empty open independent path of at most16 basic2001 belts/512 cells, a simple reciprocal chain, no external entity/prebuild/cached references or add-ons; complete native geometry/cargo/topology are bound and rechecked. Middle/tail, cargo, joins and higher belt grades reject. Sorters require native recoverable cargo, bounded inbound-reference checks and reciprocity of every PRESENT edge. Missing sorter ends are allowed; mismatched present edges, advanced stacking, prebuild targets and native instant-dismantle are rejected. Wind2203 binds the complete bounded native power topology. The windTurbineDismantle preview reports generation capacity loss, projected network components, affected consumers and readiness conditions. Set previewOnly=true for a tokenless read-only assessment. Ordinary wind recovery verifies the exact refund, native node/generator removal, surviving world data and unrelated power networks. Rebuilding uses a separate fresh build request. Prepare removes nothing and returns no item; no automatic rebuild.")]
     public static async Task<CallToolResult> PrepareDismantleAsync(
         IBridgeClient bridgeClient,
         string sessionId,
@@ -755,12 +755,15 @@ public static partial class SpherewrightTools
         string expectedEndpointStateHash,
         string expectedPlayerStateHash,
         int stateHashVersion = 1,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        [Description("For one2203 wind turbine, true returns a read-only power-impact and unmet-condition preview with an empty planToken. False prepares ordinary recovery with complete topology binding.")]
+        bool previewOnly = false)
     {
         var result = await bridgeClient.PrepareDismantleAsync(
             sessionId,
             new PrepareDismantleRequest
             {
+                PreviewOnly = previewOnly,
                 PlanetId = planetId,
                 ObjectId = objectId,
                 ExpectedEndpointStateHash = expectedEndpointStateHash,
@@ -773,12 +776,12 @@ public static partial class SpherewrightTools
 
     [McpServerTool(
         Name = "spherewright_commit_dismantle",
-        Title = "Recover one exact supported miner, sorter, empty storage or empty belt head",
+        Title = "Recover one supported building including a wind turbine",
         ReadOnly = false,
         Destructive = true,
         Idempotent = true,
         OpenWorld = false)]
-    [Description("Calls DSP's normal PlayerAction_Build.DoDismantleObject once for the approved miner, ordinary2011/2012 sorter, isolated empty default2101 storage, or isolated empty2001 chain head. Poll actionId to terminal; proves exact disappearance and building/cargo recovery without unexplained inventory deltas. Sorter removal verifies cargo inc and surviving endpoints. Empty storage requires no layers/add-on/entity/prebuild/cached references, returns exactly one2101, preserves inventory inc and all surviving native entities/prebuilds/connections. Empty belt head returns exactly one2001, preserves inventory inc, the complete remaining empty chain and all unrelated entities/prebuilds/connections; only the removed head edge clears and touched belt rotations require exact native renderer/collider proof. It never writes connections directly and has no automatic rebuild. Missing outcome evidence quarantines writes; never repeat the dismantle under a new key.")]
+    [Description("Calls DSP's normal PlayerAction_Build.DoDismantleObject once for the approved miner, ordinary2011/2012 sorter, isolated empty default2101 storage, or isolated empty2001 chain head. Poll actionId to terminal; proves exact disappearance and building/cargo recovery without unexplained inventory deltas. Sorter removal verifies cargo inc and surviving endpoints. Empty storage requires no layers/add-on/entity/prebuild/cached references, returns exactly one2101, preserves inventory inc and all surviving native entities/prebuilds/connections. Empty belt head returns exactly one2001, preserves inventory inc, the complete remaining empty chain and all unrelated entities/prebuilds/connections; only the removed head edge clears and touched belt rotations require exact native renderer/collider proof. It never writes connections directly and has no automatic rebuild. Wind2203 returns windTurbineDismantleReadback with exact recovery and power-connectivity evidence bound to the prepared topology. Missing outcome evidence quarantines writes; never repeat the dismantle under a new key.")]
     public static async Task<CallToolResult> CommitDismantleAsync(
         IBridgeClient bridgeClient,
         string sessionId,

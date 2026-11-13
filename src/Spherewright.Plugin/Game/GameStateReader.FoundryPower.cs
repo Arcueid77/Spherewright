@@ -133,7 +133,7 @@ internal sealed partial class GameStateReader
             && !prefab.gammaRayReceiver && !prefab.geothermal,
             prefab.genEnergyPerTick, prefab.useFuelPerTick, prefab.fuelMask);
 
-    private static long? CaptureFoundryWindGeneration(PrefabDesc prefab, float windStrength)
+    internal static long? CaptureFoundryWindGeneration(PrefabDesc prefab, float windStrength)
     {
         if (!prefab.isPowerGen || !prefab.windForcedPower || float.IsNaN(windStrength) || float.IsInfinity(windStrength)
             || windStrength < 0 || prefab.genEnergyPerTick < 0) return null;

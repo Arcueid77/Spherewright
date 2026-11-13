@@ -18,6 +18,7 @@ public sealed class ActionResultSnapshot
 {
     public NativeSurfaceNavigationReadback? NativeSurfaceNavigationReadback { get; set; }
     public Spherewright.Contracts.Celestial.DysonStructureReadback? DysonStructureReadback { get; set; }
+    public WindTurbineDismantleReadback? WindTurbineDismantleReadback { get; set; }
     public MovementDiagnosticsSnapshot? MovementDiagnostics { get; set; }
     public Spherewright.Contracts.Factory.NativeStackSnapshot? StackConstructionReadback { get; set; }
     public StationCargoWithdrawalReadback? StationCargoWithdrawalReadback { get; set; }

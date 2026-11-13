@@ -50,6 +50,14 @@ internal sealed partial class NormalGameActionCoordinator
         }
 
         var target = targetResult.Value;
+        if (request.PreviewOnly)
+        {
+            if (target.ItemId != WindTurbineDismantlePolicy.ItemId)
+                return InvalidPlan("The read-only dismantle preview selects one wind turbine.");
+            if (target.EndpointStateHash != request.ExpectedEndpointStateHash)
+                return StalePlan("The selected wind turbine changed after inspection.");
+            return PrepareWindDismantlePreview(target, playerResult.Value, request.ExpectedEndpointStateHash);
+        }
         var targetError = ValidateDismantleTarget(playerResult.Value, target, request.ExpectedEndpointStateHash);
         if (targetError is not null)
         {
@@ -61,6 +69,8 @@ internal sealed partial class NormalGameActionCoordinator
             ? CaptureEmptyStorageDismantleBoundary(target, false).NativeHash : string.Empty;
         var emptyBeltHash = target.ComponentKind == "belt"
             ? CaptureEmptyBeltDismantleBoundary(target, false).NativeHash : string.Empty;
+        var windBoundary = target.ItemId == WindTurbineDismantlePolicy.ItemId
+            ? CaptureWindDismantleBoundary(target, false) : null;
         var expectedHash = CanonicalStateHash.Combine(
             NormalActionKinds.Dismantle,
             _sessions.SessionId,
@@ -73,6 +83,8 @@ internal sealed partial class NormalGameActionCoordinator
             expectedHash = CanonicalStateHash.Combine(expectedHash, emptyStorageHash);
         if (emptyBeltHash.Length != 0)
             expectedHash = CanonicalStateHash.Combine(expectedHash, emptyBeltHash);
+        if (windBoundary is not null)
+            expectedHash = CanonicalStateHash.Combine(expectedHash, windBoundary.NativeHash);
         var payload = NormalActionPlanPayload.Dismantle(
             _sessions.SessionId!,
             request.PlanetId,
@@ -81,14 +93,17 @@ internal sealed partial class NormalGameActionCoordinator
             target.EndpointStateHash,
             target.ObjectId,
             target.ItemId, emptyStorageHash, emptyBeltHash);
+        payload.WindPowerStateHash = windBoundary?.NativeHash ?? string.Empty;
         var prepared = AddPreparedPlan(
             payload,
             common.Session!,
             1,
-            "DSP's normal PlayerAction_Build.DoDismantleObject removes the exact supported miner, basic sorter, isolated empty default2101 storage, or isolated empty2001 chain head (at most16 belts/512 cells). Readback proves disappearance and recovery; empty storage/belt additionally preserve surviving entities/prebuilds/connections, with touched belt rotations proven from exact native geometry. No automatic rebuild or slot write.");
+            "DSP's normal PlayerAction_Build.DoDismantleObject removes the exact supported miner, basic sorter, isolated empty default2101 storage, isolated empty2001 chain head (at most16 belts/512 cells), or one2203 wind turbine with bound power-topology verification. Readback proves disappearance and recovery; empty storage/belt additionally preserve surviving entities/prebuilds/connections, with touched belt rotations proven from exact native geometry. No automatic rebuild or slot write.");
         if (prepared.Success && prepared.Value is not null)
         {
             prepared.Value.TargetObjectId = target.ObjectId;
+            if (windBoundary is not null)
+                prepared.Value.WindTurbineDismantle = CreateWindDismantlePreview(target, playerResult.Value, windBoundary, false);
             prepared.Value.ItemBudget.Add(new ActionItemBudget
             {
                 ItemId = target.ItemId,
@@ -137,6 +152,9 @@ internal sealed partial class NormalGameActionCoordinator
         if (targetResult.Value.ComponentKind == "belt"
             && CaptureEmptyBeltDismantleBoundary(targetResult.Value, false).NativeHash != plan.EmptyBeltNativeStateHash)
             return Stale("The empty belt chain native identity, geometry, topology or cargo changed after dismantle preparation.");
+        if (targetResult.Value.ItemId == WindTurbineDismantlePolicy.ItemId
+            && CaptureWindDismantleBoundary(targetResult.Value, false).NativeHash != plan.WindPowerStateHash)
+            return Stale("The wind generator or complete power topology changed after preparation.");
         return null;
     }
 
@@ -150,11 +168,12 @@ internal sealed partial class NormalGameActionCoordinator
             || target.ItemId <= 0
             || !(target.ComponentKind == "miner" || target.ComponentKind == "inserter" && SorterDismantlePolicy.Supports(target.ItemId)
                 || EmptyStorageDismantlePolicy.SupportsSnapshot(target)
-                || EmptyBeltDismantlePolicy.SupportsSnapshot(target)))
+                || EmptyBeltDismantlePolicy.SupportsSnapshot(target)
+                || WindTurbineDismantlePolicy.SupportsSnapshot(target)))
         {
             return BridgeError.Create(
                 BridgeErrorCodes.InvalidRequest,
-                "Dismantle accepts a resource miner, ordinary2011/2012 sorter, isolated empty default2101 storage, or isolated empty2001 chain head only.",
+                "Dismantle accepts a resource miner, ordinary2011/2012 sorter, isolated empty default2101 storage, isolated empty2001 chain head, or one2203 wind turbine.",
                 false,
                 "Inspect one supported positive entity and prepare again; other types are not implicitly authorized.");
         }
@@ -167,7 +186,8 @@ internal sealed partial class NormalGameActionCoordinator
                 && item.prefabDesc.minerType != EMinerType.Oil)
             || (target.ComponentKind == "inserter" && !item.prefabDesc.isInserter)
             || (target.ComponentKind == "storage" && !item.prefabDesc.isStorage)
-            || (target.ComponentKind == "belt" && !item.prefabDesc.isBelt))
+            || (target.ComponentKind == "belt" && !item.prefabDesc.isBelt)
+            || (target.ItemId == WindTurbineDismantlePolicy.ItemId && !item.prefabDesc.windForcedPower))
         {
             return BridgeError.Create(
                 BridgeErrorCodes.InvalidRequest,
@@ -236,6 +256,16 @@ internal sealed partial class NormalGameActionCoordinator
             }
         }
 
+        if (target.ItemId == WindTurbineDismantlePolicy.ItemId)
+        {
+            try { CaptureWindDismantleBoundary(target, false); CaptureDismantleInventoryInc(GameMain.mainPlayer); }
+            catch (Exception error) when (error is ArgumentException or InvalidOperationException)
+            {
+                return BridgeError.Create(BridgeErrorCodes.BuildConnectionInvalid, error.Message, false,
+                    "Inspect the exact wind turbine and complete power topology, then prepare a fresh removal.");
+            }
+        }
+
         var requiredSlots = CountConservativeRecoverySlots(target);
         var freeSlots = player.InventorySlotCount - player.InventoryOccupiedSlotCount;
         if (freeSlots < requiredSlots)
@@ -290,8 +320,10 @@ internal sealed partial class NormalGameActionCoordinator
         var sorter = targetResult.Value.ComponentKind == "inserter";
         var emptyStorage = targetResult.Value.ComponentKind == "storage";
         var emptyBelt = targetResult.Value.ComponentKind == "belt";
+        var wind = targetResult.Value.ItemId == WindTurbineDismantlePolicy.ItemId;
         EmptyStorageDismantleBoundary? emptyBoundary = null;
         EmptyBeltDismantleBoundary? beltBoundary = null;
+        WindDismantleBoundary? windBoundary = null;
         if (emptyStorage)
         {
             if (RevalidateDismantlePlanOnMainThread(action.Plan) is not null)
@@ -304,8 +336,14 @@ internal sealed partial class NormalGameActionCoordinator
                 throw new InvalidOperationException("Empty belt lost its prepared recovery proof before execution.");
             beltBoundary = CaptureEmptyBeltDismantleBoundary(targetResult.Value, true);
         }
+        if (wind)
+        {
+            if (RevalidateDismantlePlanOnMainThread(action.Plan) is not null)
+                throw new InvalidOperationException("Wind removal lost its prepared power topology proof.");
+            windBoundary = CaptureWindDismantleBoundary(targetResult.Value, true);
+        }
         var survivors = sorter ? CaptureSorterDismantleNeighbors(targetResult.Value) : new List<FactoryEntitySnapshot>();
-        var beforeInc = sorter || emptyStorage || emptyBelt ? CaptureDismantleInventoryInc(player) : null;
+        var beforeInc = sorter || emptyStorage || emptyBelt || wind ? CaptureDismantleInventoryInc(player) : null;
         var cargo = targetResult.Value.Buffers.SingleOrDefault(b => b.Role == "inserter-held");
         foreach (var survivor in survivors)
             survivor.Connections.RemoveAll(e => e.OtherObjectId == action.Plan.EntityId);
@@ -342,6 +380,14 @@ internal sealed partial class NormalGameActionCoordinator
                 throw new InvalidOperationException("Empty belt recovery changed inventory proliferation points.");
         }
 
+        if (windBoundary is not null)
+        {
+            action.WindTurbineDismantleReadback = VerifyWindDismantleBoundary(action.Plan.EntityId, windBoundary);
+            if (!SorterDismantlePolicy.ProvesIncRecovery(beforeInc!, CaptureDismantleInventoryInc(player), 0, 0))
+                throw new InvalidOperationException("Wind recovery changed inventory proliferation points.");
+            action.WindTurbineDismantleReadback.InventoryIncPreserved = true;
+        }
+
         var afterTarget = _reader.InspectFactoryEntityOnMainThread(
             action.SessionId,
             new InspectFactoryEntityRequest { PlanetId = action.PlanetId, ObjectId = action.Plan.EntityId });
@@ -369,11 +415,14 @@ internal sealed partial class NormalGameActionCoordinator
 
         action.TargetObjectId = action.Plan.EntityId;
         action.TargetItemId = action.Plan.BuildingItemId;
+        if (action.WindTurbineDismantleReadback is not null)
+            action.WindTurbineDismantleReadback.ExactBuildingRecovery = true;
         Complete(action,
             $"DSP's normal dismantle path removed {targetResult.Value.ComponentKind} {action.Plan.EntityId} and returned its building item plus live recoverable cargo with exact inventory conservation."
             + (sorter ? $" Cargo inc and {survivors.Count} surviving endpoint configurations/connections were verified; no slot write or automatic rebuild occurred." : "")
             + (emptyStorage ? " Empty default2101 refund, unchanged inventory inc and all surviving entities/prebuilds/connections were verified; no automatic rebuild occurred." : "")
-            + (emptyBelt ? " Empty2001 head refund, unchanged inventory inc, complete remaining empty chain and all surviving entities/prebuilds/connections were verified; only exact native renderer rotations may change. No automatic rebuild occurred." : ""));
+            + (emptyBelt ? " Empty2001 head refund, unchanged inventory inc, complete remaining empty chain and all surviving entities/prebuilds/connections were verified; only exact native renderer rotations may change. No automatic rebuild occurred." : "")
+            + (wind ? " Wind generator/node removal, projected power connectivity, exact refund and surviving world preservation were verified." : ""));
     }
 
     private List<FactoryEntitySnapshot> CaptureSorterDismantleNeighbors(FactoryEntitySnapshot target)
@@ -450,6 +499,7 @@ internal sealed partial class NormalGameActionCoordinator
     private sealed partial class NormalActionPlanPayload
     {
         public string EmptyBeltNativeStateHash { get; set; } = string.Empty;
+        public string WindPowerStateHash { get; set; } = string.Empty;
 
         public static NormalActionPlanPayload Dismantle(
             string sessionId,
