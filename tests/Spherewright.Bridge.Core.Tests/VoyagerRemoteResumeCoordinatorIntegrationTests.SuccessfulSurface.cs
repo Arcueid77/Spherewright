@@ -114,6 +114,24 @@ public sealed partial class VoyagerRemoteResumeCoordinatorIntegrationTests
         Assert.False(s.Checkpoints.HasCurrentTicket);
     }
 
+    [Fact]
+    public void MismatchedLandingWitnessReleasesTheOriginalLeasesBeforeRefusing()
+    {
+        using var s = new Scenario(expiredJourney: true, currentNative: true, nativeArmed: true);
+        var request = s.PrimaryRecoveryRequest(0); s.WriteSave(Scenario.Identity, 12528);
+        var journey = s.Checkpoints.VoyagerJourney!;
+        journey.LastLandedGameTick++; journey.LastAccountedGameTick++;
+        Assert.True(s.Checkpoints.TryPersistVoyagerJourney(journey, out var rejection), rejection);
+        request.SurfaceRecoveryTarget = new Vector3Snapshot { X = 200, Y = 2, Z = 0 };
+        request.SurfaceRecoveryExpectedSourceGameTick = 12528;
+        var result = s.PrepareResult(request);
+        Assert.False(result.Success); Assert.Contains("successful_outbound_surface_exact_source_unproved", result.Error!.Message);
+        Assert.Equal("successful_surface_exact_source", result.Error.NativeFirstFailure!.FirstFailedPredicate);
+        Assert.Equal(0, DSPGame.LoadCalls);
+        foreach (var path in s.ProtectedEvidencePaths)
+            using (new FileStream(path, FileMode.Open, FileAccess.ReadWrite, FileShare.None)) { }
+    }
+
     [Theory]
     [InlineData("saved_file")] [InlineData("journal")] [InlineData("original_flight")]
     public void SuccessfulOutboundSurfaceCommitRechecksThePreparedSourceBeforeDispatch(string fault)
