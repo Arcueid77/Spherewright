@@ -1,3 +1,4 @@
+using System.Globalization;
 using Spherewright.Bridge.Core.Safety;
 using Spherewright.Contracts.Actions;
 using Spherewright.Contracts.Celestial;
@@ -99,10 +100,10 @@ public static class DysonStructurePolicy
         var fields = new List<object?>
         {
             plan.EvidenceVersion, plan.SessionId, plan.PlanetId, plan.StarId,
-            plan.BeforeDesignStateHash, plan.NativeOperation, plan.PlannedObjectId, plan.UnlockedNodeLatitudeDegrees,
+            plan.BeforeDesignStateHash, plan.NativeOperation, plan.PlannedObjectId, FloatBits(plan.UnlockedNodeLatitudeDegrees),
             plan.NativeChecksComplete, plan.RequiredStructurePoints, plan.RequiredCellPoints,
-            structure.Kind, structure.LayerId, structure.PrototypeId, structure.LocalPosition?.X,
-            structure.LocalPosition?.Y, structure.LocalPosition?.Z, structure.NodeAId, structure.NodeBId,
+            structure.Kind, structure.LayerId, structure.PrototypeId, FloatBits(structure.LocalPosition?.X),
+            FloatBits(structure.LocalPosition?.Y), FloatBits(structure.LocalPosition?.Z), structure.NodeAId, structure.NodeBId,
             structure.Euler, structure.PreviewOnly, structure.BoundaryNodeIds.Count,
         };
         fields.AddRange(structure.BoundaryNodeIds.Cast<object?>());
@@ -138,6 +139,13 @@ public static class DysonStructurePolicy
             ? !prepared.Prepared && !prepared.CommitAllowedNow && string.IsNullOrEmpty(prepared.PlanToken)
             : prepared.Prepared && prepared.CommitAllowedNow && !string.IsNullOrEmpty(prepared.PlanToken));
     }
+
+    // Unity's Mono and the MCP's .NET runtime format fractional floats
+    // differently by default. Bind their IEEE value rather than its display
+    // text; JSON may normalize signed zero, which has the same physical value.
+    private static string? FloatBits(float? value) => value is null ? null
+        : (value.Value == 0f ? 0 : BitConverter.ToInt32(BitConverter.GetBytes(value.Value), 0))
+            .ToString(CultureInfo.InvariantCulture);
 
     private static bool Finite(float value) => !float.IsNaN(value) && !float.IsInfinity(value);
 }

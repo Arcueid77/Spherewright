@@ -2,6 +2,8 @@
 
 [English](project-status.md) · [简体中文](project-status.zh-CN.md)
 
+**Ascension design binding correction.** Fractional node coordinates now bind their exact single-precision bits rather than runtime-specific float display text. A classic Windows/.NET serialized-plan regression and the current-runtime echo verify the same binding while retaining exact request, cost and Native checks. This is source validation; coherent installation and live verification remain separate.
+
 **Same-session surface-source preview development.** A read-only MCP preview checks a paused original unknown Move, two-frame pose, original journey, Journal and Native terrain/energy evidence. An optional finite window is hypothetical and preserves the original budget; it issues no Move or Resume and applies no extension. An executable entry and live acceptance remain outstanding; source, installation and scenario evidence stay separate.
 
 **0.6 Ascension development,2026-11-11.** The owner requested continuation of 0.6. The first slice adds a bounded local-star Dyson topology/progress observation and Native ray-receiver electricity data. The current source exposes 76 MCP tools. The Native assembly remains 29151. Source qualification and the next scenario follow the Ascension plan in Lab. Thunderstore publicly lists 0.5.0 on 2026-11-11. [Native research](research/game-api-dyson-state.md)

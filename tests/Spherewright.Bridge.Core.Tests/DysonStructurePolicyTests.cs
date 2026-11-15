@@ -117,6 +117,25 @@ public sealed class DysonStructurePolicyTests
     }
 
     [Fact]
+    public void FractionalCoordinatesUseStableBitsAndStillBindTheExactRequest()
+    {
+        var request = Request(DysonStructureKinds.Node);
+        request.DysonStructure!.LocalPosition = new Vector3Snapshot { X = 7956.1753f, Y = 0f, Z = 836.2277f };
+        var prepared = Prepared(request);
+        var plan = prepared.PlannedDysonStructure!;
+
+        // Independently calculated from the canonical field framing and IEEE
+        // single-precision bit values, not runtime-specific float formatting.
+        Assert.Equal("sha256:ab8fd46b0aa0fc57b943b8a5b607c2f8cea9493ee501f390074ab8735c753bba", plan.BindingHash);
+        Assert.True(DysonStructurePolicy.ConfirmsPreparedEcho("synthetic", request, prepared));
+        request.DysonStructure.LocalPosition.Y = BitConverter.Int32BitsToSingle(unchecked((int)0x80000000));
+        Assert.True(DysonStructurePolicy.ConfirmsPreparedEcho("synthetic", request, prepared));
+        request.DysonStructure.LocalPosition.X = BitConverter.Int32BitsToSingle(
+            BitConverter.SingleToInt32Bits(request.DysonStructure.LocalPosition.X) + 1);
+        Assert.False(DysonStructurePolicy.ConfirmsPreparedEcho("synthetic", request, prepared));
+    }
+
+    [Fact]
     public void CopyDetachesMutableCoordinatesAndBoundaryOrder()
     {
         var structure = Request(DysonStructureKinds.Node).DysonStructure!;
