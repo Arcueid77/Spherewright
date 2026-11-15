@@ -114,7 +114,7 @@ internal sealed partial class OwnedWorldResumeCoordinator
             blockers.Add(new WriteBlocker
             {
                 Code = BridgeErrorCodes.UserConfirmationRequired,
-                Message = payload.ActiveFixedAutosaveRecovery || payload.FailedRemoteReauthorization || payload.CompletedRemoteContinuation || payload.LegacyLocalMoveUnknown || payload.ReturnOnlyContinuation
+                Message = payload.ActiveFixedAutosaveRecovery || payload.PreapprovedExpiredAutosaveRecovery || payload.FailedRemoteReauthorization || payload.CompletedRemoteContinuation || payload.LegacyLocalMoveUnknown || payload.ReturnOnlyContinuation
                     ? "Verify this exact disclosed owned candidate is covered by explicit conversation authority; an existing matching grant needs no repeated question."
                     : "Display this plan's disclosure and wait for subsequent explicit conversation confirmation before commit.",
             });
@@ -704,6 +704,7 @@ internal sealed partial class OwnedWorldResumeCoordinator
             return _tickets.TryGetFixedAutosaveProvenance(token, out ticket, out provenance, out rejection);
         return request.RecoveryMode == OwnedWorldResumeModes.ReauthorizeExpiredPrimary
             || request.RecoveryMode == OwnedWorldResumeModes.ReauthorizeExpiredAutosave0
+            || request.RecoveryMode == OwnedWorldResumeModes.ReauthorizePreapprovedExpiredAutosave0
             ? _tickets.TryGetExpiredPrimaryProvenance(token, out ticket, out provenance, out rejection)
             : _tickets.TryGetActiveTicket(token, out ticket, out rejection);
     }
@@ -1243,6 +1244,8 @@ internal sealed partial class OwnedWorldResumeCoordinator
         public bool FixedAutosaveRecovery => OwnedWorldAutosaveRecoveryPolicy.IsFixedAutosaveMode(Request.RecoveryMode);
 
         public bool ActiveFixedAutosaveRecovery => Request.RecoveryMode == OwnedWorldResumeModes.ReauthorizeFixedAutosave0;
+
+        public bool PreapprovedExpiredAutosaveRecovery => Request.RecoveryMode == OwnedWorldResumeModes.ReauthorizePreapprovedExpiredAutosave0;
 
         public bool VersionChangedPrimary => Request.RecoveryMode == OwnedWorldResumeModes.ReauthorizeVersionChangedPrimary;
 

@@ -948,6 +948,8 @@ public sealed partial class SpherewrightToolsTests
         Assert.Contains("recoveryEvidenceVersion=3", guide);
         Assert.Contains("reauthorize_fixed_autosave0", guide);
         Assert.Contains("Require evidence version **4**", guide);
+        Assert.Contains("reauthorize_preapproved_expired_autosave0", guide);
+        Assert.Contains("Require evidence version **5**", guide);
         var prepare = typeof(SpherewrightTools).GetMethod(nameof(SpherewrightTools.PrepareOwnedWorldResumeAsync))!;
         var recoveryMode = prepare.GetParameters().Single(parameter => parameter.Name == "recoveryMode");
         Assert.Equal(OwnedWorldResumeModes.OpenSavedPrimary, recoveryMode.DefaultValue);
@@ -963,6 +965,7 @@ public sealed partial class SpherewrightToolsTests
         var confirmationDescription = ((System.ComponentModel.DescriptionAttribute)Attribute.GetCustomAttribute(
             confirmation, typeof(System.ComponentModel.DescriptionAttribute))!).Description;
         Assert.Contains("Active fixed AutoSave0 accepts an existing explicit conversation grant", confirmationDescription);
+        Assert.Contains("preapproved-expired AutoSave0 mode accepts an existing explicit grant", confirmationDescription);
     }
 
     [Theory]
@@ -1200,6 +1203,35 @@ public sealed partial class SpherewrightToolsTests
         if (blocked) Assert.DoesNotContain("planToken", result.StructuredContent!.Value.GetRawText());
     }
 
+    [Theory]
+    [InlineData(5, OwnedWorldResumeModes.ReauthorizePreapprovedExpiredAutosave0, false)]
+    [InlineData(3, OwnedWorldResumeModes.ReauthorizePreapprovedExpiredAutosave0, true)]
+    [InlineData(4, OwnedWorldResumeModes.ReauthorizePreapprovedExpiredAutosave0, true)]
+    [InlineData(5, OwnedWorldResumeModes.ReauthorizeExpiredAutosave0, true)]
+    public async Task PreapprovedExpiredAutoSave0RequiresItsOwnVersionedPluginEcho(
+        int evidenceVersion, string echoedMode, bool blocked)
+    {
+        var bridge = new FakeBridgeClient(SuccessResult())
+        {
+            ResumePlan = new PreparedOwnedWorldResumePlan
+            {
+                Prepared = true, PlanToken = "preapproved-autosave0-plan",
+                RecoveryMode = echoedMode, RecoveryEvidenceVersion = evidenceVersion,
+                CandidateGameTick = 12345, MinimumGameTick = 12345,
+                ExactEmbeddedIdentityVerified = true, UserConfirmationRequired = true, CommitAllowedNow = false,
+                ConfirmationPrompt = Spherewright.Bridge.Core.Safety.OwnedWorldAutosaveRecoveryPolicy.ConfirmationPromptFor(echoedMode),
+                ConfirmationDigest = "synthetic-preapproved-autosave0-digest",
+                SourceGameVersion = "0.10.35.29088", TargetGameVersion = "0.10.35.29088",
+            },
+        };
+        var result = await SpherewrightTools.PrepareOwnedWorldResumeAsync(bridge, "expired-provenance",
+            recoveryMode: OwnedWorldResumeModes.ReauthorizePreapprovedExpiredAutosave0,
+            minimumRecoveryGameTick: 12000, expectedRecoveryGameTick: 12345);
+        Assert.Equal(blocked, result.IsError);
+        Assert.False(bridge.LastResumePrepareRequest!.UserConfirmedInConversation);
+        if (blocked) Assert.DoesNotContain("planToken", result.StructuredContent!.Value.GetRawText());
+    }
+
     [Fact]
     public async Task ExpiredAutoSave0DoesNotAcceptAnOldPluginOrAnotherRecoveryModeEcho()
     {
@@ -1232,6 +1264,9 @@ public sealed partial class SpherewrightToolsTests
     [InlineData(OwnedWorldResumeModes.ReauthorizeFixedAutosave0, true, 80627903, 80731193)]
     [InlineData(OwnedWorldResumeModes.ReauthorizeFixedAutosave0, false, -1, 80731193)]
     [InlineData(OwnedWorldResumeModes.ReauthorizeFixedAutosave0, false, 80731194, 80731193)]
+    [InlineData(OwnedWorldResumeModes.ReauthorizePreapprovedExpiredAutosave0, true, 12000, 12345)]
+    [InlineData(OwnedWorldResumeModes.ReauthorizePreapprovedExpiredAutosave0, false, -1, 12345)]
+    [InlineData(OwnedWorldResumeModes.ReauthorizePreapprovedExpiredAutosave0, false, 12346, 12345)]
     public async Task InvalidAutoSave0PrepareNeverReachesBridge(string mode, bool confirmed, long minimum, long expected)
     {
         var bridge = new FakeBridgeClient(SuccessResult());

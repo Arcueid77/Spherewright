@@ -7,6 +7,7 @@ public static class OwnedWorldAutosaveRecoveryPolicy
 {
     public const int EvidenceVersion = 3;
     public const int ActiveEvidenceVersion = 4;
+    public const int PreapprovedExpiredEvidenceVersion = 5;
     public const string ConfirmationPrompt =
         "Confirm after reading this prepared plan: load only the exact protected AutoSave0 candidate "
         + "at the approved newer tick, preserving its owned identity and existing gameplay journal. "
@@ -26,14 +27,26 @@ public static class OwnedWorldAutosaveRecoveryPolicy
         + "are rechecked. Interruption after consumption requires investigation, not replay. Only successful "
         + "adoption and normal saving issue a new credential.";
 
+    public const string PreapprovedExpiredConfirmationPrompt =
+        "Load only this exact verified fixed AutoSave0 candidate under the user's explicit conversation authority "
+        + "for the disclosed owned identity and progress floor. An existing explicit grant matching this candidate "
+        + "may precede the fresh plan; a generic request to continue is not authority for another candidate. "
+        + "No primary, LastExit, other autosave or imported copy will load. The expired protected credential is "
+        + "durably consumed before native loading without editing its expiry. Source, runtime and candidate must "
+        + "match the supported version; migration is unavailable. Identity, full-file evidence and original Journal "
+        + "are rechecked. Interruption after consumption requires investigation, not replay. Only successful "
+        + "adoption and normal saving issue a new credential.";
+
     public static bool IsFixedAutosaveMode(string mode) =>
         mode == OwnedWorldResumeModes.ReauthorizeExpiredAutosave0
-        || mode == OwnedWorldResumeModes.ReauthorizeFixedAutosave0;
+        || mode == OwnedWorldResumeModes.ReauthorizeFixedAutosave0
+        || mode == OwnedWorldResumeModes.ReauthorizePreapprovedExpiredAutosave0;
 
     public static int EvidenceVersionFor(string mode) => mode switch
     {
         OwnedWorldResumeModes.ReauthorizeExpiredAutosave0 => EvidenceVersion,
         OwnedWorldResumeModes.ReauthorizeFixedAutosave0 => ActiveEvidenceVersion,
+        OwnedWorldResumeModes.ReauthorizePreapprovedExpiredAutosave0 => PreapprovedExpiredEvidenceVersion,
         _ => throw new ArgumentException("Unsupported fixed AutoSave0 mode.", nameof(mode)),
     };
 
@@ -41,6 +54,7 @@ public static class OwnedWorldAutosaveRecoveryPolicy
     {
         OwnedWorldResumeModes.ReauthorizeExpiredAutosave0 => ConfirmationPrompt,
         OwnedWorldResumeModes.ReauthorizeFixedAutosave0 => ActiveConfirmationPrompt,
+        OwnedWorldResumeModes.ReauthorizePreapprovedExpiredAutosave0 => PreapprovedExpiredConfirmationPrompt,
         _ => throw new ArgumentException("Unsupported fixed AutoSave0 mode.", nameof(mode)),
     };
 

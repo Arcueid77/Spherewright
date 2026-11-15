@@ -11,11 +11,25 @@ public sealed class OwnedWorldAutosaveRecoveryPolicyTests
     private const string Version = "0.10.35.29088";
     private const string ConfirmationDigest = "sha256:exact-autosave0-plan";
     private const string ExpiredMode = OwnedWorldResumeModes.ReauthorizeExpiredAutosave0;
+    private const string PreapprovedExpiredMode = OwnedWorldResumeModes.ReauthorizePreapprovedExpiredAutosave0;
     private const string ActiveMode = OwnedWorldResumeModes.ReauthorizeFixedAutosave0;
     private static readonly DateTimeOffset Issued = new(2026, 9, 16, 0, 0, 0, TimeSpan.Zero);
 
+    [Fact]
+    public void PreapprovedExpiredModeHasDistinctEvidenceAndNeverChangesTheOriginalExpiredPrompt()
+    {
+        Assert.Equal(5, OwnedWorldAutosaveRecoveryPolicy.EvidenceVersionFor(PreapprovedExpiredMode));
+        Assert.Equal(3, OwnedWorldAutosaveRecoveryPolicy.EvidenceVersionFor(ExpiredMode));
+        Assert.Contains("may precede the fresh plan", OwnedWorldAutosaveRecoveryPolicy.ConfirmationPromptFor(PreapprovedExpiredMode));
+        Assert.Contains("Confirm after reading this prepared plan", OwnedWorldAutosaveRecoveryPolicy.ConfirmationPromptFor(ExpiredMode));
+        var plan = MatchingPlan(PreapprovedExpiredMode);
+        plan.RecoveryMode = ExpiredMode;
+        Assert.False(OwnedWorldAutosaveRecoveryPolicy.HasMatchingEcho(Request(PreapprovedExpiredMode), plan));
+    }
+
     [Theory]
     [InlineData(ExpiredMode)]
+    [InlineData(PreapprovedExpiredMode)]
     [InlineData(ActiveMode)]
     public void ExactNewerSameVersionAutoSave0CandidatePasses(string mode)
     {
@@ -26,10 +40,15 @@ public sealed class OwnedWorldAutosaveRecoveryPolicyTests
 
     [Theory]
     [InlineData(ExpiredMode, "confirmation")]
+    [InlineData(PreapprovedExpiredMode, "confirmation")]
     [InlineData(ExpiredMode, "missing-known")]
+    [InlineData(PreapprovedExpiredMode, "missing-known")]
     [InlineData(ExpiredMode, "missing-expected")]
+    [InlineData(PreapprovedExpiredMode, "missing-expected")]
     [InlineData(ExpiredMode, "negative-known")]
+    [InlineData(PreapprovedExpiredMode, "negative-known")]
     [InlineData(ExpiredMode, "expected-before-known")]
+    [InlineData(PreapprovedExpiredMode, "expected-before-known")]
     [InlineData(ActiveMode, "confirmation")]
     [InlineData(ActiveMode, "missing-known")]
     [InlineData(ActiveMode, "missing-expected")]
@@ -52,16 +71,27 @@ public sealed class OwnedWorldAutosaveRecoveryPolicyTests
 
     [Theory]
     [InlineData(ExpiredMode, "ticket-floor")]
+    [InlineData(PreapprovedExpiredMode, "ticket-floor")]
     [InlineData(ExpiredMode, "candidate")]
+    [InlineData(PreapprovedExpiredMode, "candidate")]
     [InlineData(ExpiredMode, "not-newer")]
+    [InlineData(PreapprovedExpiredMode, "not-newer")]
     [InlineData(ExpiredMode, "primary-missing")]
+    [InlineData(PreapprovedExpiredMode, "primary-missing")]
     [InlineData(ExpiredMode, "primary-older")]
+    [InlineData(PreapprovedExpiredMode, "primary-older")]
     [InlineData(ExpiredMode, "primary-equal")]
+    [InlineData(PreapprovedExpiredMode, "primary-equal")]
     [InlineData(ExpiredMode, "primary-newer")]
+    [InlineData(PreapprovedExpiredMode, "primary-newer")]
     [InlineData(ExpiredMode, "source-migration")]
+    [InlineData(PreapprovedExpiredMode, "source-migration")]
     [InlineData(ExpiredMode, "unsupported-same-version")]
+    [InlineData(PreapprovedExpiredMode, "unsupported-same-version")]
     [InlineData(ExpiredMode, "written-before-ticket")]
+    [InlineData(PreapprovedExpiredMode, "written-before-ticket")]
     [InlineData(ExpiredMode, "saved-before-ticket")]
+    [InlineData(PreapprovedExpiredMode, "saved-before-ticket")]
     [InlineData(ActiveMode, "ticket-floor")]
     [InlineData(ActiveMode, "candidate")]
     [InlineData(ActiveMode, "not-newer")]
@@ -105,8 +135,11 @@ public sealed class OwnedWorldAutosaveRecoveryPolicyTests
 
     [Theory]
     [InlineData(ExpiredMode, "identity")]
+    [InlineData(PreapprovedExpiredMode, "identity")]
     [InlineData(ExpiredMode, "peaceful")]
+    [InlineData(PreapprovedExpiredMode, "peaceful")]
     [InlineData(ExpiredMode, "candidate-version")]
+    [InlineData(PreapprovedExpiredMode, "candidate-version")]
     [InlineData(ActiveMode, "identity")]
     [InlineData(ActiveMode, "peaceful")]
     [InlineData(ActiveMode, "candidate-version")]
@@ -130,17 +163,29 @@ public sealed class OwnedWorldAutosaveRecoveryPolicyTests
 
     [Theory]
     [InlineData(ExpiredMode, "old-plugin")]
+    [InlineData(PreapprovedExpiredMode, "old-plugin")]
     [InlineData(ExpiredMode, "wrong-mode")]
+    [InlineData(PreapprovedExpiredMode, "wrong-mode")]
     [InlineData(ExpiredMode, "not-prepared")]
+    [InlineData(PreapprovedExpiredMode, "not-prepared")]
     [InlineData(ExpiredMode, "identity")]
+    [InlineData(PreapprovedExpiredMode, "identity")]
     [InlineData(ExpiredMode, "candidate")]
+    [InlineData(PreapprovedExpiredMode, "candidate")]
     [InlineData(ExpiredMode, "minimum")]
+    [InlineData(PreapprovedExpiredMode, "minimum")]
     [InlineData(ExpiredMode, "confirmation-missing")]
+    [InlineData(PreapprovedExpiredMode, "confirmation-missing")]
     [InlineData(ExpiredMode, "commit-allowed")]
+    [InlineData(PreapprovedExpiredMode, "commit-allowed")]
     [InlineData(ExpiredMode, "prompt")]
+    [InlineData(PreapprovedExpiredMode, "prompt")]
     [InlineData(ExpiredMode, "digest")]
+    [InlineData(PreapprovedExpiredMode, "digest")]
     [InlineData(ExpiredMode, "migration")]
+    [InlineData(PreapprovedExpiredMode, "migration")]
     [InlineData(ExpiredMode, "unsupported-same-version")]
+    [InlineData(PreapprovedExpiredMode, "unsupported-same-version")]
     [InlineData(ActiveMode, "old-plugin")]
     [InlineData(ActiveMode, "wrong-mode")]
     [InlineData(ActiveMode, "not-prepared")]

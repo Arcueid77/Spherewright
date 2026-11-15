@@ -1,5 +1,6 @@
 using System.Text;
 using BepInEx.Logging;
+using Spherewright.Bridge.Core.Safety;
 using Spherewright.Contracts.Errors;
 using Spherewright.Contracts.Journals;
 using Spherewright.Contracts.Sessions;
@@ -21,6 +22,7 @@ public sealed partial class OwnedWorldAutosaveCoordinatorIntegrationTests
     private const long SavedTick = 12345;
     private const long CandidateTick = 20000;
     private const string ExpiredMode = OwnedWorldResumeModes.ReauthorizeExpiredAutosave0;
+    private const string PreapprovedExpiredMode = OwnedWorldResumeModes.ReauthorizePreapprovedExpiredAutosave0;
     private const string ActiveMode = OwnedWorldResumeModes.ReauthorizeFixedAutosave0;
     private const string MigrationMode = OwnedWorldResumeModes.ReauthorizeVersionChangedPrimary;
     private const string PrimaryExpiredMode = OwnedWorldResumeModes.ReauthorizeExpiredPrimary;
@@ -141,6 +143,7 @@ public sealed partial class OwnedWorldAutosaveCoordinatorIntegrationTests
 
     [Theory]
     [InlineData(ExpiredMode)]
+    [InlineData(PreapprovedExpiredMode)]
     [InlineData(ActiveMode)]
     public void PrepareDisclosesWithoutLoadOrConsumptionAndCommitNeedsModeSpecificConversationAuthority(string mode)
     {
@@ -162,8 +165,24 @@ public sealed partial class OwnedWorldAutosaveCoordinatorIntegrationTests
         Assert.Equal(0, DSPGame.LoadCalls);
     }
 
+    [Fact]
+    public void PreapprovedExpiredPlanDisclosesMatchingPriorGrantWithoutWaivingOtherChecks()
+    {
+        using var fixture = new Fixture(PreapprovedExpiredMode);
+        var plan = fixture.Prepare();
+        Assert.Equal(5, plan.RecoveryEvidenceVersion);
+        Assert.Equal(PreapprovedExpiredMode, plan.RecoveryMode);
+        Assert.Equal(OwnedWorldAutosaveRecoveryPolicy.PreapprovedExpiredConfirmationPrompt, plan.ConfirmationPrompt);
+        var blocker = Assert.Single(plan.CommitBlockers);
+        Assert.Equal(BridgeErrorCodes.UserConfirmationRequired, blocker.Code);
+        Assert.Contains("existing matching grant", blocker.Message);
+        Assert.True(fixture.HasExpiredProvenance());
+        Assert.Equal(0, DSPGame.LoadCalls);
+    }
+
     [Theory]
     [InlineData(ExpiredMode)]
+    [InlineData(PreapprovedExpiredMode)]
     [InlineData(ActiveMode)]
     public void CommitConsumesBeforeExactLoaderAndIdempotencyDoesNotLoadTwice(string mode)
     {
@@ -195,12 +214,19 @@ public sealed partial class OwnedWorldAutosaveCoordinatorIntegrationTests
 
     [Theory]
     [InlineData(ExpiredMode, "file")]
+    [InlineData(PreapprovedExpiredMode, "file")]
     [InlineData(ExpiredMode, "journal")]
+    [InlineData(PreapprovedExpiredMode, "journal")]
     [InlineData(ExpiredMode, "revision")]
+    [InlineData(PreapprovedExpiredMode, "revision")]
     [InlineData(ExpiredMode, "slot-missing")]
+    [InlineData(PreapprovedExpiredMode, "slot-missing")]
     [InlineData(ExpiredMode, "primary-file")]
+    [InlineData(PreapprovedExpiredMode, "primary-file")]
     [InlineData(ExpiredMode, "primary-identity")]
+    [InlineData(PreapprovedExpiredMode, "primary-identity")]
     [InlineData(ExpiredMode, "primary-newer-than-ticket")]
+    [InlineData(PreapprovedExpiredMode, "primary-newer-than-ticket")]
     [InlineData(ActiveMode, "file")]
     [InlineData(ActiveMode, "journal")]
     [InlineData(ActiveMode, "revision")]
@@ -239,6 +265,7 @@ public sealed partial class OwnedWorldAutosaveCoordinatorIntegrationTests
 
     [Theory]
     [InlineData(ExpiredMode)]
+    [InlineData(PreapprovedExpiredMode)]
     [InlineData(ActiveMode)]
     public void MissingFixedSlotNeverFallsBackToPrimaryLastExitOrAnotherAutosave(string mode)
     {
@@ -253,6 +280,7 @@ public sealed partial class OwnedWorldAutosaveCoordinatorIntegrationTests
 
     [Theory]
     [InlineData(ExpiredMode)]
+    [InlineData(PreapprovedExpiredMode)]
     [InlineData(ActiveMode)]
     public void NativeFailureAfterConsumptionDoesNotReviveProvenanceAndReleasesLeases(string mode)
     {
@@ -274,10 +302,15 @@ public sealed partial class OwnedWorldAutosaveCoordinatorIntegrationTests
 
     [Theory]
     [InlineData(ExpiredMode, "missing")]
+    [InlineData(PreapprovedExpiredMode, "missing")]
     [InlineData(ExpiredMode, "corrupt")]
+    [InlineData(PreapprovedExpiredMode, "corrupt")]
     [InlineData(ExpiredMode, "identity")]
+    [InlineData(PreapprovedExpiredMode, "identity")]
     [InlineData(ExpiredMode, "unreadable")]
+    [InlineData(PreapprovedExpiredMode, "unreadable")]
     [InlineData(ExpiredMode, "newer-than-ticket")]
+    [InlineData(PreapprovedExpiredMode, "newer-than-ticket")]
     [InlineData(ActiveMode, "missing")]
     [InlineData(ActiveMode, "corrupt")]
     [InlineData(ActiveMode, "identity")]
@@ -306,6 +339,7 @@ public sealed partial class OwnedWorldAutosaveCoordinatorIntegrationTests
 
     [Theory]
     [InlineData(ExpiredMode, false, true)]
+    [InlineData(PreapprovedExpiredMode, false, true)]
     [InlineData(ActiveMode, true, false)]
     public void FixedAndExpiredModesNeverAcceptEachOthersProvenance(
         string mode, bool activeExpected, bool expiredExpected)
@@ -315,9 +349,22 @@ public sealed partial class OwnedWorldAutosaveCoordinatorIntegrationTests
         Assert.Equal(expiredExpected, fixture.HasExpiredProvenance());
     }
 
+    [Fact]
+    public void PreapprovedExpiredModeNeverAcceptsAnActiveTicketOrChangesActiveMode()
+    {
+        using var active = new Fixture(ActiveMode);
+        var request = active.Request();
+        request.RecoveryMode = PreapprovedExpiredMode;
+        Assert.False(active.Coordinator.PrepareOnMainThread(request).Success);
+        Assert.True(active.HasActiveProvenance());
+        Assert.Equal(0, DSPGame.LoadCalls);
+    }
+
     [Theory]
     [InlineData(ExpiredMode, "missing-confirmation")]
+    [InlineData(PreapprovedExpiredMode, "missing-confirmation")]
     [InlineData(ExpiredMode, "wrong-digest")]
+    [InlineData(PreapprovedExpiredMode, "wrong-digest")]
     [InlineData(ActiveMode, "missing-confirmation")]
     [InlineData(ActiveMode, "wrong-digest")]
     public void MissingOrIncorrectCommitAuthorityDoesNotConsumeOrLoad(string mode, string change)

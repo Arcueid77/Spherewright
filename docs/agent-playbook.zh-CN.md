@@ -92,11 +92,16 @@ Plugin 租约绑定完整主文件和 Journal，加载前持久化尝试与消�
 
 Prepare 不接受确认。展示具体披露并获得之后明确回复，再 commit 一次。持久消耗先于加载，完整文件租约和 Journal 连续性先于正常主保存、新凭据。保留并对账更新接受回执，不能重放。
 
+<a id="preapproved-expired-fixed-autosave0"></a>
+## 已预先授权的过期固定 AutoSave0
+
+`reauthorize_preapproved_expired_autosave0` 是单独的显式模式，仅用于已有明确会话授权覆盖固定候选、受管世界和已知进度下限的情况；泛化“继续”不构成授权。要求证据版本 **5**、专用 prompt、精确身份与候选、支持的相同版本、唯一确认 blocker 和新 digest。Prepare 保持未确认且只读；commit 可以使用匹配的已有授权，无需重复询问。原过期模式仍要求之后的明确回复。两者使用相同的过期健康来源、完整文件租约、持久单次消耗、原 Journal 和正常保存／新凭据门；不能迁移或回退。
+
 <a id="commit-discipline"></a>
 ## Commit 纪律
 
 - 普通操作只 prepare 下一个已批准动作，要求 `prepared=true`、新 token、`commitAllowedNow=true`、无 blocker。只读预览是独立无 token 契约，不能囤令牌或扫候选。
-- 重新授权 prepare 有意返回 `commitAllowedNow=false` 与 `USER_CONFIRMATION_REQUIRED`。仅在没有其他 blocker，且精确披露模式要求的明确会话授权已满足时，才可用确认标志和精确 digest commit 同一个仍有效的计划。该模式要求之后明确回复时必须先取得回复；只有规定的有效固定 AutoSave0 模式可使用已有匹配授权。不能等待另一次 prepare 返回 true，也不能伪造 true 预检。确认只满足已披露的确认要求，绝不绕过其他 blocker。
+- 重新授权 prepare 有意返回 `commitAllowedNow=false` 与 `USER_CONFIRMATION_REQUIRED`。仅在没有其他 blocker，且精确披露模式要求的明确会话授权已满足时，才可用确认标志和精确 digest commit 同一个仍有效的计划。该模式要求之后明确回复时必须先取得回复；在固定 AutoSave0 各模式中，只有规定的有效模式和预先授权的过期模式可使用已有匹配授权，其他模式按各自的授权规则处理。不能等待另一次 prepare 返回 true，也不能伪造 true 预检。确认只满足已披露的确认要求，绝不绕过其他 blocker。
 - 直连 Bridge 脚本在同一受保护调用上下文保留 prepare/commit，不能打印、持久化 `planToken` 用于跨进程。普通 MCP prepare/commit 可按协议传递计划。只有证明零接受、零进行中操作，才能丢弃孤儿计划；可能接受就必须对账原 action。
 - 使用正确哈希域。研究采用 `selectionStateHash` 的 `expectedSelectionStateHash`，不是通用 progression `stateHash`。Sorter-filter 使用根 `configurationStateHash`，storage-capacity 使用完整 `stateHash`。诊断过期前先检查实际 payload 和哈希来源。
 - 现有 Lab 调用器如 `Invoke-SpherewrightNormalAction` 必须同时绑定 commit 的 `sessionId`、`planetId`，不能临时手写新 payload。同阶段两次拒绝 commit 要停止调用器诊断；格式错误、响应丢失不证明拒绝。
