@@ -6,6 +6,23 @@ namespace Spherewright.Bridge.Core.Tests.Safety;
 public sealed class GameplayJournalContinuityPolicyTests
 {
     [Fact]
+    public void QuiescentCaptureRequiresThePausedTickAndAllJournalEntriesToBeDurable()
+    {
+        Assert.True(GameplayJournalContinuityPolicy.QuiescentCheckpointReady(true, true, true, true, 100, 100, false, null, 3, new long[] { 1, 2, 3 }));
+        Assert.True(GameplayJournalContinuityPolicy.QuiescentCheckpointReady(true, true, true, true, 100, 100, false, null, 0, Array.Empty<long>()));
+        Assert.False(GameplayJournalContinuityPolicy.QuiescentCheckpointReady(true, true, true, true, 100, 99, false, null, 3, new long[] { 1, 2, 3 }));
+        Assert.False(GameplayJournalContinuityPolicy.QuiescentCheckpointReady(true, true, true, true, 100, 101, false, null, 3, new long[] { 1, 2, 3 }));
+        Assert.False(GameplayJournalContinuityPolicy.QuiescentCheckpointReady(true, true, true, true, 100, 100, true, null, 3, new long[] { 1, 2, 3 }));
+        Assert.False(GameplayJournalContinuityPolicy.QuiescentCheckpointReady(true, true, true, true, 100, 100, false, "failure", 3, new long[] { 1, 2, 3 }));
+        Assert.False(GameplayJournalContinuityPolicy.QuiescentCheckpointReady(true, true, false, true, 100, 100, false, null, 3, new long[] { 1, 2, 3 }));
+        Assert.False(GameplayJournalContinuityPolicy.QuiescentCheckpointReady(true, false, true, true, 100, 100, false, null, 3, new long[] { 1, 2, 3 }));
+        Assert.False(GameplayJournalContinuityPolicy.QuiescentCheckpointReady(false, true, true, true, 100, 100, false, null, 3, new long[] { 1, 2, 3 }));
+        Assert.False(GameplayJournalContinuityPolicy.QuiescentCheckpointReady(true, true, true, false, 100, 100, false, null, 3, new long[] { 1, 2, 3 }));
+        Assert.False(GameplayJournalContinuityPolicy.QuiescentCheckpointReady(true, true, true, true, 100, 100, false, null, 2, new long[] { 1, 2, 3 }));
+        Assert.False(GameplayJournalContinuityPolicy.QuiescentCheckpointReady(true, true, true, true, 100, 100, false, null, 3, new long[] { 1, 3, 4 }));
+        Assert.False(GameplayJournalContinuityPolicy.QuiescentCheckpointReady(true, true, true, true, 100, 100, false, null, 0, null));
+    }
+    [Fact]
     public void ExactDurableCheckpoint_IsAccepted()
     {
         Assert.True(GameplayJournalContinuityPolicy.MatchesCheckpoint(

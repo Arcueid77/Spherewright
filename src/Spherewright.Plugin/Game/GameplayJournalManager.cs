@@ -187,6 +187,25 @@ internal sealed class GameplayJournalManager : IDisposable
     public OwnedWorldGameplayJournalCheckpoint CaptureResumeCheckpointOnMainThread()
     {
         UpdateOnMainThread();
+        return CaptureDurableCheckpointOnMainThread();
+    }
+
+    // No UpdateOnMainThread here: prepare must not scan or persist a pending
+    // Journal. A later frame may make it quiescent without granting recovery.
+    internal OwnedWorldGameplayJournalCheckpoint CaptureQuiescentSurfaceCheckpointOnMainThread()
+    {
+        var sequences = _document?.Entries is { } entries && !entries.Any(entry => entry is null)
+            ? entries.Select(entry => entry.Sequence).ToArray() : null;
+        if (!GameplayJournalContinuityPolicy.QuiescentCheckpointReady(_sessions.IsCurrentSessionOwned,
+            !string.IsNullOrWhiteSpace(_sessions.SessionId) && _activeSessionId == _sessions.SessionId,
+            GameMain.isPaused, GameMain.isRunning, GameMain.gameTick, _lastScannedGameTick,
+            _pendingPersist, _persistenceError, _durableThroughSequence, sequences))
+            throw new InvalidOperationException("same_session_surface_live_journal_not_quiescent");
+        return CaptureDurableCheckpointOnMainThread();
+    }
+
+    private OwnedWorldGameplayJournalCheckpoint CaptureDurableCheckpointOnMainThread()
+    {
         if (!_sessions.IsCurrentSessionOwned
             || string.IsNullOrWhiteSpace(_sessions.SessionId)
             || !string.Equals(_activeSessionId, _sessions.SessionId, StringComparison.Ordinal)

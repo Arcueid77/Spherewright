@@ -2,6 +2,19 @@ namespace Spherewright.Bridge.Core.Safety;
 
 public static class GameplayJournalContinuityPolicy
 {
+    // This is a read-only quiescence check. It never scans, persists, resumes,
+    // or treats an unknown pending write as a completed Journal update.
+    public static bool QuiescentCheckpointReady(bool owned, bool sameSession, bool nativePaused, bool gameRunning,
+        long currentGameTick, long lastScannedGameTick, bool persistencePending, string? persistenceError,
+        long durableThroughSequence, IReadOnlyList<long>? sequences)
+    {
+        if (!owned || !sameSession || !nativePaused || !gameRunning || currentGameTick < 0
+            || lastScannedGameTick != currentGameTick || persistencePending || !string.IsNullOrWhiteSpace(persistenceError)
+            || durableThroughSequence < 0 || !HasContinuousSequence(sequences)) return false;
+        var last = sequences is { Count: > 0 } ? sequences[sequences.Count - 1] : 0L;
+        return last == durableThroughSequence;
+    }
+
     public static bool MatchesCheckpoint(
         string? expectedJournalId,
         string? expectedTrackingMode,

@@ -250,7 +250,7 @@ public sealed partial class VoyagerRemoteResumeCoordinatorIntegrationTests
         internal IEnumerable<string> ProtectedEvidencePaths => new[] { GameSave.SavePath(GameSave.LastExit), GameSave.SavePath(Identity),
             GameSave.SavePath(CheckpointSaveName), JournalPath, Path.Combine(Handoff, "flight-checkpoint.json"), Path.Combine(Handoff, "voyager-journey.json") };
 
-        internal Scenario(bool expiredJourney = false, bool currentNative = false, bool failedLanding = false)
+        internal Scenario(bool expiredJourney = false, bool currentNative = false, bool failedLanding = false, bool nativeArmed = false)
         {
             _currentNativePrefix = currentNative;
             Version = currentNative ? "0.10.35.29151" : "0.10.34.28529";
@@ -276,6 +276,7 @@ public sealed partial class VoyagerRemoteResumeCoordinatorIntegrationTests
             };
             OriginalDeadline = journey.DeadlineUtc;
             Assert.True(Checkpoints.TryPersistVoyagerJourney(journey, out _));
+            if (nativeArmed) Assert.True(Checkpoints.TryArmVoyagerNativeLaunch(cp.CheckpointId, actionId, out _));
             Assert.True(failedLanding
                 ? Checkpoints.TryMarkRecoveryRequired(cp.CheckpointId, actionId, 12510, out _)
                 : Checkpoints.TryMarkFlightSucceeded(cp.CheckpointId, actionId, 12500, out _));

@@ -204,11 +204,15 @@ internal sealed partial class OwnedWorldResumeTicketStore
         OwnedWorldResumeTicket ticket,
         bool requireExactCheckpoint,
         out string journalFingerprint,
-        out string rejection)
+        out string rejection) => TryValidateGameplayJournalContinuity(ticket.OwnedSaveName, ticket.GameVersion,
+            ticket.GameplayJournalCheckpoint, requireExactCheckpoint, out journalFingerprint, out rejection);
+
+    private bool TryValidateGameplayJournalContinuity(string ownedSaveName, string gameVersion,
+        OwnedWorldGameplayJournalCheckpoint? checkpoint, bool requireExactCheckpoint,
+        out string journalFingerprint, out string rejection)
     {
         journalFingerprint = string.Empty;
         rejection = string.Empty;
-        var checkpoint = ticket.GameplayJournalCheckpoint;
         if (checkpoint is null)
         {
             // Version-1 tickets issued before the continuity checkpoint was
@@ -219,7 +223,7 @@ internal sealed partial class OwnedWorldResumeTicketStore
 
         try
         {
-            var identityHash = GameplayJournalIdentity.HashOwnedSaveIdentity(ticket.OwnedSaveName);
+            var identityHash = GameplayJournalIdentity.HashOwnedSaveIdentity(ownedSaveName);
             if (checkpoint.Version != OwnedWorldGameplayJournalCheckpoint.CurrentVersion
                 || !string.Equals(checkpoint.JournalId, identityHash, StringComparison.Ordinal))
             {
@@ -247,7 +251,7 @@ internal sealed partial class OwnedWorldResumeTicketStore
                 || document.Version != 1
                 || !string.Equals(document.OwnedSaveIdentityHash, identityHash, StringComparison.Ordinal)
                 || !OwnedWorldVersionCompatibilityPolicy.JournalMatches(document.GameVersion,
-                    document.VersionTransitions, document.Entries?.Count ?? -1, ticket.GameVersion)
+                    document.VersionTransitions, document.Entries?.Count ?? -1, gameVersion)
                 || document.Entries is null
                 || document.Entries.Any(entry => entry is null)
                 || !GameplayJournalContinuityPolicy.MatchesCheckpoint(

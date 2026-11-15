@@ -237,9 +237,12 @@ internal sealed partial class NormalGameActionCoordinator
         return null;
     }
 
-    private static bool SurfaceRecoveryTerrain(SurfaceRecoveryState s, bool grounded, NativeResumeDecisionEvidence evidence)
+    private static bool SurfaceRecoveryTerrain(SurfaceRecoveryState s, bool grounded, NativeResumeDecisionEvidence evidence) =>
+        SurfaceRecoveryTerrain(s.Adoption.Player, s.Scene, grounded, evidence);
+
+    private static bool SurfaceRecoveryTerrain(Player p, FirstFrameSurfaceState scene, bool grounded, NativeResumeDecisionEvidence evidence)
     {
-        var p = s.Adoption.Player; var position = p.position; var up = position.normalized;
+        var position = p.position; var up = position.normalized;
         var hits = new Collider[257];
         var count = Physics.OverlapSphereNonAlloc(position + up * .15f, .35f, hits, 15873, QueryTriggerInteraction.Ignore);
         var complete = count >= 0 && count < hits.Length;
@@ -251,17 +254,17 @@ internal sealed partial class NormalGameActionCoordinator
         {
             var c = hits[i];
             var current = c is MeshCollider mesh && mesh.sharedMesh != null && c.enabled && c.gameObject.activeInHierarchy
-                && !c.isTrigger && c.gameObject.layer == 9 && s.Scene.Surface.Count(t => ReferenceEquals(t, c)) == 1;
+                && !c.isTrigger && c.gameObject.layer == 9 && scene.Surface.Count(t => ReferenceEquals(t, c)) == 1;
             if (current) { terrainCount++; continue; }
             var ownerBlocker = c == null ? "contact_missing"
-                : GameStateReader.CurrentOwnedContactOwnerBlocker(p, s.Scene.Surface, c);
+                : GameStateReader.CurrentOwnedContactOwnerBlocker(p, scene.Surface, c);
             if (ownerBlocker is null) { objectCount++; continue; }
             if (!current)
             {
                 owned = false; evidence.Number("surface_support_foreign_layer", c == null ? null : c.gameObject.layer);
                 evidence.Observe("surface_support_foreign_is_trigger", c == null ? null : c.isTrigger);
-                evidence.Observe("surface_support_foreign_is_current_ocean", c != null && ReferenceEquals(c, s.Scene.Scene.Ocean));
-                evidence.Observe("surface_support_foreign_is_current_sphere", c != null && ReferenceEquals(c, s.Scene.Scene.Simulator.sphereCollider));
+                evidence.Observe("surface_support_foreign_is_current_ocean", c != null && ReferenceEquals(c, scene.Scene.Ocean));
+                evidence.Observe("surface_support_foreign_is_current_sphere", c != null && ReferenceEquals(c, scene.Scene.Simulator.sphereCollider));
                 evidence.Require("surface_support_owner_" + ownerBlocker, false);
                 break;
             }
@@ -281,9 +284,9 @@ internal sealed partial class NormalGameActionCoordinator
         evidence.Number("surface_support_overlap_branch", count > 0 ? 1 : 0);
         NativeSurfaceRecoveryPlane Plane(bool didHit,RaycastHit h)
         {
-            var terrain=didHit && s.Scene.Surface.Count(t=>ReferenceEquals(t,h.collider))==1;
+            var terrain=didHit && scene.Surface.Count(t=>ReferenceEquals(t,h.collider))==1;
             return new NativeSurfaceRecoveryPlane {Hit=didHit,CurrentTerrainProved=terrain,
-                CurrentOwnerProved=didHit && (terrain || GameStateReader.CurrentOwnedContactOwnerBlocker(p,s.Scene.Surface,h.collider) is null),
+                CurrentOwnerProved=didHit && (terrain || GameStateReader.CurrentOwnedContactOwnerBlocker(p,scene.Surface,h.collider) is null),
                 NormalDotUp=didHit?Vector3.Dot(h.normal,up):(double?)null,
                 HeightFromActor=didHit?Vector3.Dot(h.point-position,up):(double?)null};
         }
@@ -310,18 +313,20 @@ internal sealed partial class NormalGameActionCoordinator
             selected.CurrentOwnerProved,selected.NormalDotUp,selected.HeightFromActor);
     }
 
-    private static bool SurfaceRecoveryLandingPatch(SurfaceRecoveryState s)
+    private static bool SurfaceRecoveryLandingPatch(SurfaceRecoveryState s) => SurfaceRecoveryLandingPatch(s.Scene, s.Target);
+
+    private static bool SurfaceRecoveryLandingPatch(FirstFrameSurfaceState scene, Vector3 target)
     {
-        var planet = s.Scene.Scene.Planet; var up = s.Target.normalized;
+        var planet = scene.Scene.Planet; var up = target.normalized;
         var east = Vector3.Cross(up, Math.Abs(up.y) < .9f ? Vector3.up : Vector3.right).normalized;
         var north = Vector3.Cross(up, east).normalized;
         for (var i = 0; i < 9; i++)
         {
             var angle = (i - 1) * Math.PI / 4d;
-            var normal = i == 0 ? up : (s.Target + 3.5f * ((float)Math.Cos(angle) * east + (float)Math.Sin(angle) * north)).normalized;
+            var normal = i == 0 ? up : (target + 3.5f * ((float)Math.Cos(angle) * east + (float)Math.Sin(angle) * north)).normalized;
             var ray = new Ray(normal * (planet.realRadius + 10f), -normal);
             if (!Physics.Raycast(ray, out var ground, 30f, 8704, QueryTriggerInteraction.Collide)
-                || !s.Scene.Surface.Any(c => ReferenceEquals(c, ground.collider)) || ground.point.magnitude < planet.realRadius - .8f) return false;
+                || !scene.Surface.Any(c => ReferenceEquals(c, ground.collider)) || ground.point.magnitude < planet.realRadius - .8f) return false;
             if (planet.waterItemId > 0 && (!Physics.Raycast(ray, out var water, 30f, 16, QueryTriggerInteraction.Collide)
                 || ground.point.magnitude < water.point.magnitude + .1f)) return false;
         }
