@@ -11,6 +11,8 @@ New outbound previews optionally accept `maximumRoundTripWallSeconds`600..86400.
 
 Protocol version remains `1`; the `0.5.0` Voyager development interface targets DSP `0.10.35.29151` and retains the `0.4` protocol surface. This describes maintained source, not an installed-cohort or Voyager live-acceptance claim. Formal `v0.4.0` is tagged at `b7c0002dbe2e8f5608c5ca140b0c6326a1818021`; older production acceptance remains fixed at `2a7a98d1932c404e3a7abc2c11233d9c0b8780d9`. See [product status](project-status.md), [native validation](validation/native-29151-preflight.md), [safety](safety-model.md) and the [Agent playbook](agent-playbook.md).
 
+An owned harvest order stopped after the existing native power-starvation grace period reports `failureKind=mecha_power_starved`. The original terminal result remains failed and may retain a partial inventory delta; the reason is evidence for a fresh independent audit, not permission to replay or infer completion. Older results may omit the reason. This source change does not claim live acceptance.
+
 ## Framing and authentication
 
 For `prepare_resume_owned_game` with `recoveryMode=authorize_remote_primary_recovery`, optional `additionalVoyagerGameTicks` (default0, maximum5184000) requests a separately confirmed addition above the immutable original journey cap. Prepared echoes `additionalVoyagerGameTicks`, `originalJourneyMaximumGameTicks` and `effectiveJourneyMaximumGameTicks`; the exact addition is bound into the existing disclosure/digest and durable authorization. It is not accumulated across proposals. Original spent time and return reserves remain charged. Other request modes reject a nonzero addition. See the [Agent playbook](agent-playbook.md) for execution checks.

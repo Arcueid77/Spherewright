@@ -1286,6 +1286,10 @@ internal sealed partial class NormalGameActionCoordinator
         }
 
         AbortPlayerOrderIfOwned(action);
+        if (action.ActionKind == NormalActionKinds.Harvest)
+        {
+            action.FailureKind = NormalActionFailureKinds.MechaPowerStarved;
+        }
         Fail(action,
             $"The normal {orderKind} order stopped after the mecha had no core energy, reactor energy, current reactor item, or usable fuel for {PowerStarvationGraceTicks} game ticks.");
         return true;

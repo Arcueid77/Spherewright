@@ -3,6 +3,8 @@
 
 [English](protocol.md) | [简体中文](protocol.zh-CN.md)
 
+受管采集指令在既有原生缺能宽限期后停止时，原动作返回 `failureKind=mecha_power_starved`。原终态仍为失败，并可能保留部分库存增量；该原因只供新鲜独立核销，不授权重放或推断成功。旧回执可以没有该原因。此源码变更不代表实机验收。
+
 恢复进度扣账与恢复时窗授权均绑定准确、不可变的Journey。同一已加载会话后续正常新开的旅程使用自身的已耗、截止时间和总额，不能借用旧恢复的额外tick或时钟。原恢复旅程的受保护进度仍只守恒计入一次；进入返航专用任务后由任务时钟优先，进度扣账不被清除。同ID但限额被改动、账目倒退或owned世界/会话绑定破坏仍属未证明。落地补能预算失败现在通过`nativeFirstFailure`保留当次采样的首个失败谓词，仅供诊断，不构成动作准入或physical idle证明。
 
 站内货物新增显式 `station-storage-to-player` 转移子集：当地已建2103/2104站、唯一现物且零增产点槽位、所选槽无在途订单、精确数量1..100、空手、普通建造交互范围及已证背包容量。原生 `StationComponent.TakeItem` 与 `StorageComponent.AddItemStacked` 在同一tick核对数量/增产点守恒；其余槽配置、站状态及背包物料必须不变。此手动UI操作不要求站点供电。prepare必须有 `stationCargoWithdrawal`，终态须有 `stationCargoWithdrawalReadback`；缺少同源回执不暴露token。后续正常机甲自动补给可能移动刚收到的燃料：保留即时原回执，再分别读背包/燃料舱，不重放转移。

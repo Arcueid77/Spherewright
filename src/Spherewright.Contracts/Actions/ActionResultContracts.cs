@@ -1,5 +1,12 @@
 namespace Spherewright.Contracts.Actions;
 
+public static class NormalActionFailureKinds
+{
+    // The original owned mining order stopped after the native energy grace
+    // period; any partial inventory delta remains part of the failed result.
+    public const string MechaPowerStarved = "mecha_power_starved";
+}
+
 public static class MovementFailureKinds
 {
     public const string PositionStalled = "position_stalled";
