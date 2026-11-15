@@ -194,6 +194,68 @@ public sealed class VoyagerSameSessionSurfaceSourceTests
         Assert.Equal("native_scene_lost", observer.Rejection);
     }
 
+    [Fact]
+    public void ProposedFiniteWindowCanOnlyBindAReadOnlyHypothesisWithoutChangingOriginalBudget()
+    {
+        var refs = new References { DeadlineUtc = Now.AddHours(-1) };
+        var first = Capture(refs, 10, Now); var second = Capture(refs, 11, Now.AddMilliseconds(50));
+        first.ProposedRecoveryDeadlineUtc = second.ProposedRecoveryDeadlineUtc = Now.AddHours(1);
+        var original = second.Funding!.OriginalJourney!;
+        Assert.False(VoyagerSurfaceRecoveryPolicy.OriginalReserveAllows(second.Funding));
+        Assert.True(VoyagerSameSessionSurfaceSourcePolicy.TryBind(first, second, out var binding, out var error), error);
+        Assert.False(binding!.GrantsResume); Assert.False(binding.OriginalOutcomeChanged);
+        Assert.Equal(refs.DeadlineUtc, original.JourneyDeadlineUtc);
+        Assert.Equal(100, original.SpentGameTicks); Assert.Equal(10000, original.MaximumGameTicks);
+        Assert.Equal(3600, original.ReturnReserveGameTicks); Assert.Equal(2, original.NativeWarperCount);
+        Assert.False(VoyagerSurfaceRecoveryPolicy.OriginalReserveAllows(second.Funding));
+        Assert.Equal(NormalActionStates.OutcomeUnknown, second.OriginalMove!.State);
+    }
+
+    [Theory]
+    [InlineData("original_issued_missing")] [InlineData("original_reversed")] [InlineData("original_future")]
+    [InlineData("original_offset")] [InlineData("effective_offset")] [InlineData("proposal_offset")]
+    [InlineData("proposal_expired")] [InlineData("proposal_too_long")] [InlineData("proposal_too_short")]
+    [InlineData("proposal_not_later")] [InlineData("lost_ticks")] [InlineData("lost_energy")] [InlineData("lost_warper")]
+    public void ProposedWindowCannotHideBadOriginalEvidenceOrMissingReserves(string fault)
+    {
+        var refs = new References { DeadlineUtc = Now.AddHours(-1) };
+        var first = Capture(refs, 10, Now); var second = Capture(refs, 11, Now.AddMilliseconds(50));
+        first.ProposedRecoveryDeadlineUtc = second.ProposedRecoveryDeadlineUtc = Now.AddHours(1);
+        var j = second.Funding!.OriginalJourney!;
+        switch (fault)
+        {
+            case "original_issued_missing": second.OriginalJourneyIssuedAtUtc = default; break;
+            case "original_reversed": second.OriginalJourneyIssuedAtUtc = second.OriginalJourneyDeadlineUtc; break;
+            case "original_future": second.OriginalJourneyIssuedAtUtc = Now.AddHours(1); second.OriginalJourneyDeadlineUtc = Now.AddHours(2); break;
+            case "original_offset": second.OriginalJourneyDeadlineUtc = second.OriginalJourneyDeadlineUtc.ToOffset(TimeSpan.FromHours(1)); break;
+            case "effective_offset": j.JourneyDeadlineUtc = j.JourneyDeadlineUtc.ToOffset(TimeSpan.FromHours(1)); break;
+            case "proposal_offset": second.ProposedRecoveryDeadlineUtc = Now.AddHours(1).ToOffset(TimeSpan.FromHours(1)); break;
+            case "proposal_expired": second.ProposedRecoveryDeadlineUtc = Now; break;
+            case "proposal_too_long": second.ProposedRecoveryDeadlineUtc = Now.AddHours(25); break;
+            case "proposal_too_short": second.ProposedRecoveryDeadlineUtc = Now.AddSeconds(60); break;
+            case "proposal_not_later": j.JourneyDeadlineUtc = Now.AddHours(2); break;
+            case "lost_ticks": j.MaximumGameTicks = 3600; break;
+            case "lost_energy": j.AvailableLoadedEnergyJoules = 1; break;
+            case "lost_warper": j.NativeWarperCount = 0; break;
+        }
+        Assert.False(VoyagerSameSessionSurfaceSourcePolicy.TryBind(first, second, out var binding, out var error));
+        Assert.Null(binding); Assert.NotEmpty(error);
+    }
+
+    [Theory]
+    [InlineData("proposal")] [InlineData("original")] [InlineData("effective")]
+    public void SubsecondWindowChangesCannotReuseFrozenSourceBinding(string field)
+    {
+        var refs = new References { DeadlineUtc = Now.AddHours(-1) };
+        var first = Capture(refs, 10, Now); var second = Capture(refs, 11, Now.AddMilliseconds(50));
+        first.ProposedRecoveryDeadlineUtc = second.ProposedRecoveryDeadlineUtc = Now.AddHours(1);
+        if (field == "proposal") second.ProposedRecoveryDeadlineUtc = second.ProposedRecoveryDeadlineUtc!.Value.AddTicks(1);
+        if (field == "original") second.OriginalJourneyDeadlineUtc = second.OriginalJourneyDeadlineUtc.AddTicks(1);
+        if (field == "effective") second.Funding!.OriginalJourney!.JourneyDeadlineUtc = refs.DeadlineUtc.AddTicks(1);
+        Assert.False(VoyagerSameSessionSurfaceSourcePolicy.TryBind(first, second, out _, out var error));
+        Assert.Equal("same_session_surface_frozen_source_changed", error);
+    }
+
     internal sealed class References
     {
         public object World { get; } = new(); public object Player { get; } = new();
@@ -261,6 +323,7 @@ public sealed class VoyagerSameSessionSurfaceSourceTests
             World = r.World, Player = r.Player, Controller = r.Controller, Rigidbody = r.Rigidbody, Factory = r.Factory,
             NativeSceneBinding = r.Scene, NativeTransformBinding = r.Transform, JourneyStore = r.Journey, OriginalActionRecord = r.Original,
             JourneyId = r.JourneyId, ExpectedJourneyId = r.JourneyId,
+            OriginalJourneyIssuedAtUtc = r.DeadlineUtc.AddHours(-2), OriginalJourneyDeadlineUtc = r.DeadlineUtc,
             JourneySnapshotFingerprint = "sha256:" + new string('a', 64), DurableEvidenceFingerprint = "sha256:" + new string('b', 64),
             Session = session, OriginalMove = action,
             PlayerState = player, RigidbodyVelocity = new(), RigidbodyAngularVelocity = new(), Target = new() { X = 200, Y = 10 },

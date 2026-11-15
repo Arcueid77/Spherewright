@@ -3192,7 +3192,11 @@ public sealed partial class SpherewrightToolsTests
     public async Task SameSessionSurfacePreviewSdkSchemaIsReadOnlyAndForwardsActualJsonArguments()
     {
         var actionId = Guid.NewGuid().ToString(); var hash = "sha256:" + new string('a', 64);
-        var bridge = new FakeBridgeClient(SuccessResult()) { SameSessionSurfacePreview = SurfacePreview(actionId, "source_bound") };
+        var now = DateTimeOffset.UtcNow; var proposed = now.AddHours(1);
+        var response = SurfacePreview(actionId, "source_bound");
+        response.OriginalJourneyIssuedAtUtc = now.AddHours(-3); response.OriginalJourneyDeadlineUtc = now.AddHours(-2);
+        response.CurrentJourneyDeadlineUtc = now.AddHours(-1); response.ProposedRecoveryDeadlineUtc = proposed;
+        var bridge = new FakeBridgeClient(SuccessResult()) { SameSessionSurfacePreview = response };
         var services = new ServiceCollection(); services.AddSingleton<IBridgeClient>(bridge);
         services.AddMcpServer().WithToolsFromAssembly(typeof(SpherewrightTools).Assembly);
         using var provider = services.BuildServiceProvider();
@@ -3203,6 +3207,8 @@ public sealed partial class SpherewrightToolsTests
         var schema = tool.ProtocolTool.InputSchema;
         foreach (var name in new[] { "sessionId", "planetId", "originalActionId", "expectedRevision", "expectedPlayerStateHash", "targetX", "targetY", "targetZ" })
             Assert.Contains(schema.GetProperty("required").EnumerateArray(), p => p.GetString() == name);
+        Assert.True(schema.GetProperty("properties").TryGetProperty("proposedRecoveryDeadlineUtc", out _));
+        Assert.DoesNotContain(schema.GetProperty("required").EnumerateArray(), p => p.GetString() == "proposedRecoveryDeadlineUtc");
         Assert.False(schema.GetProperty("properties").TryGetProperty("planToken", out _));
         await using var server = McpServer.Create(new StreamServerTransport(Stream.Null, Stream.Null), new McpServerOptions(), null, provider);
         var parameters = new CallToolRequestParams { Name = tool.ProtocolTool.Name, Arguments = new Dictionary<string, JsonElement>
@@ -3211,14 +3217,17 @@ public sealed partial class SpherewrightToolsTests
             ["originalActionId"] = JsonSerializer.SerializeToElement(actionId), ["expectedRevision"] = JsonSerializer.SerializeToElement(4),
             ["expectedPlayerStateHash"] = JsonSerializer.SerializeToElement(hash), ["targetX"] = JsonSerializer.SerializeToElement(200),
             ["targetY"] = JsonSerializer.SerializeToElement(0), ["targetZ"] = JsonSerializer.SerializeToElement(0),
+            ["proposedRecoveryDeadlineUtc"] = JsonSerializer.SerializeToElement(proposed),
         } };
         var context = new RequestContext<CallToolRequestParams>(server, new JsonRpcRequest { Id = new RequestId(1), Method = "tools/call" }, parameters)
         { Services = provider };
         var result = await tool.InvokeAsync(context);
         Assert.False(result.IsError); Assert.Equal(actionId, bridge.LastSameSessionSurfaceRequest!.OriginalActionId);
+        Assert.Equal(proposed, bridge.LastSameSessionSurfaceRequest.ProposedRecoveryDeadlineUtc);
         var echo = result.StructuredContent!.Value.GetProperty("result");
         Assert.True(echo.GetProperty("readOnly").GetBoolean()); Assert.False(echo.GetProperty("executable").GetBoolean());
         Assert.False(echo.GetProperty("nativeResumePerformed").GetBoolean()); Assert.False(echo.GetProperty("originalOutcomeChanged").GetBoolean());
+        Assert.False(echo.GetProperty("proposedWindowApplied").GetBoolean()); Assert.Equal(0, echo.GetProperty("additionalVoyagerGameTicks").GetInt64());
         Assert.False(echo.TryGetProperty("planToken", out _));
     }
 
@@ -3269,13 +3278,57 @@ public sealed partial class SpherewrightToolsTests
         Assert.True(result.IsError); Assert.Null(bridge.LastSameSessionSurfaceRequest);
     }
 
+    [Theory]
+    [InlineData("valid")] [InlineData("different_proposal")] [InlineData("missing_original")]
+    [InlineData("changed_original")] [InlineData("missing_current")] [InlineData("applied")]
+    [InlineData("missing_applied")] [InlineData("added_ticks")] [InlineData("missing_ticks")]
+    public async Task SameSessionWindowPreviewRequiresExactUnappliedEcho(string fault)
+    {
+        var actionId = Guid.NewGuid().ToString(); var now = DateTimeOffset.UtcNow;
+        var proposed = now.AddHours(1); var value = SurfacePreview(actionId, "source_bound");
+        value.OriginalJourneyIssuedAtUtc = now.AddHours(-3); value.OriginalJourneyDeadlineUtc = now.AddHours(-2);
+        value.CurrentJourneyDeadlineUtc = now.AddHours(-1); value.ProposedRecoveryDeadlineUtc = proposed;
+        switch (fault)
+        {
+            case "different_proposal": value.ProposedRecoveryDeadlineUtc = proposed.AddSeconds(1); break;
+            case "missing_original": value.OriginalJourneyIssuedAtUtc = null; break;
+            case "changed_original": value.OriginalJourneyDeadlineUtc = proposed.AddHours(1); break;
+            case "missing_current": value.CurrentJourneyDeadlineUtc = null; break;
+            case "applied": value.ProposedWindowApplied = true; break;
+            case "missing_applied": value.ProposedWindowApplied = null; break;
+            case "added_ticks": value.AdditionalVoyagerGameTicks = 1; break;
+            case "missing_ticks": value.AdditionalVoyagerGameTicks = null; break;
+        }
+        var bridge = new FakeBridgeClient(SuccessResult()) { SameSessionSurfacePreview = value };
+        var result = await SpherewrightTools.PreviewSameSessionSurfaceRecoveryAsync(bridge, "synthetic-session", 7,
+            actionId, 4, "sha256:" + new string('a', 64), 200, 0, 0, proposedRecoveryDeadlineUtc: proposed);
+        Assert.Equal(fault != "valid", result.IsError);
+        Assert.Equal(proposed, bridge.LastSameSessionSurfaceRequest!.ProposedRecoveryDeadlineUtc);
+        Assert.Null(bridge.LastResumeCommitRequest);
+    }
+
+    [Theory]
+    [InlineData("past")] [InlineData("too_long")] [InlineData("non_utc")]
+    public async Task SameSessionWindowPreviewRejectsInvalidProposalBeforeBridgeCall(string fault)
+    {
+        var now = DateTimeOffset.UtcNow;
+        var proposed = fault switch { "past" => now.AddSeconds(-1), "too_long" => now.AddHours(25),
+            _ => now.AddHours(1).ToOffset(TimeSpan.FromHours(1)) };
+        var bridge = new FakeBridgeClient(SuccessResult());
+        var result = await SpherewrightTools.PreviewSameSessionSurfaceRecoveryAsync(bridge, "synthetic-session", 7,
+            Guid.NewGuid().ToString(), 4, "sha256:" + new string('a', 64), 200, 0, 0, proposedRecoveryDeadlineUtc: proposed);
+        Assert.True(result.IsError); Assert.Null(bridge.LastSameSessionSurfaceRequest);
+    }
+
     private static SameSessionSurfacePreviewSnapshot SurfacePreview(string actionId, string state) => new()
     {
-        EvidenceVersion = 1, State = state, SessionId = "synthetic-session", PlanetId = 7, Revision = 4,
+        EvidenceVersion = 2, State = state, SessionId = "synthetic-session", PlanetId = 7, Revision = 4,
         PlayerStateHash = "sha256:" + new string('a', 64), OriginalActionId = actionId, SourceGameTick = 200,
         ExpiresAtUtc = DateTimeOffset.UtcNow.AddSeconds(1), Target = new() { X = 199 },
         SourceFingerprint = state == "source_bound" ? "sha256:" + new string('b', 64) : null,
         MaximumWorkGameTicks = 600, MaximumWallSeconds = 20, ReadOnly = true,
+        OriginalJourneyIssuedAtUtc = DateTimeOffset.UtcNow.AddHours(-1), OriginalJourneyDeadlineUtc = DateTimeOffset.UtcNow.AddHours(1),
+        CurrentJourneyDeadlineUtc = DateTimeOffset.UtcNow.AddHours(1), AdditionalVoyagerGameTicks = 0, ProposedWindowApplied = false,
         Executable = false, CommitAllowedNow = false, NativeResumePerformed = false, OriginalOutcomeChanged = false,
     };
 

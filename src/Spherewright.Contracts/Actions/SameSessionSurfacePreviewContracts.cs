@@ -9,6 +9,7 @@ public sealed class SameSessionSurfacePreviewRequest
     public long ExpectedRevision { get; set; }
     public string ExpectedPlayerStateHash { get; set; } = string.Empty;
     public Vector3Snapshot? Target { get; set; }
+    public DateTimeOffset? ProposedRecoveryDeadlineUtc { get; set; }
     public int StateHashVersion { get; set; } = 1;
 }
 
@@ -27,6 +28,12 @@ public sealed class SameSessionSurfacePreviewSnapshot
     public DateTimeOffset ExpiresAtUtc { get; set; }
     public Vector3Snapshot? Target { get; set; }
     public string? SourceFingerprint { get; set; }
+    public DateTimeOffset? OriginalJourneyIssuedAtUtc { get; set; }
+    public DateTimeOffset? OriginalJourneyDeadlineUtc { get; set; }
+    public DateTimeOffset? CurrentJourneyDeadlineUtc { get; set; }
+    public DateTimeOffset? ProposedRecoveryDeadlineUtc { get; set; }
+    public long? AdditionalVoyagerGameTicks { get; set; }
+    public bool? ProposedWindowApplied { get; set; }
     public int MaximumWorkGameTicks { get; set; }
     public double MaximumWallSeconds { get; set; }
     public bool? ReadOnly { get; set; }

@@ -498,7 +498,7 @@ Move 地表预览是观察，不是寻路，180/600 tick 失败指导禁止重�
 
 `spherewright_preview_same_session_surface_recovery` 接受当前会话、星球、准确的原 unknown Move ID、revision、新鲜玩家 `stateHash` 和一个有限目标。它在同一暂停 owned 世界中核对原动作、连续两帧姿态、原旅程、成功出航文件及静默日志，并使用原生地形/成本检查；两帧须在两秒内完成。`awaiting_second_frame` 不是完成证明；`source_bound` 是只读来源证据，不证明路径无障碍或实际落地。回显须包含证据版本、准确会话、星球、revision、玩家状态哈希、原动作、目标、600游戏tick/20秒范围及只读/不可执行/未恢复/原结果未改变标记，缺失或不一致时 MCP 拒绝。
 
-此预览不提供计划令牌，不提交移动、不解除隔离、不恢复模拟、不保存或读档，也不增加原旅程的tick或墙钟。原墙钟储备不足返回 `same_session_surface_original_wall_reserve_unproved` 并保留拒绝；另行实现和验收的执行入口才可在新鲜原生门及适用授权下考虑有限恢复。
+未提出新时窗时，原墙钟储备不足返回 `same_session_surface_original_wall_reserve_unproved`。可选的 `proposedRecoveryDeadlineUtc` 对一个更晚的有限UTC截止时间进行假设核算，核对原签发/截止、当前有效截止、已耗tick、返航储备、能源及翘曲器。版本2回显这三个原有时间、准确提议、零新增游戏tick及 `proposedWindowApplied=false`。提议只是假设：预览不提供计划令牌，不应用或授权新时窗，不提交移动、不解除隔离、不恢复模拟、不保存或读档。另行实现和验收的执行入口才可在新鲜原生门及适用授权下考虑有限恢复。
 
 ## 受保护地返回主界面
 

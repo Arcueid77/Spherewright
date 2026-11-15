@@ -15,13 +15,14 @@ internal sealed partial class NormalGameActionCoordinator
     private sealed class SameSessionSurfaceCapture : IDisposable
     {
         public SameSessionSurfaceCapture(ActionRecord original, FirstFrameSurfaceState scene,
-            NativeContactTransformBinding transform, Vector3 target, SameSessionSurfaceJourneyEvidence route,
+            NativeContactTransformBinding transform, Vector3 target, DateTimeOffset? proposedRecoveryDeadlineUtc, SameSessionSurfaceJourneyEvidence route,
             SameSessionSurfaceJournalEvidence journal)
-        { Original = original; Scene = scene; Transform = transform; Target = target; Route = route; Journal = journal; }
+        { Original = original; Scene = scene; Transform = transform; Target = target; ProposedRecoveryDeadlineUtc = proposedRecoveryDeadlineUtc; Route = route; Journal = journal; }
         public ActionRecord Original { get; }
         public FirstFrameSurfaceState Scene { get; }
         public NativeContactTransformBinding Transform { get; }
         public Vector3 Target { get; }
+        public DateTimeOffset? ProposedRecoveryDeadlineUtc { get; }
         public SameSessionSurfaceJourneyEvidence Route { get; }
         public SameSessionSurfaceJournalEvidence Journal { get; }
         public bool IsDisposed { get; private set; }
@@ -33,7 +34,7 @@ internal sealed partial class NormalGameActionCoordinator
         }
     }
 
-    private bool TryOpenSameSessionSurfaceCapture(string actionId, string expectedPlayerStateHash, Vector3 requestedTarget,
+    private bool TryOpenSameSessionSurfaceCapture(string actionId, string expectedPlayerStateHash, Vector3 requestedTarget, DateTimeOffset? proposedRecoveryDeadlineUtc,
         out SameSessionSurfaceCapture? capture, out string rejection)
     {
         capture = null; rejection = "same_session_surface_original_context_unproved";
@@ -66,7 +67,7 @@ internal sealed partial class NormalGameActionCoordinator
                 journeyId, GameMain.gameTick, Process.GetCurrentProcess().Id, out route, out rejection) || route is null) return false;
             journal = _sessions.OpenQuiescentSurfaceJournalOnMainThread();
             var target = requestedTarget.normalized * player.position.magnitude;
-            capture = new SameSessionSurfaceCapture(original, surface, transform, target, route, journal);
+            capture = new SameSessionSurfaceCapture(original, surface, transform, target, proposedRecoveryDeadlineUtc, route, journal);
             route = null; journal = null; rejection = string.Empty;
             return true;
         }
@@ -126,6 +127,8 @@ internal sealed partial class NormalGameActionCoordinator
                 OriginalActionRecord = original, JourneyId = journey.JourneyId, ExpectedJourneyId = original.Plan.VoyagerLocalJourneyId!,
                 JourneySnapshotFingerprint = capture.Route.JourneySnapshotFingerprint,
                 DurableEvidenceFingerprint = CanonicalStateHash.Combine("same-session-surface-durable-v1", capture.Route.RouteFingerprint, capture.Journal.Fingerprint),
+                OriginalJourneyIssuedAtUtc = journey.IssuedAtUtc, OriginalJourneyDeadlineUtc = journey.DeadlineUtc,
+                ProposedRecoveryDeadlineUtc = capture.ProposedRecoveryDeadlineUtc,
                 Session = session, OriginalMove = CreateActionSnapshot(original), PlayerState = read.Value,
                 RigidbodyVelocity = Snapshot(player.controller.rigid.velocity), RigidbodyAngularVelocity = Snapshot(player.controller.rigid.angularVelocity),
                 Target = Snapshot(capture.Target), NativePaused = GameMain.isPaused, ExactNativeReferencesProved = true,

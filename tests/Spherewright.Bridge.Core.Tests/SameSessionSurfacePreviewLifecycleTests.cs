@@ -173,4 +173,34 @@ public sealed class SameSessionSurfacePreviewLifecycleTests
         }
         finally { GameMain.isPaused = oldPaused; GameMain.isRunning = oldRunning; }
     }
+
+    [Fact]
+    public void ProposedWindowIsDisclosedButNeverAppliedOrExecuted()
+    {
+        var oldPaused = GameMain.isPaused; var oldRunning = GameMain.isRunning;
+        try
+        {
+            GameMain.isPaused = true; GameMain.isRunning = true;
+            var refs = new VoyagerSameSessionSurfaceSourceTests.References { DeadlineUtc = DateTimeOffset.UtcNow.AddHours(-1) }; var frame = 10;
+            var coordinator = new NormalGameActionCoordinator();
+            coordinator.ConfigureSurfacePreviewForTest(() => VoyagerSameSessionSurfaceSourceTests.Capture(refs, frame, DateTimeOffset.UtcNow));
+            var sample = VoyagerSameSessionSurfaceSourceTests.Capture(refs, frame, DateTimeOffset.UtcNow);
+            var proposed = DateTimeOffset.UtcNow.AddHours(1);
+            var request = new SameSessionSurfacePreviewRequest { PlanetId = 7, OriginalActionId = refs.ActionId, ExpectedRevision = 4,
+                ExpectedPlayerStateHash = sample.PlayerState!.StateHash, Target = new Vector3Snapshot { X = 200, Y = 10 },
+                ProposedRecoveryDeadlineUtc = proposed };
+            var first = coordinator.PreviewSameSessionSurfaceRecoveryOnMainThread("synthetic-session", request);
+            Assert.True(first.Success); Assert.Equal("awaiting_second_frame", first.Value!.State);
+            frame++; coordinator.AdvanceSurfacePreviewForTest();
+            var second = coordinator.PreviewSameSessionSurfaceRecoveryOnMainThread("synthetic-session", request);
+            Assert.True(second.Success); Assert.Equal("source_bound", second.Value!.State);
+            Assert.Equal(refs.DeadlineUtc, second.Value.OriginalJourneyDeadlineUtc);
+            Assert.Equal(refs.DeadlineUtc, second.Value.CurrentJourneyDeadlineUtc);
+            Assert.Equal(proposed, second.Value.ProposedRecoveryDeadlineUtc);
+            Assert.Equal(0, second.Value.AdditionalVoyagerGameTicks); Assert.False(second.Value.ProposedWindowApplied);
+            Assert.False(second.Value.Executable); Assert.False(second.Value.NativeResumePerformed); Assert.True(GameMain.isPaused);
+            coordinator.StopSurfacePreviewForTest(); Assert.Equal(1, coordinator.SurfacePreviewReleasesForTest);
+        }
+        finally { GameMain.isPaused = oldPaused; GameMain.isRunning = oldRunning; }
+    }
 }

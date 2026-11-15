@@ -492,7 +492,7 @@ Native Import 可将 double 宇宙坐标逆投影为 float 本地位置；普通
 
 ## 同会话暂停水面来源预览
 
-原 Move 已终态 unknown 且同一 owned 会话保持原生暂停/准确隔离时，可用 `spherewright_preview_same_session_surface_recovery` 对一个16米内的新目标做只读检查：传当前星球、原动作 ID、revision、新鲜玩家 `stateHash` 和目标坐标。`awaiting_second_frame` 只表示仍需第二帧；`source_bound` 要求两秒内两帧稳定、原航程/日志和原生地形/能源检查，但不证明路径无障碍或实际落地。核对准确会话、星球、revision、玩家状态哈希、原动作、目标、600 tick/20秒和只读、不可执行、未Resume及旧结果未改回显；缺失或不一致必须拒绝。预览不提供提交令牌，不解除隔离、不移动、不保存/读档，也不延长过期旅程；原墙钟储备不足返回 `same_session_surface_original_wall_reserve_unproved`。可执行水面恢复仍需另行实现、原生准入和实际验证。
+原 Move 已终态 unknown 且同一 owned 会话保持原生暂停/准确隔离时，可用 `spherewright_preview_same_session_surface_recovery` 对一个16米内的新目标做只读检查：传当前星球、原动作 ID、revision、新鲜玩家 `stateHash` 和目标坐标。`awaiting_second_frame` 只表示仍需第二帧；`source_bound` 要求两秒内两帧稳定、原航程/日志和原生地形/能源检查，但不证明路径无障碍或实际落地。核对准确会话、星球、revision、玩家状态哈希、原动作、目标、600 tick/20秒和只读、不可执行、未Resume及旧结果未改回显；缺失或不一致必须拒绝。未提议时窗时，原墙钟储备不足返回 `same_session_surface_original_wall_reserve_unproved`。可选传入更晚的 `proposedRecoveryDeadlineUtc`，对有限新时窗做假设核算，保留原有/当前截止及tick、能源和翘曲器储备；核对版本2回显中的准确提议、零新增tick和 `proposedWindowApplied=false`。它不授权或应用新时窗，不提供令牌，不解除隔离、不移动、不保存/读档。可执行水面恢复仍需另行实现、原生准入和实际验证。
 
 ## 同会话暂停闲置的原地复核
 

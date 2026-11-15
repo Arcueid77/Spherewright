@@ -14,12 +14,12 @@ internal sealed partial class NormalGameActionCoordinator
         var session = common.Session!;
         if (session.Revision != request.ExpectedRevision || session.WriteQuarantineActionId != request.OriginalActionId
             || !Guid.TryParse(request.OriginalActionId, out _) || !OwnedWorldRecoveryPolicy.IsCanonicalFingerprint(request.ExpectedPlayerStateHash)
-            || request.Target is null)
+            || request.Target is null || request.ProposedRecoveryDeadlineUtc is { Offset: var offset } && offset != TimeSpan.Zero)
             return GameCallResult<SameSessionSurfacePreviewSnapshot>.Failed(BridgeError.Create(BridgeErrorCodes.StaleState,
                 "The current revision, exact quarantine, player hash or target is missing or changed.", true,
                 "Inspect the same owned session and original unknown action before a fresh read-only preview."));
         var target = ToVector(request.Target);
-        if (!TryBeginSameSessionSurfacePreview(request.OriginalActionId, request.ExpectedPlayerStateHash, target,
+        if (!TryBeginSameSessionSurfacePreview(request.OriginalActionId, request.ExpectedPlayerStateHash, target, request.ProposedRecoveryDeadlineUtc,
             out var preview, out var rejection) || preview is null)
             return GameCallResult<SameSessionSurfacePreviewSnapshot>.Failed(BridgeError.Create(BridgeErrorCodes.ActionRejected,
                 rejection, true, "Keep the original pause and unknown action; do not submit a Move from an unproved preview."));
@@ -40,13 +40,16 @@ internal sealed partial class NormalGameActionCoordinator
         var binding = preview.Observation.Binding;
         return GameCallResult<SameSessionSurfacePreviewSnapshot>.Succeeded(new SameSessionSurfacePreviewSnapshot
         {
-            EvidenceVersion = 1, ReadOnly = true, Executable = false, CommitAllowedNow = false,
+            EvidenceVersion = 2, ReadOnly = true, Executable = false, CommitAllowedNow = false,
             NativeResumePerformed = false, OriginalOutcomeChanged = false,
             State = binding is null ? "awaiting_second_frame" : "source_bound",
             SessionId = session.SessionId, PlanetId = request.PlanetId, Revision = session.Revision, PlayerStateHash = preview.ExpectedPlayerStateHash,
             OriginalActionId = preview.ActionId, SourceGameTick = preview.Capture.Route.SourceGameTick,
             ExpiresAtUtc = preview.ExpiresAtUtc, Target = Snapshot(preview.Capture.Target),
             SourceFingerprint = binding?.Fingerprint,
+            OriginalJourneyIssuedAtUtc = preview.OriginalJourneyIssuedAtUtc, OriginalJourneyDeadlineUtc = preview.OriginalJourneyDeadlineUtc,
+            CurrentJourneyDeadlineUtc = preview.CurrentJourneyDeadlineUtc, ProposedRecoveryDeadlineUtc = preview.ProposedRecoveryDeadlineUtc,
+            AdditionalVoyagerGameTicks = 0, ProposedWindowApplied = false,
             MaximumWorkGameTicks = VoyagerSurfaceRecoveryPolicy.MaximumWorkGameTicks,
             MaximumWallSeconds = VoyagerSurfaceRecoveryPolicy.MaximumWallSeconds,
         });

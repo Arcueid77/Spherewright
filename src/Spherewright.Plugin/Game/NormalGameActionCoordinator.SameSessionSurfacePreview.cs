@@ -11,36 +11,43 @@ internal sealed partial class NormalGameActionCoordinator
     private sealed class SameSessionSurfacePreview : IDisposable
     {
         public SameSessionSurfacePreview(string actionId, string expectedPlayerStateHash, Vector3 requestedTarget,
-            SameSessionSurfaceCapture capture, VoyagerSameSessionSurfaceObservation observation, DateTimeOffset firstCaptureUtc)
+            SameSessionSurfaceCapture capture, VoyagerSameSessionSurfaceObservation observation, VoyagerSameSessionSurfaceSourceFacts first)
         { ActionId = actionId; ExpectedPlayerStateHash = expectedPlayerStateHash; RequestedTarget = requestedTarget; Capture = capture;
-          Observation = observation; ExpiresAtUtc = firstCaptureUtc.AddSeconds(VoyagerSurfaceRecoveryPolicy.MaximumInitialBindingWallSeconds); }
+          Observation = observation; ExpiresAtUtc = first.CapturedAtUtc.AddSeconds(VoyagerSurfaceRecoveryPolicy.MaximumInitialBindingWallSeconds);
+          OriginalJourneyIssuedAtUtc = first.OriginalJourneyIssuedAtUtc; OriginalJourneyDeadlineUtc = first.OriginalJourneyDeadlineUtc;
+          CurrentJourneyDeadlineUtc = first.Funding!.OriginalJourney!.JourneyDeadlineUtc; ProposedRecoveryDeadlineUtc = first.ProposedRecoveryDeadlineUtc; }
         public string ActionId { get; }
         public string ExpectedPlayerStateHash { get; }
         public Vector3 RequestedTarget { get; }
         public SameSessionSurfaceCapture Capture { get; }
         public VoyagerSameSessionSurfaceObservation Observation { get; }
         public DateTimeOffset ExpiresAtUtc { get; }
+        public DateTimeOffset OriginalJourneyIssuedAtUtc { get; }
+        public DateTimeOffset OriginalJourneyDeadlineUtc { get; }
+        public DateTimeOffset CurrentJourneyDeadlineUtc { get; }
+        public DateTimeOffset? ProposedRecoveryDeadlineUtc { get; }
         public bool IsDisposed { get; private set; }
-        public bool Matches(string actionId, string expectedPlayerStateHash, Vector3 target) =>
-            ActionId == actionId && ExpectedPlayerStateHash == expectedPlayerStateHash && RequestedTarget.Equals(target);
+        public bool Matches(string actionId, string expectedPlayerStateHash, Vector3 target, DateTimeOffset? proposedRecoveryDeadlineUtc) =>
+            ActionId == actionId && ExpectedPlayerStateHash == expectedPlayerStateHash && RequestedTarget.Equals(target)
+            && ProposedRecoveryDeadlineUtc == proposedRecoveryDeadlineUtc;
         public void Dispose() { if (IsDisposed) return; IsDisposed = true; Capture.Dispose(); }
     }
 
     // The future public entry is read-only: this stores a bounded two-frame
     // observation and never creates an action token or resumes simulation.
-    private bool TryBeginSameSessionSurfacePreview(string actionId, string expectedPlayerStateHash, Vector3 target,
+    private bool TryBeginSameSessionSurfacePreview(string actionId, string expectedPlayerStateHash, Vector3 target, DateTimeOffset? proposedRecoveryDeadlineUtc,
         out SameSessionSurfacePreview? preview, out string rejection)
     {
         preview = null; rejection = string.Empty;
         UpdateSameSessionSurfacePreviewOnMainThread();
         if (_sameSessionSurfacePreviewReleaseFailure is { } releaseFailure)
         { rejection = releaseFailure; return false; }
-        if (_sameSessionSurfacePreview is { } existing && existing.Matches(actionId, expectedPlayerStateHash, target))
+        if (_sameSessionSurfacePreview is { } existing && existing.Matches(actionId, expectedPlayerStateHash, target, proposedRecoveryDeadlineUtc))
         { preview = existing; return true; }
         StopSameSessionSurfacePreviewOnMainThread();
         if (_sameSessionSurfacePreviewReleaseFailure is { } stopFailure)
         { rejection = stopFailure; return false; }
-        if (!TryOpenSameSessionSurfaceCapture(actionId, expectedPlayerStateHash, target, out var capture, out rejection) || capture is null)
+        if (!TryOpenSameSessionSurfaceCapture(actionId, expectedPlayerStateHash, target, proposedRecoveryDeadlineUtc, out var capture, out rejection) || capture is null)
             return false;
         try
         {
@@ -48,7 +55,7 @@ internal sealed partial class NormalGameActionCoordinator
             var observation = new VoyagerSameSessionSurfaceObservation();
             if (observation.Observe(first) != VoyagerSameSessionSurfaceObservationState.AwaitingSecondFrame)
             { rejection = observation.Rejection ?? "same_session_surface_first_frame_unproved"; return false; }
-            preview = _sameSessionSurfacePreview = new SameSessionSurfacePreview(actionId, expectedPlayerStateHash, target, capture, observation, first.CapturedAtUtc);
+            preview = _sameSessionSurfacePreview = new SameSessionSurfacePreview(actionId, expectedPlayerStateHash, target, capture, observation, first);
             capture = null; // The bounded preview now owns its Native file leases.
             return true;
         }

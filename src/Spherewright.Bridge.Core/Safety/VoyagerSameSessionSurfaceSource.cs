@@ -26,6 +26,9 @@ public sealed class VoyagerSameSessionSurfaceSourceFacts
     public string ExpectedJourneyId { get; set; } = string.Empty;
     public string JourneySnapshotFingerprint { get; set; } = string.Empty;
     public string DurableEvidenceFingerprint { get; set; } = string.Empty;
+    public DateTimeOffset OriginalJourneyIssuedAtUtc { get; set; }
+    public DateTimeOffset OriginalJourneyDeadlineUtc { get; set; }
+    public DateTimeOffset? ProposedRecoveryDeadlineUtc { get; set; }
     public SessionState? Session { get; set; }
     public ActionResultSnapshot? OriginalMove { get; set; }
     public PlayerStateSnapshot? PlayerState { get; set; }
@@ -199,6 +202,24 @@ public static class VoyagerSameSessionSurfaceSourcePolicy
             || f.Funding.PerNativeTickEnergyJoules != energy.PerNativeTickEnergyUpperJoules)
             return "same_session_surface_original_reserve_unproved";
         var budget = f.Funding.OriginalJourney;
+        if (f.OriginalJourneyIssuedAtUtc == default || f.OriginalJourneyIssuedAtUtc.Offset != TimeSpan.Zero
+            || f.OriginalJourneyDeadlineUtc.Offset != TimeSpan.Zero || f.OriginalJourneyDeadlineUtc <= f.OriginalJourneyIssuedAtUtc
+            || f.OriginalJourneyIssuedAtUtc > f.CapturedAtUtc || budget.JourneyDeadlineUtc == default
+            || budget.JourneyDeadlineUtc.Offset != TimeSpan.Zero)
+            return "same_session_surface_original_window_unproved";
+        if (f.ProposedRecoveryDeadlineUtc is { } proposed)
+        {
+            var proposal = new VoyagerRecoveryWindowProposal(proposed, VoyagerRecoveryWindowProposal.TaskScope,
+                VoyagerSurfaceRecoveryPolicy.MaximumWorkGameTicks, VoyagerSurfaceRecoveryPolicy.MaximumWallSeconds);
+            if (f.CapturedAtUtc.Offset != TimeSpan.Zero || proposed.Offset != TimeSpan.Zero
+                || proposed <= budget.JourneyDeadlineUtc || proposed <= f.OriginalJourneyDeadlineUtc
+                || VoyagerRecoveryWindowPolicy.ProposalBlocker(proposal, f.CapturedAtUtc,
+                    f.OriginalJourneyIssuedAtUtc, f.OriginalJourneyDeadlineUtc, budget.ReturnReserveGameTicks) is not null)
+                return "same_session_surface_proposed_window_invalid";
+            if (!VoyagerSurfaceRecoveryPolicy.ProspectiveWindowReserveAllows(f.Funding, proposed))
+                return "same_session_surface_proposed_window_reserve_unproved";
+            return null;
+        }
         if (budget.ReturnReserveGameTicks is >= 3600 and <= 108000 && budget.NowUtc == f.CapturedAtUtc
             && Finite(f.Funding.StopWallPatienceSeconds) && f.Funding.StopWallPatienceSeconds >= 1d
             && f.Funding.StopWallPatienceSeconds <= VoyagerActiveMoveGroundGapPolicy.MaximumStopWallPatienceSeconds
@@ -226,6 +247,8 @@ public static class VoyagerSameSessionSurfaceSourcePolicy
             a.ActionId, a.IdempotencyKey, a.BeforeStateHash, a.StartedAtGameTick, a.CompletedAtGameTick,
             FailureFingerprint(a.NativeFirstFailure!),
             f.JourneyId, f.JourneySnapshotFingerprint, f.DurableEvidenceFingerprint,
+            f.OriginalJourneyIssuedAtUtc.UtcDateTime.Ticks, f.OriginalJourneyDeadlineUtc.UtcDateTime.Ticks,
+            f.ProposedRecoveryDeadlineUtc?.UtcDateTime.Ticks,
             p.StateHash, CanonicalStateHash.Player(p), V(p.Position), p.MovementState, F(p.Speed), x.ControllerMovementStateInFrame,
             x.AutoSimulation, x.AutoSyncTransforms, F(x.FixedDeltaTimeSeconds!.Value), x.GroundContact!.QueriesHitTriggers, x.GroundContact.CheckSphereHit,
             x.UseGravity, x.Constraints, x.CollisionDetectionMode,
@@ -235,7 +258,7 @@ public static class VoyagerSameSessionSurfaceSourcePolicy
             OptionalD(energy.IndependentEnergyPerNativeTickUpperJoules), OptionalD(energy.ShieldRechargeEnergyPerNativeTickUpperJoules),
             OptionalD(energy.LaserRechargeEnergyPerNativeTickUpperJoules),
             V(target), j.CurrentGameTick, j.LastLandedGameTick, j.SpentGameTicks, j.MaximumGameTicks, j.ReturnReserveGameTicks,
-            j.WorkGameTicks, j.TailGameTicks, j.JourneyDeadlineUtc, D(j.AvailableLoadedEnergyJoules!.Value),
+            j.WorkGameTicks, j.TailGameTicks, j.JourneyDeadlineUtc.UtcDateTime.Ticks, D(j.AvailableLoadedEnergyJoules!.Value),
             D(j.LockedReturnFloorJoules!.Value), j.NativeWarperCount, j.OriginalExtraWarperReserve,
             D(f.Funding.CoreEnergyJoules!.Value), D(f.Funding.PerNativeTickEnergyJoules!.Value), D(f.Funding.StopWallPatienceSeconds));
     }

@@ -122,7 +122,15 @@ public sealed class VoyagerSurfaceRecoveryPolicy
         && (now - StartedUtc).TotalSeconds < MaximumWallSeconds;
     private bool InitialBindingOpen(DateTimeOffset now) => LastPhysicsTick != SourceGameTick
         || (now - StartedUtc).TotalSeconds < MaximumInitialBindingWallSeconds;
-    public static bool OriginalReserveAllows(VoyagerSurfaceRecoveryFacts f)
+    public static bool OriginalReserveAllows(VoyagerSurfaceRecoveryFacts f) =>
+        ReserveAllows(f, f.OriginalJourney?.JourneyDeadlineUtc ?? default);
+
+    // Read-only feasibility only. A hypothetical deadline never mutates the
+    // journey and must not be used by the executable controller as authority.
+    internal static bool ProspectiveWindowReserveAllows(VoyagerSurfaceRecoveryFacts f, DateTimeOffset proposedDeadlineUtc) =>
+        ReserveAllows(f, proposedDeadlineUtc);
+
+    private static bool ReserveAllows(VoyagerSurfaceRecoveryFacts f, DateTimeOffset deadlineUtc)
     {
         var j = f.OriginalJourney;
         // This controller starts from Drift. It must not impersonate a
@@ -135,7 +143,7 @@ public sealed class VoyagerSurfaceRecoveryPolicy
             || !j.NativeWarperCount.HasValue || j.NativeWarperCount < 1 + j.OriginalExtraWarperReserve
             || j.NowUtc != f.NowUtc || !Known(f.StopWallPatienceSeconds) || f.StopWallPatienceSeconds < 1d
             || f.StopWallPatienceSeconds > VoyagerActiveMoveGroundGapPolicy.MaximumStopWallPatienceSeconds
-            || (j.JourneyDeadlineUtc - f.NowUtc).TotalSeconds <= j.ReturnReserveGameTicks / 60d + f.StopWallPatienceSeconds + 1d / 60d
+            || (deadlineUtc - f.NowUtc).TotalSeconds <= j.ReturnReserveGameTicks / 60d + f.StopWallPatienceSeconds + 1d / 60d
             || !Known(f.CoreEnergyJoules) || !Known(f.PerNativeTickEnergyJoules)
             || !Known(j.AvailableLoadedEnergyJoules) || !Known(j.LockedReturnFloorJoules)) return false;
         var ticks = (decimal)j.SpentGameTicks + j.CurrentGameTick - j.LastLandedGameTick.Value

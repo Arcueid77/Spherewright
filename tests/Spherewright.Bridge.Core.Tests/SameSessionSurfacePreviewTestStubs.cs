@@ -13,8 +13,10 @@ internal sealed partial class NormalGameActionCoordinator
     private sealed class SameSessionSurfaceCapture : IDisposable
     {
         private readonly Action _release;
-        internal SameSessionSurfaceCapture(Action release, Vector3 target) { _release = release; Target = target; }
+        internal SameSessionSurfaceCapture(Action release, Vector3 target, DateTimeOffset? proposedRecoveryDeadlineUtc)
+        { _release = release; Target = target; ProposedRecoveryDeadlineUtc = proposedRecoveryDeadlineUtc; }
         public Vector3 Target { get; }
+        public DateTimeOffset? ProposedRecoveryDeadlineUtc { get; }
         public TestSurfaceRoute Route { get; } = new();
         public void Dispose() => _release();
     }
@@ -26,7 +28,7 @@ internal sealed partial class NormalGameActionCoordinator
     internal int SurfacePreviewReleasesForTest { get; private set; }
     internal void ConfigureSurfacePreviewForTest(Func<VoyagerSameSessionSurfaceSourceFacts?> sample, bool releaseFails = false)
     { _surfacePreviewSampleForTest = sample; _surfacePreviewReleaseFailsForTest = releaseFails; }
-    private bool TryOpenSameSessionSurfaceCapture(string actionId, string expectedPlayerStateHash, Vector3 requestedTarget,
+    private bool TryOpenSameSessionSurfaceCapture(string actionId, string expectedPlayerStateHash, Vector3 requestedTarget, DateTimeOffset? proposedRecoveryDeadlineUtc,
         out SameSessionSurfaceCapture? capture, out string rejection)
     {
         SurfacePreviewOpensForTest++;
@@ -34,18 +36,19 @@ internal sealed partial class NormalGameActionCoordinator
         {
             SurfacePreviewReleasesForTest++;
             if (_surfacePreviewReleaseFailsForTest) throw new IOException("synthetic-release-failure");
-        }, requestedTarget);
+        }, requestedTarget, proposedRecoveryDeadlineUtc);
         rejection = string.Empty; return true;
     }
     private bool TryCaptureSameSessionSurfaceSource(SameSessionSurfaceCapture capture,
         out VoyagerSameSessionSurfaceSourceFacts? facts, out string rejection)
     {
         facts = _surfacePreviewSampleForTest?.Invoke();
+        if (facts is not null) facts.ProposedRecoveryDeadlineUtc = capture.ProposedRecoveryDeadlineUtc;
         rejection = facts is null ? "synthetic-native-observation-lost" : string.Empty;
         return facts is not null;
     }
     internal bool BeginSurfacePreviewForTest(string action, out string rejection) =>
-        TryBeginSameSessionSurfacePreview(action, "synthetic-player-hash", new Vector3(200, 10, 0), out _, out rejection);
+        TryBeginSameSessionSurfacePreview(action, "synthetic-player-hash", new Vector3(200, 10, 0), null, out _, out rejection);
     internal VoyagerSameSessionSurfaceObservationState? SurfacePreviewStateForTest => _sameSessionSurfacePreview?.Observation.State;
     internal string? SurfacePreviewRejectionForTest => _sameSessionSurfacePreview?.Observation.Rejection;
     internal void AdvanceSurfacePreviewForTest() => UpdateSameSessionSurfacePreviewOnMainThread();
