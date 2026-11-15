@@ -29,7 +29,20 @@ public sealed class VoyagerLocalActionIdentityAndDeadlineTests
         Assert.Equal(start.AddSeconds(50), deadline);
         Assert.True(VoyagerLocalActionBudgetPolicy.LocalWindowStillOpen(100, 101, 7300, start, start.AddSeconds(49), deadline));
         Assert.False(VoyagerLocalActionBudgetPolicy.LocalWindowStillOpen(100, 101, 7300, start, start.AddSeconds(50), deadline));
-        Assert.Equal(start.AddSeconds(120), VoyagerLocalActionBudgetPolicy.WorkDeadlineUtc(start, start.AddHours(1), 7200, 54000));
+        Assert.Equal(start.AddSeconds(720), VoyagerLocalActionBudgetPolicy.WorkDeadlineUtc(start, start.AddHours(1), 7200, 54000));
+    }
+
+    [Fact]
+    public void SlowNaturalTicksHaveFiniteWallPatienceWithoutExtraWorkOrReturnTime()
+    {
+        var start = new DateTimeOffset(2025, 1, 1, 0, 0, 0, TimeSpan.Zero);
+        var end = VoyagerLocalActionBudgetPolicy.WorkDeadlineUtc(start, start.AddHours(1), 7200, 54000);
+        Assert.Equal(start.AddSeconds(720), end);
+        Assert.True(VoyagerLocalActionBudgetPolicy.LocalWindowStillOpen(100, 3100, 7300, start, start.AddSeconds(300), end));
+        Assert.False(VoyagerLocalActionBudgetPolicy.LocalWindowStillOpen(100, 7300, 7300, start, start.AddSeconds(300), end));
+        Assert.False(VoyagerLocalActionBudgetPolicy.LocalWindowStillOpen(100, 3100, 7300, start, start.AddSeconds(720), end));
+        Assert.Equal(start.AddSeconds(1), VoyagerLocalActionBudgetPolicy.WorkDeadlineUtc(start, start.AddHours(1), 1, 54000));
+        Assert.Equal(start.AddMilliseconds(500), VoyagerLocalActionBudgetPolicy.WorkDeadlineUtc(start, start.AddMilliseconds(900500), 1, 54000));
     }
 
     [Fact]

@@ -51,9 +51,14 @@ public static class VoyagerLocalActionBudgetPolicy
             || stopTailGameTicks < 0 || stopTailGameTicks > 7200) return null;
         try
         {
-            // Integer ticks avoid runtime-specific AddSeconds rounding granting
-            // any part of the originally reserved return/cleanup wall interval.
-            var byWork = nowUtc.AddTicks((long)Math.Floor(workGameTicks * (double)TimeSpan.TicksPerSecond / 60d));
+            // Game ticks can advance more slowly than real time, especially in
+            // a background window. Allow finite wall patience at 10 ticks/s,
+            // with one second for immediate work; the independent game-tick
+            // cap and the original return/cleanup wall reserve do not change.
+            // Integer ticks avoid runtime-specific AddSeconds rounding.
+            var workWallTicks = Math.Max(TimeSpan.TicksPerSecond,
+                (long)Math.Floor(workGameTicks * (double)TimeSpan.TicksPerSecond / 10d));
+            var byWork = nowUtc.AddTicks(workWallTicks);
             var reservedTicks = (long)Math.Ceiling((returnReserveGameTicks + (double)stopTailGameTicks) * TimeSpan.TicksPerSecond / 60d);
             var byReturn = journeyDeadlineUtc.AddTicks(-reservedTicks);
             var result = byWork < byReturn ? byWork : byReturn;

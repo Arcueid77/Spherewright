@@ -380,6 +380,8 @@ prepare/commit 前要求 fresh 前进的原生 tick，并以短于 30 秒控制�
 
 ## Voyager 本地作业与结构化施工
 
+有限本地工作墙钟窗口按每秒10个游戏tick容纳自然慢速运行，立即操作至少留1秒；窗口仍在原返程及清理墙钟储备之前截止。原游戏tick、能源、翘曲器和观察租约上限不变；超时不重开或重放原动作。
+
 所有远端动作保留在原 `remote_landed` 航程及精确 owned 存档/Native/world 绑定内；保留原返程 UTC/tick 窗、loaded 返程能量底线与原生 `1+extraWarperReserve`。返程核心充能在起飞前重验，不是每个本地动作都要满核心。原生站点配置/转移仍要求玩家实际本地、精确站点及 fresh 哈希；owned-remote 站点只读观察不授权在母星写远端。
 
 Move/Harvest 复用既有普通 RTS 动作并保留无水快路。有限能耗分支允许运行中有界 Walk/Drift，要求 fresh Native pre-player 钩子及精确 owned world/player/controller/mecha/本地工厂绑定；排队订单、手动输入/惯性、待跳跃、导航、快速旅行、曲速和 Fly 仍不支持。原生水平、推力及后台成本须覆盖有限工作窗与13个付费 Native 游戏停止 tick，含采矿与 RTS 减速同 tick 发生，且不侵入原核心/loaded 返程底线、原生翘曲器或返程时间。停止上限为原13个付费游戏tick或独立锁定的有限墙钟，先到为止。Harvest及旧60Hz Move保持1秒；严格准入Move在停止初次arm时观察原生物理步长，慢节奏可用max(1,1+ceil(13*fixedDeltaTime))秒、硬上限5秒，步长必须已证明为正且<=0.25秒。墙钟等待不增加模拟或能量，当前UTC准入仍须在原返程墙钟储备之外留足整段；读回或后续步长变化均不重置/延长该截止。任一上限均不重开原 action 或 journey 期限。本地 UTC/tick 期限及30秒原 action 租约的范围保持不变。此分支仅在有限能耗资格通过时替代原整球海洋排除门，不授予路线净空或连续干地区域证书。正常成功仍须实际干地 Walk 与真实 Native 零速度读回；RTS 归零、abort 订单或游戏暂停均不足。

@@ -2,6 +2,8 @@
 
 [English](project-status.md) · [简体中文](project-status.zh-CN.md)
 
+**Proportionate remote-work timing.** Finite local action wall patience now accommodates naturally slow game ticks without extending the original work-tick limit or consuming the protected return/cleanup wall reserve. Tests cover slow progress, the unchanged tick boundary and return-time clamp. This source change is not live acceptance.
+
 **Ascension design binding correction.** Fractional node coordinates now bind their exact single-precision bits rather than runtime-specific float display text. A classic Windows/.NET serialized-plan regression and the current-runtime echo verify the same binding while retaining exact request, cost and Native checks. This is source validation; coherent installation and live verification remain separate.
 
 **Same-session surface-source preview development.** A read-only MCP preview checks a paused original unknown Move, two-frame pose, original journey, Journal and Native terrain/energy evidence. An optional finite window is hypothetical and preserves the original budget; it issues no Move or Resume and applies no extension. An executable entry and live acceptance remain outstanding; source, installation and scenario evidence stay separate.
