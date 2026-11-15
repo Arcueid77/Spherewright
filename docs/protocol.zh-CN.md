@@ -34,6 +34,8 @@
 
 指定可选地表目标时，具备原生启动及成功出航证明、无进度损失的远端保存是独立于已完成保存落地准入的来源。该来源要求`surfaceRecoveryExpectedSourceGameTick`与准确候选文件tick相等，并回显`successfulOutboundSurfaceSourceUsed=true`；两种来源不能同时声明。预期tick来自调用方观察，文件检查不能原生认证此前现场。准备与提交将其绑定到digest，保留原unknown结果，仍需既有Native151/501地表、能源、储备及接地闲置门。它不保存现场，也不授权回退。
 
+仅该成功出航地表来源可显式使用 `restoreRenamedLastExitIdentity=true` 及 `expectedRenamedLastExitContentHash` 选择正常另存名后的固定 LastExit，不接受任意路径。计划披露前绑定完整文件哈希、调用方观察的准确 tick、原主档及原生创建/星系字段、Journey 和 Journal，并回显 `renamedLastExitIdentityRestorationPlanned` 与来源哈希。准确原生加载器回调核对加载的来源名称和 tick 后，在接管前于内存恢复原受管名称；单独的用户命名存档不受修改。本操作不修改或认证原 Move 结果。
+
 公共 MCP 的 `prepare_resume_owned_game` 参数现默认 `open_saved_primary`。显式使用旧 `default` 模式的既有 wire 请求保留原行为；普通 MCP 读档请求不会被推断为继续旧任务。
 
 普通读档使用 `prepare_resume_owned_game(recoveryMode=open_saved_primary)`：即使旧自动操作许可已过期，也核验精确完整的同 Native 主档、受保护归属双副本及原 Journal；原生加载完成后停在准确存档 tick，不续跑旧任务，不自动保存/充能/飞行。Prepare 回显 `opensSavedWorldOnly`、`previousAutomationRemainsStopped`、`newChargingProhibited`、`discardedUnstoredProgressGameTicks`。可选 `acceptUnstoredProgressLoss` 默认 false，须同时绑定准确已知 `minimumRecoveryGameTick` 和获准主档 `expectedRecoveryGameTick`。保留 fresh prepare/digest/确认、持久单次消费、完整文件租约及禁止回退来源；新签发的仅读档凭据可供以后再次打开存档，不能充当自动操作许可。见[手册](agent-playbook.zh-CN.md#打开存档并保持旧自动任务停止)。

@@ -136,14 +136,22 @@ internal sealed partial class FlightCheckpointStore
                 && source.Prefix.GameTick > primary.Prefix.GameTick
                 && (!remotePrimaryRequest.AcceptUnstoredProgressLoss ? source.Prefix.GameTick == ticket.MinimumGameTick
                     : remotePrimaryRequest.ExpectedRecoveryGameTick == source.Prefix.GameTick && source.Prefix.GameTick <= ticket.MinimumGameTick);
+            var exactRenamedExit = remotePrimaryRequest?.RestoreRenamedLastExitIdentity == true
+                && progressLastExit is not null && source.Fingerprint == progressLastExit.Fingerprint
+                && source.IsBoundToIdentity(ticket.OwnedSaveName) && primary.IsBoundToIdentity(ticket.OwnedSaveName)
+                && !source.Prefix.MatchesExpectedIdentity && primary.Prefix.MatchesExpectedIdentity
+                && source.ContentFingerprint == remotePrimaryRequest.ExpectedRenamedLastExitContentHash
+                && source.Prefix.GameTick == remotePrimaryRequest.SurfaceRecoveryExpectedSourceGameTick
+                && source.Prefix.GameTick > primary.Prefix.GameTick && source.HasSameNativeWorldIdentity(primary);
             // Only explicit new remote-primary authority may use this separate
             // healthy admission witness. The old flight-success fact stays false.
             var savedLandingWitness = remotePrimaryRequest is not null
                 && CompletedSavedLandingAdmissionWitness(journey, checkpoint, primary.Prefix.GameTick);
             var facts = new VoyagerRemoteResumeFacts
             {
-                DefaultLastExit = remotePrimaryRequest is null || exactCurrentExit,
-                ExactOwnedIdentityAndVersion = source.Prefix.MatchesExpectedIdentity && primary.Prefix.MatchesExpectedIdentity
+                DefaultLastExit = remotePrimaryRequest is null || exactCurrentExit || exactRenamedExit,
+                VerifiedRenamedLastExit = exactRenamedExit,
+                ExactOwnedIdentityAndVersion = (source.Prefix.MatchesExpectedIdentity || exactRenamedExit) && primary.Prefix.MatchesExpectedIdentity
                     && checkpoint.OwnedSaveName == ticket.OwnedSaveName && journey.OwnedSaveName == ticket.OwnedSaveName
                     && source.Prefix.GameVersion == ticket.GameVersion && primary.Prefix.GameVersion == ticket.GameVersion
                     && checkpoint.GameVersion == ticket.GameVersion && journey.GameVersion == ticket.GameVersion && ticket.GameVersion == _gameVersion,
@@ -176,8 +184,8 @@ internal sealed partial class FlightCheckpointStore
                 decision.Number("prior_observed_progress_floor", ticket.ObservedProgressGameTickFloor);
                 decision.NotReached("primary_matching_file_leases", "primary_progress_source_identity", "primary_mode_unmixed",
                     "primary_prior_observed_time_known");
-                var sourceBound = decision.Require("primary_matching_file_leases", source.Fingerprint == primary.Fingerprint || exactCurrentExit)
-                    && decision.Require("primary_progress_source_identity", progressLastExit is null || progressLastExit.Prefix.MatchesExpectedIdentity)
+                var sourceBound = decision.Require("primary_matching_file_leases", source.Fingerprint == primary.Fingerprint || exactCurrentExit || exactRenamedExit)
+                    && decision.Require("primary_progress_source_identity", progressLastExit is null || progressLastExit.Prefix.MatchesExpectedIdentity || exactRenamedExit)
                     && decision.Require("primary_mode_unmixed", !failedRemoteReauthorization && !completedRemoteContinuation
                         && priorConsumedProof is null && string.IsNullOrEmpty(legacyLocalMoveEvidenceJson))
                     && decision.Require("primary_prior_observed_time_known", ticket.SavedWorldOpenOnly != true
@@ -189,6 +197,8 @@ internal sealed partial class FlightCheckpointStore
                 rejection = sourceBound
                     ? VoyagerRemotePrimaryRecoveryPolicy.Blocker(remotePrimaryRequest, facts, knownProgress, decision, budgetFloor) ?? string.Empty
                     : "remote_primary_source_or_mode_unproved";
+                if (rejection.Length == 0 && exactRenamedExit && savedLandingWitness)
+                    rejection = "renamed_last_exit_requires_successful_outbound";
                 if (rejection.Length == 0 && remotePrimaryRequest.SurfaceRecoveryTarget is not null && !savedLandingWitness
                     && !decision.Require("successful_surface_no_loss_armed_expected_tick",
                         !remotePrimaryRequest.AcceptUnstoredProgressLoss && facts.CheckpointFlightSucceededWithoutReload && checkpoint.NativeLaunchArmed
@@ -223,6 +233,7 @@ internal sealed partial class FlightCheckpointStore
                         return false;
                     }
                 }
+                if (exactRenamedExit) evidence.BindRenamedLastExitIdentityRestoration();
                 ticketLease = null; journeyLease = null; checkpointLease = null;
                 return true;
             }
@@ -424,6 +435,14 @@ internal sealed class VoyagerRemoteResumeEvidence : IDisposable
     internal bool FailedLandingRecovery => FailedLandingSource is not null;
     internal bool CompletedSavedLandingAdmissionUsed { get; private set; }
     internal bool SuccessfulOutboundSurfaceSourceUsed { get; private set; }
+    internal bool RenamedLastExitIdentityRestoration { get; private set; }
+    internal void BindRenamedLastExitIdentityRestoration()
+    {
+        if (!SuccessfulOutboundSurfaceSourceUsed || !RemotePrimaryRecovery || IsDisposed)
+            throw new InvalidOperationException("The exact successful-outbound surface source is required.");
+        RenamedLastExitIdentityRestoration = true;
+        Fingerprint = CanonicalStateHash.Combine("remote-primary-renamed-last-exit-identity-v1", Fingerprint);
+    }
     internal void BindCompletedSavedLandingAdmission()
     {
         if (!RemotePrimaryRecovery || IsDisposed) throw new InvalidOperationException("New remote-primary admission authority is required.");

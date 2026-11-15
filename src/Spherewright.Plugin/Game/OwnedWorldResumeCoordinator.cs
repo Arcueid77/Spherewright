@@ -159,6 +159,8 @@ internal sealed partial class OwnedWorldResumeCoordinator
             AdditionalVoyagerGameTicks = payload.RemoteEvidence?.RecoveryProposal?.AdditionalVoyagerGameTicks ?? 0,
             SurfaceRecoveryTarget = VoyagerSurfaceRecoveryPolicy.CopyTarget(payload.Request.SurfaceRecoveryTarget),
             SurfaceRecoveryExpectedSourceGameTick = payload.Request.SurfaceRecoveryExpectedSourceGameTick,
+            RenamedLastExitIdentityRestorationPlanned = payload.RemoteEvidence?.RenamedLastExitIdentityRestoration == true,
+            ExpectedRenamedLastExitContentHash = payload.Request.ExpectedRenamedLastExitContentHash,
             SurfaceRecoveryMaximumWorkGameTicks = payload.Request.SurfaceRecoveryTarget is null ? 0 : VoyagerSurfaceRecoveryPolicy.MaximumWorkGameTicks,
             SurfaceRecoveryMaximumWallSeconds = payload.Request.SurfaceRecoveryTarget is null ? 0d : VoyagerSurfaceRecoveryPolicy.MaximumWallSeconds,
             OriginalJourneyMaximumGameTicks = payload.RemoteEvidence?.Journey.MaximumGameTicks,
@@ -207,7 +209,9 @@ internal sealed partial class OwnedWorldResumeCoordinator
             UserConfirmationRequired = payload.RequiresConfirmation,
             SourceGameVersion = ticket.GameVersion,
             TargetGameVersion = _tickets.CurrentGameVersion,
-            ConfirmationPrompt = (payload.Request.SurfaceRecoveryTarget is { } surfaceTarget
+            ConfirmationPrompt = (payload.RemoteEvidence?.RenamedLastExitIdentityRestoration == true
+                ? "The exact fixed LastExit was normally saved under a different name. Its full-file hash, Native world-creation identity and current tick match the selected owned world; after the exact native load, the original managed name is restored in memory before adoption. The user-named save and original action outcome remain unchanged. " : string.Empty)
+                + (payload.Request.SurfaceRecoveryTarget is { } surfaceTarget
                 ? $"This NEW resume task may issue one normal Native Move toward ({surfaceTarget.X}, {surfaceTarget.Y}, {surfaceTarget.Z}), at most600 work ticks/20 wall seconds inside the original budget, after fresh Native landing and cost proof. It does not replay or change any old unknown Move. General work and a covering Save still require strict grounded Walk and zero physical tails. " : string.Empty)
                 + (payload.RemoteEvidence?.SuccessfulOutboundSurfaceSourceUsed == true
                 ? $"The separately bound source is a no-loss saved remote world after a proved successful outbound, not a completed failed-landing admission. Its Native file tick must equal the caller-observed boundary {payload.Request.SurfaceRecoveryExpectedSourceGameTick}; the caller's earlier live observation is not authenticated by this file check. The saved source alone proves neither dry ground nor the prior unknown Move's outcome. " : string.Empty)
@@ -998,10 +1002,25 @@ internal sealed partial class OwnedWorldResumeCoordinator
         VoyagerRemoteResumeEvidence? evidence = null;
         try
         {
-            source = OwnedSaveRecoveryLease.Open(GameSave.SavePath(ticket.OwnedSaveName), ticket.OwnedSaveName);
-            primary = OwnedSaveRecoveryLease.Open(GameSave.SavePath(ticket.OwnedSaveName), ticket.OwnedSaveName);
+            var primaryPath = GameSave.SavePath(ticket.OwnedSaveName);
+            if (request.RestoreRenamedLastExitIdentity && (File.GetAttributes(primaryPath) & FileAttributes.ReparsePoint) != 0)
+            { rejection = "remote_primary_renamed_primary_not_regular"; return false; }
+            source = OwnedSaveRecoveryLease.Open(primaryPath, ticket.OwnedSaveName);
+            primary = OwnedSaveRecoveryLease.Open(primaryPath, ticket.OwnedSaveName);
             var lastExitPath = GameSave.SavePath(GameSave.LastExit);
-            if (File.Exists(lastExitPath))
+            if (request.RestoreRenamedLastExitIdentity)
+            {
+                if (!File.Exists(lastExitPath))
+                { rejection = "remote_primary_renamed_last_exit_missing"; return false; }
+                progress = OwnedSaveRecoveryLease.OpenForRenamedLastExit(lastExitPath, ticket.OwnedSaveName);
+                if (progress.Prefix.MatchesExpectedIdentity || !progress.IsBoundToIdentity(ticket.OwnedSaveName)
+                    || progress.ContentFingerprint != request.ExpectedRenamedLastExitContentHash
+                    || progress.Prefix.GameTick != request.SurfaceRecoveryExpectedSourceGameTick
+                    || progress.Prefix.GameTick <= primary.Prefix.GameTick
+                    || !progress.HasSameNativeWorldIdentity(primary))
+                { rejection = "remote_primary_renamed_last_exit_identity_or_progress_unproved"; return false; }
+            }
+            else if (File.Exists(lastExitPath))
             {
                 using var prefix = new FileStream(lastExitPath, FileMode.Open, FileAccess.Read, FileShare.Read);
                 if (OwnedSavePrefixReader.Read(prefix, ticket.OwnedSaveName).MatchesExpectedIdentity)
@@ -1015,13 +1034,15 @@ internal sealed partial class OwnedWorldResumeCoordinator
             // Use only the fixed LastExit at this exact current credential's
             // boundary; a merely larger tick from another branch is not eligible.
             if (progress is not null && primary.Prefix.GameTick < progress.Prefix.GameTick
-                && (!request.AcceptUnstoredProgressLoss ? progress.Prefix.GameTick == ticket.MinimumGameTick
+                && (request.RestoreRenamedLastExitIdentity || (!request.AcceptUnstoredProgressLoss ? progress.Prefix.GameTick == ticket.MinimumGameTick
                     : request.ExpectedRecoveryGameTick == progress.Prefix.GameTick
-                        && progress.Prefix.GameTick <= ticket.MinimumGameTick)
+                        && progress.Prefix.GameTick <= ticket.MinimumGameTick))
                 && progress.Prefix.GameVersion == ticket.GameVersion && progress.Prefix.Peaceful)
             {
                 source.Dispose();
-                source = OwnedSaveRecoveryLease.Open(lastExitPath, ticket.OwnedSaveName);
+                source = request.RestoreRenamedLastExitIdentity
+                    ? OwnedSaveRecoveryLease.OpenForRenamedLastExit(lastExitPath, ticket.OwnedSaveName)
+                    : OwnedSaveRecoveryLease.Open(lastExitPath, ticket.OwnedSaveName);
                 sourceKind = OwnedWorldResumeSourceKind.LastExit;
             }
             journal = _tickets.OpenReauthorizationJournalLease(ticket, provenance, savedWorldOpenOnly: true);
@@ -1156,6 +1177,8 @@ internal sealed partial class OwnedWorldResumeCoordinator
                 AdditionalVoyagerGameTicks = request.AdditionalVoyagerGameTicks,
                 SurfaceRecoveryTarget = VoyagerSurfaceRecoveryPolicy.CopyTarget(request.SurfaceRecoveryTarget),
                 SurfaceRecoveryExpectedSourceGameTick = request.SurfaceRecoveryExpectedSourceGameTick,
+                RestoreRenamedLastExitIdentity = request.RestoreRenamedLastExitIdentity,
+                ExpectedRenamedLastExitContentHash = request.ExpectedRenamedLastExitContentHash,
                 PriorConsumedResumeToken = request.PriorConsumedResumeToken, PriorSourceFingerprint = request.PriorSourceFingerprint,
                 PriorLegacySourceFingerprint = request.PriorLegacySourceFingerprint,
                 PriorIntermediateSourceFingerprint = request.PriorIntermediateSourceFingerprint,
@@ -1228,6 +1251,9 @@ internal sealed partial class OwnedWorldResumeCoordinator
             if (Request.SurfaceRecoveryExpectedSourceGameTick.HasValue)
                 Fingerprint = CanonicalStateHash.Combine("resume-owned-world-surface-expected-tick-v1", Fingerprint,
                     Request.SurfaceRecoveryExpectedSourceGameTick);
+            if (Request.RestoreRenamedLastExitIdentity)
+                Fingerprint = CanonicalStateHash.Combine("resume-owned-world-renamed-last-exit-v1", Fingerprint,
+                    Request.ExpectedRenamedLastExitContentHash);
         }
 
         public OwnedWorldResumeTicket Ticket { get; }

@@ -67,7 +67,8 @@ public static class OwnedSavePrefixReader
                 fileLength, gameTick, new DateTimeOffset(savedAtTicks, TimeSpan.Zero),
                 gameVersion,
                 peaceful, sandbox, string.Equals(identity, expectedOwnedIdentity, StringComparison.Ordinal),
-                stream.Position);
+                stream.Position, CanonicalStateHash.Combine("native-save-embedded-identity-v1", identity),
+                !string.IsNullOrWhiteSpace(identity));
         }
     }
 
@@ -115,7 +116,8 @@ public static class OwnedSavePrefixReader
 public sealed class OwnedSavePrefixEvidence
 {
     internal OwnedSavePrefixEvidence(long fileLength, long gameTick, DateTimeOffset savedAtUtc,
-        string gameVersion, bool peaceful, bool sandbox, bool matchesExpectedIdentity, long prefixEnd)
+        string gameVersion, bool peaceful, bool sandbox, bool matchesExpectedIdentity, long prefixEnd,
+        string embeddedIdentityFingerprint, bool embeddedIdentityPresent)
     {
         FileLength = fileLength;
         GameTick = gameTick;
@@ -125,6 +127,8 @@ public sealed class OwnedSavePrefixEvidence
         Sandbox = sandbox;
         MatchesExpectedIdentity = matchesExpectedIdentity;
         PrefixEnd = prefixEnd;
+        EmbeddedIdentityFingerprint = embeddedIdentityFingerprint;
+        EmbeddedIdentityPresent = embeddedIdentityPresent;
     }
 
     public long FileLength { get; }
@@ -135,4 +139,6 @@ public sealed class OwnedSavePrefixEvidence
     public bool Sandbox { get; }
     public bool MatchesExpectedIdentity { get; }
     public long PrefixEnd { get; }
+    internal string EmbeddedIdentityFingerprint { get; }
+    internal bool EmbeddedIdentityPresent { get; }
 }

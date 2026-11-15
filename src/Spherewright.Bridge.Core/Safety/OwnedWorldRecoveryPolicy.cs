@@ -10,6 +10,9 @@ public static class OwnedWorldRecoveryPolicy
 
     public static string? ValidateRequest(PrepareOwnedWorldResumeRequest request)
     {
+        if ((request.RestoreRenamedLastExitIdentity || !string.IsNullOrEmpty(request.ExpectedRenamedLastExitContentHash))
+            && request.RecoveryMode != OwnedWorldResumeModes.AuthorizeRemotePrimaryRecovery)
+            return "Renamed-save identity restoration belongs only to explicit remote-primary surface recovery.";
         if (VoyagerSurfaceRecoveryPolicy.ValidateRequest(request) is { } surfaceInvalid) return surfaceInvalid;
         if (request.RecoveryMode == OwnedWorldResumeModes.OpenSavedLastExit)
             return OwnedLastExitOpenPolicy.ValidateRequest(request);

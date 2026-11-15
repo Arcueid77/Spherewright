@@ -5,6 +5,7 @@ namespace Spherewright.Bridge.Core.Safety;
 public sealed class VoyagerRemoteResumeFacts
 {
     public bool DefaultLastExit { get; set; }
+    public bool VerifiedRenamedLastExit { get; set; }
     public bool ExactOwnedIdentityAndVersion { get; set; }
     public bool Peaceful { get; set; }
     public bool FullSourceAndPrimaryEvidence { get; set; }

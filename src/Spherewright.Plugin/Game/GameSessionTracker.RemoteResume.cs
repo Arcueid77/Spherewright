@@ -123,6 +123,24 @@ internal sealed partial class GameSessionTracker
                     + (captureType is null ? string.Empty : ":" + captureType));
                 return;
             }
+            if (_pendingRemoteResumeEvidence?.RenamedLastExitIdentityRestoration == true)
+            {
+                var evidence = _pendingRemoteResumeEvidence;
+                var ticket = _expectedResumeTicket;
+                var sourceLease = _resumeSourceLease;
+                var primaryLease = _resumePrimaryLease;
+                if (ticket is null || sourceLease is null || primaryLease is null || evidence.IsDisposed
+                    || !ReferenceEquals(GameMain.data, _remoteResumeCompletedWorld)
+                    || !_flightCheckpoints.RemoteResumeEvidenceStillMatches(evidence))
+                { FailRemoteResumeAdmission("remote_resume_renamed_loaded_source_unproved"); return; }
+                // The same normal game-name property used by DSP Save As and
+                // the existing import flow. The user-named file is untouched;
+                // no position, items, gameplay ticks or old results are changed.
+                var nameBlocker = RenamedSavedIdentityRestoration.Restore(sourceLease, primaryLease,
+                    ticket.OwnedSaveName, evidence.SourceFingerprint, evidence.PrimaryFingerprint,
+                    GameMain.gameTick, evidence.SourceGameTick, () => GameMain.gameName, name => GameMain.gameName = name);
+                if (nameBlocker is not null) { FailRemoteResumeAdmission(nameBlocker); return; }
+            }
             _remoteResumeLoadCompleteObserved = true;
             string? blocker;
             _remoteResumeLoadPreflightRunning = true;

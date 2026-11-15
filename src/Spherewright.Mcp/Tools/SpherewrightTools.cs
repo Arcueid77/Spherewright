@@ -1725,7 +1725,9 @@ public static partial class SpherewrightTools
         [Description("Optional NEW bounded native surface recovery target. Supply all three coordinates only with explicit authorize_remote_primary_recovery and a separately confirmed finite budget; requires exact fresh disclosure and grounded idle before general work. Never replay an unknown target.")] float? surfaceRecoveryTargetX = null,
         [Description("Y coordinate of the same explicit new surface recovery target.")] float? surfaceRecoveryTargetY = null,
         [Description("Z coordinate of the same explicit new surface recovery target.")] float? surfaceRecoveryTargetZ = null,
-        [Description("For a successful-outbound saved surface source, provide the exact caller-observed saved game tick to bind and recheck. This does not authenticate an earlier live capture or permit progress loss.")] long? surfaceRecoveryExpectedSourceGameTick = null)
+        [Description("For a successful-outbound saved surface source, provide the exact caller-observed saved game tick to bind and recheck. This does not authenticate an earlier live capture or permit progress loss.")] long? surfaceRecoveryExpectedSourceGameTick = null,
+        [Description("Explicitly recover the fixed LastExit when this managed world was normally saved under another name. Requires its exact content hash, matching native world-creation identity, saved tick, original Journey and Journal. This never chooses an arbitrary save or changes the old action outcome.")] bool restoreRenamedLastExitIdentity = false,
+        [Description("Exact independently observed complete-file SHA-256 of the fixed LastExit as sha256: plus lowercase hex, required only with restoreRenamedLastExitIdentity.")] string expectedRenamedLastExitContentHash = "")
     {
         var request = new PrepareOwnedWorldResumeRequest
         {
@@ -1739,6 +1741,8 @@ public static partial class SpherewrightTools
             SurfaceRecoveryTarget = surfaceRecoveryTargetX.HasValue || surfaceRecoveryTargetY.HasValue || surfaceRecoveryTargetZ.HasValue
                 ? new Vector3Snapshot { X = surfaceRecoveryTargetX ?? float.NaN, Y = surfaceRecoveryTargetY ?? float.NaN, Z = surfaceRecoveryTargetZ ?? float.NaN } : null,
             SurfaceRecoveryExpectedSourceGameTick = surfaceRecoveryExpectedSourceGameTick,
+            RestoreRenamedLastExitIdentity = restoreRenamedLastExitIdentity,
+            ExpectedRenamedLastExitContentHash = expectedRenamedLastExitContentHash,
             PriorConsumedResumeToken = priorConsumedResumeToken, PriorSourceFingerprint = priorSourceFingerprint,
             PriorActionKnownTerminalFailed = priorActionKnownTerminalFailed,
             PriorActionKnownTerminalCompleted = priorActionKnownTerminalCompleted,

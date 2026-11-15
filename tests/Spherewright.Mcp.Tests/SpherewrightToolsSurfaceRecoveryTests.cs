@@ -104,12 +104,14 @@ public sealed partial class SpherewrightToolsTests
     public async Task SdkForwardsTheExactSavedSurfaceBoundaryWithoutLoading()
     {
         var deadline = DateTimeOffset.UtcNow.AddMinutes(55);
+        var renamedContentHash = CanonicalStateHash.Combine("synthetic-renamed-last-exit");
         var p = new PreparedOwnedWorldResumePlan
         {
             Prepared = true, PlanToken = "synthetic-surface-token", SurfaceRecoveryTarget = new() { X = 200, Y = 1, Z = 2 },
             SurfaceRecoveryExpectedSourceGameTick = 1200, SurfaceRecoveryMaximumWorkGameTicks = 600, SurfaceRecoveryMaximumWallSeconds = 20,
             RecoveryMode = OwnedWorldResumeModes.AuthorizeRemotePrimaryRecovery, RecoveryEvidenceVersion = VoyagerRemotePrimaryRecoveryPolicy.EvidenceVersion,
             RemotePrimaryRecoveryAuthorizationUsed = true, SuccessfulOutboundSurfaceSourceUsed = true,
+            RenamedLastExitIdentityRestorationPlanned = true, ExpectedRenamedLastExitContentHash = renamedContentHash,
             SourceGameVersion = "synthetic-native", TargetGameVersion = "synthetic-native", OriginalJourneyDeadlineUtc = deadline.AddDays(-1),
             EffectiveRecoveryDeadlineUtc = deadline, RecoveryScope = VoyagerRecoveryWindowProposal.TaskScope,
             MaximumChargeGameTicks = 3600, MaximumChargeWallSeconds = 120, NativeChargeFeasibilityRequiresFreshCapture = true,
@@ -123,6 +125,8 @@ public sealed partial class SpherewrightToolsTests
         using var provider = services.BuildServiceProvider();
         var tool = Assert.Single(provider.GetServices<McpServerTool>(), t => t.ProtocolTool.Name == "spherewright_prepare_resume_owned_game");
         Assert.True(tool.ProtocolTool.InputSchema.GetProperty("properties").TryGetProperty("surfaceRecoveryExpectedSourceGameTick", out _));
+        Assert.True(tool.ProtocolTool.InputSchema.GetProperty("properties").TryGetProperty("restoreRenamedLastExitIdentity", out _));
+        Assert.True(tool.ProtocolTool.InputSchema.GetProperty("properties").TryGetProperty("expectedRenamedLastExitContentHash", out _));
         await using var server = McpServer.Create(new StreamServerTransport(Stream.Null, Stream.Null), new McpServerOptions(), null, provider);
         var parameters = new CallToolRequestParams { Name = tool.ProtocolTool.Name, Arguments = new Dictionary<string, JsonElement>
         {
@@ -133,12 +137,53 @@ public sealed partial class SpherewrightToolsTests
             ["maximumChargeGameTicks"] = JsonSerializer.SerializeToElement(3600), ["maximumChargeWallSeconds"] = JsonSerializer.SerializeToElement(120),
             ["surfaceRecoveryTargetX"] = JsonSerializer.SerializeToElement(200), ["surfaceRecoveryTargetY"] = JsonSerializer.SerializeToElement(1),
             ["surfaceRecoveryTargetZ"] = JsonSerializer.SerializeToElement(2), ["surfaceRecoveryExpectedSourceGameTick"] = JsonSerializer.SerializeToElement(1200),
+            ["restoreRenamedLastExitIdentity"] = JsonSerializer.SerializeToElement(true),
+            ["expectedRenamedLastExitContentHash"] = JsonSerializer.SerializeToElement(renamedContentHash),
         }};
         var context = new RequestContext<CallToolRequestParams>(server, new JsonRpcRequest { Id = new RequestId(1), Method = "tools/call" }, parameters)
         { Services = provider };
         var result = await tool.InvokeAsync(context);
         Assert.False(result.IsError, result.StructuredContent?.GetRawText());
         Assert.Equal(1200, bridge.LastResumePrepareRequest!.SurfaceRecoveryExpectedSourceGameTick);
+        Assert.True(bridge.LastResumePrepareRequest.RestoreRenamedLastExitIdentity);
+        Assert.Equal(renamedContentHash, bridge.LastResumePrepareRequest.ExpectedRenamedLastExitContentHash);
+        Assert.Null(bridge.LastResumeCommitRequest);
+    }
+
+    [Theory]
+    [InlineData("valid")] [InlineData("old_plugin_echo")] [InlineData("wrong_echo_hash")]
+    [InlineData("missing_hash")] [InlineData("hash_without_opt_in")] [InlineData("loss")]
+    public async Task RenamedLastExitRequiresExplicitSourceAndMatchingPluginDisclosure(string fault)
+    {
+        var deadline = DateTimeOffset.UtcNow.AddMinutes(55);
+        var sourceHash = CanonicalStateHash.Combine("synthetic-renamed-source");
+        var p = new PreparedOwnedWorldResumePlan
+        {
+            Prepared = true, PlanToken = "synthetic-renamed-plan", SurfaceRecoveryTarget = new() { X = 200, Y = 1, Z = 2 },
+            SurfaceRecoveryExpectedSourceGameTick = 1200, SurfaceRecoveryMaximumWorkGameTicks = 600, SurfaceRecoveryMaximumWallSeconds = 20,
+            RecoveryMode = OwnedWorldResumeModes.AuthorizeRemotePrimaryRecovery, RecoveryEvidenceVersion = VoyagerRemotePrimaryRecoveryPolicy.EvidenceVersion,
+            RemotePrimaryRecoveryAuthorizationUsed = true, SuccessfulOutboundSurfaceSourceUsed = true,
+            RenamedLastExitIdentityRestorationPlanned = fault != "old_plugin_echo",
+            ExpectedRenamedLastExitContentHash = fault == "wrong_echo_hash" ? CanonicalStateHash.Combine("other-source") : sourceHash,
+            SourceGameVersion = "synthetic-native", TargetGameVersion = "synthetic-native", OriginalJourneyDeadlineUtc = deadline.AddDays(-1),
+            EffectiveRecoveryDeadlineUtc = deadline, RecoveryScope = VoyagerRecoveryWindowProposal.TaskScope,
+            MaximumChargeGameTicks = 3600, MaximumChargeWallSeconds = 120, NativeChargeFeasibilityRequiresFreshCapture = true,
+            CandidateGameTick = 1200, MinimumGameTick = 1200, DiscardedUnstoredProgressGameTicks = 0,
+            ConservedObservedProgressDebitGameTicks = 0, ExactEmbeddedIdentityVerified = true, UserConfirmationRequired = true,
+            ConfirmationDigest = CanonicalStateHash.Combine("synthetic-renamed-digest"),
+        };
+        var bridge = new FakeBridgeClient(SuccessResult()) { ResumePlan = p };
+        var result = await SpherewrightTools.PrepareOwnedWorldResumeAsync(bridge, "synthetic-credential",
+            recoveryMode: OwnedWorldResumeModes.AuthorizeRemotePrimaryRecovery,
+            recoveryDeadlineUtc: deadline, recoveryScope: VoyagerRecoveryWindowProposal.TaskScope,
+            maximumChargeGameTicks: 3600, maximumChargeWallSeconds: 120,
+            surfaceRecoveryTargetX: 200, surfaceRecoveryTargetY: 1, surfaceRecoveryTargetZ: 2,
+            surfaceRecoveryExpectedSourceGameTick: 1200, restoreRenamedLastExitIdentity: fault != "hash_without_opt_in",
+            expectedRenamedLastExitContentHash: fault == "missing_hash" ? "" : sourceHash,
+            acceptUnstoredProgressLoss: fault == "loss");
+        Assert.Equal(fault != "valid", result.IsError);
+        if (fault is "missing_hash" or "hash_without_opt_in" or "loss") Assert.Null(bridge.LastResumePrepareRequest);
+        if (fault != "valid") Assert.DoesNotContain("synthetic-renamed-plan", result.StructuredContent!.Value.GetRawText());
         Assert.Null(bridge.LastResumeCommitRequest);
     }
 

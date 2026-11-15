@@ -42,6 +42,10 @@ public sealed class PrepareOwnedWorldResumeRequest
     public Factory.Vector3Snapshot? SurfaceRecoveryTarget { get; set; }
     /// <summary>Caller-observed exact saved tick for a successful-outbound surface source; not authentication of a former live snapshot.</summary>
     public long? SurfaceRecoveryExpectedSourceGameTick { get; set; }
+    /// <summary>Explicit fixed-LastExit recovery after a managed world was normally saved under another name; no arbitrary save selection.</summary>
+    public bool RestoreRenamedLastExitIdentity { get; set; }
+    /// <summary>Exact complete-file SHA-256 independently observed for that fixed LastExit.</summary>
+    public string ExpectedRenamedLastExitContentHash { get; set; } = string.Empty;
     public string PriorConsumedResumeToken { get; set; } = string.Empty;
     public string PriorSourceFingerprint { get; set; } = string.Empty;
     public string PriorLegacySourceFingerprint { get; set; } = string.Empty;
@@ -69,6 +73,8 @@ public sealed class PreparedOwnedWorldResumePlan
     public bool OpensExactLastExitOnly { get; set; }
     public Factory.Vector3Snapshot? SurfaceRecoveryTarget { get; set; }
     public long? SurfaceRecoveryExpectedSourceGameTick { get; set; }
+    public bool RenamedLastExitIdentityRestorationPlanned { get; set; }
+    public string ExpectedRenamedLastExitContentHash { get; set; } = string.Empty;
     public int SurfaceRecoveryMaximumWorkGameTicks { get; set; }
     public double SurfaceRecoveryMaximumWallSeconds { get; set; }
     public long AdditionalVoyagerGameTicks { get; set; }

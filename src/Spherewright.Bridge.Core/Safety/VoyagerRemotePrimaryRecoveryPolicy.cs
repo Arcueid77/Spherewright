@@ -41,6 +41,11 @@ public static class VoyagerRemotePrimaryRecoveryPolicy
             return true;
         }
         if (!All(("request_primary_mode", r.RecoveryMode == OwnedWorldResumeModes.AuthorizeRemotePrimaryRecovery),
+            ("request_renamed_exit_consistent", r.RestoreRenamedLastExitIdentity
+                ? !r.AcceptUnstoredProgressLoss && r.SurfaceRecoveryTarget is not null && r.SurfaceRecoveryExpectedSourceGameTick.HasValue
+                    && !r.MinimumRecoveryGameTick.HasValue && !r.ExpectedRecoveryGameTick.HasValue
+                    && OwnedWorldRecoveryPolicy.IsCanonicalFingerprint(r.ExpectedRenamedLastExitContentHash)
+                : string.IsNullOrEmpty(r.ExpectedRenamedLastExitContentHash)),
             ("request_additional_tick_minimum", r.AdditionalVoyagerGameTicks >= 0),
             ("request_additional_tick_maximum", r.AdditionalVoyagerGameTicks <= VoyagerRecoveryWindowPolicy.MaximumAdditionalVoyagerGameTicks),
             ("request_prepare_unconfirmed", !r.UserConfirmedInConversation), ("request_new_deadline_observed", r.RecoveryDeadlineUtc.HasValue),
@@ -92,12 +97,18 @@ public static class VoyagerRemotePrimaryRecoveryPolicy
             "primary_accounting_nonnegative", "primary_source_covers_accounted", "primary_source_covers_landing",
             "primary_new_window_observed");
         if (!e.Require("primary_request_valid", ValidateRequest(r, e) is null)) return "remote_primary_request_invalid";
-        var currentFixedExit = f.DefaultLastExit
-            && (!r.AcceptUnstoredProgressLoss ? f.SourceGameTick == knownProgress
+        var renamedFixedExit = r.RestoreRenamedLastExitIdentity && f.VerifiedRenamedLastExit
+            && !r.AcceptUnstoredProgressLoss && r.SurfaceRecoveryExpectedSourceGameTick == f.SourceGameTick
+            && f.SourceGameTick == knownProgress && f.SourceGameTick > f.PrimaryGameTick;
+        if (!e.Require("primary_renamed_exit_proved", !r.RestoreRenamedLastExitIdentity || renamedFixedExit))
+            return "remote_primary_renamed_last_exit_unproved";
+        var currentFixedExit = f.DefaultLastExit && (renamedFixedExit ||
+            (
+            (!r.AcceptUnstoredProgressLoss ? f.SourceGameTick == knownProgress
                 : r.ExpectedRecoveryGameTick == f.SourceGameTick && r.MinimumRecoveryGameTick == knownProgress)
             && (!r.AcceptUnstoredProgressLoss ? f.SourceGameTick == f.TicketMinimumGameTick
                 : f.SourceGameTick <= f.TicketMinimumGameTick)
-            && f.SourceGameTick > f.PrimaryGameTick;
+            && f.SourceGameTick > f.PrimaryGameTick));
         if (!e.Require("primary_source_kind", !f.DefaultLastExit || currentFixedExit)) return "remote_primary_exact_primary_required";
         if (!e.Require("primary_identity_version", f.ExactOwnedIdentityAndVersion)
             || !e.Require("primary_peaceful", f.Peaceful)) return "remote_resume_native_identity_unproved";
@@ -127,6 +138,8 @@ public static class VoyagerRemotePrimaryRecoveryPolicy
 
     public static bool HasMatchingEcho(PrepareOwnedWorldResumeRequest r, PreparedOwnedWorldResumePlan p) =>
         ValidateRequest(r) is null && p.Prepared && p.RecoveryMode == OwnedWorldResumeModes.AuthorizeRemotePrimaryRecovery
+        && p.RenamedLastExitIdentityRestorationPlanned == r.RestoreRenamedLastExitIdentity
+        && p.ExpectedRenamedLastExitContentHash == r.ExpectedRenamedLastExitContentHash
         && p.RecoveryEvidenceVersion == EvidenceVersion && p.RemotePrimaryRecoveryAuthorizationUsed
         && p.CompletedSavedLandingAdmissionUsed == !string.IsNullOrEmpty(p.OriginalFailedFlightActionId)
         && (!p.CompletedSavedLandingAdmissionUsed || Guid.TryParse(p.OriginalFailedFlightActionId, out _)
