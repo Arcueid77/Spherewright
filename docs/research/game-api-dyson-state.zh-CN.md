@@ -34,6 +34,8 @@ Gamma的 `capacityCurrentTick`来自原生日照、预热、透镜及戴森响�
 
 29151的 `UIDEAddSwarmDialogue.OnOkClick` 先通过现有球体的 `QuerySwarmRadius`调整半径，再由两个编辑器角度计算旋转并调用 `DysonSwarm.NewOrbit`。`NewOrbit` 选择 `orbitCursor` 之前首个普通空槽或当前游标，拒绝大于20的ID。原生保留轨道30不是普通目标。适配器读取现有轨道池及准确引用，披露原生调整后的半径与旋转，并通过该业务方法新建一个空轨道。即时读回绑定分配ID、新轨道几何、既有普通/保留轨道、太阳帆和在途数量及玩家背包。这是源码能力；编辑/删除轨道及实际发射/发电不属于该动作，实机验收另计。
 
+方案和MCP分别核验返回的四元数与请求角度一致。Unity按[ZXY顺序应用欧拉旋转](https://docs.unity3d.com/ScriptReference/Quaternion.Euler.html)；当X为零时，预期旋转为Y四元数乘以Z四元数。有限浮点容差内接受表示相同旋转的相反符号四元数。
+
 同一29151程序集定义 `DysonSphereLayer.NewDysonNode(int, Vector3)`、`NewDysonFrame(int, int, int, bool)` 和 `NewDysonShell(int, List<int>)`。普通编辑器画笔在这些业务操作前检查科技纬度、节点间距、框架间隙/交叉及闭合壳面。适配器在主线程保留这些检查，要求当前所选已有层覆盖完整、设计hash新鲜、渲染原型可用及下一分配槽位合法。
 
 原生节点碰撞使用归一化距离平方0.0051122503。框架间隙阈值为0.0027562499，最大归一化弦长为0.518。应力准入比较取整纬度角与 `GameHistoryData.dysonNodeLatitude` 的取整值。框架准确火箭需求取 `DysonFrame.segCount * 10`，每个新节点需30结构点。独立的 `DysonShell.GenerateGeometry()` 按 `vertexCount * cpPerVertex` 计算太阳帆需求，填充几何数组及原生临时映射。

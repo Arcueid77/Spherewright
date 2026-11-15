@@ -5,6 +5,7 @@ using ModelContextProtocol.Server;
 using Spherewright.Bridge.Core.Celestial;
 using Spherewright.Contracts.Actions;
 using Spherewright.Contracts.Celestial;
+using Spherewright.Contracts.Factory;
 using Spherewright.Mcp.Tools;
 using Spherewright.Mcp.BridgeClient;
 using Xunit;
@@ -85,9 +86,13 @@ public sealed partial class SpherewrightToolsTests
 
     private static DysonSwarmOrbitPlan OrbitPlan(DysonSwarmOrbitRequest spec)
     {
+        var yaw = -spec.LongitudeDegrees * Math.PI / 360d; var roll = -spec.InclinationDegrees * Math.PI / 360d;
+        var sy = Math.Sin(yaw); var cy = Math.Cos(yaw); var sz = Math.Sin(roll); var cz = Math.Cos(roll);
+        var q = new QuaternionSnapshot { X = (float)(sy * sz), Y = (float)(sy * cz), Z = (float)(cy * sz), W = (float)(cy * cz) };
+        var up = new Vector3Snapshot { X = 2 * (q.X * q.Y - q.W * q.Z), Y = 1 - 2 * (q.X * q.X + q.Z * q.Z), Z = 2 * (q.Y * q.Z + q.W * q.X) };
         var plan = new DysonSwarmOrbitPlan { EvidenceVersion = 1, SessionId = "synthetic-session", PlanetId = 7, StarId = 2,
             Orbit = spec, BeforeStateHash = "sha256:" + new string('a', 64), PlannedOrbitId = 2,
-            NativeRadius = 8000, NativeRotation = new() { W = 1 }, NativeUp = new() { Y = 1 }, ExistingActiveSails = 2,
+            NativeRadius = 8000, NativeRotation = q, NativeUp = up, ExistingActiveSails = 2,
             ExistingInFlightSails = 1, NativeChecksComplete = true };
         plan.BindingHash = DysonSwarmOrbitPolicy.BindingHash(plan);
         return plan;

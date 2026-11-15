@@ -36,6 +36,31 @@ public sealed class DysonSwarmOrbitPolicyTests
     }
 
     [Theory]
+    [InlineData(0f, 0f)] [InlineData(30f, 40f)] [InlineData(90f, 270f)] [InlineData(180f, 359.9f)]
+    public void NativeAngleEchoMustMatchTheRequestedRotationIncludingEquivalentQuaternionSign(float inclination, float longitude)
+    {
+        var request = new DysonSwarmOrbitRequest { Radius = 8000, InclinationDegrees = inclination, LongitudeDegrees = longitude };
+        var plan = Plan(request); var q = plan.NativeRotation;
+        Assert.True(DysonSwarmOrbitPolicy.RotationMatchesRequest(request, q));
+        Assert.True(DysonSwarmOrbitPolicy.RotationMatchesUp(q, plan.NativeUp));
+        var negated = new QuaternionSnapshot { X = -q.X, Y = -q.Y, Z = -q.Z, W = -q.W };
+        Assert.True(DysonSwarmOrbitPolicy.RotationMatchesRequest(request, negated));
+        if (inclination != 0 || longitude != 0)
+            Assert.False(DysonSwarmOrbitPolicy.RotationMatchesRequest(request, new QuaternionSnapshot { W = 1 }));
+    }
+
+    [Fact]
+    public void PreciseFloatPlanSurvivesTheBridgeJsonRoundTrip()
+    {
+        var request = new DysonSwarmOrbitRequest { Radius = MathF.BitIncrement(8000f),
+            InclinationDegrees = 37.12501f, LongitudeDegrees = 217.37502f };
+        var plan = Plan(request); var json = Newtonsoft.Json.JsonConvert.SerializeObject(plan);
+        var received = Newtonsoft.Json.JsonConvert.DeserializeObject<DysonSwarmOrbitPlan>(json);
+        Assert.NotNull(received); Assert.Equal(plan.BindingHash, DysonSwarmOrbitPolicy.BindingHash(received!));
+        Assert.True(DysonSwarmOrbitPolicy.RotationMatchesRequest(received!.Orbit, received.NativeRotation));
+    }
+
+    [Theory]
     [InlineData("binding")] [InlineData("incomplete")] [InlineData("cursor")] [InlineData("capacity")]
     [InlineData("radius")] [InlineData("invalid_rotation")] [InlineData("duplicate")] [InlineData("future_slot")]
     [InlineData("reserved")] [InlineData("negative_sails")] [InlineData("more_orbit_sails_than_total")] [InlineData("wrong_up")]
@@ -82,7 +107,8 @@ public sealed class DysonSwarmOrbitPolicyTests
 
     [Theory]
     [InlineData("valid")] [InlineData("preview")] [InlineData("wrong_request")] [InlineData("wrong_planet")]
-    [InlineData("wrong_hash")] [InlineData("wrong_rotation")] [InlineData("wrong_up")] [InlineData("preview_token")] [InlineData("missing_token")]
+    [InlineData("wrong_hash")] [InlineData("wrong_rotation")] [InlineData("wrong_up")] [InlineData("wrong_orientation")]
+    [InlineData("preview_token")] [InlineData("missing_token")]
     public void PreparedEchoBindsExactRequestAndPreviewCannotCommit(string fault)
     {
         var request = Request(); request.DysonSwarmOrbit!.PreviewOnly = fault is "preview" or "preview_token";
@@ -97,6 +123,8 @@ public sealed class DysonSwarmOrbitPolicyTests
             case "wrong_hash": prepared.ExpectedStateHash = "wrong"; break;
             case "wrong_rotation": plan.NativeRotation.W = 0; break;
             case "wrong_up": plan.NativeUp = new() { X = 1 }; plan.BindingHash = DysonSwarmOrbitPolicy.BindingHash(plan); prepared.ExpectedStateHash = plan.BindingHash; break;
+            case "wrong_orientation": plan.NativeRotation = new() { W = 1 }; plan.NativeUp = new() { Y = 1 };
+                plan.BindingHash = DysonSwarmOrbitPolicy.BindingHash(plan); prepared.ExpectedStateHash = plan.BindingHash; break;
             case "preview_token": prepared.PlanToken = "token"; break;
             case "missing_token": prepared.PlanToken = ""; break;
         }
@@ -113,6 +141,7 @@ public sealed class DysonSwarmOrbitPolicyTests
         var after = State(); var added = Orbit(2); after.Orbits.Add(added);
         Assert.True(DysonSwarmOrbitPolicy.Complete("session", 7, 2, after));
         var plan = Plan(Request().DysonSwarmOrbit!); plan.PlannedOrbitId = 2; plan.NativeRadius = added.Radius;
+        plan.NativeRotation = added.Rotation; plan.NativeUp = added.Up!;
         switch (fault)
         {
             case "wrong_id": added.OrbitId = 4; break;
@@ -147,9 +176,13 @@ public sealed class DysonSwarmOrbitPolicyTests
     };
     private static DysonSwarmOrbitPlan Plan(DysonSwarmOrbitRequest request)
     {
+        var yaw = -request.LongitudeDegrees * Math.PI / 360d; var roll = -request.InclinationDegrees * Math.PI / 360d;
+        var sy = Math.Sin(yaw); var cy = Math.Cos(yaw); var sz = Math.Sin(roll); var cz = Math.Cos(roll);
+        var q = new QuaternionSnapshot { X = (float)(sy * sz), Y = (float)(sy * cz), Z = (float)(cy * sz), W = (float)(cy * cz) };
+        var up = new Vector3Snapshot { X = 2 * (q.X * q.Y - q.W * q.Z), Y = 1 - 2 * (q.X * q.X + q.Z * q.Z), Z = 2 * (q.Y * q.Z + q.W * q.X) };
         var plan = new DysonSwarmOrbitPlan { EvidenceVersion = 1, SessionId = "session", PlanetId = 7, StarId = 2,
             Orbit = request, BeforeStateHash = "sha256:" + new string('a', 64), PlannedOrbitId = 2, NativeRadius = 8000,
-            NativeRotation = new() { W = 1 }, NativeUp = new() { Y = 1 }, ExistingActiveSails = 4, ExistingInFlightSails = 2, NativeChecksComplete = true };
+            NativeRotation = q, NativeUp = up, ExistingActiveSails = 4, ExistingInFlightSails = 2, NativeChecksComplete = true };
         plan.BindingHash = DysonSwarmOrbitPolicy.BindingHash(plan); return plan;
     }
 }

@@ -51,14 +51,15 @@ internal sealed partial class NormalGameActionCoordinator
         var rotation = Quaternion.Euler(0f, -spec.LongitudeDegrees, -spec.InclinationDegrees);
         var up = rotation * Vector3.up;
         var q = new QuaternionSnapshot { X = rotation.x, Y = rotation.y, Z = rotation.z, W = rotation.w };
+        var upSnapshot = new Vector3Snapshot { X = up.x, Y = up.y, Z = up.z };
         if (!IsFinite(radius) || radius < orbits.MinimumRadius || radius > orbits.MaximumRadius
-            || !DysonSwarmOrbitPolicy.ValidRotation(q))
+            || !DysonSwarmOrbitPolicy.RotationMatchesRequest(spec, q) || !DysonSwarmOrbitPolicy.RotationMatchesUp(q, upSnapshot))
             return DysonSwarmOrbitFailure("dyson_swarm_orbit_native_radius_or_rotation_unproved");
         var plan = new DysonSwarmOrbitPlan
         {
             EvidenceVersion = 1, SessionId = sessionId, PlanetId = request.PlanetId, StarId = state.StarId,
             Orbit = spec, BeforeStateHash = orbits.StateHash, PlannedOrbitId = next,
-            NativeRadius = radius, NativeRotation = q, NativeUp = new Vector3Snapshot { X = up.x, Y = up.y, Z = up.z }, ExistingActiveSails = orbits.ActiveSailCount,
+            NativeRadius = radius, NativeRotation = q, NativeUp = upSnapshot, ExistingActiveSails = orbits.ActiveSailCount,
             ExistingInFlightSails = orbits.InFlightSailCount, NativeChecksComplete = true,
         };
         plan.BindingHash = DysonSwarmOrbitPolicy.BindingHash(plan);

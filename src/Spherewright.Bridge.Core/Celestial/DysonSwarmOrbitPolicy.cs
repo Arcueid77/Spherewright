@@ -83,7 +83,8 @@ public static class DysonSwarmOrbitPolicy
             || plan.Orbit is null || plan.NativeRotation is null || plan.EvidenceVersion != 1 || plan.SessionId != sessionId
             || plan.PlanetId != request.PlanetId || plan.StarId <= 0 || plan.PlannedOrbitId < 1
             || plan.PlannedOrbitId > MaximumOrdinaryOrbitId || !Finite(plan.NativeRadius) || plan.NativeRadius <= 0
-            || !RotationMatchesUp(plan.NativeRotation, plan.NativeUp) || plan.ExistingActiveSails < 0 || plan.ExistingInFlightSails < 0
+            || !RotationMatchesRequest(plan.Orbit, plan.NativeRotation) || !RotationMatchesUp(plan.NativeRotation, plan.NativeUp)
+            || plan.ExistingActiveSails < 0 || plan.ExistingInFlightSails < 0
             || !plan.NativeChecksComplete || plan.BeforeStateHash != request.ExpectedFactoryStateHash
             || plan.BindingHash != BindingHash(plan) || plan.BindingHash != BindingHash(plan, request.DysonSwarmOrbit)
             || prepared.ExpectedStateHash != plan.BindingHash || prepared.ActionKind != NormalActionKinds.ConfigureBuilding
@@ -141,6 +142,22 @@ public static class DysonSwarmOrbitPolicy
         return Math.Abs(up!.X - 2d * (x * y - w * z)) <= .0001d
             && Math.Abs(up.Y - (1d - 2d * (x * x + z * z))) <= .0001d
             && Math.Abs(up.Z - 2d * (y * z + w * x)) <= .0001d;
+    }
+    // Native editor uses Quaternion.Euler(0, -longitude, -inclination).
+    // Unity applies Z then X then Y; X is zero, so this is qY * qZ.
+    public static bool RotationMatchesRequest(DysonSwarmOrbitRequest? request, QuaternionSnapshot? q)
+    {
+        if (request is null || !Finite(request.InclinationDegrees) || !Finite(request.LongitudeDegrees)
+            || request.InclinationDegrees < 0 || request.InclinationDegrees > 180
+            || request.LongitudeDegrees < 0 || request.LongitudeDegrees >= 360 || !ValidRotation(q)) return false;
+        var yaw = -request.LongitudeDegrees * (Math.PI / 360d);
+        var roll = -request.InclinationDegrees * (Math.PI / 360d);
+        var sy = Math.Sin(yaw); var cy = Math.Cos(yaw); var sz = Math.Sin(roll); var cz = Math.Cos(roll);
+        var expected = new[] { sy * sz, sy * cz, cy * sz, cy * cz };
+        var actual = new[] { (double)q!.X, q.Y, q.Z, q.W };
+        // q and -q represent the same rotation. Account for Native float trig.
+        return expected.Zip(actual, (a, b) => Math.Abs(a - b)).Max() <= .0001d
+            || expected.Zip(actual, (a, b) => Math.Abs(a + b)).Max() <= .0001d;
     }
     private static bool ValidOrbit(SwarmOrbitSnapshot o) => o.SailCount >= 0 && Finite(o.Radius) && o.Radius > 0
         && RotationMatchesUp(o.Rotation, o.Up);
