@@ -91,9 +91,12 @@ internal sealed partial class OwnedWorldResumeCoordinator
         payload!.RemoteEvidence?.Dispose();
         payload.RemoteJournalLease?.Dispose();
         payload.RemoteCredentialLease?.Dispose();
-        if (payload.Request.SurfaceRecoveryTarget is not null && payload.RemoteEvidence?.CompletedSavedLandingAdmissionUsed != true)
+        if (payload.Request.SurfaceRecoveryTarget is not null
+            && !VoyagerSurfaceRecoveryPolicy.HasExactSavedSource(payload.RemoteEvidence?.RemotePrimaryRecovery == true,
+                payload.RemoteEvidence?.CompletedSavedLandingAdmissionUsed == true,
+                payload.RemoteEvidence?.SuccessfulOutboundSurfaceSourceUsed == true))
             return GameCallResult<PreparedOwnedWorldResumePlan>.Failed(BridgeError.Create(BridgeErrorCodes.InvalidRequest,
-                "Surface recovery requires a separately completed saved landing admission for this exact source.", false,
+                "Surface recovery requires a completed saved landing admission or a no-loss saved successful outbound source.", false,
                 "Retain the original action and use only a supported fresh owned-world recovery plan."));
         PreparedPlan<OwnedWorldResumePlanPayload> plan;
         try
@@ -155,6 +158,7 @@ internal sealed partial class OwnedWorldResumeCoordinator
             MaximumChargeWallSeconds = payload.RemoteEvidence?.RecoveryProposal?.MaximumChargeWallSeconds ?? payload.Request.MaximumChargeWallSeconds,
             AdditionalVoyagerGameTicks = payload.RemoteEvidence?.RecoveryProposal?.AdditionalVoyagerGameTicks ?? 0,
             SurfaceRecoveryTarget = VoyagerSurfaceRecoveryPolicy.CopyTarget(payload.Request.SurfaceRecoveryTarget),
+            SurfaceRecoveryExpectedSourceGameTick = payload.Request.SurfaceRecoveryExpectedSourceGameTick,
             SurfaceRecoveryMaximumWorkGameTicks = payload.Request.SurfaceRecoveryTarget is null ? 0 : VoyagerSurfaceRecoveryPolicy.MaximumWorkGameTicks,
             SurfaceRecoveryMaximumWallSeconds = payload.Request.SurfaceRecoveryTarget is null ? 0d : VoyagerSurfaceRecoveryPolicy.MaximumWallSeconds,
             OriginalJourneyMaximumGameTicks = payload.RemoteEvidence?.Journey.MaximumGameTicks,
@@ -172,6 +176,7 @@ internal sealed partial class OwnedWorldResumeCoordinator
             RemotePrimaryRecoveryAuthorizationUsed = payload.RemotePrimaryRecovery,
             FailedLandingRecoveryAuthorizationUsed = payload.FailedLandingRecovery,
             CompletedSavedLandingAdmissionUsed = payload.RemoteEvidence?.CompletedSavedLandingAdmissionUsed == true,
+            SuccessfulOutboundSurfaceSourceUsed = payload.RemoteEvidence?.SuccessfulOutboundSurfaceSourceUsed == true,
             SavedLandingAccountingAnchorGameTick = payload.RemoteEvidence?.FailedLandingAccountingAnchorGameTick,
             OriginalFailedFlightActionId = payload.FailedLandingRecovery || payload.RemoteEvidence?.CompletedSavedLandingAdmissionUsed == true
                 ? payload.RemoteEvidence!.Journey.ActiveActionId : string.Empty,
@@ -204,6 +209,8 @@ internal sealed partial class OwnedWorldResumeCoordinator
             TargetGameVersion = _tickets.CurrentGameVersion,
             ConfirmationPrompt = (payload.Request.SurfaceRecoveryTarget is { } surfaceTarget
                 ? $"This NEW resume task may issue one normal Native Move toward ({surfaceTarget.X}, {surfaceTarget.Y}, {surfaceTarget.Z}), at most600 work ticks/20 wall seconds inside the original budget, after fresh Native landing and cost proof. It does not replay or change any old unknown Move. General work and a covering Save still require strict grounded Walk and zero physical tails. " : string.Empty)
+                + (payload.RemoteEvidence?.SuccessfulOutboundSurfaceSourceUsed == true
+                ? $"The separately bound source is a no-loss saved remote world after a proved successful outbound, not a completed failed-landing admission. Its Native file tick must equal the caller-observed boundary {payload.Request.SurfaceRecoveryExpectedSourceGameTick}; the caller's earlier live observation is not authenticated by this file check. The saved source alone proves neither dry ground nor the prior unknown Move's outcome. " : string.Empty)
                 + (payload.RemoteEvidence?.SuccessfulFlightWitnessRetiredAtGameTick is { } coveredTick
                 ? $"The original successful-flight checkpoint was retired by primary coverage at tick {coveredTick}. It is a bound historical witness only and will never be loaded. " : string.Empty)
                 + (payload.RemotePrimaryRecovery && payload.Request.AdditionalVoyagerGameTicks > 0
@@ -246,6 +253,8 @@ internal sealed partial class OwnedWorldResumeCoordinator
                 ? "Exact owned source and durable Journal verified; Native load completed and paused at the saved tick. Reads are available; generic automated writes remain blocked. Opening does not change any original task result, Journey, spent amount or deadline, and does not resave the world."
                 : payload.RemotePrimaryRecovery && payload.RemoteEvidence?.CompletedSavedLandingAdmissionUsed == true
                 ? "The exact saved world, Journal and separate healthy landing admission are revalidated under new finite authority. Fresh Native contact/idle control, conserved accounting and a covering normal Save are required; the original outbound failure remains failed."
+                : payload.RemotePrimaryRecovery && payload.RemoteEvidence?.SuccessfulOutboundSurfaceSourceUsed == true
+                ? "The exact no-loss saved remote world, successful outbound and Journal are revalidated under new finite authority. A distinct bounded surface task, fresh Native contact/strict idle, conserved accounting and a covering normal Save are required; no prior Move outcome is claimed or replayed."
                 : payload.RemotePrimaryRecovery
                 ? "Only the exact complete current primary may load after new finite authorization and this disclosure's digest confirmation. Original Journey/Journal/successful-outbound evidence and any matching LastExit are held; old outcomes remain unchanged. Discarded observed progress remains charged against the original finite ticks. Existing Native initialization, first-frame, contact, charge, strict idle and 2P/13P gates remain; healthy takeover, conservative debit persistence, normal primary Save and a matching fresh credential are all required for success. No old action or checkpoint is replayed."
                 : payload.LegacyLocalMoveUnknown
@@ -1146,6 +1155,7 @@ internal sealed partial class OwnedWorldResumeCoordinator
                 MaximumChargeGameTicks = request.MaximumChargeGameTicks, MaximumChargeWallSeconds = request.MaximumChargeWallSeconds,
                 AdditionalVoyagerGameTicks = request.AdditionalVoyagerGameTicks,
                 SurfaceRecoveryTarget = VoyagerSurfaceRecoveryPolicy.CopyTarget(request.SurfaceRecoveryTarget),
+                SurfaceRecoveryExpectedSourceGameTick = request.SurfaceRecoveryExpectedSourceGameTick,
                 PriorConsumedResumeToken = request.PriorConsumedResumeToken, PriorSourceFingerprint = request.PriorSourceFingerprint,
                 PriorLegacySourceFingerprint = request.PriorLegacySourceFingerprint,
                 PriorIntermediateSourceFingerprint = request.PriorIntermediateSourceFingerprint,
@@ -1215,6 +1225,9 @@ internal sealed partial class OwnedWorldResumeCoordinator
                 Fingerprint = CanonicalStateHash.Combine("resume-owned-world-surface-recovery-v1", Fingerprint,
                     surfaceTarget.X, surfaceTarget.Y, surfaceTarget.Z, VoyagerSurfaceRecoveryPolicy.MaximumWorkGameTicks,
                     VoyagerSurfaceRecoveryPolicy.MaximumWallSeconds);
+            if (Request.SurfaceRecoveryExpectedSourceGameTick.HasValue)
+                Fingerprint = CanonicalStateHash.Combine("resume-owned-world-surface-expected-tick-v1", Fingerprint,
+                    Request.SurfaceRecoveryExpectedSourceGameTick);
         }
 
         public OwnedWorldResumeTicket Ticket { get; }

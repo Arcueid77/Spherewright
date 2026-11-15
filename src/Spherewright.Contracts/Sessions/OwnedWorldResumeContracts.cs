@@ -40,6 +40,8 @@ public sealed class PrepareOwnedWorldResumeRequest
     public long AdditionalVoyagerGameTicks { get; set; }
     /// <summary>Opt-in new bounded Native Move during current-world recovery; never an old Move replay.</summary>
     public Factory.Vector3Snapshot? SurfaceRecoveryTarget { get; set; }
+    /// <summary>Caller-observed exact saved tick for a successful-outbound surface source; not authentication of a former live snapshot.</summary>
+    public long? SurfaceRecoveryExpectedSourceGameTick { get; set; }
     public string PriorConsumedResumeToken { get; set; } = string.Empty;
     public string PriorSourceFingerprint { get; set; } = string.Empty;
     public string PriorLegacySourceFingerprint { get; set; } = string.Empty;
@@ -66,6 +68,7 @@ public sealed class PreparedOwnedWorldResumePlan
 {
     public bool OpensExactLastExitOnly { get; set; }
     public Factory.Vector3Snapshot? SurfaceRecoveryTarget { get; set; }
+    public long? SurfaceRecoveryExpectedSourceGameTick { get; set; }
     public int SurfaceRecoveryMaximumWorkGameTicks { get; set; }
     public double SurfaceRecoveryMaximumWallSeconds { get; set; }
     public long AdditionalVoyagerGameTicks { get; set; }
@@ -99,6 +102,8 @@ public sealed class PreparedOwnedWorldResumePlan
     public bool RemotePrimaryRecoveryAuthorizationUsed { get; set; }
     public bool FailedLandingRecoveryAuthorizationUsed { get; set; }
     public bool CompletedSavedLandingAdmissionUsed { get; set; }
+    // Separate source role: an exact saved remote world after a proved successful outbound.
+    public bool SuccessfulOutboundSurfaceSourceUsed { get; set; }
     public long? SavedLandingAccountingAnchorGameTick { get; set; }
     public string OriginalFailedFlightActionId { get; set; } = string.Empty;
     public bool PriorActionTerminalCompletionAttested { get; set; }

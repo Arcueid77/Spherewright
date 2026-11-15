@@ -35,6 +35,8 @@ public sealed class VoyagerSurfaceRecoveryPolicy
     public const double MaximumTargetDistanceMeters = 16d;
     public const double MaximumDisplacementMeters = 24d;
     public const double MaximumArrivalDistanceMeters = 3.5d;
+    public static bool HasExactSavedSource(bool remotePrimary, bool completedSavedLanding, bool successfulOutboundSurface) =>
+        remotePrimary && completedSavedLanding != successfulOutboundSurface;
     public long SourceGameTick { get; }
     public DateTimeOffset StartedUtc { get; }
     public long LastPhysicsTick { get; private set; }
@@ -46,11 +48,13 @@ public sealed class VoyagerSurfaceRecoveryPolicy
     public static string? ValidateRequest(PrepareOwnedWorldResumeRequest r)
     {
         var p = r.SurfaceRecoveryTarget;
-        if (p is null) return null;
+        if (p is null) return r.SurfaceRecoveryExpectedSourceGameTick.HasValue
+            ? "An expected surface-source tick requires an explicit surface target." : null;
         return r.RecoveryMode == OwnedWorldResumeModes.AuthorizeRemotePrimaryRecovery
             && r.AdditionalVoyagerGameTicks >= 0 && r.AdditionalVoyagerGameTicks <= VoyagerRecoveryWindowPolicy.MaximumAdditionalVoyagerGameTicks
             && r.MaximumChargeGameTicks >= MaximumWorkGameTicks
             && Known(r.MaximumChargeWallSeconds) && r.MaximumChargeWallSeconds >= MaximumWallSeconds
+            && (!r.SurfaceRecoveryExpectedSourceGameTick.HasValue || r.SurfaceRecoveryExpectedSourceGameTick >= 0)
             && Finite(p.X) && Finite(p.Y) && Finite(p.Z)
             && (double)p.X * p.X + (double)p.Y * p.Y + (double)p.Z * p.Z >= 1d
             ? null : "Surface recovery requires explicit finite current-world authorization, one finite target and charge caps at least600 ticks/20 seconds; no default fallback or replay.";
@@ -63,10 +67,16 @@ public sealed class VoyagerSurfaceRecoveryPolicy
     {
         if (p is null) return false;
         var a = r.SurfaceRecoveryTarget; var b = p.SurfaceRecoveryTarget;
-        if (a is null) return b is null && p.SurfaceRecoveryMaximumWorkGameTicks == 0 && p.SurfaceRecoveryMaximumWallSeconds == 0d;
+        if (a is null) return b is null && !p.SuccessfulOutboundSurfaceSourceUsed && !p.SurfaceRecoveryExpectedSourceGameTick.HasValue
+            && p.SurfaceRecoveryMaximumWorkGameTicks == 0 && p.SurfaceRecoveryMaximumWallSeconds == 0d;
         return ValidateRequest(r) is null && b is not null && a.X == b.X && a.Y == b.Y && a.Z == b.Z
             && p.RecoveryMode == r.RecoveryMode
-            && p.RemotePrimaryRecoveryAuthorizationUsed && p.CompletedSavedLandingAdmissionUsed
+            && HasExactSavedSource(p.RemotePrimaryRecoveryAuthorizationUsed, p.CompletedSavedLandingAdmissionUsed,
+                p.SuccessfulOutboundSurfaceSourceUsed)
+            && p.SurfaceRecoveryExpectedSourceGameTick == r.SurfaceRecoveryExpectedSourceGameTick
+            && (!r.SurfaceRecoveryExpectedSourceGameTick.HasValue || p.CandidateGameTick == r.SurfaceRecoveryExpectedSourceGameTick)
+            && (!p.SuccessfulOutboundSurfaceSourceUsed || !r.AcceptUnstoredProgressLoss && p.DiscardedUnstoredProgressGameTicks == 0
+                && r.SurfaceRecoveryExpectedSourceGameTick.HasValue)
             && p.SurfaceRecoveryMaximumWorkGameTicks == MaximumWorkGameTicks && p.SurfaceRecoveryMaximumWallSeconds == MaximumWallSeconds
             && p.AdditionalVoyagerGameTicks == r.AdditionalVoyagerGameTicks && p.UserConfirmationRequired && !string.IsNullOrEmpty(p.ConfirmationDigest);
     }

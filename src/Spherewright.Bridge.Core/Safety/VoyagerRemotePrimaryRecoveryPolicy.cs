@@ -131,6 +131,12 @@ public static class VoyagerRemotePrimaryRecoveryPolicy
         && p.CompletedSavedLandingAdmissionUsed == !string.IsNullOrEmpty(p.OriginalFailedFlightActionId)
         && (!p.CompletedSavedLandingAdmissionUsed || Guid.TryParse(p.OriginalFailedFlightActionId, out _)
             && p.SuccessfulFlightWitnessRetiredAtGameTick is null)
+        && (r.SurfaceRecoveryTarget is null ? !p.SuccessfulOutboundSurfaceSourceUsed
+            : p.CompletedSavedLandingAdmissionUsed != p.SuccessfulOutboundSurfaceSourceUsed)
+        && (!p.SuccessfulOutboundSurfaceSourceUsed || !r.AcceptUnstoredProgressLoss && p.DiscardedUnstoredProgressGameTicks == 0
+            && r.SurfaceRecoveryExpectedSourceGameTick.HasValue
+            && p.SurfaceRecoveryExpectedSourceGameTick == r.SurfaceRecoveryExpectedSourceGameTick
+            && p.CandidateGameTick == r.SurfaceRecoveryExpectedSourceGameTick)
         && !p.OpensSavedWorldOnly && !p.PreviousAutomationRemainsStopped && !p.CompletedRemoteLastExitContinuationUsed
         && !p.FailedRemoteLastExitReauthorizationUsed && !p.PriorActionTerminalCompletionAttested
         && !p.PriorActionTerminalFailureAttested && !p.PriorFailedResumeProvenanceUsed

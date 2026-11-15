@@ -30,6 +30,8 @@
 
 显式 `prepare_resume_owned_game(recoveryMode=authorize_remote_primary_recovery)` 接受用户新授予的精确远端主档有限恢复窗口，不依赖旧自动操作凭据继续有效。证据版本2回显 `remotePrimaryRecoveryAuthorizationUsed` 及准确新期限/范围/充能上限、候选、本次舍弃 tick 数和 `conservedObservedProgressDebitGameTicks`。受保护的仅读档凭据将此前观察时间保留到正常退出后，不改变物理存档 minimum，也不授执行许可；历史观察未知则拒绝自动恢复，健康普通 Save 后不重复扣费。仍须独立 digest 确认、原 Journey/Journal/成功去程证明、持久消费及完整 Native 健康接管。舍弃进度不返还旅程时间，不改变普通 `open_saved_primary` 或宣称旧动作结果。见[手册](agent-playbook.zh-CN.md#远端主档的新有限恢复授权)。
 
+指定可选地表目标时，具备原生启动及成功出航证明、无进度损失的远端保存是独立于已完成保存落地准入的来源。该来源要求`surfaceRecoveryExpectedSourceGameTick`与准确候选文件tick相等，并回显`successfulOutboundSurfaceSourceUsed=true`；两种来源不能同时声明。预期tick来自调用方观察，文件检查不能原生认证此前现场。准备与提交将其绑定到digest，保留原unknown结果，仍需既有Native151/501地表、能源、储备及接地闲置门。它不保存现场，也不授权回退。
+
 公共 MCP 的 `prepare_resume_owned_game` 参数现默认 `open_saved_primary`。显式使用旧 `default` 模式的既有 wire 请求保留原行为；普通 MCP 读档请求不会被推断为继续旧任务。
 
 普通读档使用 `prepare_resume_owned_game(recoveryMode=open_saved_primary)`：即使旧自动操作许可已过期，也核验精确完整的同 Native 主档、受保护归属双副本及原 Journal；原生加载完成后停在准确存档 tick，不续跑旧任务，不自动保存/充能/飞行。Prepare 回显 `opensSavedWorldOnly`、`previousAutomationRemainsStopped`、`newChargingProhibited`、`discardedUnstoredProgressGameTicks`。可选 `acceptUnstoredProgressLoss` 默认 false，须同时绑定准确已知 `minimumRecoveryGameTick` 和获准主档 `expectedRecoveryGameTick`。保留 fresh prepare/digest/确认、持久单次消费、完整文件租约及禁止回退来源；新签发的仅读档凭据可供以后再次打开存档，不能充当自动操作许可。见[手册](agent-playbook.zh-CN.md#打开存档并保持旧自动任务停止)。

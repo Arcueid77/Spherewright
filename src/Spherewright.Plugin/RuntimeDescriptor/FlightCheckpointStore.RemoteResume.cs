@@ -189,6 +189,15 @@ internal sealed partial class FlightCheckpointStore
                 rejection = sourceBound
                     ? VoyagerRemotePrimaryRecoveryPolicy.Blocker(remotePrimaryRequest, facts, knownProgress, decision, budgetFloor) ?? string.Empty
                     : "remote_primary_source_or_mode_unproved";
+                if (rejection.Length == 0 && remotePrimaryRequest.SurfaceRecoveryTarget is not null && !savedLandingWitness
+                    && !decision.Require("successful_surface_no_loss_armed_expected_tick",
+                        !remotePrimaryRequest.AcceptUnstoredProgressLoss && facts.CheckpointFlightSucceededWithoutReload && checkpoint.NativeLaunchArmed
+                        && remotePrimaryRequest.SurfaceRecoveryExpectedSourceGameTick.HasValue
+                        && remotePrimaryRequest.SurfaceRecoveryExpectedSourceGameTick == source.Prefix.GameTick))
+                    rejection = "successful_outbound_surface_no_loss_native_witness_required";
+                if (rejection.Length == 0 && remotePrimaryRequest.SurfaceRecoveryExpectedSourceGameTick.HasValue
+                    && !decision.Require("surface_expected_saved_tick", remotePrimaryRequest.SurfaceRecoveryExpectedSourceGameTick == source.Prefix.GameTick))
+                    rejection = "surface_expected_saved_tick_mismatch";
                 if (rejection.Length != 0)
                 {
                     _remotePrimaryRecoveryFailure = decision.Failure(Spherewright.Contracts.Errors.BridgeErrorCodes.StaleState, rejection);
@@ -201,6 +210,19 @@ internal sealed partial class FlightCheckpointStore
                     ticket.GameplayJournalCheckpoint!, recoveryProposal!, budgetFloor,
                     progressLastExit?.Fingerprint ?? string.Empty, validatedJournalHash, remotePrimaryRequest.AcceptUnstoredProgressLoss, leases.ToArray());
                 if (savedLandingWitness) evidence.BindCompletedSavedLandingAdmission();
+                else if (remotePrimaryRequest.SurfaceRecoveryTarget is not null && !remotePrimaryRequest.AcceptUnstoredProgressLoss
+                    && facts.CheckpointFlightSucceededWithoutReload)
+                {
+                    if (!evidence.TryBindSuccessfulOutboundSurfaceSource())
+                    {
+                        decision.Require("successful_surface_exact_source", false);
+                        _remotePrimaryRecoveryFailure = decision.Failure(Spherewright.Contracts.Errors.BridgeErrorCodes.StaleState,
+                            "successful_outbound_surface_exact_source_unproved");
+                        evidence.Dispose(); evidence = null;
+                        rejection = "successful_outbound_surface_exact_source_unproved";
+                        return false;
+                    }
+                }
                 ticketLease = null; journeyLease = null; checkpointLease = null;
                 return true;
             }
@@ -290,7 +312,7 @@ internal sealed partial class FlightCheckpointStore
     // It does not erase the original sealed successful outbound. Only that
     // bound history may witness a LastExit >= current primary continuation;
     // TryGetActiveTicket and checkpoint loading continue rejecting retirement.
-    private static bool SuccessfulRemoteFlightWitness(FlightCheckpointTicket checkpoint, long primaryTick)
+    internal static bool SuccessfulRemoteFlightWitness(FlightCheckpointTicket checkpoint, long primaryTick)
     {
         if (!checkpoint.SuccessfulFlightAtGameTick.HasValue
             || checkpoint.SuccessfulFlightAtGameTick < checkpoint.SavedGameTick
@@ -401,11 +423,35 @@ internal sealed class VoyagerRemoteResumeEvidence : IDisposable
     internal VoyagerFailedLandingSource? FailedLandingSource { get; private set; }
     internal bool FailedLandingRecovery => FailedLandingSource is not null;
     internal bool CompletedSavedLandingAdmissionUsed { get; private set; }
+    internal bool SuccessfulOutboundSurfaceSourceUsed { get; private set; }
     internal void BindCompletedSavedLandingAdmission()
     {
         if (!RemotePrimaryRecovery || IsDisposed) throw new InvalidOperationException("New remote-primary admission authority is required.");
         CompletedSavedLandingAdmissionUsed = true;
         Fingerprint = CanonicalStateHash.Combine("remote-primary-completed-saved-landing-v1", Fingerprint);
+    }
+    internal bool TryBindSuccessfulOutboundSurfaceSource()
+    {
+        var journey = PluginJson.Deserialize<VoyagerJourneyRecord>(JourneyJson);
+        var checkpoint = PluginJson.Deserialize<FlightCheckpointTicket>(CheckpointJson);
+        if (!RemotePrimaryRecovery || IsDisposed || CompletedSavedLandingAdmissionUsed || SuccessfulOutboundSurfaceSourceUsed
+            || RecoveryProposal?.SurfaceRecoveryTarget is null || AcceptedProgressLossGameTicks != 0
+            || !KnownPrimaryProgressTick.HasValue || KnownPrimaryProgressTick > SourceGameTick || SourceGameTick < PrimaryGameTick
+            || journey is null
+            || journey.Phase != "remote_landed" || journey.ReturnLeg || journey.ReturnOnlyScopeActive || journey.SpentGameTicksIsConservative
+            || checkpoint is null || !checkpoint.NativeLaunchArmed
+            || !FlightCheckpointStore.SuccessfulRemoteFlightWitness(checkpoint, PrimaryGameTick)
+            || checkpoint.OwnedSaveName != journey.OwnedSaveName || checkpoint.GameVersion != journey.GameVersion
+            || checkpoint.OriginPlanetId != journey.HomePlanetId || checkpoint.OriginStarId != journey.HomeStarId
+            || checkpoint.DestinationPlanetId != journey.RemotePlanetId || checkpoint.DestinationStarId != journey.DestinationStarId
+            || checkpoint.VoyagerJourneyId != journey.JourneyId || checkpoint.CheckpointId != journey.ActiveCheckpointId
+            || checkpoint.LastAttemptActionId != journey.ActiveActionId || journey.LastAccountedFlightActionId != journey.ActiveActionId
+            || !journey.LastLandedGameTick.HasValue || journey.LastLandedGameTick != checkpoint.SuccessfulFlightAtGameTick
+            || journey.LastAccountedGameTick < journey.LastLandedGameTick || SourceGameTick < journey.LastAccountedGameTick)
+            return false;
+        SuccessfulOutboundSurfaceSourceUsed = true;
+        Fingerprint = CanonicalStateHash.Combine("remote-primary-successful-outbound-surface-v1", Fingerprint);
+        return true;
     }
     internal long? FailedLandingAccountingAnchorGameTick => FailedLandingSource?.SavedAccountingAnchorGameTick;
     internal static VoyagerRemoteResumeEvidence CreateFailedLandingRecovery(VoyagerFailedLandingSource source)

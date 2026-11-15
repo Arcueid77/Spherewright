@@ -48,8 +48,10 @@ internal sealed partial class NormalGameActionCoordinator
         completed = false;
         if (_surfaceRecovery is not { } s || !ReferenceEquals(s.Adoption, a))
         {
-            if (!loadBoundary || !_sessions.ExactRemoteResumeLoadPreflight(a) || !a.Evidence.RemotePrimaryRecovery
-                || !a.Evidence.CompletedSavedLandingAdmissionUsed || a.Authorization?.Proposal.SurfaceRecoveryTarget is not { } proposed)
+            if (!loadBoundary || !_sessions.ExactRemoteResumeLoadPreflight(a)
+                || !VoyagerSurfaceRecoveryPolicy.HasExactSavedSource(a.Evidence.RemotePrimaryRecovery,
+                    a.Evidence.CompletedSavedLandingAdmissionUsed, a.Evidence.SuccessfulOutboundSurfaceSourceUsed)
+                || a.Authorization?.Proposal.SurfaceRecoveryTarget is not { } proposed)
                 return SurfaceFailure(a, "surface_recovery_exact_new_source_unproved");
             if (_surfaceRecovery is { Policy.Completed: false }) return SurfaceFailure(a, "surface_recovery_previous_task_unsettled");
             var p = a.Player; var target = ToVector(proposed); var scene = CaptureNativeLocalWalkScene();
@@ -63,7 +65,8 @@ internal sealed partial class NormalGameActionCoordinator
                 || p.controller.rigid.isKinematic || !p.controller.rigid.detectCollisions
                 || p.controller.actionWalk.rtsVelocity.sqrMagnitude != 0f || p.controller.actionDrift.rtsVelocity.sqrMagnitude != 0f
                 || !TryObserveOwnedConstructionDrones(p.factory, p.mecha.constructionModule, out var idle, out _) || !idle
-                || RemoteResumeChargeEnvironmentBlocker(p, j.JourneyId, a.CurrentDecisionEvidence, provedSavedLandingAdmission: true) is not null
+                || RemoteResumeChargeEnvironmentBlocker(p, j.JourneyId, a.CurrentDecisionEvidence,
+                    provedSavedLandingAdmission: a.Evidence.CompletedSavedLandingAdmissionUsed) is not null
                 || !IsFinite(target.x) || !IsFinite(target.y) || !IsFinite(target.z)
                 || Math.Abs(target.magnitude - p.position.magnitude) > 4f)
                 return SurfaceFailure(a, "surface_recovery_source_native_premises_unproved");
@@ -111,7 +114,7 @@ internal sealed partial class NormalGameActionCoordinator
         // per-tick14P and original finite controller; it is never idle.
         var modeProved = modeBlocker is null || modeBlocker == "remote_idle_ground_contact_unproved";
         var environmentBlocker = RemoteResumeChargeEnvironmentBlocker(player, j.JourneyId, a.CurrentDecisionEvidence,
-            provedSavedLandingAdmission: true, allowBoundedSurfaceRts: true);
+            provedSavedLandingAdmission: a.Evidence.CompletedSavedLandingAdmissionUsed, allowBoundedSurfaceRts: true);
         var native = order && player.orders.orderCount == 0 && BuildUiIsIdle(player) && VoyagerMechaWorkIdle(player)
             && modeProved && environmentBlocker is null
             && TryObserveOwnedConstructionDrones(player.factory, player.mecha.constructionModule, out var dronesIdle, out _) && dronesIdle;

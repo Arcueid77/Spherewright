@@ -1724,7 +1724,8 @@ public static partial class SpherewrightTools
         [Description("Only authorize_remote_primary_recovery: separately owner-approved game ticks above the immutable original journey cap, 0..5184000. This amount is not stacked with a prior proposal. Original spent time, return ticks, energy and warpers remain charged/reserved. The prepared original/effective caps and this exact amount must match the conversation grant and confirmationDigest before commit.")] long additionalVoyagerGameTicks = 0,
         [Description("Optional NEW bounded native surface recovery target. Supply all three coordinates only with explicit authorize_remote_primary_recovery and a separately confirmed finite budget; requires exact fresh disclosure and grounded idle before general work. Never replay an unknown target.")] float? surfaceRecoveryTargetX = null,
         [Description("Y coordinate of the same explicit new surface recovery target.")] float? surfaceRecoveryTargetY = null,
-        [Description("Z coordinate of the same explicit new surface recovery target.")] float? surfaceRecoveryTargetZ = null)
+        [Description("Z coordinate of the same explicit new surface recovery target.")] float? surfaceRecoveryTargetZ = null,
+        [Description("For a successful-outbound saved surface source, provide the exact caller-observed saved game tick to bind and recheck. This does not authenticate an earlier live capture or permit progress loss.")] long? surfaceRecoveryExpectedSourceGameTick = null)
     {
         var request = new PrepareOwnedWorldResumeRequest
         {
@@ -1737,6 +1738,7 @@ public static partial class SpherewrightTools
             AdditionalVoyagerGameTicks = additionalVoyagerGameTicks,
             SurfaceRecoveryTarget = surfaceRecoveryTargetX.HasValue || surfaceRecoveryTargetY.HasValue || surfaceRecoveryTargetZ.HasValue
                 ? new Vector3Snapshot { X = surfaceRecoveryTargetX ?? float.NaN, Y = surfaceRecoveryTargetY ?? float.NaN, Z = surfaceRecoveryTargetZ ?? float.NaN } : null,
+            SurfaceRecoveryExpectedSourceGameTick = surfaceRecoveryExpectedSourceGameTick,
             PriorConsumedResumeToken = priorConsumedResumeToken, PriorSourceFingerprint = priorSourceFingerprint,
             PriorActionKnownTerminalFailed = priorActionKnownTerminalFailed,
             PriorActionKnownTerminalCompleted = priorActionKnownTerminalCompleted,
