@@ -97,6 +97,7 @@ public sealed class VoyagerSameSessionSurfaceSourceTests
         }
         Assert.False(VoyagerSameSessionSurfaceSourcePolicy.TryBind(first, second, out var binding, out var error));
         Assert.Null(binding); Assert.NotEmpty(error);
+        if (fault == "expired_wall") Assert.Equal("same_session_surface_original_wall_reserve_unproved", error);
     }
 
     [Theory]

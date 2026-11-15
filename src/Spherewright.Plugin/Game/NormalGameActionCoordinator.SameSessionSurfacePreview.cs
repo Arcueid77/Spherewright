@@ -11,13 +11,15 @@ internal sealed partial class NormalGameActionCoordinator
     private sealed class SameSessionSurfacePreview : IDisposable
     {
         public SameSessionSurfacePreview(string actionId, string expectedPlayerStateHash, Vector3 requestedTarget,
-            SameSessionSurfaceCapture capture, VoyagerSameSessionSurfaceObservation observation)
-        { ActionId = actionId; ExpectedPlayerStateHash = expectedPlayerStateHash; RequestedTarget = requestedTarget; Capture = capture; Observation = observation; }
+            SameSessionSurfaceCapture capture, VoyagerSameSessionSurfaceObservation observation, DateTimeOffset firstCaptureUtc)
+        { ActionId = actionId; ExpectedPlayerStateHash = expectedPlayerStateHash; RequestedTarget = requestedTarget; Capture = capture;
+          Observation = observation; ExpiresAtUtc = firstCaptureUtc.AddSeconds(VoyagerSurfaceRecoveryPolicy.MaximumInitialBindingWallSeconds); }
         public string ActionId { get; }
         public string ExpectedPlayerStateHash { get; }
         public Vector3 RequestedTarget { get; }
         public SameSessionSurfaceCapture Capture { get; }
         public VoyagerSameSessionSurfaceObservation Observation { get; }
+        public DateTimeOffset ExpiresAtUtc { get; }
         public bool IsDisposed { get; private set; }
         public bool Matches(string actionId, string expectedPlayerStateHash, Vector3 target) =>
             ActionId == actionId && ExpectedPlayerStateHash == expectedPlayerStateHash && RequestedTarget.Equals(target);
@@ -33,7 +35,7 @@ internal sealed partial class NormalGameActionCoordinator
         UpdateSameSessionSurfacePreviewOnMainThread();
         if (_sameSessionSurfacePreviewReleaseFailure is { } releaseFailure)
         { rejection = releaseFailure; return false; }
-        if (_sameSessionSurfacePreview is { IsDisposed: false } existing && existing.Matches(actionId, expectedPlayerStateHash, target))
+        if (_sameSessionSurfacePreview is { } existing && existing.Matches(actionId, expectedPlayerStateHash, target))
         { preview = existing; return true; }
         StopSameSessionSurfacePreviewOnMainThread();
         if (_sameSessionSurfacePreviewReleaseFailure is { } stopFailure)
@@ -46,7 +48,7 @@ internal sealed partial class NormalGameActionCoordinator
             var observation = new VoyagerSameSessionSurfaceObservation();
             if (observation.Observe(first) != VoyagerSameSessionSurfaceObservationState.AwaitingSecondFrame)
             { rejection = observation.Rejection ?? "same_session_surface_first_frame_unproved"; return false; }
-            preview = _sameSessionSurfacePreview = new SameSessionSurfacePreview(actionId, expectedPlayerStateHash, target, capture, observation);
+            preview = _sameSessionSurfacePreview = new SameSessionSurfacePreview(actionId, expectedPlayerStateHash, target, capture, observation, first.CapturedAtUtc);
             capture = null; // The bounded preview now owns its Native file leases.
             return true;
         }
@@ -108,4 +110,5 @@ internal sealed partial class NormalGameActionCoordinator
         try { preview.Dispose(); }
         catch (Exception ex) { _sameSessionSurfacePreviewReleaseFailure ??= "same_session_surface_preview_release_failed:" + ex.GetType().Name; }
     }
+
 }

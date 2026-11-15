@@ -196,8 +196,16 @@ public static class VoyagerSameSessionSurfaceSourcePolicy
             || f.Funding.OriginalJourney.SavedLandingSourceBindingProved
             || !f.Funding.OriginalJourney.LastLandedGameTick.HasValue
             || a.StartedAtGameTick < f.Funding.OriginalJourney.LastLandedGameTick
-            || f.Funding.PerNativeTickEnergyJoules != energy.PerNativeTickEnergyUpperJoules
-            || !VoyagerSurfaceRecoveryPolicy.OriginalReserveAllows(f.Funding))
+            || f.Funding.PerNativeTickEnergyJoules != energy.PerNativeTickEnergyUpperJoules)
+            return "same_session_surface_original_reserve_unproved";
+        var budget = f.Funding.OriginalJourney;
+        if (budget.ReturnReserveGameTicks is >= 3600 and <= 108000 && budget.NowUtc == f.CapturedAtUtc
+            && Finite(f.Funding.StopWallPatienceSeconds) && f.Funding.StopWallPatienceSeconds >= 1d
+            && f.Funding.StopWallPatienceSeconds <= VoyagerActiveMoveGroundGapPolicy.MaximumStopWallPatienceSeconds
+            && (budget.JourneyDeadlineUtc - f.CapturedAtUtc).TotalSeconds
+                <= budget.ReturnReserveGameTicks / 60d + f.Funding.StopWallPatienceSeconds + 1d / 60d)
+            return "same_session_surface_original_wall_reserve_unproved";
+        if (!VoyagerSurfaceRecoveryPolicy.OriginalReserveAllows(f.Funding))
             return "same_session_surface_original_reserve_unproved";
         return null;
     }

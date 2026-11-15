@@ -414,6 +414,13 @@ internal sealed class NamedPipeBridgeClient : IBridgeClient
             request,
             cancellationToken);
 
+    public Task<BridgeCallResult<SameSessionSurfacePreviewSnapshot>> PreviewSameSessionSurfaceRecoveryAsync(
+        string sessionId,
+        SameSessionSurfacePreviewRequest request,
+        CancellationToken cancellationToken) =>
+        CallAsync<SameSessionSurfacePreviewRequest, SameSessionSurfacePreviewSnapshot>(
+            BridgeMethods.PreviewSameSessionSurfaceRecovery, sessionId, request, cancellationToken);
+
     public Task<BridgeCallResult<NormalActionCommitResult>> CommitQuarantineReconciliationAsync(
         string sessionId,
         CommitNormalActionRequest request,

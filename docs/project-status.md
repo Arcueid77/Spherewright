@@ -2,7 +2,9 @@
 
 [English](project-status.md) · [简体中文](project-status.zh-CN.md)
 
-**0.6 Ascension development,2026-11-11.** The owner requested continuation of 0.6. The first slice adds a bounded local-star Dyson topology/progress observation and Native ray-receiver electricity data, available through 75 MCP tools. The Native assembly remains 29151. Source qualification and the next scenario follow the Ascension plan in Lab. Thunderstore publicly lists 0.5.0 on 2026-11-11. [Native research](research/game-api-dyson-state.md)
+**Same-session surface-source preview development.** A read-only MCP preview checks a paused original unknown Move, two-frame pose, original journey, Journal and Native terrain/energy evidence. It issues no Move or Resume and does not extend the original journey. An executable entry and live acceptance remain outstanding; source, installation and scenario evidence stay separate.
+
+**0.6 Ascension development,2026-11-11.** The owner requested continuation of 0.6. The first slice adds a bounded local-star Dyson topology/progress observation and Native ray-receiver electricity data. The current source exposes 76 MCP tools. The Native assembly remains 29151. Source qualification and the next scenario follow the Ascension plan in Lab. Thunderstore publicly lists 0.5.0 on 2026-11-11. [Native research](research/game-api-dyson-state.md)
 
 The design source slice adds detached multi-object Native cost previews and individually prepared node/frame/shell creation through the existing normal-configuration action family. It preserves complete geometry, stress, prototype, allocator, original-action and conservation checks. Source qualification, installation and positive launch/receiver/save acceptance are recorded at their own boundaries in Lab.
 

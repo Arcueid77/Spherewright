@@ -72,6 +72,7 @@ public static class BridgeMethods
     public const string PrepareReturnToMainMenu = "prepare_return_to_main_menu";
     public const string CommitReturnToMainMenu = "commit_return_to_main_menu";
     public const string PrepareQuarantineReconciliation = "prepare_quarantine_reconciliation";
+    public const string PreviewSameSessionSurfaceRecovery = "preview_same_session_surface_recovery";
     public const string CommitQuarantineReconciliation = "commit_quarantine_reconciliation";
     public const string PrepareResumeOwnedGame = "prepare_resume_owned_game";
     public const string CommitResumeOwnedGame = "commit_resume_owned_game";

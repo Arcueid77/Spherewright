@@ -283,6 +283,11 @@ public interface IBridgeClient
         PrepareQuarantineReconciliationRequest request,
         CancellationToken cancellationToken);
 
+    Task<BridgeCallResult<SameSessionSurfacePreviewSnapshot>> PreviewSameSessionSurfaceRecoveryAsync(
+        string sessionId,
+        SameSessionSurfacePreviewRequest request,
+        CancellationToken cancellationToken);
+
     Task<BridgeCallResult<NormalActionCommitResult>> CommitQuarantineReconciliationAsync(
         string sessionId,
         CommitNormalActionRequest request,

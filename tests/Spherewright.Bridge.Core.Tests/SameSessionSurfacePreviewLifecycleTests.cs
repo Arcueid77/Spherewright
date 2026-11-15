@@ -1,4 +1,6 @@
 using Spherewright.Bridge.Core.Safety;
+using Spherewright.Contracts.Actions;
+using Spherewright.Contracts.Factory;
 using Spherewright.Plugin.Game;
 using Xunit;
 
@@ -94,6 +96,80 @@ public sealed class SameSessionSurfacePreviewLifecycleTests
             Assert.Equal(1, coordinator.SurfacePreviewReleasesForTest);
             Assert.False(coordinator.BeginSurfacePreviewForTest("another-original", out rejection));
             Assert.StartsWith("same_session_surface_preview_release_failed:", rejection);
+        }
+        finally { GameMain.isPaused = oldPaused; GameMain.isRunning = oldRunning; }
+    }
+
+    [Fact]
+    public void NativePreviewEntryOnlyDisclosesAStableSourceAndNeverCreatesACommitToken()
+    {
+        var oldPaused = GameMain.isPaused; var oldRunning = GameMain.isRunning;
+        try
+        {
+            GameMain.isPaused = true; GameMain.isRunning = true;
+            var refs = new VoyagerSameSessionSurfaceSourceTests.References { DeadlineUtc = DateTimeOffset.UtcNow.AddHours(2) }; var frame = 10;
+            var coordinator = new NormalGameActionCoordinator();
+            coordinator.ConfigureSurfacePreviewForTest(() => VoyagerSameSessionSurfaceSourceTests.Capture(refs, frame, DateTimeOffset.UtcNow));
+            var sample = VoyagerSameSessionSurfaceSourceTests.Capture(refs, frame, DateTimeOffset.UtcNow);
+            var request = new SameSessionSurfacePreviewRequest { PlanetId = 7, OriginalActionId = refs.ActionId, ExpectedRevision = 4,
+                ExpectedPlayerStateHash = sample.PlayerState!.StateHash, Target = new Vector3Snapshot { X = 200, Y = 10 } };
+            var first = coordinator.PreviewSameSessionSurfaceRecoveryOnMainThread("synthetic-session", request);
+            Assert.True(first.Success); Assert.Equal("awaiting_second_frame", first.Value!.State); Assert.Null(first.Value.SourceFingerprint);
+            Assert.True(first.Value.ReadOnly); Assert.False(first.Value.Executable); Assert.False(first.Value.CommitAllowedNow);
+            Assert.False(first.Value.NativeResumePerformed); Assert.False(first.Value.OriginalOutcomeChanged);
+            Assert.Null(typeof(SameSessionSurfacePreviewSnapshot).GetProperty("PlanToken"));
+            frame++; coordinator.AdvanceSurfacePreviewForTest();
+            var second = coordinator.PreviewSameSessionSurfaceRecoveryOnMainThread("synthetic-session", request);
+            Assert.True(second.Success); Assert.Equal("source_bound", second.Value!.State);
+            Assert.True(OwnedWorldRecoveryPolicy.IsCanonicalFingerprint(second.Value.SourceFingerprint));
+            Assert.Equal(refs.ActionId, second.Value.OriginalActionId); Assert.Equal("synthetic-session", second.Value.SessionId);
+            Assert.Equal(7, second.Value.PlanetId); Assert.Equal(4, second.Value.Revision);
+            Assert.Equal(request.ExpectedPlayerStateHash, second.Value.PlayerStateHash); Assert.False(second.Value.CommitAllowedNow);
+            coordinator.StopSurfacePreviewForTest(); Assert.Equal(1, coordinator.SurfacePreviewReleasesForTest);
+        }
+        finally { GameMain.isPaused = oldPaused; GameMain.isRunning = oldRunning; }
+    }
+
+    [Theory]
+    [InlineData("revision")] [InlineData("action")] [InlineData("hash")] [InlineData("target")]
+    public void NativePreviewEntryRefusesWrongRequestBeforeAcquiringAnyLease(string fault)
+    {
+        var oldPaused = GameMain.isPaused; var oldRunning = GameMain.isRunning;
+        try
+        {
+            GameMain.isPaused = true; GameMain.isRunning = true;
+            var refs = new VoyagerSameSessionSurfaceSourceTests.References { DeadlineUtc = DateTimeOffset.UtcNow.AddHours(2) };
+            var coordinator = new NormalGameActionCoordinator();
+            coordinator.ConfigureSurfacePreviewForTest(() => VoyagerSameSessionSurfaceSourceTests.Capture(refs, 10, DateTimeOffset.UtcNow));
+            var sample = VoyagerSameSessionSurfaceSourceTests.Capture(refs, 10, DateTimeOffset.UtcNow);
+            var request = new SameSessionSurfacePreviewRequest { PlanetId = 7, OriginalActionId = refs.ActionId, ExpectedRevision = 4,
+                ExpectedPlayerStateHash = sample.PlayerState!.StateHash, Target = new Vector3Snapshot { X = 200, Y = 10 } };
+            if (fault == "revision") request.ExpectedRevision++;
+            if (fault == "action") request.OriginalActionId = Guid.NewGuid().ToString();
+            if (fault == "hash") request.ExpectedPlayerStateHash = "invalid";
+            if (fault == "target") request.Target = null;
+            Assert.False(coordinator.PreviewSameSessionSurfaceRecoveryOnMainThread("synthetic-session", request).Success);
+            Assert.Equal(0, coordinator.SurfacePreviewOpensForTest); Assert.Equal(0, coordinator.SurfacePreviewReleasesForTest);
+        }
+        finally { GameMain.isPaused = oldPaused; GameMain.isRunning = oldRunning; }
+    }
+
+    [Fact]
+    public void ExpiredOriginalWallReserveRefusesPreviewAndLeavesNativePaused()
+    {
+        var oldPaused = GameMain.isPaused; var oldRunning = GameMain.isRunning;
+        try
+        {
+            GameMain.isPaused = true; GameMain.isRunning = true;
+            var refs = new VoyagerSameSessionSurfaceSourceTests.References { DeadlineUtc = DateTimeOffset.UtcNow.AddSeconds(30) };
+            var coordinator = new NormalGameActionCoordinator();
+            coordinator.ConfigureSurfacePreviewForTest(() => VoyagerSameSessionSurfaceSourceTests.Capture(refs, 10, DateTimeOffset.UtcNow));
+            var sample = VoyagerSameSessionSurfaceSourceTests.Capture(refs, 10, DateTimeOffset.UtcNow);
+            var request = new SameSessionSurfacePreviewRequest { PlanetId = 7, OriginalActionId = refs.ActionId, ExpectedRevision = 4,
+                ExpectedPlayerStateHash = sample.PlayerState!.StateHash, Target = new Vector3Snapshot { X = 200, Y = 10 } };
+            var result = coordinator.PreviewSameSessionSurfaceRecoveryOnMainThread("synthetic-session", request);
+            Assert.False(result.Success); Assert.Equal("same_session_surface_original_wall_reserve_unproved", result.Error!.Message);
+            Assert.True(GameMain.isPaused); Assert.Equal(1, coordinator.SurfacePreviewReleasesForTest);
         }
         finally { GameMain.isPaused = oldPaused; GameMain.isRunning = oldRunning; }
     }

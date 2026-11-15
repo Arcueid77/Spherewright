@@ -508,7 +508,7 @@ public sealed partial class SpherewrightToolsTests
         using var provider = services.BuildServiceProvider();
         var tools = provider.GetServices<McpServerTool>().ToArray();
         var tool = Assert.Single(tools, t => t.ProtocolTool.Name == "spherewright_prepare_resume_owned_game");
-        Assert.Equal(75, tools.Length);
+        Assert.Equal(76, tools.Length);
         var schema = tool.ProtocolTool.InputSchema;
         var names = new[] { "recoveryDeadlineUtc", "recoveryScope", "maximumChargeGameTicks", "maximumChargeWallSeconds" };
         foreach (var name in names)
@@ -2163,13 +2163,15 @@ public sealed partial class SpherewrightToolsTests
                 "spherewright_prepare_transfer",
                 "spherewright_prepare_upgrade",
                 "spherewright_prepare_voyager_flight",
+                "spherewright_preview_same_session_surface_recovery",
                 "spherewright_preview_voyager_route",
             },
             tools.Select(tool => tool.ProtocolTool.Name).OrderBy(name => name).ToArray());
         Assert.All(
             tools.Where(tool => tool.ProtocolTool.Name.StartsWith("spherewright_get_", StringComparison.Ordinal)
                 || tool.ProtocolTool.Name.StartsWith("spherewright_list_", StringComparison.Ordinal)
-                || tool.ProtocolTool.Name.StartsWith("spherewright_inspect_", StringComparison.Ordinal)),
+                || tool.ProtocolTool.Name.StartsWith("spherewright_inspect_", StringComparison.Ordinal)
+                || tool.ProtocolTool.Name.StartsWith("spherewright_preview_", StringComparison.Ordinal)),
             tool => Assert.True(tool.ProtocolTool.Annotations?.ReadOnlyHint));
         Assert.All(
             tools.Where(tool => tool.ProtocolTool.Name.StartsWith("spherewright_commit_", StringComparison.Ordinal)),
@@ -3170,6 +3172,113 @@ public sealed partial class SpherewrightToolsTests
         Assert.Equal(445, bridge.LastReconciliationRequest?.ExpectedRevision);
     }
 
+    [Theory]
+    [InlineData("awaiting_second_frame")] [InlineData("source_bound")]
+    public async Task SameSessionSurfacePreviewIsTokenlessReadOnlyAndBindsTheExactRequest(string state)
+    {
+        var actionId = Guid.NewGuid().ToString(); var hash = "sha256:" + new string('a', 64);
+        var bridge = new FakeBridgeClient(SuccessResult()) { SameSessionSurfacePreview = SurfacePreview(actionId, state) };
+        var result = await SpherewrightTools.PreviewSameSessionSurfaceRecoveryAsync(bridge, "synthetic-session", 7,
+            actionId, 4, hash, 200, 0, 0);
+        Assert.False(result.IsError); Assert.Equal("synthetic-session", bridge.LastSessionId);
+        Assert.Equal(actionId, bridge.LastSameSessionSurfaceRequest!.OriginalActionId);
+        Assert.Equal(hash, bridge.LastSameSessionSurfaceRequest.ExpectedPlayerStateHash);
+        Assert.Equal(200f, bridge.LastSameSessionSurfaceRequest.Target!.X);
+        Assert.Equal(4, bridge.LastSameSessionSurfaceRequest.ExpectedRevision);
+        Assert.Null(bridge.LastResumeCommitRequest);
+    }
+
+    [Fact]
+    public async Task SameSessionSurfacePreviewSdkSchemaIsReadOnlyAndForwardsActualJsonArguments()
+    {
+        var actionId = Guid.NewGuid().ToString(); var hash = "sha256:" + new string('a', 64);
+        var bridge = new FakeBridgeClient(SuccessResult()) { SameSessionSurfacePreview = SurfacePreview(actionId, "source_bound") };
+        var services = new ServiceCollection(); services.AddSingleton<IBridgeClient>(bridge);
+        services.AddMcpServer().WithToolsFromAssembly(typeof(SpherewrightTools).Assembly);
+        using var provider = services.BuildServiceProvider();
+        var tools = provider.GetServices<McpServerTool>().ToArray();
+        var tool = Assert.Single(tools, t => t.ProtocolTool.Name == "spherewright_preview_same_session_surface_recovery");
+        Assert.Equal(76, tools.Length); Assert.True(tool.ProtocolTool.Annotations!.ReadOnlyHint);
+        Assert.False(tool.ProtocolTool.Annotations.DestructiveHint); Assert.True(tool.ProtocolTool.Annotations.IdempotentHint);
+        var schema = tool.ProtocolTool.InputSchema;
+        foreach (var name in new[] { "sessionId", "planetId", "originalActionId", "expectedRevision", "expectedPlayerStateHash", "targetX", "targetY", "targetZ" })
+            Assert.Contains(schema.GetProperty("required").EnumerateArray(), p => p.GetString() == name);
+        Assert.False(schema.GetProperty("properties").TryGetProperty("planToken", out _));
+        await using var server = McpServer.Create(new StreamServerTransport(Stream.Null, Stream.Null), new McpServerOptions(), null, provider);
+        var parameters = new CallToolRequestParams { Name = tool.ProtocolTool.Name, Arguments = new Dictionary<string, JsonElement>
+        {
+            ["sessionId"] = JsonSerializer.SerializeToElement("synthetic-session"), ["planetId"] = JsonSerializer.SerializeToElement(7),
+            ["originalActionId"] = JsonSerializer.SerializeToElement(actionId), ["expectedRevision"] = JsonSerializer.SerializeToElement(4),
+            ["expectedPlayerStateHash"] = JsonSerializer.SerializeToElement(hash), ["targetX"] = JsonSerializer.SerializeToElement(200),
+            ["targetY"] = JsonSerializer.SerializeToElement(0), ["targetZ"] = JsonSerializer.SerializeToElement(0),
+        } };
+        var context = new RequestContext<CallToolRequestParams>(server, new JsonRpcRequest { Id = new RequestId(1), Method = "tools/call" }, parameters)
+        { Services = provider };
+        var result = await tool.InvokeAsync(context);
+        Assert.False(result.IsError); Assert.Equal(actionId, bridge.LastSameSessionSurfaceRequest!.OriginalActionId);
+        var echo = result.StructuredContent!.Value.GetProperty("result");
+        Assert.True(echo.GetProperty("readOnly").GetBoolean()); Assert.False(echo.GetProperty("executable").GetBoolean());
+        Assert.False(echo.GetProperty("nativeResumePerformed").GetBoolean()); Assert.False(echo.GetProperty("originalOutcomeChanged").GetBoolean());
+        Assert.False(echo.TryGetProperty("planToken", out _));
+    }
+
+    [Theory]
+    [InlineData("missing_read_only")] [InlineData("executable")] [InlineData("commit")]
+    [InlineData("resume")] [InlineData("changed_original")] [InlineData("wrong_action")]
+    [InlineData("wrong_session")] [InlineData("wrong_planet")] [InlineData("wrong_revision")] [InlineData("wrong_player_hash")]
+    [InlineData("wrong_target")] [InlineData("missing_target")] [InlineData("wrong_cap")]
+    [InlineData("missing_fingerprint")] [InlineData("pending_fingerprint")] [InlineData("unknown_state")]
+    public async Task SameSessionSurfacePreviewRejectsIncompleteOrExecutionClaimingEcho(string fault)
+    {
+        var actionId = Guid.NewGuid().ToString(); var value = SurfacePreview(actionId, "source_bound");
+        switch (fault)
+        {
+            case "missing_read_only": value.ReadOnly = null; break;
+            case "executable": value.Executable = true; break;
+            case "commit": value.CommitAllowedNow = true; break;
+            case "resume": value.NativeResumePerformed = true; break;
+            case "changed_original": value.OriginalOutcomeChanged = true; break;
+            case "wrong_action": value.OriginalActionId = Guid.NewGuid().ToString(); break;
+            case "wrong_session": value.SessionId = "another-session"; break;
+            case "wrong_planet": value.PlanetId++; break;
+            case "wrong_revision": value.Revision++; break;
+            case "wrong_player_hash": value.PlayerStateHash = "sha256:" + new string('c', 64); break;
+            case "wrong_target": value.Target!.Y = 20; break;
+            case "missing_target": value.Target = null; break;
+            case "wrong_cap": value.MaximumWorkGameTicks++; break;
+            case "missing_fingerprint": value.SourceFingerprint = null; break;
+            case "pending_fingerprint": value.State = "awaiting_second_frame"; break;
+            case "unknown_state": value.State = "completed"; break;
+        }
+        var bridge = new FakeBridgeClient(SuccessResult()) { SameSessionSurfacePreview = value };
+        var result = await SpherewrightTools.PreviewSameSessionSurfaceRecoveryAsync(bridge, "synthetic-session", 7,
+            actionId, 4, "sha256:" + new string('a', 64), 200, 0, 0);
+        Assert.True(result.IsError); Assert.Null(bridge.LastResumeCommitRequest);
+    }
+
+    [Theory]
+    [InlineData("bad_action")] [InlineData("bad_hash")] [InlineData("nonfinite_target")]
+    [InlineData("bad_session")] [InlineData("bad_planet")] [InlineData("bad_revision")] [InlineData("bad_version")]
+    public async Task SameSessionSurfacePreviewRejectsBadRequestBeforeCallingTheBridge(string fault)
+    {
+        var bridge = new FakeBridgeClient(SuccessResult());
+        var result = await SpherewrightTools.PreviewSameSessionSurfaceRecoveryAsync(bridge, fault == "bad_session" ? "" : "synthetic-session", fault == "bad_planet" ? 0 : 7,
+            fault == "bad_action" ? "not-a-guid" : Guid.NewGuid().ToString(), fault == "bad_revision" ? 0 : 4,
+            fault == "bad_hash" ? "bad" : "sha256:" + new string('a', 64),
+            fault == "nonfinite_target" ? float.NaN : 200, 0, 0, stateHashVersion: fault == "bad_version" ? 2 : 1);
+        Assert.True(result.IsError); Assert.Null(bridge.LastSameSessionSurfaceRequest);
+    }
+
+    private static SameSessionSurfacePreviewSnapshot SurfacePreview(string actionId, string state) => new()
+    {
+        EvidenceVersion = 1, State = state, SessionId = "synthetic-session", PlanetId = 7, Revision = 4,
+        PlayerStateHash = "sha256:" + new string('a', 64), OriginalActionId = actionId, SourceGameTick = 200,
+        ExpiresAtUtc = DateTimeOffset.UtcNow.AddSeconds(1), Target = new() { X = 199 },
+        SourceFingerprint = state == "source_bound" ? "sha256:" + new string('b', 64) : null,
+        MaximumWorkGameTicks = 600, MaximumWallSeconds = 20, ReadOnly = true,
+        Executable = false, CommitAllowedNow = false, NativeResumePerformed = false, OriginalOutcomeChanged = false,
+    };
+
     [Fact]
     public async Task PrepareInterplanetaryFlight_MapsBoundDestinationAndProofs()
     {
@@ -3581,6 +3690,14 @@ public sealed partial class SpherewrightToolsTests
 
     private sealed class FakeBridgeClient : IBridgeClient
     {
+        public SameSessionSurfacePreviewRequest? LastSameSessionSurfaceRequest { get; private set; }
+        public SameSessionSurfacePreviewSnapshot? SameSessionSurfacePreview { get; set; }
+        public Task<BridgeCallResult<SameSessionSurfacePreviewSnapshot>> PreviewSameSessionSurfaceRecoveryAsync(
+            string sessionId, SameSessionSurfacePreviewRequest request, CancellationToken cancellationToken)
+        {
+            LastSessionId = sessionId; LastSameSessionSurfaceRequest = request;
+            return Task.FromResult(BridgeCallResult<SameSessionSurfacePreviewSnapshot>.Succeeded(SameSessionSurfacePreview!));
+        }
         public PrepareBlueprintBuildRequest? LastBlueprintBuildRequest { get; private set; }
         public PrepareCancelBlueprintRequest? LastCancelBlueprintRequest { get; private set; }
         public BlueprintBuildRequest? LastBlueprintReadRequest { get; private set; }

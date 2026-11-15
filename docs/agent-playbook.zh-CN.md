@@ -490,6 +490,10 @@ Native Import 可将 double 宇宙坐标逆投影为 float 本地位置；普通
 
 当前场景执行从当前 [Spherewright-Lab](https://github.com/Arcueid77/Spherewright-Lab) 检出目录开始，先读取其当前 [AGENTS.md](https://github.com/Arcueid77/Spherewright-Lab/blob/main/AGENTS.md) 与[活动交接](https://github.com/Arcueid77/Spherewright-Lab/blob/main/operations/active-handoff.md)；本内嵌指南不授予权限。[Lab 固定快照](https://github.com/Arcueid77/Spherewright-Lab/tree/14478a03c64c550e644c559405c8496b647552e7)与[已验收指南](https://github.com/Arcueid77/Spherewright/blob/2a7a98d1932c404e3a7abc2c11233d9c0b8780d9/docs/agent-playbook.md)仅保留历史证据、示例。历史成功绝不授予重放权限。
 
+## 同会话暂停水面来源预览
+
+原 Move 已终态 unknown 且同一 owned 会话保持原生暂停/准确隔离时，可用 `spherewright_preview_same_session_surface_recovery` 对一个16米内的新目标做只读检查：传当前星球、原动作 ID、revision、新鲜玩家 `stateHash` 和目标坐标。`awaiting_second_frame` 只表示仍需第二帧；`source_bound` 要求两秒内两帧稳定、原航程/日志和原生地形/能源检查，但不证明路径无障碍或实际落地。核对准确会话、星球、revision、玩家状态哈希、原动作、目标、600 tick/20秒和只读、不可执行、未Resume及旧结果未改回显；缺失或不一致必须拒绝。预览不提供提交令牌，不解除隔离、不移动、不保存/读档，也不延长过期旅程；原墙钟储备不足返回 `same_session_surface_original_wall_reserve_unproved`。可执行水面恢复仍需另行实现、原生准入和实际验证。
+
 ## 同会话暂停闲置的原地复核
 
 同一运行进程内，远端闲置保护导致暂停后，先读取当前会话，以精确的 `writeQuarantineActionId`、星球和 revision 调用 `spherewright_prepare_quarantine_reconciliation`。现有接口除核销结果未知的建造外，也可复核仍然保留的闲置控制绑定。检查 `completionCondition`：此分支要求相同世界、玩家和控制器，未改变的原旅程，没有未决动作或其他写阻塞，重新证明静止 Walk、接地以及原剩余 tick、墙钟、能量和翘曲器储备。Prepare 不恢复游戏运行。

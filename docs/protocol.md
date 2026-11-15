@@ -44,6 +44,7 @@ spherewright_get_gameplay_journal
 spherewright_get_local_star_system
 spherewright_get_voyager_star_catalog
 spherewright_preview_voyager_route
+spherewright_preview_same_session_surface_recovery
 spherewright_get_recipe_catalog
 spherewright_get_build_catalog
 spherewright_get_foundry_plan
@@ -474,6 +475,12 @@ Source authority: [Contracts](../src/Spherewright.Contracts), [MCP tools](../src
 ## Paused Voyager idle reconciliation
 
 The existing quarantine-reconciliation request and commit schemas are unchanged. In addition to retained unknown builds, the endpoint accepts an exact same-process idle quarantine recorded by the Voyager idle guard. The prepared `completionCondition` discloses an in-place resume. Prepare and commit both recheck the original session/action/reason, Native references, strict idle and original reserves; a changed proof or other blocker refuses. Successful commit retains all original action outcomes and ledger bytes while resuming the current world. No new recovery mode, credential, Load, Save, tick grant or wall renewal is introduced. See the [playbook](agent-playbook.md#same-session-paused-idle-reconciliation).
+
+## Read-only same-session paused surface source preview
+
+`spherewright_preview_same_session_surface_recovery` takes the current session/planet, exact original unknown Move ID, revision, fresh player `stateHash` and one finite target. In the same paused owned world it checks the retained action, two stable render frames, original journey/successful-flight files, quiescent Journal and Native surface/cost evidence. Both frames must fit the two-second observation window. `awaiting_second_frame` is not completed proof; `source_bound` is read-only source evidence, not route clearance or arrival. The echo must contain its evidence version, exact session, planet, revision, player state hash, original action, target,600-game-tick/20-second bounds and read-only/non-executable/no-resume/unchanged-original flags; MCP refuses missing or inconsistent echoes.
+
+This preview has no plan token. It does not submit movement, clear quarantine, resume simulation, save or Load, and adds no original journey ticks or wall time. An expired or insufficient original wall reserve reports `same_session_surface_original_wall_reserve_unproved` and remains a refusal. Any later executable recovery requires its own implementation, fresh Native admission and applicable authority.
 
 ## Protected return to the main menu
 
