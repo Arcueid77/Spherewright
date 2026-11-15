@@ -37,6 +37,8 @@ public sealed class SwarmOrbitSnapshot
     public bool Enabled { get; set; }
     public float Radius { get; set; }
     public QuaternionSnapshot Rotation { get; set; } = new();
+    // Older Plugin responses may omit this Native observation.
+    public Vector3Snapshot? Up { get; set; }
     public int SailCount { get; set; }
     public string StateHash { get; set; } = string.Empty;
 }

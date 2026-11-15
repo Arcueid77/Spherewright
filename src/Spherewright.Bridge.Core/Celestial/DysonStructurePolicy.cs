@@ -20,7 +20,7 @@ public static class DysonStructurePolicy
 
     public static string? ValidateRequest(PrepareConfigureBuildingRequest request)
     {
-        if (request.Mode != BuildingConfigurationModes.DysonStructure || request.EntityId != 0
+        if (request.Mode != BuildingConfigurationModes.DysonStructure || request.DysonSwarmOrbit is not null || request.EntityId != 0
             || request.RecipeId != 0 || request.TechId != 0 || request.FilterItemId != 0
             || request.EjectorOrbitId != -1 || !string.IsNullOrEmpty(request.StorageOperation)
             || request.StorageBannedGridCount != -1 || request.StationStorageIndex != -1

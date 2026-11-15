@@ -5,6 +5,8 @@
     <IsTestProject>true</IsTestProject>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="..\..\src\Spherewright.Plugin\Game\GameStateReader.DysonSwarmOrbits.cs" Link="PluginGame\GameStateReader.DysonSwarmOrbits.cs" />
+    <Compile Include="..\..\src\Spherewright.Plugin\Game\DysonSwarmOrbitNativeExecution.cs" Link="PluginGame\DysonSwarmOrbitNativeExecution.cs" />
     <Compile Include="..\..\src\Spherewright.Plugin\Game\GameSessionTracker.VoyagerRecoveryBudget.cs" Link="PluginGame\GameSessionTracker.VoyagerRecoveryBudget.cs" />
     <None Update="Fixtures\native-station-cargo-delivery.json" CopyToOutputDirectory="PreserveNewest" />
     <None Update="Fixtures\recovered-home-next-voyage-charge.json" CopyToOutputDirectory="PreserveNewest" />

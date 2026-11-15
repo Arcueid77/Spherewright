@@ -952,6 +952,11 @@ internal sealed partial class NormalGameActionCoordinator
                     ExecuteDysonStructureOnMainThread(action);
                     break;
                 }
+                if (plan.ConfigureMode == BuildingConfigurationModes.DysonSwarmOrbit)
+                {
+                    ExecuteDysonSwarmOrbitOnMainThread(action);
+                    break;
+                }
                 ApplyBuildingConfigurationOnMainThread(plan);
                 action.TargetObjectId = plan.EntityId;
                 action.TargetItemId = plan.ConfigureMode == BuildingConfigurationModes.SorterFilter
@@ -1498,6 +1503,8 @@ internal sealed partial class NormalGameActionCoordinator
             case NormalActionKinds.ConfigureBuilding:
                 if (plan.ConfigureMode == BuildingConfigurationModes.DysonStructure)
                     return RevalidateDysonStructureOnMainThread(plan);
+                if (plan.ConfigureMode == BuildingConfigurationModes.DysonSwarmOrbit)
+                    return RevalidateDysonSwarmOrbitOnMainThread(plan);
                 if (plan.ConfigureMode == BuildingConfigurationModes.ReverseBeltPath)
                     return RevalidateBeltReversal(plan);
                 if (plan.ConfigureMode == BuildingConfigurationModes.StorageCapacity)
@@ -1805,6 +1812,7 @@ internal sealed partial class NormalGameActionCoordinator
             HandcraftReadback = action.HandcraftReadback?.Copy(),
             NativeSurfaceNavigationReadback = action.NativeSurfaceNavigationReadback,
             DysonStructureReadback = action.DysonStructureReadback,
+            DysonSwarmOrbitReadback = action.DysonSwarmOrbitReadback,
             StorageConfigurationReadback = action.StorageConfigurationReadback,
             BeltPathReversalReadback = action.BeltPathReversalReadback,
             StackConstructionReadback = action.StackConstructionReadback,

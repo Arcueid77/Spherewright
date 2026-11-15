@@ -11,5 +11,6 @@ public static class VoyagerFactoryConfigurationPolicy
         || mode == BuildingConfigurationModes.LogisticsStationBelt || mode == BuildingConfigurationModes.LogisticsStationCharge
         || mode == BuildingConfigurationModes.Production || mode == BuildingConfigurationModes.SorterFilter
         || mode == BuildingConfigurationModes.StorageCapacity || mode == BuildingConfigurationModes.EjectorOrbit
-        || mode == BuildingConfigurationModes.MinimalDysonReceivingNode || mode == BuildingConfigurationModes.DysonStructure;
+        || mode == BuildingConfigurationModes.MinimalDysonReceivingNode || mode == BuildingConfigurationModes.DysonStructure
+        || mode == BuildingConfigurationModes.DysonSwarmOrbit;
 }

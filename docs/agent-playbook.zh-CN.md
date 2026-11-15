@@ -649,6 +649,8 @@ Move/Harvest失败可在原失败tick保留`movementDiagnostics`。合读位置�
 
 有限外星原生无人机施工范围同时接受2208射线接收站，并核对准确发电组件/模型完成证明。设计配置沿原单tick即时旅程工作预算，建筑物品、科研、供料和返航储备继续计入声明场景额度。
 
+新建太阳帆轨道时，先新鲜读取 `spherewright_get_dyson_state`，要求 `swarmOrbits` 非空、原生覆盖完整并取得其 `stateHash`。调用 `spherewright_prepare_configure_building`，指定 `mode=dyson-swarm-orbit`、`entityId=0`、`recipeId=0`，以该hash作为 `expectedFactoryStateHash`，并提供一个 `dysonSwarmOrbit`：`radius`、`inclinationDegrees`（0至180度）、`longitudeDegrees`（0含至360不含），可选 `previewOnly`。方案回显原生调整后的半径、旋转、向上向量、下一个普通轨道ID和当前太阳帆数量；预览无令牌。执行时核对准确的 `plannedDysonSwarmOrbit`，只提交一次并保留 `dysonSwarmOrbitReadback`：ID一致、调用边界、新空轨道准确、旧轨道数据/太阳帆数量及背包不变。调用后结果不完整时保留原unknown动作及隔离。此操作只新建一个轨道；编辑/删除轨道以及实际供料/发射均为独立事项，源码测试不代表实机验收。
+
 ## 手工制造完成证据
 
 手工制造预检声明 `handcraftReadbackVersion=1`。原终态中的 `handcraftReadback` 将配方和请求执行次数绑定到保留的原生 `ForgeTask`。完成要求原任务离开队列、剩余执行次数为0且交付缓冲为空。取消任务保留未完成次数。`inventoryProductsObserved` 与普通 `itemDeltas` 分别记录背包读回。产物进入原生自动用途时，继续核对背包实物、自动科研缓存和科技进度。后续转移采用实际背包库存，旧版缺少该读回的记录保留原证据范围。

@@ -53,6 +53,7 @@ internal sealed partial class GameStateReader
             }
             CaptureDysonStructure(sphere, result);
             CaptureDysonSwarmCounts(sphere, result);
+            result.SwarmOrbits = DysonSwarmOrbitNativeSnapshot.Capture(sphere, result);
             var rockets = new SiloStateSnapshot();
             CaptureDysonRockets(sphere, rockets);
             result.RocketCoverageComplete = rockets.RocketCoverageComplete;

@@ -62,7 +62,8 @@ internal sealed partial class GameStateReader
                 var orbit = new SwarmOrbitSnapshot { OrbitId = i, Enabled = native.enabled,
                     Radius = native.radius, SailCount = swarm.SailCountOnOrbit(i),
                     Rotation = new QuaternionSnapshot { X = native.rotation.x, Y = native.rotation.y,
-                        Z = native.rotation.z, W = native.rotation.w } };
+                        Z = native.rotation.z, W = native.rotation.w },
+                    Up = new Vector3Snapshot { X = native.up.x, Y = native.up.y, Z = native.up.z } };
                 orbit.StateHash = EjectorOrbitConfigurationPolicy.OrbitHash(star.id, orbit);
                 result.Orbits.Add(orbit);
             }

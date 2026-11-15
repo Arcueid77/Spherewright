@@ -2271,6 +2271,10 @@ internal sealed partial class NormalGameActionCoordinator
             return GameCallResult<PreparedNormalAction>.Failed(common.Error);
         }
 
+        if (request.DysonSwarmOrbit is not null && request.Mode != BuildingConfigurationModes.DysonSwarmOrbit)
+            return InvalidPlan("Swarm orbit parameters require dyson-swarm-orbit mode.");
+        if (request.Mode == BuildingConfigurationModes.DysonSwarmOrbit)
+            return PrepareDysonSwarmOrbitOnMainThread(requestedSessionId, request, common.Session!);
         if (request.DysonStructure is not null && request.Mode != BuildingConfigurationModes.DysonStructure)
             return InvalidPlan("Dyson structure parameters require dyson-structure mode.");
         if (request.Mode == BuildingConfigurationModes.DysonStructure)

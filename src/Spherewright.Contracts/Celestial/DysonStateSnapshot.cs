@@ -36,6 +36,7 @@ public sealed class DysonStateSnapshot
     public long? SphereRequestedEnergyPerTick { get; set; }
     public int? ActiveSailCount { get; set; }
     public int? InFlightSailCount { get; set; }
+    public DysonSwarmOrbitState? SwarmOrbits { get; set; }
     public bool RocketCoverageComplete { get; set; }
     public int? InFlightRocketCount { get; set; }
     public List<DysonRocketSnapshot> Rockets { get; set; } = new();

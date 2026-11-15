@@ -12,6 +12,7 @@ public sealed class VoyagerFactoryConfigurationPolicyTests
     [InlineData(BuildingConfigurationModes.StorageCapacity)]
     [InlineData(BuildingConfigurationModes.EjectorOrbit)]
     [InlineData(BuildingConfigurationModes.DysonStructure)]
+    [InlineData(BuildingConfigurationModes.DysonSwarmOrbit)]
     [InlineData(BuildingConfigurationModes.LogisticsStationStorage)]
     [InlineData(BuildingConfigurationModes.LogisticsStationBelt)]
     [InlineData(BuildingConfigurationModes.LogisticsStationCharge)]
