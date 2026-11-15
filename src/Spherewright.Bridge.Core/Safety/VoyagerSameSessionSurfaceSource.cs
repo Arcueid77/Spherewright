@@ -273,3 +273,62 @@ public static class VoyagerSameSessionSurfaceSourcePolicy
     private static string? OptionalD(double? x) => x.HasValue ? D(x.Value) : null;
     private static string V(Vector3Snapshot p) => F(p.X) + "," + F(p.Y) + "," + F(p.Z);
 }
+
+public enum VoyagerSameSessionSurfaceObservationState { AwaitingFirstFrame, AwaitingSecondFrame, Bound, Rejected }
+
+// Collects exactly two distinct paused render frames within the original
+// finite observation window. This object owns no Native resources and cannot
+// issue an order, clear quarantine, load a world, or resume simulation.
+public sealed class VoyagerSameSessionSurfaceObservation
+{
+    private VoyagerSameSessionSurfaceSourceFacts? _first;
+    private string? _firstFingerprint;
+    public VoyagerSameSessionSurfaceObservationState State { get; private set; } = VoyagerSameSessionSurfaceObservationState.AwaitingFirstFrame;
+    public VoyagerSameSessionSurfaceSourceBinding? Binding { get; private set; }
+    public string? Rejection { get; private set; }
+
+    public VoyagerSameSessionSurfaceObservationState Observe(VoyagerSameSessionSurfaceSourceFacts sample)
+    {
+        if (State is VoyagerSameSessionSurfaceObservationState.Bound or VoyagerSameSessionSurfaceObservationState.Rejected) return State;
+        var blocker = VoyagerSameSessionSurfaceSourcePolicy.Blocker(sample);
+        if (blocker is not null) return Reject(blocker);
+        var fingerprint = VoyagerSameSessionSurfaceSourcePolicy.Fingerprint(sample);
+        if (_first is null)
+        {
+            _first = sample; _firstFingerprint = fingerprint;
+            return State = VoyagerSameSessionSurfaceObservationState.AwaitingSecondFrame;
+        }
+        if (VoyagerSameSessionSurfaceSourcePolicy.Blocker(_first) is not null
+            || VoyagerSameSessionSurfaceSourcePolicy.Fingerprint(_first) != _firstFingerprint)
+            return Reject("same_session_surface_first_sample_changed");
+        if (sample.CapturedAtUtc < _first.CapturedAtUtc || sample.RenderFrame < _first.RenderFrame)
+            return Reject("same_session_surface_observation_order_unproved");
+        if ((sample.CapturedAtUtc - _first.CapturedAtUtc).TotalSeconds > VoyagerSurfaceRecoveryPolicy.MaximumInitialBindingWallSeconds)
+            return Reject("same_session_surface_observation_expired");
+        if (sample.RenderFrame == _first.RenderFrame)
+            return fingerprint == _firstFingerprint ? State : Reject("same_session_surface_same_frame_changed");
+        if (!VoyagerSameSessionSurfaceSourcePolicy.TryBind(_first, sample, out var binding, out var rejection)) return Reject(rejection);
+        Binding = binding;
+        return State = VoyagerSameSessionSurfaceObservationState.Bound;
+    }
+
+    public VoyagerSameSessionSurfaceObservationState Expire(DateTimeOffset now)
+    {
+        if (State == VoyagerSameSessionSurfaceObservationState.Rejected || _first is null) return State;
+        if (now < _first.CapturedAtUtc || (now - _first.CapturedAtUtc).TotalSeconds > VoyagerSurfaceRecoveryPolicy.MaximumInitialBindingWallSeconds)
+            return Reject("same_session_surface_observation_expired");
+        return State;
+    }
+
+    public VoyagerSameSessionSurfaceObservationState Invalidate(string rejection)
+    {
+        if (State == VoyagerSameSessionSurfaceObservationState.Rejected) return State;
+        return Reject(string.IsNullOrWhiteSpace(rejection) ? "same_session_surface_native_observation_unproved" : rejection);
+    }
+
+    private VoyagerSameSessionSurfaceObservationState Reject(string rejection)
+    {
+        Rejection ??= rejection; Binding = null;
+        return State = VoyagerSameSessionSurfaceObservationState.Rejected;
+    }
+}

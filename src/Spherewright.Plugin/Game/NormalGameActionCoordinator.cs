@@ -711,6 +711,7 @@ internal sealed partial class NormalGameActionCoordinator
 
     public void UpdateOnMainThread()
     {
+        UpdateSameSessionSurfacePreviewOnMainThread();
         PumpCheckpointReturnRecoveryOnMainThread();
         CheckVoyagerControlWatchdogOnMainThread();
         UpdateStoppedSpaceReturnWatchdog();

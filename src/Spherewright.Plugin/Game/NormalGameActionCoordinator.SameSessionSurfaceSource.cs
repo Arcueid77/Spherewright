@@ -72,7 +72,13 @@ internal sealed partial class NormalGameActionCoordinator
         }
         catch (Exception ex)
         { rejection = "same_session_surface_capture_failed:" + ex.GetType().Name; return false; }
-        finally { journal?.Dispose(); route?.Dispose(); }
+        finally
+        {
+            try { journal?.Dispose(); }
+            catch (Exception ex) { _sameSessionSurfacePreviewReleaseFailure ??= "same_session_surface_preview_release_failed:" + ex.GetType().Name; }
+            try { route?.Dispose(); }
+            catch (Exception ex) { _sameSessionSurfacePreviewReleaseFailure ??= "same_session_surface_preview_release_failed:" + ex.GetType().Name; }
+        }
     }
 
     private bool TryCaptureSameSessionSurfaceSource(SameSessionSurfaceCapture capture,

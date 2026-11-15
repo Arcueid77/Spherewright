@@ -146,7 +146,54 @@ public sealed class VoyagerSameSessionSurfaceSourceTests
         Assert.False(binding.GrantsResume); Assert.False(binding.OriginalOutcomeChanged);
     }
 
-    private sealed class References
+    [Fact]
+    public void ObservationNeedsTwoDistinctFrozenFramesAndNeverGrantsResume()
+    {
+        var refs = new References(); var observer = new VoyagerSameSessionSurfaceObservation();
+        Assert.Equal(VoyagerSameSessionSurfaceObservationState.AwaitingSecondFrame, observer.Observe(Capture(refs, 10, Now)));
+        Assert.Equal(VoyagerSameSessionSurfaceObservationState.AwaitingSecondFrame, observer.Observe(Capture(refs, 10, Now.AddMilliseconds(50))));
+        Assert.Equal(VoyagerSameSessionSurfaceObservationState.Bound, observer.Observe(Capture(refs, 11, Now.AddMilliseconds(100))));
+        Assert.NotNull(observer.Binding); Assert.False(observer.Binding!.GrantsResume); Assert.False(observer.Binding.OriginalOutcomeChanged);
+        Assert.Equal(VoyagerSameSessionSurfaceObservationState.Rejected, observer.Expire(Now.AddSeconds(3)));
+        Assert.Null(observer.Binding); Assert.Equal("same_session_surface_observation_expired", observer.Rejection);
+    }
+
+    [Theory]
+    [InlineData("source_changed")] [InlineData("same_frame_changed")] [InlineData("wrong_frame_order")]
+    [InlineData("expired")] [InlineData("unpaused")]
+    public void ObservationLatchesItsFirstRefusalAndCannotTurnItIntoARecoveryGrant(string fault)
+    {
+        var refs = new References(); var observer = new VoyagerSameSessionSurfaceObservation(); var first = Capture(refs, 10, Now);
+        Assert.Equal(VoyagerSameSessionSurfaceObservationState.AwaitingSecondFrame, observer.Observe(first));
+        var second = Capture(refs, 11, Now.AddMilliseconds(100));
+        switch (fault)
+        {
+            case "source_changed": first.Target!.Y = 11; break;
+            case "same_frame_changed": second.RenderFrame = 10; second.Target!.Y = 11; break;
+            case "wrong_frame_order": second.RenderFrame = 9; break;
+            case "expired": second.CapturedAtUtc = Now.AddSeconds(3); second.Funding!.NowUtc = second.Funding.OriginalJourney!.NowUtc = second.CapturedAtUtc; break;
+            case "unpaused": second.NativePaused = false; break;
+        }
+        Assert.Equal(VoyagerSameSessionSurfaceObservationState.Rejected, observer.Observe(second));
+        var firstRejection = observer.Rejection;
+        Assert.NotNull(firstRejection); Assert.Null(observer.Binding);
+        Assert.Equal(VoyagerSameSessionSurfaceObservationState.Rejected, observer.Observe(Capture(refs, 12, Now.AddMilliseconds(200))));
+        Assert.Equal(firstRejection, observer.Rejection);
+    }
+
+    [Fact]
+    public void NativeObservationLossInvalidatesEvenAnAlreadyBoundPreview()
+    {
+        var refs = new References(); var observer = new VoyagerSameSessionSurfaceObservation();
+        observer.Observe(Capture(refs, 10, Now)); observer.Observe(Capture(refs, 11, Now.AddMilliseconds(100)));
+        Assert.NotNull(observer.Binding);
+        Assert.Equal(VoyagerSameSessionSurfaceObservationState.Rejected, observer.Invalidate("native_scene_lost"));
+        Assert.Null(observer.Binding); Assert.Equal("native_scene_lost", observer.Rejection);
+        Assert.Equal(VoyagerSameSessionSurfaceObservationState.Rejected, observer.Invalidate("different_failure"));
+        Assert.Equal("native_scene_lost", observer.Rejection);
+    }
+
+    internal sealed class References
     {
         public object World { get; } = new(); public object Player { get; } = new();
         public object Controller { get; } = new(); public object Rigidbody { get; } = new();
@@ -155,9 +202,10 @@ public sealed class VoyagerSameSessionSurfaceSourceTests
         public object Original { get; } = new();
         public string ActionId { get; } = Guid.NewGuid().ToString(); public string Key { get; } = Guid.NewGuid().ToString();
         public string JourneyId { get; } = Guid.NewGuid().ToString();
+        public DateTimeOffset DeadlineUtc { get; set; } = Now.AddHours(2);
     }
 
-    private static VoyagerSameSessionSurfaceSourceFacts Capture(References r, int frame, DateTimeOffset now)
+    internal static VoyagerSameSessionSurfaceSourceFacts Capture(References r, int frame, DateTimeOffset now)
     {
         const string sessionId = "synthetic-session", reason = "retained synthetic move failure";
         var session = new SessionState
@@ -204,7 +252,7 @@ public sealed class VoyagerSameSessionSurfaceSourceTests
             ExactRemoteBinding = true, NativePlayerIdle = false, LastLandedGameTick = 100, CurrentGameTick = 200,
             SpentGameTicks = 100, MaximumGameTicks = 10000, ReturnReserveGameTicks = 3600,
             WorkGameTicks = 1, TailGameTicks = VoyagerLocalWalkReservePolicy.StopGameTicks, NowUtc = now,
-            JourneyDeadlineUtc = Now.AddHours(2), AvailableLoadedEnergyJoules = 100000000,
+            JourneyDeadlineUtc = r.DeadlineUtc, AvailableLoadedEnergyJoules = 100000000,
             LockedReturnFloorJoules = 1000000, NativeWarperCount = 2,
         };
         return new()

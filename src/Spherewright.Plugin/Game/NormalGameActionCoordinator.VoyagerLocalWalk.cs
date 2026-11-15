@@ -803,6 +803,7 @@ internal sealed partial class NormalGameActionCoordinator
 
     public void StopVoyagerLocalForHostShutdownOnMainThread()
     {
+        StopSameSessionSurfacePreviewOnMainThread();
         VoyagerLocalPrePlayerTickAvailable = false;
         GuardVoyagerLandingChargeOnMainThread(stoppingHost: true);
         GuardVoyagerRemoteIdleOnMainThread(stoppingHost: true);

@@ -58,6 +58,7 @@
     <Compile Include="..\..\src\Spherewright.Plugin\Game\GameSessionTracker.RemoteResumeLeaseHandoff.cs" Link="PluginGame\GameSessionTracker.RemoteResumeLeaseHandoff.cs" />
     <Compile Include="..\..\src\Spherewright.Plugin\Game\GameSessionTracker.PausedSave.cs" Link="PluginGame\GameSessionTracker.PausedSave.cs" />
     <Compile Include="..\..\src\Spherewright.Plugin\Game\GameSessionTracker.SameSessionSurface.cs" Link="PluginGame\GameSessionTracker.SameSessionSurface.cs" />
+    <Compile Include="..\..\src\Spherewright.Plugin\Game\NormalGameActionCoordinator.SameSessionSurfacePreview.cs" Link="PluginGame\NormalGameActionCoordinator.SameSessionSurfacePreview.cs" />
     <Compile Include="..\..\src\Spherewright.Plugin\Game\GameSessionTracker.WriteBlockers.cs" Link="PluginGame\GameSessionTracker.WriteBlockers.cs" />
     <Compile Include="..\..\src\Spherewright.Plugin\Game\GameSessionTracker.OwnedSave.cs" Link="PluginGame\GameSessionTracker.OwnedSave.cs" />
     <Compile Include="..\..\src\Spherewright.Plugin\Game\GameSessionTracker.RemoteResumeSavePermission.cs" Link="PluginGame\GameSessionTracker.RemoteResumeSavePermission.cs" />
