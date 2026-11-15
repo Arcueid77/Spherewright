@@ -305,7 +305,7 @@ internal sealed partial class NormalGameActionCoordinator
             prepared.CommitAllowedNow = prepared.CommitBlockers.Count == 0;
             prepared.PreservesQuarantine = true;
             prepared.PreservationGameTick = preservation.GameTick;
-            prepared.CompletionCondition = "The same paused, previously admitted owned world is normally saved at the bound stable tick; quarantine, original action outcomes, tickets and Journey budgets remain unchanged. This grants no Resume or recovery authority.";
+            prepared.CompletionCondition = "The same paused owned world is normally saved at the bound stable tick; quarantine, original action outcomes, tickets and Journey budgets remain unchanged. This grants no Resume or recovery authority.";
         }
         return result;
     }

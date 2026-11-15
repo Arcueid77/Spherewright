@@ -12,6 +12,26 @@ namespace Spherewright.Bridge.Core.Tests;
 public sealed partial class VoyagerJourneyStoreIntegrationTests
 {
     [Fact]
+    public void UnrelatedUnknownMoveCanSaveWithoutBorrowingAReturnOnlyContinuationReceipt()
+    {
+        using var f = new Fixture(returnLeg: true, recoveryPhase: "active", originalWindowExpired: true);
+        var accepted = DispatchReturnOnly(f, NewReturnOnlyProposal(f)); f.AdoptExactCheckpoint();
+        Assert.True(f.ReadAction(accepted.ActionId).Succeeded);
+        GameMain.Pause();
+        f.Sessions.QuarantineWritesOnMainThread("unknown-move", "move_outcome_unknown");
+        UnityEngine.Time.frameCount++; f.Sessions.ObservePausedOwnedSaveOnMainThread();
+        UnityEngine.Time.frameCount++; f.Sessions.ObservePausedOwnedSaveOnMainThread();
+        Assert.True(f.Sessions.TryBindPausedOwnedSave(out var binding, out var rejection), rejection);
+        var prior = GameSave.FlightStartSave;
+        GameSave.FlightStartSave = name => { Fixture.WriteSave(name, GameMain.gameTick); return true; };
+        try { Assert.True(f.Sessions.TrySaveOwnedWorldNowOnMainThread(out var error, binding), error); }
+        finally { GameSave.FlightStartSave = prior; }
+        Assert.Null(f.Store.VoyagerJourney!.ReturnOnlyTask!.PreservationReceipt);
+        Assert.Equal("unknown-move", f.Sessions.Snapshot.WriteQuarantineActionId);
+        Assert.True(GameMain.isPaused);
+    }
+
+    [Fact]
     public void PreservationReceiptClosesTheTailGapWithoutRenewingTheCredentialOrBorrowingANewerTick()
     {
         using var f = new Fixture(returnLeg: true, recoveryPhase: "active", originalWindowExpired: true);

@@ -55,19 +55,17 @@ public sealed partial class VoyagerRemoteResumeCoordinatorIntegrationTests
     }
 
     [Theory]
-    [InlineData("adoption_pending")] [InlineData("adoption_failure")]
+    [InlineData("adoption_pending")]
     [InlineData("journal_pending")] [InlineData("load_pending")]
     [InlineData("newer_saved")] [InlineData("unowned")]
     [InlineData("other_blocker")] [InlineData("same_code_other_reason")]
-    [InlineData("other_quarantine_owner")] [InlineData("native_running")]
+    [InlineData("native_running")]
     public void UnprovedOrContradictoryPreservationNeverGetsAFileWrite(string fault)
     {
         using var s = new Scenario(); var action = s.Commit(s.Prepare()).Value!;
         using var shell = new PausedSaveShell(s, action.ActionId, fault != "adoption_pending");
         var before = File.ReadAllBytes(GameSave.SavePath(Scenario.Identity)); var calls = GameSave.FlightStartSaveCalls;
-        if (fault == "other_quarantine_owner")
-            s.Sessions.QuarantineWritesOnMainThread("different-original-action", "retained_unknown");
-        else s.Sessions.QuarantineRemoteIdleOnMainThread(action.ActionId, "remote_idle_return_wall_reserve_insufficient");
+        s.Sessions.QuarantineRemoteIdleOnMainThread(action.ActionId, "remote_idle_return_wall_reserve_insufficient");
         if (fault == "other_blocker") s.Sessions.DisablePausedSaveWrites();
         if (fault == "same_code_other_reason")
         {
@@ -86,6 +84,74 @@ public sealed partial class VoyagerRemoteResumeCoordinatorIntegrationTests
         Assert.Equal(GameMain.gameTick, cut.CapturedAtGameTick); Assert.False(cut.SafetyCertified);
         Assert.Equal("not_reached", cut.Predicates["native_save"]);
         Assert.Equal(before, File.ReadAllBytes(GameSave.SavePath(Scenario.Identity)));
+    }
+
+    [Theory]
+    [InlineData(false)] [InlineData(true)]
+    public void UnknownMoveCanPreservePausedProgressWithoutPriorAdoptionOrSaveWatermark(bool noExistingPrimary)
+    {
+        using var s = new Scenario(); var resume = s.Commit(s.Prepare()).Value!;
+        using var shell = new PausedSaveShell(s, resume.ActionId);
+        s.Sessions.ForgetPausedSaveProvenanceForTest();
+        s.Sessions.QuarantineWritesOnMainThread("unknown-move", "move_outcome_unknown");
+        if (noExistingPrimary) File.Delete(GameSave.SavePath(Scenario.Identity));
+        var untouched = s.ProtectedEvidencePaths.Where(p => p != GameSave.SavePath(Scenario.Identity))
+            .ToDictionary(p => p, File.ReadAllBytes);
+        var loadCalls = DSPGame.LoadCalls;
+        shell.Observe(10); shell.Observe(11);
+        Assert.True(s.Sessions.TryBindPausedOwnedSave(out var binding, out var rejection), rejection);
+        Assert.Null(NormalGameActionCoordinator.SaveAccessForTest(s.Sessions.Snapshot, binding));
+
+        GameSave.FlightStartSave = name => { s.WriteSave(name, GameMain.gameTick); return true; };
+        Assert.True(s.Sessions.TrySaveOwnedWorldNowOnMainThread(out var error, binding), error);
+        using var primary = OwnedSaveRecoveryLease.Open(GameSave.SavePath(Scenario.Identity), Scenario.Identity);
+        Assert.Equal(GameMain.gameTick, primary.Prefix.GameTick);
+        Assert.True(GameMain.isPaused);
+        Assert.Equal("unknown-move", s.Sessions.Snapshot.WriteQuarantineActionId);
+        Assert.Equal(WriteHealthStates.Quarantined, s.Sessions.PreservationWriteHealth);
+        Assert.False(s.Sessions.Snapshot.WritesAllowed);
+        Assert.Equal(loadCalls, DSPGame.LoadCalls);
+        foreach (var pair in untouched) Assert.Equal(pair.Value, File.ReadAllBytes(pair.Key));
+    }
+
+    [Fact]
+    public void UnknownWatermarkDoesNotPermitOverwritingANewerPrimary()
+    {
+        using var s = new Scenario(); var resume = s.Commit(s.Prepare()).Value!;
+        using var shell = new PausedSaveShell(s, resume.ActionId);
+        s.Sessions.ForgetPausedSaveProvenanceForTest();
+        s.Sessions.QuarantineWritesOnMainThread("unknown-move", "move_outcome_unknown");
+        s.WriteSave(Scenario.Identity, GameMain.gameTick + 1);
+        var original = File.ReadAllBytes(GameSave.SavePath(Scenario.Identity));
+        var calls = GameSave.FlightStartSaveCalls;
+        shell.Observe(10); shell.Observe(11);
+        Assert.True(s.Sessions.TryBindPausedOwnedSave(out var binding, out var rejection), rejection);
+        Assert.False(s.Sessions.TrySaveOwnedWorldNowOnMainThread(out _, binding));
+        Assert.Equal(calls, GameSave.FlightStartSaveCalls);
+        Assert.Equal(original, File.ReadAllBytes(GameSave.SavePath(Scenario.Identity)));
+        Assert.Equal("existing_primary_not_newer", binding!.FirstFailure!.FirstFailedPredicate);
+        Assert.Equal("not_reached", binding.FirstFailure.Predicates["native_save_returned_true"]);
+    }
+
+    [Fact]
+    public void FailedSaveDoesNotPermanentlyBlockANewSaveOfTheSamePausedWorld()
+    {
+        using var s = new Scenario(); var resume = s.Commit(s.Prepare()).Value!;
+        using var shell = new PausedSaveShell(s, resume.ActionId);
+        s.Sessions.QuarantineWritesOnMainThread("unknown-move", "move_outcome_unknown");
+        shell.Observe(10); shell.Observe(11);
+        Assert.True(s.Sessions.TryBindPausedOwnedSave(out var first, out var rejection), rejection);
+        GameSave.FlightStartSave = _ => false;
+        Assert.False(s.Sessions.TrySaveOwnedWorldNowOnMainThread(out _, first));
+        Assert.Equal("native_save_returned_true", first!.FirstFailure!.FirstFailedPredicate);
+
+        Assert.True(s.Sessions.TryBindPausedOwnedSave(out var next, out rejection), rejection);
+        Assert.NotSame(first, next);
+        GameSave.FlightStartSave = name => { s.WriteSave(name, GameMain.gameTick); return true; };
+        Assert.True(s.Sessions.TrySaveOwnedWorldNowOnMainThread(out var error, next), error);
+        Assert.Equal("native_save_returned_true", first.FirstFailure!.FirstFailedPredicate);
+        Assert.Equal("unknown-move", s.Sessions.Snapshot.WriteQuarantineActionId);
+        Assert.True(GameMain.isPaused);
     }
 
     [Theory]

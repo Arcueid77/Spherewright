@@ -90,6 +90,14 @@ namespace Spherewright.Plugin.Game
                 case "unowned": IsCurrentSessionOwned = false; break;
             }
         }
+        internal void ForgetPausedSaveProvenanceForTest()
+        {
+            ResetContactForExpectedWorld();
+            _remoteResumeAdoption = null;
+            _resumeAdoptionError = "synthetic_previous_failure";
+            _ownedSaveState = OwnedSaveStates.SaveFailed;
+            _lastOwnedSaveGameTick = null;
+        }
         internal long? LastPreservedTick => _lastOwnedSaveGameTick;
         internal string PreservationWriteHealth => _writeHealth;
         internal void DisablePausedSaveWrites() => _writesConfigured = false;

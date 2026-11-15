@@ -86,6 +86,10 @@ public sealed class PausedOwnedSaveGuard
             return false;
         }
         _lastFailure = null;
+        // A failed save keeps its own first-failure evidence, but must not
+        // poison a newly prepared save of the same still-stable paused world.
+        if (_stable!.FirstFailure is not null)
+            _stable = new PausedOwnedSaveBinding(_stable.Observation);
         binding = _stable;
         return true;
     }
@@ -125,6 +129,6 @@ public sealed class PausedOwnedSaveGuard
         ?? (o.NativePaused is null ? "paused_save_pause_not_observed" : o.NativePaused != true ? "paused_save_native_not_paused" :
             o.World is null || string.IsNullOrWhiteSpace(o.SessionId) || string.IsNullOrWhiteSpace(o.OwnedSaveName)
             || string.IsNullOrWhiteSpace(o.NativeVersion) || o.PlanetId <= 0 || o.GameTick < 0 || o.RenderFrame < 0
-            || string.IsNullOrWhiteSpace(o.QuarantineActionId) || string.IsNullOrWhiteSpace(o.QuarantineReason)
+            || string.IsNullOrWhiteSpace(o.QuarantineReason)
                 ? "paused_save_identity_or_quarantine_unproved" : null);
 }

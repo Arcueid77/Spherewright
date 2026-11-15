@@ -70,6 +70,18 @@ public sealed class PausedOwnedSaveGuardTests
         Assert.Equal(2, binding.RemainingBlockers(new[] { exact, exact }).Count);
     }
 
+    [Fact]
+    public void SerializationDoesNotRequireAnUnavailableOriginalActionId()
+    {
+        var guard = new PausedOwnedSaveGuard(); var o = Observation(); o.QuarantineActionId = null;
+        guard.Observe(o); o.RenderFrame++; guard.Observe(o);
+        Assert.True(guard.TryBind(o, out var binding, out var rejection), rejection);
+        Assert.Empty(binding!.RemainingBlockers(new[] { new WriteBlocker
+        { Code = BridgeErrorCodes.WriteSubsystemQuarantined, Message = o.QuarantineReason! } }));
+        o.QuarantineActionId = "later-different-action";
+        Assert.False(guard.Validate(binding, o, out _));
+    }
+
     private static PausedOwnedSaveObservation Observation() => new()
     {
         World = new object(), SessionId = "synthetic-session", OwnedSaveName = "synthetic-owned-world",

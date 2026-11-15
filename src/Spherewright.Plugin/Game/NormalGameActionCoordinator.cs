@@ -1497,7 +1497,7 @@ internal sealed partial class NormalGameActionCoordinator
             case NormalActionKinds.SupplyMechaWarpers:
                 return RevalidateSupplyMechaWarpersOnMainThread(plan);
             case NormalActionKinds.ReturnToMainMenu:
-                return RevalidateSaveOnMainThread(plan) ?? MainMenuIdleBlocker();
+                return RevalidateSaveOnMainThread(plan) ?? MainMenuIdleBlocker(pausedPreservation: plan.SavePreservation is not null);
             case NormalActionKinds.Save:
                 return RevalidateSaveOnMainThread(plan);
             case NormalActionKinds.ConfigureBuilding:

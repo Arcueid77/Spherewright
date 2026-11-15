@@ -415,11 +415,11 @@ Move/Harvest 复用既有普通 RTS 动作并保留无水快路。有限能耗�
 正常施工保持固定 hold anchor 处的 Walk；Drift 或锚损失立即停止新派发并走精确绑定的 Pause/unknown 失败保护，不能声称无人机已尾返。工作仍自原开始最多3600 tick/60秒，默认fresh resume不增加一分钟，working 原 action 查询只续30秒观察租约。已知的有限取消保留第一次尾部时钟。dispatchDisabled 不等于安全空闲：须关闭后跨过精确工厂真实 Native 施工轮次、原预发缓存清空、全部 owned 无人机实际空闲及 physicalIdleVerified，并保留原绑定/anchor/储备证据。守卫、租约或尾期失败走失败保护，不能写成空闲成功。保留未知的原 action/build/checkpoint，不启用无人机、不重放创建；已证 pending 对象仅通过 fresh prepare_blueprint_build，以精确 resumeBuildId 及进度/玩家哈希续接。过期工作仍过期，不覆盖用户暂停/输入、不自动恢复，也不从 Host 退出推断无人机已返。
 
 <a id="restart-and-interplanetary-flight"></a>
-### 接管后闲置隔离的进度保全
+### 隔离期间的暂停进度保全
 
-`spherewright_prepare_save(..., preserveQuarantinedProgress=true)` 是有限的序列化请求。配套 Plugin 必须回显 `preservesQuarantine=true` 和 `preservationGameTick`。它要求同一已完成接管的 owned 世界、原接管后 idle 守卫隔离、全部加载/Journal 租约已释放、无其他动作或写入阻塞，并在可能的601尾部之后跨不同渲染帧观察到暂停进度不变。Prepare/commit 绑定精确世界、会话、revision、tick和隔离；其他世界、未知 Pause、进度变化或过期绑定均拒绝。默认 Save 仍受隔离阻塞。这不证明物理空闲、接地或返程预算。
+`spherewright_prepare_save(..., preserveQuarantinedProgress=true)` 请求保存当前暂停且处于隔离中的 owned 世界，当前星球及工厂须已加载。配套 Plugin 回显 `preservesQuarantine=true` 和 `preservationGameTick`。原动作不必是已完成恢复或 idle 守卫：Move 结果未知、角色在水面或先前保存失败，本身都不妨碍新保存。加载/Journal 操作和其他动作须已结束，且暂停进度在不同渲染帧保持不变。Prepare/commit 绑定精确世界、会话、revision、tick 和隔离；其他世界、未知 Pause、进度变化或过期绑定均拒绝。覆盖现有 owned 主档前会检查主档没有更新进度。默认 Save 仍受隔离阻塞。保存不证明物理空闲、接地或返程预算。
 
-使用原计划/key提交一次，核对同一动作。原生普通 Save 必须返回 true，精确 owned 完整文件须通过 prefix及全文件核验，并等于绑定的当前 tick。失败保留同次 `nativeFirstFailure` 事实；未知文件 tick保留 null，未执行检查保留 `not_reached`。保全不清隔离、不关闭/重写 Journey、不退役或续发凭据、不修改旧动作结果，也不 Resume或Load。尤其成功恢复不能当作失败前驱；保存后续暂停进度不使它获得失败续接资格。旧实装 Plugin 不会因更新文档或 MCP 自动获得此能力；RAM尚无完整覆盖时，不退出或冷部署。离线 Native 替身不证明 Unity Data.Export 或实机验收。
+使用原计划/key提交一次，核对同一动作。原生普通 Save 必须返回 true，精确 owned 完整文件须通过 prefix 及全文件核验，并等于绑定的当前 tick。失败保留同次 `nativeFirstFailure` 事实；暂停现场仍有效时可用新计划重试，原失败记录不变。保全不清隔离、不关闭或续期 Journey、不修改旧动作结果，也不 Resume 或 Load。只返航续接回执仅为其精确所有者记录；若回执记录失败，已核验的保存仍然成立，但不能据此取得续接证据。旧实装 Plugin 不会因更新文档或 MCP 自动获得此能力；RAM 尚无完整覆盖时，不退出或冷部署。离线 Native 替身不证明 Unity Data.Export 或实机验收。
 
 ### 在原窗口内续接已成功的远端接管
 
@@ -502,7 +502,7 @@ Native Import 可将 double 宇宙坐标逆投影为 float 本地位置；普通
 
 ## 保存后回主界面，在同一进程恢复
 
-已有普通 Save/Load 授权时，使用 `spherewright_prepare_return_to_main_menu` / `spherewright_commit_return_to_main_menu`。先核当前 session/revision，等待角色落地无指令、真实施工无人机闲置和全部已接受动作完成。预检不保存、不离开世界。提交先普通保存并核验完整当前 owned 文件，再执行原生 EndGame；还可能生成正常 LastExit。查询原 `spherewright_get_action_result`，直到 `succeeded=true` 且 `mainMenuReturnReadback.mainMenuVerified=true`，并另核新 session 未载入世界；游戏进程保持打开。读档仍另需精确存档身份/进度、完整备份、新鲜恢复计划/摘要及适用授权。保留原回执和累计预算，回菜单不授新任务。可选 `preserveQuarantinedProgress=true` 沿用所有暂停隔离保全检查，不授 Resume。失败先保留原件并调查、不重放。只有已授权 Mod 换装或其他具体技术必要条件才关闭进程。
+已有普通 Save/Load 授权时，使用 `spherewright_prepare_return_to_main_menu` / `spherewright_commit_return_to_main_menu`。先核当前 session/revision，等待已接受动作和加载结束。运行中的世界要求角色落地无指令、真实施工无人机闲置；使用已绑定的 `preserveQuarantinedProgress=true` 时则保持暂停，无需先接地或等待无人机闲置。预检不保存、不离开世界。提交先普通保存并核验完整当前 owned 文件，再执行原生 EndGame；还可能生成正常 LastExit。查询原 `spherewright_get_action_result`，直到 `succeeded=true` 且 `mainMenuReturnReadback.mainMenuVerified=true`，并另核新 session 未载入世界；游戏进程保持打开。读档仍另需精确存档身份/进度、完整备份、新鲜恢复计划/摘要及适用授权。保留原回执和累计预算，回菜单不授新任务。失败先保留原件并调查、不重放。只有已授权 Mod 换装或其他具体技术必要条件才关闭进程。
 
 ### 已存未供电电塔及远端传送带端口
 

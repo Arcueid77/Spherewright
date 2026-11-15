@@ -38,7 +38,7 @@
 
 `prepare_resume_owned_game` 新增显式 `continue_completed_remote_last_exit` 和可选 `priorActionKnownTerminalCompleted`，要求独立当前上下文域及立即前驱消费双副本，继承不变的授权窗口/起点，禁止新充能，拒绝新期限/上限参数。成功终态是调用方声明，不是Native认证，不得替换失败/未知结果；须核独立prepare回显并确认准确digest。见[手册](agent-playbook.zh-CN.md#在原窗口内续接已成功的远端接管)。
 
-Owned Save 准备新增可选 `preserveQuarantinedProgress`，默认 false。序列化请求要求匹配的 `preservesQuarantine`/`preservationGameTick` 回显及 fresh 接管后暂停保存证明；普通 commit/幂等和其他阻塞均保留，不清隔离，不授予 Resume/Load。可选的 `BridgeError.nativeFirstFailure` 和动作结果 `nativeFirstFailure` 是有界、独立复制的首次判断证据，不是安全认证；未知值保留 null/unknown，未执行检查为 `not_reached`。见[手册](agent-playbook.zh-CN.md#接管后闲置隔离的进度保全)。
+Owned Save 准备支持可选 `preserveQuarantinedProgress`，默认 false。序列化请求要求匹配的 `preservesQuarantine`/`preservationGameTick` 回显及 fresh 暂停 owned 世界证明，不限定原隔离动作；普通 commit/幂等和其他阻塞均保留，不清隔离，不授予 Resume/Load。可选的 `BridgeError.nativeFirstFailure` 和动作结果 `nativeFirstFailure` 是有界、独立复制的首次判断证据，不是安全认证；未知值保留 null/unknown，未执行检查为 `not_reached`。见[手册](agent-playbook.zh-CN.md#隔离期间的暂停进度保全)。
 
 ```text
 spherewright_get_status
@@ -487,7 +487,7 @@ Move 地表预览是观察，不是寻路，180/600 tick 失败指导禁止重�
 
 只返航重载在 `returnOnlyRecovery.nativeHandoffState=pending` 时保持非终态。准确检查点接管先阻止普通写入与重存；既有 Native501 保护必须证明当前运行引用、严格物理 idle、能源及本次独立返航预算，才能成功完成。原已耗尽 spent、UTC 与返程储备保持不变。接管失败时正常暂停同一 owned 世界并报告首个同次复制证据；已接管检查点不因此获得再次加载权限。
 
-这一准确、完整接管的检查点角色，可在接管检查已结束或失败后，以 `prepare_save(preserveQuarantinedProgress=true)` 绑定稳定暂停状态的保全保存。它核验原检查点、任务、会话、世界、工厂及其余阻塞，并完整读回原生文件、身份、版本、和平模式及准确 tick。保存保留隔离、范围、旧结果与预算，不签发恢复凭据。既有已成功 LastExit 接管的保全角色维持原要求。
+检查点接管已结束或失败后，可用 `prepare_save(preserveQuarantinedProgress=true)` 绑定稳定暂停状态的保全保存，无需健康 idle 证明。它核验 owned 会话、世界、工厂及其余阻塞，并完整读回原生文件、身份、版本、和平模式及准确 tick。保存保留隔离、范围、旧结果与预算，不签发恢复凭据；只返航续接回执另行要求匹配其精确任务所有者。
 
 
 源码依据：[Contracts](../src/Spherewright.Contracts)、[MCP 工具](../src/Spherewright.Mcp/Tools)、[Core](../src/Spherewright.Bridge.Core)、[原生适配器](../src/Spherewright.Plugin/Game)。早期细节：[已验收协议](https://github.com/Arcueid77/Spherewright/blob/2a7a98d1932c404e3a7abc2c11233d9c0b8780d9/docs/protocol.md)、[Lab 固定参考](https://github.com/Arcueid77/Spherewright-Lab/tree/14478a03c64c550e644c559405c8496b647552e7)。离线契约不证明已安装或实机验收。
@@ -504,9 +504,9 @@ Move 地表预览是观察，不是寻路，180/600 tick 失败指导禁止重�
 
 ## 受保护地返回主界面
 
-`prepare_return_to_main_menu` 复用 `prepare_save` 的星球、revision、hash version 及可选暂停隔离保全参数，签发独立的 `return-to-main-menu` 计划；`commit_return_to_main_menu` 使用普通提交信封和单个 UUID。MCP 对应同名 `spherewright_*` 工具。仅接受当前 owned 世界、角色落地无指令、真实施工无人机闲置且无其他活动动作或 loader；原写入、Journey、隔离及单动作安全检查保留。
+`prepare_return_to_main_menu` 复用 `prepare_save` 的星球、revision、hash version 及可选暂停隔离保全参数，签发独立的 `return-to-main-menu` 计划；`commit_return_to_main_menu` 使用普通提交信封和单个 UUID。MCP 对应同名 `spherewright_*` 工具。运行中的 owned 世界要求角色落地无指令、真实施工无人机闲置；已绑定的暂停保全退出则要求世界保持暂停。两者均要求无其他活动动作或 loader；原写入、Journey、隔离及单动作安全检查保留。
 
-提交先执行一次普通 owned Save，核验完整文件的精确身份、版本、当前 tick、和平及非沙盒状态，再沿原生 Esc 菜单路径设置 `backToMainMenu=true` 并调用 `DSPGame.EndGame`。原生 EndGame 还可能写 LastExit；不退出进程、不读档。查询原动作的 `mainMenuReturnReadback`，分别取得保存成功/tick、完整文件、End 发出、真实闲置菜单及首个失败谓词。接受或发出 End 不等于成功，菜单观察限十秒；世界结束后仍能查询原幂等及终态记录。失败/unknown 原件保留、不重放。读档另走受保护预检、确认和提交。
+提交先执行一次普通 owned Save，核验完整文件的精确身份、版本、当前 tick 和和平模式，再沿原生 Esc 菜单路径设置 `backToMainMenu=true` 并调用 `DSPGame.EndGame`。沙盒模式本身不阻止此流程。原生 EndGame 还可能写 LastExit；不退出进程、不读档。查询原动作的 `mainMenuReturnReadback`，分别取得保存成功/tick、完整文件、End 发出、真实闲置菜单及首个失败谓词。接受或发出 End 不等于成功，菜单观察限十秒；世界结束后仍能查询原幂等及终态记录。失败/unknown 原件保留、不重放。读档另走受保护预检、确认和提交。
 
 ### 原生背包科研自动供料开关
 

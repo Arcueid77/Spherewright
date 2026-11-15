@@ -8,6 +8,30 @@ public sealed class ProtectedMainMenuReturnTests
     private static readonly DateTimeOffset Now = DateTimeOffset.Parse("2026-01-01T00:00:00Z");
 
     [Fact]
+    public void PausedPreservationCanSaveAndExitWithoutRequiringGroundOrIdleDrones()
+    {
+        Assert.Null(ProtectedMainMenuReturn.ReadinessBlocker(false, true, true, true, false));
+        var calls = new List<string>(); var operation = new ProtectedMainMenuReturn();
+        operation.Begin(() => { calls.Add("save"); return 42; }, _ =>
+        { calls.Add("complete"); return ProtectedMainMenuReturn.ReadinessBlocker(false, true, true, true, false) is null; },
+        () => calls.Add("end"), Now);
+        Assert.Equal(new[] { "save", "complete", "end" }, calls);
+        operation.Observe(() => true, Now.AddSeconds(1));
+        Assert.True(operation.Succeeded);
+    }
+
+    [Theory]
+    [InlineData(true, true, true, true, false)]
+    [InlineData(false, false, true, true, false)]
+    [InlineData(false, true, true, false, false)]
+    [InlineData(false, true, false, true, false)]
+    public void ExitStillRefusesActiveWorkMissingRuntimeUnpausedPreservationOrRunningNonIdleWorld(
+        bool active, bool ready, bool preservation, bool paused, bool idle)
+    {
+        Assert.NotNull(ProtectedMainMenuReturn.ReadinessBlocker(active, ready, preservation, paused, idle));
+    }
+
+    [Fact]
     public void SaveAndCompleteProofPrecedeNativeEndAndActualMenuObservation()
     {
         var calls = new List<string>();

@@ -11,7 +11,7 @@ internal sealed partial class NormalGameActionCoordinator
     {
         var common = ValidatePrepareCommon(sessionId, request.PlanetId, request.StateHashVersion);
         if (common.Error is not null) return GameCallResult<PreparedNormalAction>.Failed(common.Error);
-        var blocker = MainMenuIdleBlocker();
+        var blocker = MainMenuIdleBlocker(pausedPreservation: request.PreserveQuarantinedProgress);
         if (blocker is not null) return GameCallResult<PreparedNormalAction>.Failed(blocker);
         var result = PrepareSavePlanOnMainThread(sessionId, request, NormalActionKinds.ReturnToMainMenu);
         if (result.Value is { } prepared)
@@ -19,21 +19,20 @@ internal sealed partial class NormalGameActionCoordinator
         return result;
     }
 
-    private BridgeError? MainMenuIdleBlocker(ActionRecord? executing = null)
+    private BridgeError? MainMenuIdleBlocker(ActionRecord? executing = null, bool pausedPreservation = false)
     {
-        if (_actions.ActiveValues.Any(a => !a.Terminal && !ReferenceEquals(a, executing)))
-            return Stale("Wait for every accepted action to become terminal before returning to the main menu.");
+        var otherActionActive = _actions.ActiveValues.Any(a => !a.Terminal && !ReferenceEquals(a, executing));
+        var gameReady = GameMain.isRunning && !DSPGame.IsMenuDemo && UIRoot.instance is not null
+            && UnityEngine.Object.FindObjectOfType<GameLoader>() == null;
         var player = GameMain.mainPlayer;
         var factory = GameMain.data?.localLoadedPlanetFactory;
-        if (!GameMain.isRunning || DSPGame.IsMenuDemo || UIRoot.instance is null
-            || UnityEngine.Object.FindObjectOfType<GameLoader>() != null
-            || player?.controller?.actionWalk is null || !player.controller.actionWalk.isGrounded
-            || player.currentOrder is not null || !(player.controller.velocity.sqrMagnitude <= 0.01f)
-            || player.mecha?.constructionModule is null || factory is null
-            || !TryObserveOwnedConstructionDrones(factory, player.mecha.constructionModule, out var idle, out _)
-            || !idle)
-            return Stale("Returning to the main menu requires the exact loaded grounded, order-free player, physically idle construction drones and no game loader.");
-        return null;
+        var physicallyIdle = !pausedPreservation && player?.controller?.actionWalk is not null
+            && player.controller.actionWalk.isGrounded && player.currentOrder is null
+            && player.controller.velocity.sqrMagnitude <= 0.01f && player.mecha?.constructionModule is not null
+            && factory is not null && TryObserveOwnedConstructionDrones(factory, player.mecha.constructionModule, out var idle, out _) && idle;
+        var rejection = ProtectedMainMenuReturn.ReadinessBlocker(otherActionActive, gameReady,
+            pausedPreservation, GameMain.isPaused, physicallyIdle);
+        return rejection is null ? null : Stale(rejection);
     }
 
     private void ExecuteReturnToMainMenuOnMainThread(ActionRecord action)
@@ -45,7 +44,7 @@ internal sealed partial class NormalGameActionCoordinator
         operation.Begin(
             () =>
             {
-                var blocker = MainMenuIdleBlocker(action) ?? SavePreservationBlocker(action.Plan, action);
+                var blocker = MainMenuIdleBlocker(action, action.Plan.SavePreservation is not null) ?? SavePreservationBlocker(action.Plan, action);
                 if (blocker is not null) throw new InvalidOperationException(blocker.Message);
                 if (!_sessions.TrySaveOwnedWorldNowOnMainThread(out var error, action.Plan.SavePreservation))
                     throw new InvalidOperationException(error);
@@ -58,7 +57,7 @@ internal sealed partial class NormalGameActionCoordinator
                 using var file = OwnedSaveRecoveryLease.Open(GameSave.SavePath(action.Plan.SaveOwnedName), action.Plan.SaveOwnedName);
                 return file.Prefix.MatchesExpectedIdentity && file.Prefix.GameTick == tick && tick == GameMain.gameTick
                     && file.Prefix.GameVersion == _sessions.CurrentNativeGameVersion && file.Prefix.Peaceful
-                    && !file.Prefix.Sandbox && MainMenuIdleBlocker(action) is null;
+                    && MainMenuIdleBlocker(action, action.Plan.SavePreservation is not null) is null;
             },
             () =>
             {

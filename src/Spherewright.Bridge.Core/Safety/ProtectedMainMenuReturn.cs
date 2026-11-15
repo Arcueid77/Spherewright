@@ -11,6 +11,19 @@ public sealed class ProtectedMainMenuReturn
     public bool Terminal { get; private set; }
     public bool Succeeded => Terminal && Readback.MainMenuVerified;
 
+    // A paused preservation exit serializes the current state before EndGame;
+    // the actor and drones need not first become physically idle. A running
+    // world still needs the ordinary idle check.
+    public static string? ReadinessBlocker(bool otherActionActive, bool nativeGameReady,
+        bool pausedPreservation, bool nativePaused, bool physicallyIdle)
+    {
+        if (otherActionActive) return "Wait for every accepted action to become terminal before returning to the main menu.";
+        if (!nativeGameReady) return "The loaded game, menu interface or loader is not ready for a normal return.";
+        if (pausedPreservation)
+            return nativePaused ? null : "Paused preservation return requires the current world to remain paused.";
+        return physicallyIdle ? null : "Returning to the main menu requires the grounded, order-free player and physically idle construction drones.";
+    }
+
     public void Begin(Func<long> save, Func<long, bool> verify, Action endGame, DateTimeOffset now)
     {
         if (Readback.NativeEndRequested || Terminal) return;

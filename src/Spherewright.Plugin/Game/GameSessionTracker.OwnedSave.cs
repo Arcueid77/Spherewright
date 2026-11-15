@@ -25,7 +25,7 @@ internal sealed partial class GameSessionTracker
         var failedPredicate = "native_save_returned_true";
         var saveEvidence = preservation is null ? null
             : new NativeResumeDecisionEvidence("paused_owned_native_save", null, null, true);
-        saveEvidence?.NotReached("native_save_returned_true", "native_save_complete_prefix", "native_save_owned_identity",
+        saveEvidence?.NotReached("existing_primary_not_newer", "native_save_returned_true", "native_save_complete_prefix", "native_save_owned_identity",
             "native_save_version", "native_save_peaceful", "native_save_current_tick", "native_save_complete_file_hash",
             "native_save_bound_progress_and_quarantine","return_only_preservation_receipt");
         saveEvidence?.Number("bound_game_tick", preservation?.GameTick);
@@ -42,6 +42,24 @@ internal sealed partial class GameSessionTracker
         }
         try
         {
+            if (preservation is not null)
+            {
+                // A missing in-memory watermark must not hide a newer primary.
+                // A new owned world may legitimately have no primary yet.
+                failedPredicate = "existing_primary_not_newer";
+                var path = GameSave.SavePath(_ownedSaveName);
+                if (File.Exists(path))
+                {
+                    using var existing = OwnedSaveRecoveryLease.Open(path, _ownedSaveName!);
+                    if (existing.Prefix.GameTick > preservation.GameTick)
+                    {
+                        saveEvidence?.Require(failedPredicate, false);
+                        throw new InvalidDataException("The existing owned primary is newer than the paused world.");
+                    }
+                }
+                saveEvidence?.Require(failedPredicate, true);
+            }
+            failedPredicate = "native_save_returned_true";
             GameMain.gameName = _ownedSaveName;
             nativeReturned = GameSave.SaveCurrentGame(_ownedSaveName);
             saveEvidence?.Require("native_save_returned_true", nativeReturned);
@@ -85,15 +103,24 @@ internal sealed partial class GameSessionTracker
                     || !ValidatePausedOwnedSave(preservation, out _))
                     throw new InvalidDataException("The paused owned save did not prove complete current progress and unchanged quarantine.");
                 saveEvidence?.Require("native_save_bound_progress_and_quarantine", true);
-                failedPredicate="return_only_preservation_receipt";
-                if(_flightCheckpoints.VoyagerJourney?.ReturnOnlyScopeActive==true
-                    &&!_flightCheckpoints.TryRecordReturnOnlyPreservation(_sessionId!,_writeQuarantineActionId!,
-                        complete.Prefix.GameTick,complete.Fingerprint,preservation.Fingerprint,out var receiptRejection))
+                // A receipt is useful only for its exact return-only owner. An
+                // unrelated quarantine can still save, but cannot issue a
+                // return continuation or borrow another task's provenance.
+                var journey = _flightCheckpoints.VoyagerJourney;
+                var task = journey?.ReturnOnlyTask;
+                if (journey?.ReturnOnlyScopeActive == true && task is not null && task.CurrentSessionId == _sessionId
+                    && task.CurrentActionId == _writeQuarantineActionId)
                 {
-                    saveEvidence?.Require(failedPredicate,null);
-                    throw new InvalidDataException(receiptRejection);
+                    failedPredicate = "return_only_preservation_receipt";
+                    if (_flightCheckpoints.TryRecordReturnOnlyPreservation(_sessionId!, _writeQuarantineActionId!,
+                        complete.Prefix.GameTick, complete.Fingerprint, preservation.Fingerprint, out var receiptRejection))
+                        saveEvidence?.Require(failedPredicate, true);
+                    else
+                    {
+                        saveEvidence?.Require(failedPredicate, false);
+                        _logger.LogWarning($"The owned save succeeded but the return-only continuation receipt was not recorded: {receiptRejection}");
+                    }
                 }
-                if(_flightCheckpoints.VoyagerJourney?.ReturnOnlyScopeActive==true)saveEvidence?.Require(failedPredicate,true);
             }
 
             _ownedSaveState = OwnedSaveStates.Saved;
