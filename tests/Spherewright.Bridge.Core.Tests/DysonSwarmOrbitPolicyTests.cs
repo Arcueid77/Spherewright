@@ -60,6 +60,17 @@ public sealed class DysonSwarmOrbitPolicyTests
         Assert.True(DysonSwarmOrbitPolicy.RotationMatchesRequest(received!.Orbit, received.NativeRotation));
     }
 
+    [Fact]
+    public void KnownThirtyByFortyDegreeOrientationIsNotAnIdentityOrReversedAnglePair()
+    {
+        // Z(-30 degrees) followed by Y(-40 degrees), with its actual rotated up vector.
+        var q = new QuaternionSnapshot { X = .08852133f, Y = -.33036608f, Z = -.24321035f, W = .90767337f };
+        var up = new Vector3Snapshot { X = .38302222f, Y = .8660254f, Z = .3213938f };
+        Assert.True(DysonSwarmOrbitPolicy.RotationMatchesRequest(new() { InclinationDegrees = 30, LongitudeDegrees = 40 }, q));
+        Assert.True(DysonSwarmOrbitPolicy.RotationMatchesUp(q, up));
+        Assert.False(DysonSwarmOrbitPolicy.RotationMatchesRequest(new() { InclinationDegrees = 40, LongitudeDegrees = 30 }, q));
+    }
+
     [Theory]
     [InlineData("binding")] [InlineData("incomplete")] [InlineData("cursor")] [InlineData("capacity")]
     [InlineData("radius")] [InlineData("invalid_rotation")] [InlineData("duplicate")] [InlineData("future_slot")]
