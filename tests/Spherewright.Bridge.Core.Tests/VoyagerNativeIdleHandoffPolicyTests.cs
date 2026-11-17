@@ -14,6 +14,17 @@ public sealed class VoyagerNativeIdleHandoffPolicyTests
         Assert.True(VoyagerNativeIdleHandoffPolicy.PhysicallyAtRest(true, true, 0, 0, 0, 0, 0, 0, 0));
     }
 
+    [Fact]
+    public void GroundedNativeFloatNoiseIsIdleButAnRtsTailStillIsNot()
+    {
+        Assert.True(VoyagerNativeIdleHandoffPolicy.PhysicallyAtRest(true,true,6.6e-10,1e-18,1e-18,1e-18,6.6e-10,0,0));
+        Assert.True(VoyagerNativeIdleHandoffPolicy.PhysicallyAtRest(true,true,0,1e-10,1e-10,1e-10,1e-5,0,0));
+        Assert.False(VoyagerNativeIdleHandoffPolicy.PhysicallyAtRest(true,true,0,1.01e-10,0,0,0,0,0));
+        Assert.False(VoyagerNativeIdleHandoffPolicy.PhysicallyAtRest(true,true,0,0,0,0,1.01e-5,0,0));
+        Assert.False(VoyagerNativeIdleHandoffPolicy.PhysicallyAtRest(true,true,0,0,0,0,0,1e-18,0));
+        Assert.False(VoyagerNativeIdleHandoffPolicy.PhysicallyAtRest(true,true,0,0,0,0,0,0,1e-18));
+    }
+
     [Theory]
     [InlineData(0)] [InlineData(1)] [InlineData(2)] [InlineData(3)] [InlineData(4)] [InlineData(5)]
     public void AnyRemainingControllerOrBodyMotionPreventsIdleHandoff(int component)

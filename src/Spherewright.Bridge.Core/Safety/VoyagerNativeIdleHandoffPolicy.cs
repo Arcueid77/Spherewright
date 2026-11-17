@@ -6,10 +6,18 @@ namespace Spherewright.Bridge.Core.Safety;
 // can make a completed Move quarantine the same frame.
 public static class VoyagerNativeIdleHandoffPolicy
 {
+    // Tiny Native physics noise is not an RTS order. At this bound even the
+    // full13-tick local stop spans less than three micrometres. Real commands,
+    // ground contact, original budgets and the later anchor checks remain
+    // independent requirements.
+    public const double MaximumResidualSpeed = .00001d;
+    private const double MaximumResidualSquared = MaximumResidualSpeed * MaximumResidualSpeed;
+    private static bool TinySquared(double value) => value >= 0d && value <= MaximumResidualSquared;
+
     public static bool PhysicallyAtRest(bool actualWalk, bool frameWalk, double speed,
         double controllerVelocitySquared, double rigidVelocitySquared, double angularVelocitySquared,
         double verticalSpeed, double walkRtsVelocitySquared, double driftRtsVelocitySquared) =>
         actualWalk && frameWalk && speed >= 0d && speed <= (double).1f
-        && controllerVelocitySquared == 0d && rigidVelocitySquared == 0d && angularVelocitySquared == 0d
-        && verticalSpeed == 0d && walkRtsVelocitySquared == 0d && driftRtsVelocitySquared == 0d;
+        && TinySquared(controllerVelocitySquared) && TinySquared(rigidVelocitySquared) && TinySquared(angularVelocitySquared)
+        && Math.Abs(verticalSpeed) <= MaximumResidualSpeed && walkRtsVelocitySquared == 0d && driftRtsVelocitySquared == 0d;
 }
