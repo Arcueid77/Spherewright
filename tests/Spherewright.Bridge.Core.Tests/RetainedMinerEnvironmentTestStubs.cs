@@ -89,9 +89,13 @@ internal sealed class TestStation
     internal int id, entityId, planetId, gid, warperCount, idleShipCount, workShipCount, idleDroneCount, workDroneCount;
     internal long energy;
     internal bool isStellar = true, isCollector, isVeinCollector;
+    internal TestLogisticsDrone[]? workDroneDatas = new TestLogisticsDrone[50];
+    internal TestLogisticsOrder[]? workDroneOrders = new TestLogisticsOrder[50];
     internal TestStorage[] storage = new TestStorage[5];
     internal TestSlot[] slots = new TestSlot[12];
 }
+internal struct TestLogisticsDrone { }
+internal struct TestLogisticsOrder { }
 internal struct TestStorage { internal int itemId, count, inc, max, localOrder, remoteOrder; internal ELogisticStorage localLogic, remoteLogic; }
 internal struct TestSlot { internal int beltId, counter, storageIdx; internal IODir dir; }
 internal struct TestBelt { internal int id, entityId, segPathId, segIndex, segLength; }
@@ -161,7 +165,7 @@ internal sealed partial class NormalGameActionCoordinator
         => factory.TestGeometryMatches && id > 0 && id < factory.entityCursor && factory.entityPool[id].id == id
             && factory.entityPool[id].protoId == spec.ItemId
             && (spec.ItemId == 2301 ? factory.entityPool[id].minerId > 0
-                : spec.ItemId == 2104 ? factory.entityPool[id].stationId > 0
+                : StructuredConstructionBinding.IsLogisticsStationItem(spec.ItemId) ? factory.entityPool[id].stationId > 0
                 : spec.ItemId == 2001 ? factory.entityPool[id].beltId > 0
                 : StructuredConstructionBinding.IsFactoryCoreItem(spec.ItemId) || spec.ItemId == 2011 || factory.entityPool[id].powerNodeId > 0);
     private static bool BlueprintPrebuildMatches(PlanetFactory f, int id, BlueprintSiteObject spec) =>

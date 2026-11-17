@@ -30,8 +30,9 @@ internal sealed partial class NormalGameActionCoordinator
         if (journey is null || IsVoyagerJourneyClosed(journey)) return null;
         if (!VoyagerOwnedJourneyMatchesCurrentSession(journey, plan.SessionId))
             return Stale("A structured batch cannot use another exact owned save's or Native version's journey.");
+        if (StructuredConstructionBinding.UnsupportedItemError(plan.BuildingItemId) is { } unsupported)
+            return unsupported;
         if (journey.Phase != "remote_landed" || journey.RemotePlanetId != plan.PlanetId
-            || !StructuredConstructionBinding.SupportsItem(plan.BuildingItemId)
             || plan.BuildSteps.Count < 1 || plan.BuildSteps.Count > StructuredConstructionBinding.MaximumNewObjects(plan.BuildingItemId)
             || plan.BuildSteps.Any(s => s.DestinationBeltAnchor is not null
                 || s.BeltPathMode == BeltPathModes.NativeElevatedGrid))

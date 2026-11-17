@@ -1,4 +1,5 @@
 using Spherewright.Bridge.Core.Safety;
+using Spherewright.Contracts.Errors;
 using Spherewright.Contracts.Factory;
 
 namespace Spherewright.Bridge.Core.Factory;
@@ -21,8 +22,19 @@ public sealed class StructuredConstructionBinding
     public StructuredEmptyBeltSource? EmptyBeltSource { get; set; }
     public bool ShouldSerializeEmptyBeltSource() => EmptyBeltSource is not null;
 
-    public static bool SupportsItem(int id) => id == 2301 || id == 2104 || id == 2201 || id == 2203
+    public static bool SupportsItem(int id) => id == 2301 || IsLogisticsStationItem(id) || id == 2201 || id == 2203
         || id == 2205 || id == 2001 || id == 2011 || IsFactoryCoreItem(id);
+
+    public static bool IsLogisticsStationItem(int id) => id is 2103 or 2104;
+
+    public static BridgeError? UnsupportedItemError(int itemId) => SupportsItem(itemId) ? null
+        : BridgeError.Create(BridgeErrorCodes.ActionRejected,
+            $"Remote structured construction does not support item {itemId}; no object was created.", false,
+            "Use a supported construction type or update the capability; repeating the same request cannot change this result.");
+
+    public static bool UsesTallStationReserveEnvelope(int itemId, int objectCount, double targetDistanceMeters) =>
+        objectCount == 1 && IsLogisticsStationItem(itemId)
+        && targetDistanceMeters > NativeConstructionDroneReservePolicy.MaximumTargetDistanceMeters;
 
     // These ordinary core types still need current-version Native placement,
     // paid drone work and exact component/pose/topology completion proof.

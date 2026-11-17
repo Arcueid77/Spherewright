@@ -12,6 +12,45 @@ namespace Spherewright.Bridge.Core.Tests;
 // No DSP invocation, Native Create, flight or construction acceptance.
 public sealed class StructuredConstructionStoreIntegrationTests
 {
+    [Fact]
+    public void PlanetaryStationUsesThePaidStructuredReceiptWithoutBroadeningBlueprintSyntax()
+    {
+        using var fixture = new Fixture();
+        var state = BlueprintBuildState.Create(Site(1, 2103), structuredConstruction: Binding(1));
+        Assert.True(StructuredConstructionBinding.SupportsItem(2103));
+        Assert.False(BoundedBlueprintReader.SupportsItem(2103));
+        Start(state);
+        state.BeforeStructuredSubmission(101, 1, "before");
+        state.ConfirmStructuredSubmission(new[] { 20 }, 0, "after");
+        Assert.True(fixture.Store().TryPut(state));
+        var restored = Assert.Single(fixture.Read());
+        Assert.Equal(2103, restored.Site.Objects[0].ItemId);
+        Assert.Equal(20, restored.Objects[0].PrebuildId);
+        Assert.Equal(1, restored.Objects[0].InventoryBefore);
+        Assert.Equal(0, restored.Objects[0].InventoryAfter);
+        Assert.Throws<InvalidOperationException>(() => restored.BeforeStructuredSubmission(102, 1, "replay"));
+    }
+
+    [Theory]
+    [InlineData(2103, 1, 27, true)]
+    [InlineData(2104, 1, 27, true)]
+    [InlineData(2103, 1, 26, false)]
+    [InlineData(2103, 2, 27, false)]
+    [InlineData(2105, 1, 27, false)]
+    public void TallStationReserveProfileAppliesOnlyToOneSupportedStation(
+        int itemId, int count, double distance, bool expected) =>
+        Assert.Equal(expected, StructuredConstructionBinding.UsesTallStationReserveEnvelope(itemId, count, distance));
+
+    [Fact]
+    public void UnsupportedRemoteItemIsNotMisreportedAsRetryableStaleState()
+    {
+        Assert.Null(StructuredConstructionBinding.UnsupportedItemError(2103));
+        var rejection = Assert.IsType<Spherewright.Contracts.Errors.BridgeError>(
+            StructuredConstructionBinding.UnsupportedItemError(2105));
+        Assert.Equal(Spherewright.Contracts.Errors.BridgeErrorCodes.ActionRejected, rejection.Code);
+        Assert.False(rejection.Retryable);
+    }
+
     [Theory]
     [InlineData(2101, 51, 8, "technology", "click", false)]
     [InlineData(2101, 51, 8, "technology", "click", true)]

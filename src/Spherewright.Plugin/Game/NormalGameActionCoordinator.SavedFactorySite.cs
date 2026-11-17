@@ -1,4 +1,5 @@
 using Spherewright.Bridge.Core.Factory;
+using Spherewright.Bridge.Core.Logistics;
 using Spherewright.Bridge.Core.Safety;
 using Spherewright.Contracts.Factory;
 using UnityEngine;
@@ -109,6 +110,30 @@ internal sealed partial class NormalGameActionCoordinator
             var entity = factory.entityPool![id];
             if (entity.stationId <= 0) continue;
             var transport = factory.transport;
+            if (entity.protoId == 2103)
+            {
+                // A normally paid planetary station may retain its own local
+                // drones and ordinary storage across the same owned save. This
+                // reads Native state only; it does not create, recall or route
+                // a drone and does not relax the interstellar-station guard.
+                if (!Require("saved_factory_site_planetary_station", transport?.stationPool is not null
+                        && entity.stationId < transport.stationCursor && entity.stationId < transport.stationPool.Length
+                        && transport.stationPool[entity.stationId] is { } localStation
+                        && LogisticsStationIdentityPolicy.MatchesPaidConstruction(entity.protoId, entity.stationId, id,
+                            factory.planetId, localStation.id, localStation.entityId, localStation.planetId, localStation.gid,
+                            localStation.isStellar, localStation.isCollector, localStation.isVeinCollector)
+                        && localStation.idleShipCount == 0 && localStation.workShipCount == 0 && localStation.warperCount == 0
+                        && localStation.idleDroneCount >= 0 && localStation.workDroneCount >= 0
+                        && localStation.workDroneDatas is { } drones && localStation.workDroneOrders is { } orders
+                        && drones.Length == orders.Length && drones.Length <= 100
+                        && (long)localStation.idleDroneCount + localStation.workDroneCount <= drones.Length
+                        && localStation.storage is { Length: > 0 and <= 5 } && localStation.slots is { Length: 12 }
+                        && localStation.storage.All(s => s.itemId >= 0 && s.count >= 0 && s.inc >= 0 && (long)s.inc <= (long)s.count * 10
+                            && s.max >= 0 && (s.itemId == 0 ? s.count == 0 && s.inc == 0 : SavedFactoryItemAvailable(s.itemId))
+                            && (s.localLogic == ELogisticStorage.None || s.localLogic == ELogisticStorage.Supply || s.localLogic == ELogisticStorage.Demand)
+                            && s.remoteLogic == ELogisticStorage.None))) return false;
+                continue;
+            }
             if (!Require("saved_factory_site_passive_station", transport?.stationPool is not null
                     && entity.stationId < transport.stationCursor && entity.stationId < transport.stationPool.Length
                     && transport.stationPool[entity.stationId] is { } station && station.id == entity.stationId

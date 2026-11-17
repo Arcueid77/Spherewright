@@ -1,4 +1,5 @@
 using Spherewright.Bridge.Core.Factory;
+using Spherewright.Bridge.Core.Logistics;
 using Spherewright.Bridge.Core.Safety;
 using Spherewright.Contracts.Factory;
 using Spherewright.Contracts.Celestial;
@@ -122,8 +123,8 @@ internal sealed partial class NormalGameActionCoordinator
         if (NativeConstructionDroneReservePolicy.ReturnClosureFraction(speed, ejectDisplacement) > .25d)
             costHash = CanonicalStateHash.Combine("native-structured-drone-return-eleven-twentieths-v1", costHash,
                 NativeConstructionDroneReservePolicy.MaximumTighterReturnEjectDisplacementMeters);
-        var tallStation = build.Site.Objects.Count == 1 && build.Site.Objects[0].ItemId == 2104
-            && reach > NativeConstructionDroneReservePolicy.MaximumTargetDistanceMeters;
+        var tallStation = build.Site.Objects.Count == 1 && StructuredConstructionBinding.UsesTallStationReserveEnvelope(
+            build.Site.Objects[0].ItemId, build.Site.Objects.Count, reach);
         var verticalStack = build.StructuredConstruction?.StackConstruction is not null
             && reach > NativeConstructionDroneReservePolicy.MaximumTargetDistanceMeters;
         if (verticalStack)
@@ -354,13 +355,14 @@ internal sealed partial class NormalGameActionCoordinator
                 && expected.Contains(build.StructuredConstruction!.ResourceNodeId)
                 && miner.veins.Take(miner.veinCount).Where(n => n > 0).OrderBy(n => n).SequenceEqual(expected);
         }
-        if (spec.ItemId == 2104)
+        if (StructuredConstructionBinding.IsLogisticsStationItem(spec.ItemId))
         {
             if (e.stationId <= 0 || factory.transport?.stationPool is null || e.stationId >= factory.transport.stationCursor
                 || e.stationId >= factory.transport.stationPool.Length) return false;
             var station = factory.transport.stationPool[e.stationId];
-            return station is not null && station.id == e.stationId && station.entityId == id && station.isStellar
-                && station.planetId == factory.planetId && station.gid > 0;
+            return station is not null && LogisticsStationIdentityPolicy.MatchesPaidConstruction(
+                spec.ItemId, e.stationId, id, factory.planetId, station.id, station.entityId, station.planetId,
+                station.gid, station.isStellar, station.isCollector, station.isVeinCollector);
         }
         if (spec.ItemId == 2201 || spec.ItemId == 2203 || spec.ItemId == 2205)
         {

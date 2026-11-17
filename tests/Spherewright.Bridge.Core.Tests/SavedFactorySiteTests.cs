@@ -159,6 +159,61 @@ public sealed class SavedFactorySiteTests
     }
 
     [Theory]
+    [InlineData(0, 0)]
+    [InlineData(2, 0)]
+    [InlineData(1, 1)]
+    public void PaidPlanetaryStationRetainsNormalLocalDroneStateOnRecovery(int idle, int working)
+    {
+        using var f = new Fixture(false); f.AddPlanetaryStation(idle, working);
+        var station = f.Factory.transport.stationPool[1]!;
+        var before = File.ReadAllBytes(f.StorePath);
+        Assert.Null(f.Guard());
+        Assert.Equal(idle, station.idleDroneCount);
+        Assert.Equal(working, station.workDroneCount);
+        Assert.Equal(10, station.storage[0].count);
+        Assert.Equal(before, File.ReadAllBytes(f.StorePath));
+    }
+
+    [Theory]
+    [InlineData("foreign_planet")]
+    [InlineData("wrong_entity")]
+    [InlineData("interstellar_kind")]
+    [InlineData("galactic_id")]
+    [InlineData("collector")]
+    [InlineData("negative_drones")]
+    [InlineData("over_capacity")]
+    [InlineData("missing_drone_array")]
+    [InlineData("mismatched_drone_arrays")]
+    [InlineData("ship")]
+    [InlineData("warper")]
+    [InlineData("remote_logic")]
+    [InlineData("negative_stock")]
+    [InlineData("invalid_inc")]
+    public void PlanetaryStationRecoveryRejectsInvalidNativeState(string fault)
+    {
+        using var f = new Fixture(false); f.AddPlanetaryStation(1, 1);
+        var station = f.Factory.transport.stationPool[1]!;
+        switch (fault)
+        {
+            case "foreign_planet": station.planetId = 401; break;
+            case "wrong_entity": station.entityId = 1; break;
+            case "interstellar_kind": station.isStellar = true; break;
+            case "galactic_id": station.gid = 1; break;
+            case "collector": station.isCollector = true; break;
+            case "negative_drones": station.idleDroneCount = -1; break;
+            case "over_capacity": station.idleDroneCount = 50; station.workDroneCount = 1; break;
+            case "missing_drone_array": station.workDroneDatas = null; break;
+            case "mismatched_drone_arrays": station.workDroneOrders = new TestLogisticsOrder[49]; break;
+            case "ship": station.idleShipCount = 1; break;
+            case "warper": station.warperCount = 1; break;
+            case "remote_logic": station.storage[0].remoteLogic = ELogisticStorage.Demand; break;
+            case "negative_stock": station.storage[0].count = -1; break;
+            case "invalid_inc": station.storage[0].inc = 101; break;
+        }
+        Assert.Equal("remote_resume_paid_factory_site_unproved", f.Guard());
+    }
+
+    [Theory]
     [InlineData("own_fleet")]
     [InlineData("negative_stock")]
     [InlineData("invalid_inc")]
@@ -266,6 +321,18 @@ public sealed class SavedFactorySiteTests
             s.storage[0] = new() { itemId = 1013, count = 10, max = 100, remoteLogic = ELogisticStorage.Supply };
             s.storage[1] = new() { itemId = 1301, count = 12, max = 100, remoteOrder = -10, remoteLogic = ELogisticStorage.Demand };
             Add(2104, 4, false);
+        }
+        internal void AddPlanetaryStation(int idle, int working)
+        {
+            Factory.entityPool[4] = new() { id = 4, protoId = 2103, stationId = 1, rot = new(0, 0, 0, 1) };
+            Factory.entityCursor = 5; Factory.entityCount++;
+            var station = Factory.transport.stationPool[1] = new()
+            {
+                id = 1, entityId = 4, planetId = 0, gid = 0, isStellar = false,
+                idleDroneCount = idle, workDroneCount = working, storage = new TestStorage[4],
+            };
+            station.storage[0] = new() { itemId = 1305, count = 10, max = 100, localLogic = ELogisticStorage.Demand };
+            Add(2103, 4, false);
         }
         private void Add(int item, int entity, bool pending,bool unknownTail=false,bool workFailure=false)
         {
