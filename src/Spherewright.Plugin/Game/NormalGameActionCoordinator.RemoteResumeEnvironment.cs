@@ -41,7 +41,7 @@ internal sealed partial class NormalGameActionCoordinator
                 && local.All(b => PaidFactoryCompletionPolicy.HasCompletedIdleProof(b, GameMain.gameTick));
             if (completedPaidLandingOnly && !completePaidSite)
                 return "landing_charge_completed_paid_site_required";
-            if (hasFactoryCore || completedPaidLandingOnly || provedSavedLandingAdmission)
+            if (hasFactoryCore || completedPaidLandingOnly || provedSavedLandingAdmission || HasCurrentSavedFactoryTail(p, journeyId))
                 return SavedFactorySiteMatches(p, factory, journeyId, factorySaved, evidence)
                     ? null : "remote_resume_paid_factory_site_unproved";
         }

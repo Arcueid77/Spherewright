@@ -1,3 +1,4 @@
+using Spherewright.Bridge.Core.Factory;
 using Spherewright.Bridge.Core.Safety;
 using Spherewright.Contracts.Actions;
 using Spherewright.Contracts.Errors;
@@ -329,6 +330,15 @@ internal sealed partial class NormalGameActionCoordinator
             || action.ExpectedBuildEntities.Count != action.Plan.BuildSteps.Count)
         {
             rejection = "The retained action lacks a complete build plan or quarantine-time inventory snapshot.";
+            return false;
+        }
+
+        // A completed entity/debit alone does not prove that the structured
+        // controller's paid Native drone tail has physically returned.
+        if (IsStructuredConstruction(action.Plan)
+            && (action.BlueprintBuild is null || !PaidFactoryCompletionPolicy.HasCompletedIdleProof(action.BlueprintBuild, GameMain.gameTick)))
+        {
+            rejection = "The structured build has not proved its separate physical drone-idle completion.";
             return false;
         }
 

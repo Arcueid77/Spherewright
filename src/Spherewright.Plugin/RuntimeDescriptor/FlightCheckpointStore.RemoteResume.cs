@@ -233,6 +233,8 @@ internal sealed partial class FlightCheckpointStore
                         return false;
                     }
                 }
+                else if (remotePrimaryRequest.SurfaceRecoveryTarget is null && !remotePrimaryRequest.AcceptUnstoredProgressLoss)
+                    evidence.TryBindSuccessfulOutboundPaidTailSource(ticket.QuarantineActionId);
                 if (exactRenamedExit) evidence.BindRenamedLastExitIdentityRestoration();
                 ticketLease = null; journeyLease = null; checkpointLease = null;
                 return true;
@@ -435,6 +437,9 @@ internal sealed class VoyagerRemoteResumeEvidence : IDisposable
     internal bool FailedLandingRecovery => FailedLandingSource is not null;
     internal bool CompletedSavedLandingAdmissionUsed { get; private set; }
     internal bool SuccessfulOutboundSurfaceSourceUsed { get; private set; }
+    // This names one retained paid action; it neither resolves the old result
+    // nor authorizes another submission or a replacement construction order.
+    internal string? SuccessfulOutboundPaidTailActionId { get; private set; }
     internal bool RenamedLastExitIdentityRestoration { get; private set; }
     internal void BindRenamedLastExitIdentityRestoration()
     {
@@ -470,6 +475,31 @@ internal sealed class VoyagerRemoteResumeEvidence : IDisposable
             return false;
         SuccessfulOutboundSurfaceSourceUsed = true;
         Fingerprint = CanonicalStateHash.Combine("remote-primary-successful-outbound-surface-v1", Fingerprint);
+        return true;
+    }
+    internal bool TryBindSuccessfulOutboundPaidTailSource(string? quarantineActionId)
+    {
+        var journey = PluginJson.Deserialize<VoyagerJourneyRecord>(JourneyJson);
+        var checkpoint = PluginJson.Deserialize<FlightCheckpointTicket>(CheckpointJson);
+        if (!RemotePrimaryRecovery || IsDisposed || CompletedSavedLandingAdmissionUsed || SuccessfulOutboundSurfaceSourceUsed
+            || SuccessfulOutboundPaidTailActionId is not null || RecoveryProposal is null || RecoveryProposal.SurfaceRecoveryTarget is not null
+            || AcceptedProgressLossGameTicks != 0 || !KnownPrimaryProgressTick.HasValue
+            || KnownPrimaryProgressTick > SourceGameTick || SourceGameTick != PrimaryGameTick
+            || SourceFingerprint != PrimaryFingerprint || !Guid.TryParse(quarantineActionId, out _)
+            || journey is null || journey.Phase != "remote_landed" || journey.ReturnLeg || journey.ReturnOnlyScopeActive
+            || journey.SpentGameTicksIsConservative || quarantineActionId == journey.ActiveActionId
+            || checkpoint is null || !checkpoint.NativeLaunchArmed
+            || !FlightCheckpointStore.SuccessfulRemoteFlightWitness(checkpoint, PrimaryGameTick)
+            || checkpoint.OwnedSaveName != journey.OwnedSaveName || checkpoint.GameVersion != journey.GameVersion
+            || checkpoint.OriginPlanetId != journey.HomePlanetId || checkpoint.OriginStarId != journey.HomeStarId
+            || checkpoint.DestinationPlanetId != journey.RemotePlanetId || checkpoint.DestinationStarId != journey.DestinationStarId
+            || checkpoint.VoyagerJourneyId != journey.JourneyId || checkpoint.CheckpointId != journey.ActiveCheckpointId
+            || checkpoint.LastAttemptActionId != journey.ActiveActionId || journey.LastAccountedFlightActionId != journey.ActiveActionId
+            || !journey.LastLandedGameTick.HasValue || journey.LastLandedGameTick != checkpoint.SuccessfulFlightAtGameTick
+            || journey.LastAccountedGameTick < journey.LastLandedGameTick || SourceGameTick < journey.LastAccountedGameTick)
+            return false;
+        SuccessfulOutboundPaidTailActionId = quarantineActionId;
+        Fingerprint = CanonicalStateHash.Combine("remote-primary-successful-outbound-paid-tail-v1", Fingerprint, quarantineActionId);
         return true;
     }
     internal long? FailedLandingAccountingAnchorGameTick => FailedLandingSource?.SavedAccountingAnchorGameTick;

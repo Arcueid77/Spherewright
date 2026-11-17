@@ -11,6 +11,56 @@ namespace Spherewright.Bridge.Core.Tests;
 public sealed partial class VoyagerRemoteResumeCoordinatorIntegrationTests
 {
     [Theory]
+    [InlineData("valid")] [InlineData("wrong_destination")] [InlineData("wrong_action")]
+    [InlineData("wrong_landing")] [InlineData("unarmed")] [InlineData("conservative")]
+    [InlineData("known_newer_progress")] [InlineData("accepted_loss")] [InlineData("different_source")]
+    [InlineData("surface_target")] [InlineData("flight_as_quarantine")] [InlineData("invalid_action")]
+    public void SuccessfulOutboundPaidTailBindsOnlyTheExactNoLossPrimaryAndDistinctOriginalAction(string fault)
+    {
+        using var s = new Scenario(expiredJourney: true, currentNative: true, nativeArmed: true);
+        var journey = s.Checkpoints.VoyagerJourney!;
+        var checkpoint = PluginJson.Deserialize<FlightCheckpointTicket>(File.ReadAllText(Path.Combine(s.Handoff, "flight-checkpoint.json")))!;
+        if (fault == "wrong_destination") checkpoint.DestinationPlanetId++;
+        if (fault == "wrong_action") checkpoint.LastAttemptActionId = Guid.NewGuid().ToString();
+        if (fault == "wrong_landing") checkpoint.SuccessfulFlightAtGameTick++;
+        if (fault == "unarmed") checkpoint.NativeLaunchArmed = false;
+        if (fault == "conservative") journey.SpentGameTicksIsConservative = true;
+        var proposal = new VoyagerRecoveryWindowProposal(DateTimeOffset.UtcNow.AddMinutes(55), VoyagerRecoveryWindowProposal.TaskScope,
+            9000, 240, surfaceRecoveryTarget: fault == "surface_target" ? new Vector3Snapshot { X = 200, Y = 2, Z = 0 } : null);
+        using var evidence = VoyagerRemoteResumeEvidence.CreateRemotePrimaryRecovery(PluginJson.Serialize(journey),
+            PluginJson.Serialize(checkpoint), "same-primary", fault == "different_source" ? "different-primary" : "same-primary", 12528, 12528,
+            new OwnedWorldGameplayJournalCheckpoint(), proposal,
+            fault is "known_newer_progress" or "accepted_loss" ? 12529 : 12528, "", "", fault == "accepted_loss");
+        var action = fault == "invalid_action" ? "invalid" : fault == "flight_as_quarantine" ? journey.ActiveActionId : Guid.NewGuid().ToString();
+        var fingerprint = evidence.Fingerprint;
+        var bound = evidence.TryBindSuccessfulOutboundPaidTailSource(action);
+        Assert.Equal(fault == "valid", bound);
+        Assert.Equal(bound ? action : null, evidence.SuccessfulOutboundPaidTailActionId);
+        if (!bound) Assert.Equal(fingerprint, evidence.Fingerprint);
+        Assert.Equal(0, DSPGame.LoadCalls);
+    }
+
+    [Fact]
+    public void PreparedCurrentPrimaryCarriesTheDistinctQuarantinedPaidActionIntoTheNewAdoption()
+    {
+        using var s = new Scenario(expiredJourney: true, currentNative: true, nativeArmed: true);
+        var request = s.PrimaryRecoveryRequest(0);
+        var paidAction = Guid.NewGuid().ToString();
+        s.ReplaceCurrentTicket(t => { t.QuarantineActionId = paidAction; t.MinimumGameTick = 12528; }); s.ReopenPrimaryCredentials();
+        s.WriteSave(Scenario.Identity, 12528); s.WriteSave(GameSave.LastExit, 12528);
+        request.MinimumRecoveryGameTick = 12528; request.ExpectedRecoveryGameTick = 12528;
+        var preparation = s.PrepareResult(request);
+        Assert.True(preparation.Success, PluginJson.Serialize(preparation.Error));
+        var prepared = preparation.Value!;
+        Assert.True(VoyagerRemotePrimaryRecoveryPolicy.HasMatchingEcho(request, prepared));
+        Assert.False(prepared.NativeOriginalOutcomeProved);
+        Assert.True(s.Commit(prepared).Success);
+        Assert.Equal(paidAction, s.Sessions.RemoteEvidence!.SuccessfulOutboundPaidTailActionId);
+        Assert.False(s.Sessions.RemoteEvidence.CompletedSavedLandingAdmissionUsed);
+        Assert.Equal(1, DSPGame.LoadCalls); // Native completion and the drone tail are separately required.
+    }
+
+    [Theory]
     [InlineData(true, true, false, true)] [InlineData(true, false, true, true)]
     [InlineData(true, true, true, false)] [InlineData(true, false, false, false)]
     [InlineData(false, true, false, false)] [InlineData(false, false, true, false)]

@@ -72,11 +72,14 @@ internal sealed partial class NormalGameActionCoordinator
             return "remote_resume_saved_drone_pool_unproved";
         BlueprintBuildState? generic=null;
         List<BlueprintBuildState>? currentSite=null;
+        var successfulPaidAction=adoption.Evidence.SuccessfulOutboundPaidTailActionId;
         if(_sessions.ExactRemoteResumeLoadPreflight(adoption) && adoption.Evidence.RemotePrimaryRecovery
-            && adoption.Evidence.CompletedSavedLandingAdmissionUsed && adoption.Authorization is not null
+            && (adoption.Evidence.CompletedSavedLandingAdmissionUsed || successfulPaidAction is not null) && adoption.Authorization is not null
             && !p.mecha.constructionModule.droneEnabled && _blueprints.TryRead(out var genericSaved))
         {
             var candidates=genericSaved.Where(b=>b.Site.PlanetId==f.planetId && b.SavedTailCompletion?.Matches(b,GameMain.gameTick)!=true
+                && (successfulPaidAction is null
+                    || HasExactSuccessfulOutboundCompletedPaidAction(b,successfulPaidAction,journeyId,GameMain.gameTick))
                 && (HasSavedStoppedPaidBatchReceipt(b,journeyId,GameMain.gameTick)
                     || HasSavedPaidWorkReceipt(b,journeyId,GameMain.gameTick))).ToArray();
             if(candidates.Length==1)generic=CloneBlueprintState(candidates[0]);

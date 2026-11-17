@@ -14,6 +14,20 @@ namespace Spherewright.Bridge.Core.Tests;
 public sealed class SavedFactorySiteTests
 {
     [Fact]
+    public void SuccessfulOutboundTailRequiresTheExactCompletedPaidActionWithoutRecreatingAnything()
+    {
+        using var f = new Fixture(false, unknownTail: true, workFailure: true);
+        Assert.True(f.Store().TryRead(out var rows)); var b = rows.Single(x => x.Phase == "outcome_unknown");
+        var original = PluginJson.Serialize(b); var action = b.ActionId!;
+        Assert.True(NormalGameActionCoordinator.SuccessfulOutboundPaidActionForTest(b, action, f.Journey, 120));
+        Assert.False(NormalGameActionCoordinator.SuccessfulOutboundPaidActionForTest(b, Guid.NewGuid().ToString(), f.Journey, 120));
+        Assert.False(NormalGameActionCoordinator.SuccessfulOutboundPaidActionForTest(b, action, Guid.NewGuid().ToString(), 120));
+        Assert.Equal(original, PluginJson.Serialize(b));
+        b.Objects[0].State = BlueprintObjectStates.PendingConstruction; b.Objects[0].EntityId = null;
+        Assert.False(NormalGameActionCoordinator.SuccessfulOutboundPaidActionForTest(b, action, f.Journey, 120));
+    }
+
+    [Fact]
     public void IndependentlyCertifiedPaidStopMayRetainPendingObjectsWithoutClaimingConstructionCompletion()
     {
         using var f = new Fixture(true, unknownTail: true, workFailure: true);
