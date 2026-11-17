@@ -57,11 +57,7 @@ internal sealed partial class NormalGameActionCoordinator
             if (player.movementState != EMovementState.Walk) return Blocked("remote_idle_actual_walk_required");
             // Broad foot contact during a gravity step is not idle. Preserve
             // actual Walk and zero controller/body/RTS tails at both layers.
-            var physicallyAtRest = player.speed <= .1f && player.movementState==EMovementState.Walk
-                && player.controller.movementStateInFrame==EMovementState.Walk
-                && player.controller.velocity.sqrMagnitude==0f && player.controller.rigid.velocity.sqrMagnitude==0f
-                && player.controller.rigid.angularVelocity.sqrMagnitude==0f && player.controller.vertSpeed==0f
-                && player.controller.actionWalk.rtsVelocity.sqrMagnitude==0f && player.controller.actionDrift.rtsVelocity.sqrMagnitude==0f;
+            var physicallyAtRest = VoyagerNativeMotionAtRest(player);
             if (!physicallyAtRest && (!collectNaturalContact || !(player.speed <= (_firstFrameContact?.Policy.SpeedLimit ?? NativeResumeContactPolicy.MaximumSpeedMetersPerSecond))))
                 return Blocked("remote_idle_actual_speed_not_at_rest");
             stage = "energy_and_journey";
@@ -108,6 +104,13 @@ internal sealed partial class NormalGameActionCoordinator
             return VoyagerRemoteIdleAdmissionPolicy.Blocked("remote_idle_capture_failed", stage, exception.GetType().Name);
         }
     }
+
+    private static bool VoyagerNativeMotionAtRest(Player player) =>
+        VoyagerNativeIdleHandoffPolicy.PhysicallyAtRest(
+            player.movementState == EMovementState.Walk, player.controller.movementStateInFrame == EMovementState.Walk,
+            player.speed, player.controller.velocity.sqrMagnitude, player.controller.rigid.velocity.sqrMagnitude,
+            player.controller.rigid.angularVelocity.sqrMagnitude, player.controller.vertSpeed,
+            player.controller.actionWalk.rtsVelocity.sqrMagnitude, player.controller.actionDrift.rtsVelocity.sqrMagnitude);
 
     internal string? AdmitVerifiedVoyagerRemoteResumeOnMainThread(VoyagerRemoteResumeAdoption adoption)
         => CheckVerifiedVoyagerRemoteResumeOnMainThread(adoption, admit: true);
@@ -612,10 +615,8 @@ internal sealed partial class NormalGameActionCoordinator
             action.VoyagerLocalStopMessage += " Ground contact was lost during the original finite stop.";
         }
         var p = action.Plan.VoyagerLocalBinding!.Player;
-        if (facts.GroundSphereHit == true && p.movementState == EMovementState.Walk
-            && p.controller.movementStateInFrame == EMovementState.Walk && p.speed <= .1f
-            && p.controller.actionWalk.rtsVelocity.sqrMagnitude == 0f && p.controller.actionWalk.moveVelocity.sqrMagnitude == 0f
-            && p.controller.actionDrift.rtsVelocity.sqrMagnitude == 0f && p.controller.actionDrift.moveVelocity.sqrMagnitude == 0f)
+        if (facts.GroundSphereHit == true && VoyagerNativeMotionAtRest(p)
+            && p.controller.actionWalk.moveVelocity.sqrMagnitude == 0f && p.controller.actionDrift.moveVelocity.sqrMagnitude == 0f)
         {
             action.VoyagerLocalCompleting = true;
             if (action.VoyagerLocalStopSucceeded)
@@ -750,9 +751,7 @@ internal sealed partial class NormalGameActionCoordinator
             || CalculateAvailableFlightEnergy(player.mecha) < journey.ReturnEnergyFloorJoules
             || CountVoyagerWarpers(player.mecha.warpStorage) < 1 + journey.ExtraWarperReserve)
         { FinishVoyagerLocalOrderUnknown(action, "The original Native tail left its exact ordinary Walk/owned-world envelope."); return; }
-        if (player.movementState == EMovementState.Walk && player.controller.movementStateInFrame == EMovementState.Walk
-            && player.controller.actionWalk.rtsVelocity.sqrMagnitude == 0f && player.controller.actionWalk.moveVelocity.sqrMagnitude == 0f
-            && player.speed <= .1f)
+        if (VoyagerNativeMotionAtRest(player) && player.controller.actionWalk.moveVelocity.sqrMagnitude == 0f)
         {
             action.VoyagerLocalCompleting = true;
             if (action.VoyagerLocalStopSucceeded) Complete(action, action.VoyagerLocalStopMessage + " Native RTS tail is physically zero.");
