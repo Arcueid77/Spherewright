@@ -160,8 +160,8 @@ internal sealed partial class NormalGameActionCoordinator
             && f.prebuildPool[o.PrebuildId.Value].builderModuleId!=-1);
     internal static bool SavedTowerReceiptForTest(BlueprintBuildState b, string journeyId, long tick) => HasSavedPassiveTowerReceipt(b, journeyId, tick);
     internal static bool SavedPaidWorkReceiptForTest(BlueprintBuildState b,string journeyId,long tick)=>HasSavedPaidWorkReceipt(b,journeyId,tick);
-    internal static bool SuccessfulOutboundPaidActionForTest(BlueprintBuildState b,string actionId,string journeyId,long tick)
-        =>HasExactSuccessfulOutboundCompletedPaidAction(b,actionId,journeyId,tick);
+    internal static bool SuccessfulOutboundPaidActionForTest(BlueprintBuildState b,string journeyId,long tick)
+        =>HasExactSuccessfulOutboundCompletedPaidAction(b,journeyId,tick);
     private static bool StructuredEntityMatches(PlanetFactory factory, int id, BlueprintBuildState build, BlueprintSiteObject spec,
         bool allowCurrentSorterFilter = false)
         => factory.TestGeometryMatches && id > 0 && id < factory.entityCursor && factory.entityPool[id].id == id

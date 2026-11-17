@@ -5,8 +5,8 @@ namespace Spherewright.Plugin.Game;
 
 internal sealed partial class NormalGameActionCoordinator
 {
-    private static bool HasExactSuccessfulOutboundCompletedPaidAction(BlueprintBuildState b, string actionId, string journeyId, long tick) =>
-        b.ActionId == actionId && b.ConstructionControl?.NativeCreateActionId == actionId
+    private static bool HasExactSuccessfulOutboundCompletedPaidAction(BlueprintBuildState b, string journeyId, long tick) =>
+        Guid.TryParse(b.ActionId, out _) && b.ConstructionControl?.NativeCreateActionId == b.ActionId
         && b.Objects.All(o => o.State == BlueprintObjectStates.Completed) && HasSavedPaidWorkReceipt(b, journeyId, tick);
 
     private static bool HasSavedPaidWorkReceipt(BlueprintBuildState b,string journeyId,long tick)

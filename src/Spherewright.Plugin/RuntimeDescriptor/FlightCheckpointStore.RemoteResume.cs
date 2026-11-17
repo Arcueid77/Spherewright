@@ -437,9 +437,9 @@ internal sealed class VoyagerRemoteResumeEvidence : IDisposable
     internal bool FailedLandingRecovery => FailedLandingSource is not null;
     internal bool CompletedSavedLandingAdmissionUsed { get; private set; }
     internal bool SuccessfulOutboundSurfaceSourceUsed { get; private set; }
-    // This names one retained paid action; it neither resolves the old result
-    // nor authorizes another submission or a replacement construction order.
-    internal string? SuccessfulOutboundPaidTailActionId { get; private set; }
+    // The current quarantine may be the paid action or a later failed resume.
+    // Its identity is retained; neither outcome is resolved by this source.
+    internal string? SuccessfulOutboundSavedQuarantineActionId { get; private set; }
     internal bool RenamedLastExitIdentityRestoration { get; private set; }
     internal void BindRenamedLastExitIdentityRestoration()
     {
@@ -482,10 +482,11 @@ internal sealed class VoyagerRemoteResumeEvidence : IDisposable
         var journey = PluginJson.Deserialize<VoyagerJourneyRecord>(JourneyJson);
         var checkpoint = PluginJson.Deserialize<FlightCheckpointTicket>(CheckpointJson);
         if (!RemotePrimaryRecovery || IsDisposed || CompletedSavedLandingAdmissionUsed || SuccessfulOutboundSurfaceSourceUsed
-            || SuccessfulOutboundPaidTailActionId is not null || RecoveryProposal is null || RecoveryProposal.SurfaceRecoveryTarget is not null
+            || SuccessfulOutboundSavedQuarantineActionId is not null || RecoveryProposal is null || RecoveryProposal.SurfaceRecoveryTarget is not null
             || AcceptedProgressLossGameTicks != 0 || !KnownPrimaryProgressTick.HasValue
-            || KnownPrimaryProgressTick > SourceGameTick || SourceGameTick != PrimaryGameTick
-            || SourceFingerprint != PrimaryFingerprint || !Guid.TryParse(quarantineActionId, out _)
+            || KnownPrimaryProgressTick > SourceGameTick || SourceGameTick < PrimaryGameTick
+            || (SourceGameTick == PrimaryGameTick ? SourceFingerprint != PrimaryFingerprint : KnownPrimaryProgressTick != SourceGameTick)
+            || !Guid.TryParse(quarantineActionId, out _)
             || journey is null || journey.Phase != "remote_landed" || journey.ReturnLeg || journey.ReturnOnlyScopeActive
             || journey.SpentGameTicksIsConservative || quarantineActionId == journey.ActiveActionId
             || checkpoint is null || !checkpoint.NativeLaunchArmed
@@ -498,7 +499,7 @@ internal sealed class VoyagerRemoteResumeEvidence : IDisposable
             || !journey.LastLandedGameTick.HasValue || journey.LastLandedGameTick != checkpoint.SuccessfulFlightAtGameTick
             || journey.LastAccountedGameTick < journey.LastLandedGameTick || SourceGameTick < journey.LastAccountedGameTick)
             return false;
-        SuccessfulOutboundPaidTailActionId = quarantineActionId;
+        SuccessfulOutboundSavedQuarantineActionId = quarantineActionId;
         Fingerprint = CanonicalStateHash.Combine("remote-primary-successful-outbound-paid-tail-v1", Fingerprint, quarantineActionId);
         return true;
     }

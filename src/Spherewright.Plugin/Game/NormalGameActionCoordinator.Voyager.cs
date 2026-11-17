@@ -710,6 +710,8 @@ internal sealed partial class NormalGameActionCoordinator
         if (plan.VoyagerBudget is not null || plan.ActionKind == NormalActionKinds.CancelVoyagerFlight) return null;
         if (journey.ReturnOnlyScopeActive && NormalActionKinds.IsSaveLifecycle(plan.ActionKind)) return null;
         if (journey.Phase == "home_awaiting_save" && NormalActionKinds.IsSaveLifecycle(plan.ActionKind)) return null;
+        if (VoyagerPausedSavePolicy.UsesBoundPreservation(plan.ActionKind, plan.SavePreservation is not null))
+            return SavePreservationBlocker(plan);
         if (journey.Phase != "remote_landed" || journey.RemotePlanetId != plan.PlanetId)
             return Stale("The active Voyager action/checkpoint must be reconciled before unrelated writes.");
         if (!VoyagerRemoteIdleBindingMatches())

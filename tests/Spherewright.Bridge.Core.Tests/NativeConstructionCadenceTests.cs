@@ -42,4 +42,13 @@ public sealed class NativeConstructionCadenceTests
     [InlineData(double.NaN)][InlineData(double.PositiveInfinity)][InlineData(0)][InlineData(-.1)][InlineData(.251)]
     public void UnknownOrUnboundedCadenceCannotCreateANewClock(double delta)
         =>Assert.Null(NativeConstructionCadencePolicy.WallBudget(402,delta));
+
+    [Fact]
+    public void SavedTailReservesSlowWorldCadenceWithoutExtendingItsOriginalTickLimit()
+    {
+        Assert.Equal(189d,NativeConstructionCadencePolicy.SavedTailWallBudget(752,1d/60d));
+        Assert.Equal(189d,NativeConstructionCadencePolicy.SavedTailWallBudget(752,.125d));
+        Assert.Null(NativeConstructionCadencePolicy.SavedTailWallBudget(752,.251d));
+        Assert.Equal(752,NativeSavedConstructionTailPolicy.MaximumGameTicks);
+    }
 }

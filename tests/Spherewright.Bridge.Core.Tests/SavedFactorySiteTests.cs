@@ -19,12 +19,14 @@ public sealed class SavedFactorySiteTests
         using var f = new Fixture(false, unknownTail: true, workFailure: true);
         Assert.True(f.Store().TryRead(out var rows)); var b = rows.Single(x => x.Phase == "outcome_unknown");
         var original = PluginJson.Serialize(b); var action = b.ActionId!;
-        Assert.True(NormalGameActionCoordinator.SuccessfulOutboundPaidActionForTest(b, action, f.Journey, 120));
-        Assert.False(NormalGameActionCoordinator.SuccessfulOutboundPaidActionForTest(b, Guid.NewGuid().ToString(), f.Journey, 120));
-        Assert.False(NormalGameActionCoordinator.SuccessfulOutboundPaidActionForTest(b, action, Guid.NewGuid().ToString(), 120));
+        Assert.True(NormalGameActionCoordinator.SuccessfulOutboundPaidActionForTest(b, f.Journey, 120));
+        Assert.False(NormalGameActionCoordinator.SuccessfulOutboundPaidActionForTest(b, Guid.NewGuid().ToString(), 120));
         Assert.Equal(original, PluginJson.Serialize(b));
+        b.ConstructionControl!.NativeCreateActionId = Guid.NewGuid().ToString();
+        Assert.False(NormalGameActionCoordinator.SuccessfulOutboundPaidActionForTest(b, f.Journey, 120));
+        b.ConstructionControl.NativeCreateActionId = action;
         b.Objects[0].State = BlueprintObjectStates.PendingConstruction; b.Objects[0].EntityId = null;
-        Assert.False(NormalGameActionCoordinator.SuccessfulOutboundPaidActionForTest(b, action, f.Journey, 120));
+        Assert.False(NormalGameActionCoordinator.SuccessfulOutboundPaidActionForTest(b, f.Journey, 120));
     }
 
     [Fact]

@@ -65,21 +65,31 @@ internal sealed partial class NormalGameActionCoordinator
     private string? PrepareSavedConstructionTail(VoyagerRemoteResumeAdoption adoption, string journeyId)
     {
         if (_savedConstructionTail is { } retained)
-            return ReferenceEquals(retained.Adoption, adoption) && SavedConstructionTailMatches(adoption.Player, journeyId)
-                ? null : "remote_resume_saved_drone_tail_binding_changed";
+        {
+            if (ReferenceEquals(retained.Adoption, adoption) && SavedConstructionTailMatches(adoption.Player, journeyId)) return null;
+            var e=adoption.CurrentDecisionEvidence;
+            e?.Number("saved_tail_elapsed_wall_s",(DateTimeOffset.UtcNow-retained.StartedUtc).TotalSeconds);
+            e?.Number("saved_tail_wall_limit_s",retained.WallSeconds);
+            e?.Number("saved_tail_elapsed_game_ticks",GameMain.gameTick-adoption.Evidence.SourceGameTick);
+            e?.Observe("saved_tail_anchor_held",retained.AnchorHeld);
+            e?.Observe("saved_tail_search_cache_current",retained.SearchCache is not null
+                && retained.SearchCache.Matches(adoption.Player,retained.Factory,_sessions.SessionId,retained.Build));
+            e?.Observe("saved_tail_same_adoption",ReferenceEquals(retained.Adoption,adoption));
+            return "remote_resume_saved_drone_tail_binding_changed";
+        }
         var p = adoption.Player; var f = p.factory;
         if (!TryObserveOwnedConstructionDrones(f, p.mecha.constructionModule, out var idle, out var ids))
             return "remote_resume_saved_drone_pool_unproved";
         BlueprintBuildState? generic=null;
         List<BlueprintBuildState>? currentSite=null;
-        var successfulPaidAction=adoption.Evidence.SuccessfulOutboundPaidTailActionId;
+        var successfulSavedQuarantine=adoption.Evidence.SuccessfulOutboundSavedQuarantineActionId;
         if(_sessions.ExactRemoteResumeLoadPreflight(adoption) && adoption.Evidence.RemotePrimaryRecovery
-            && (adoption.Evidence.CompletedSavedLandingAdmissionUsed || successfulPaidAction is not null) && adoption.Authorization is not null
+            && (adoption.Evidence.CompletedSavedLandingAdmissionUsed || successfulSavedQuarantine is not null) && adoption.Authorization is not null
             && !p.mecha.constructionModule.droneEnabled && _blueprints.TryRead(out var genericSaved))
         {
             var candidates=genericSaved.Where(b=>b.Site.PlanetId==f.planetId && b.SavedTailCompletion?.Matches(b,GameMain.gameTick)!=true
-                && (successfulPaidAction is null
-                    || HasExactSuccessfulOutboundCompletedPaidAction(b,successfulPaidAction,journeyId,GameMain.gameTick))
+                && (successfulSavedQuarantine is null
+                    || HasExactSuccessfulOutboundCompletedPaidAction(b,journeyId,GameMain.gameTick))
                 && (HasSavedStoppedPaidBatchReceipt(b,journeyId,GameMain.gameTick)
                     || HasSavedPaidWorkReceipt(b,journeyId,GameMain.gameTick))).ToArray();
             if(candidates.Length==1)generic=CloneBlueprintState(candidates[0]);
@@ -286,7 +296,7 @@ internal sealed partial class NormalGameActionCoordinator
         internal bool GenericPaidSite;
         internal bool AllowExistingPaidWork;
         internal SavedPaidSearchCache? SearchCache;
-        internal readonly double WallSeconds=NativeConstructionCadencePolicy.WallBudget(NativeSavedConstructionTailPolicy.MaximumGameTicks,Time.fixedDeltaTime)??double.NaN;
+        internal readonly double WallSeconds=NativeConstructionCadencePolicy.SavedTailWallBudget(NativeSavedConstructionTailPolicy.MaximumGameTicks,Time.fixedDeltaTime)??double.NaN;
         internal SavedConstructionTail(VoyagerRemoteResumeAdoption a, PlanetFactory f, BlueprintBuildState b, List<int> ids, double power)
         { Adoption=a; Factory=f; Build=b; DroneIds=new HashSet<int>(ids); Power=power; SourceAnchor=Anchor=a.Player.position; Eject=Anchor.normalized*(Anchor.magnitude+2.8f); }
         internal static bool TryPower(Player p, out double power)

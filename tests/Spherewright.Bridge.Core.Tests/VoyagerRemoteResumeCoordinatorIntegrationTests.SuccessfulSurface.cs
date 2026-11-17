@@ -11,11 +11,11 @@ namespace Spherewright.Bridge.Core.Tests;
 public sealed partial class VoyagerRemoteResumeCoordinatorIntegrationTests
 {
     [Theory]
-    [InlineData("valid")] [InlineData("wrong_destination")] [InlineData("wrong_action")]
+    [InlineData("valid")] [InlineData("newer_fixed_exit")] [InlineData("wrong_destination")] [InlineData("wrong_action")]
     [InlineData("wrong_landing")] [InlineData("unarmed")] [InlineData("conservative")]
-    [InlineData("known_newer_progress")] [InlineData("accepted_loss")] [InlineData("different_source")]
+    [InlineData("known_newer_progress")] [InlineData("accepted_loss")] [InlineData("different_source")] [InlineData("newer_uncovered")]
     [InlineData("surface_target")] [InlineData("flight_as_quarantine")] [InlineData("invalid_action")]
-    public void SuccessfulOutboundPaidTailBindsOnlyTheExactNoLossPrimaryAndDistinctOriginalAction(string fault)
+    public void SuccessfulOutboundPaidTailBindsOnlyAnExactNoLossSavedSourceAndDistinctQuarantine(string fault)
     {
         using var s = new Scenario(expiredJourney: true, currentNative: true, nativeArmed: true);
         var journey = s.Checkpoints.VoyagerJourney!;
@@ -28,14 +28,15 @@ public sealed partial class VoyagerRemoteResumeCoordinatorIntegrationTests
         var proposal = new VoyagerRecoveryWindowProposal(DateTimeOffset.UtcNow.AddMinutes(55), VoyagerRecoveryWindowProposal.TaskScope,
             9000, 240, surfaceRecoveryTarget: fault == "surface_target" ? new Vector3Snapshot { X = 200, Y = 2, Z = 0 } : null);
         using var evidence = VoyagerRemoteResumeEvidence.CreateRemotePrimaryRecovery(PluginJson.Serialize(journey),
-            PluginJson.Serialize(checkpoint), "same-primary", fault == "different_source" ? "different-primary" : "same-primary", 12528, 12528,
+            PluginJson.Serialize(checkpoint), "same-primary", fault is "different_source" or "newer_fixed_exit" or "newer_uncovered" ? "different-primary" : "same-primary",
+            fault is "newer_fixed_exit" or "newer_uncovered" ? 12529 : 12528, 12528,
             new OwnedWorldGameplayJournalCheckpoint(), proposal,
-            fault is "known_newer_progress" or "accepted_loss" ? 12529 : 12528, "", "", fault == "accepted_loss");
+            fault is "known_newer_progress" or "accepted_loss" or "newer_fixed_exit" ? 12529 : 12528, "", "", fault == "accepted_loss");
         var action = fault == "invalid_action" ? "invalid" : fault == "flight_as_quarantine" ? journey.ActiveActionId : Guid.NewGuid().ToString();
         var fingerprint = evidence.Fingerprint;
         var bound = evidence.TryBindSuccessfulOutboundPaidTailSource(action);
-        Assert.Equal(fault == "valid", bound);
-        Assert.Equal(bound ? action : null, evidence.SuccessfulOutboundPaidTailActionId);
+        Assert.Equal(fault is "valid" or "newer_fixed_exit", bound);
+        Assert.Equal(bound ? action : null, evidence.SuccessfulOutboundSavedQuarantineActionId);
         if (!bound) Assert.Equal(fingerprint, evidence.Fingerprint);
         Assert.Equal(0, DSPGame.LoadCalls);
     }
@@ -55,9 +56,27 @@ public sealed partial class VoyagerRemoteResumeCoordinatorIntegrationTests
         Assert.True(VoyagerRemotePrimaryRecoveryPolicy.HasMatchingEcho(request, prepared));
         Assert.False(prepared.NativeOriginalOutcomeProved);
         Assert.True(s.Commit(prepared).Success);
-        Assert.Equal(paidAction, s.Sessions.RemoteEvidence!.SuccessfulOutboundPaidTailActionId);
+        Assert.Equal(paidAction, s.Sessions.RemoteEvidence!.SuccessfulOutboundSavedQuarantineActionId);
         Assert.False(s.Sessions.RemoteEvidence.CompletedSavedLandingAdmissionUsed);
         Assert.Equal(1, DSPGame.LoadCalls); // Native completion and the drone tail are separately required.
+    }
+
+    [Fact]
+    public void NewerExactLastExitCanRetainTheLaterFailedResumeAsItsOwnQuarantine()
+    {
+        using var s = new Scenario(expiredJourney: true, currentNative: true, nativeArmed: true);
+        var request = s.PrimaryRecoveryRequest(18);
+        var failedResume = Guid.NewGuid().ToString();
+        s.ReplaceCurrentTicket(t => t.QuarantineActionId = failedResume); s.ReopenPrimaryCredentials();
+        request.AcceptUnstoredProgressLoss = false;
+        request.MinimumRecoveryGameTick = request.ExpectedRecoveryGameTick = 12528;
+        var preparation = s.PrepareResult(request);
+        Assert.True(preparation.Success, PluginJson.Serialize(preparation.Error));
+        Assert.True(VoyagerRemotePrimaryRecoveryPolicy.HasMatchingEcho(request, preparation.Value!));
+        Assert.True(s.Commit(preparation.Value!).Success);
+        Assert.Equal(GameSave.LastExit, DSPGame.LoadedName);
+        Assert.Equal(failedResume, s.Sessions.RemoteEvidence!.SuccessfulOutboundSavedQuarantineActionId);
+        Assert.False(preparation.Value!.NativeOriginalOutcomeProved);
     }
 
     [Theory]
