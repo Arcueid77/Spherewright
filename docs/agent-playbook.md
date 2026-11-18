@@ -503,6 +503,8 @@ Remote primary recovery also recognizes one already completed, paid2..12-belt co
 
 A connected station **Input** belt takes compatible cargo through the configured storage. The `logistics-station-belt` tool can select or change the item on a connected **Output** port without pending port cargo. Cargo already on the belt keeps moving; inspect the route and downstream filters before switching. The tool does not apply to Input ports.
 
+A station storage slot with zero count and proliferator points can be reassigned to another unlocked item when it has no outstanding orders. A configured item alone does not make an empty slot occupied. Verify any output selectors and downstream cargo before repurposing the slot.
+
 The same sealed minimal connection may also recover with exactly two already paid/completed2203 winds. Bind both original receipts, same-item attribution, every generator/node/network, all original entities and current physical idle. Only the bound miner's1013 output, the passive supply slot (max100) and fully decoded1013/non-proliferated belt cargo may be retained. Other generators, chargers, batteries, exchangers, foreign items, additional entities and unfinished work remain excluded. This reads the complete saved running site; it does not grant construction, energy or fresh Journey resources. Preserve actual Native power and delivery measurements rather than treating a rounded catalog estimate as generation already delivered.
 
 ## Saved off-world factory segments

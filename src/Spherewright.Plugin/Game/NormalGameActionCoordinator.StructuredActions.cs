@@ -2442,7 +2442,7 @@ internal sealed partial class NormalGameActionCoordinator
                     BridgeErrorCodes.ActionRejected,
                     stationReason,
                     true,
-                    "Choose an unlocked item and an empty or same-item slot with no outstanding orders; use 100-item limit steps within the station's current researched capacity."));
+                    "Choose an unlocked item and a slot with no outstanding orders; a different item requires an empty slot. Use 100-item limit steps within the station's current researched capacity."));
             }
 
             if (request.Mode == BuildingConfigurationModes.LogisticsStationCharge
@@ -2852,21 +2852,10 @@ internal sealed partial class NormalGameActionCoordinator
         }
 
         var current = station.storage[storageIndex];
-        if (current.itemId != 0 && current.itemId != itemId)
+        if (!LogisticsStationStorageSlotPolicy.CanAssign(current.itemId, current.count, current.inc,
+                current.localOrder, current.remoteOrder, itemId))
         {
-            reason = "This action never replaces or clears an occupied station slot; choose an empty slot or keep the same item.";
-            return false;
-        }
-
-        if (current.localOrder != 0 || current.remoteOrder != 0)
-        {
-            reason = "The station slot has outstanding logistics orders and must become idle before configuration.";
-            return false;
-        }
-
-        if (current.itemId == 0 && (current.count != 0 || current.inc != 0))
-        {
-            reason = "The nominally empty station slot contains unexplained inventory state.";
+            reason = "Changing the station item requires an empty slot with no outstanding logistics orders; same-item settings also require no outstanding orders.";
             return false;
         }
 
