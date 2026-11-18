@@ -408,7 +408,7 @@ Storage-capacity 在所选普通 `2101`/`2102` 层或通过其配送器选择的
 
 Sorter-filter 绑定根配置及手持货物，支持无货 Returning 或普通 `2011/2012` Inserting。只改过滤、标记，已持货仍去相同目的地。已确认 inserter 的 null 读回表示无过滤，请求 `filterItemId=0` 清过滤；这不是清堵。
 
-物流站 storage 只通过 `SetStationStorage` 配置无订单空槽或同物品槽；belt 选择未选的已连空输出；charge 采用精确原生范围、3 MW 步进。机队转移保留全部其他状态。转移移动真实库存，补燃料用 `AutoReplenishFuel` 和数量、增产点守恒，保存用内部主身份、`SaveCurrentGame`。
+物流站 storage 只通过 `SetStationStorage` 配置无订单空槽或同物品槽；belt 可选择或更换已连接且没有待处理端口货物的输出，带上原有货物保留；charge 采用精确原生范围、3 MW 步进。机队转移保留全部其他状态。转移移动真实库存，补燃料用 `AutoReplenishFuel` 和数量、增产点守恒，保存用内部主身份、`SaveCurrentGame`。
 
 现有机队转移支持无人机5001、运输船5002和原生站点翘曲器1210，数量1–100。翘曲器要求普通 ILS、原生运输船曲速科技、真实 `warperCount`/`warperCapacity`、存入零增产点物品及精确玩家/机队哈希；采集站、PLS、未知或已满容量均拒绝。同一原 action 证明背包/计数器双边变化及其他机队/存储/能量保留；不扩大远端写范围、不创造翘曲器，未知转移不得换键重放。
 

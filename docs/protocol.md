@@ -392,7 +392,7 @@ Storage-capacity binds full state on a selected ordinary `2101`/`2102` layer or 
 
 Sorter-filter binds root config/held cargo, with supported empty Returning or ordinary `2011/2012` Inserting. Only filter/sign changes; held cargo still goes to the same destination. Confirmed inserter null readback is unfiltered; request `filterItemId=0` clears. This is not jam clearance.
 
-Station storage only configures empty/same-item no-order slots via `SetStationStorage`; belt selects an unselected connected empty output; charge uses exact native range/3 MW steps. Fleet transfer preserves all unrelated state. Transfer moves real stock, refuel uses `AutoReplenishFuel` and count/inc conservation, save uses internal primary/`SaveCurrentGame`.
+Station storage only configures empty/same-item no-order slots via `SetStationStorage`; belt selects or changes a connected output with no pending port cargo, preserving cargo already on the belt; charge uses exact native range/3 MW steps. Fleet transfer preserves all unrelated state. Transfer moves real stock, refuel uses `AutoReplenishFuel` and count/inc conservation, save uses internal primary/`SaveCurrentGame`.
 
 Existing fleet transfer accepts drones5001, vessels5002 and native station warpers1210, count1–100. Warpers require an ordinary ILS, native vessel warp-drive unlock, actual `warperCount`/`warperCapacity`, zero-inc deposit items and exact player/fleet hashes; collectors/PLS or unknown/full capacity reject. The same original action proves bilateral package/counter changes and unrelated fleet/storage/energy preservation. This changes no remote write scope, does not create warpers and never retries an unknown transfer under a new key.
 

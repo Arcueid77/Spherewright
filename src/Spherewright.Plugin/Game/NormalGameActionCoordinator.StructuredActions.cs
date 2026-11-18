@@ -2473,7 +2473,7 @@ internal sealed partial class NormalGameActionCoordinator
                     BridgeErrorCodes.ActionRejected,
                     beltReason,
                     true,
-                    "Choose an empty connected output port and a configured unlocked station storage slot; existing nonzero output selectors are never replaced."));
+                    "Choose a connected output port with no pending port cargo and a different configured unlocked station storage slot."));
             }
         }
 
@@ -2968,15 +2968,11 @@ internal sealed partial class NormalGameActionCoordinator
             return false;
         }
 
-        if (slot.storageIdx == desiredStorageIndex)
+        if (!LogisticsStationBeltSelectorPolicy.CanChange(slot.storageIdx, storageIndex, station.storage.Length))
         {
-            reason = "The requested station output selector is already applied.";
-            return false;
-        }
-
-        if (slot.storageIdx != 0)
-        {
-            reason = "This action never replaces an existing nonzero station output selector.";
+            reason = slot.storageIdx == desiredStorageIndex
+                ? "The requested station output selector is already applied."
+                : "The current or requested station output selector is outside the native storage slots.";
             return false;
         }
 
