@@ -5,6 +5,46 @@ namespace Spherewright.Bridge.Core.Tests;
 
 public sealed class NativeResumeContactPolicyTests
 {
+    private static Spherewright.Contracts.Players.NativeNearGroundSupportSnapshot Vegetation() => new()
+    {
+        State="observed",ActualGroundSphereHit=false,CastAttempted=true,CastHit=true,CastLayerMask=15873,
+        CastDistance=.51028556f,NormalDotUp=.925f,Layer=10,Shape="sphere",OwnerType="vegetable",
+        Enabled=true,ActiveInHierarchy=true,IsTrigger=false,SameDefaultPhysicsScene=true,
+        CurrentPoolReference=true,LiveObject=true,ColliderChain=true,NativeLiveFlag=true,
+        FootOverlapComplete=true,FootOverlapCount=0,AllFootHitsCurrentSupportOrTerrain=true,
+    };
+    [Fact]
+    public void CurrentVegetationAllowsObservedNaturalSettlingWithoutPretendingAlreadyGrounded()
+    {
+        var source=Vegetation();var p=NativeResumeContactPolicy.ForNativeSupport(100,Now,source,.125);
+        Assert.True(NativeResumeContactPolicy.VegetationCastProved(source));Assert.True(p.UsesVegetationSettling);
+        Assert.False(source.ActualGroundSphereHit);Assert.False(p.Retired);Assert.Equal(32,p.WorkTickLimit);
+        var f=Good();f.CastDistanceMeters=.51028556;Assert.Null(p.PreflightBlocker(f));
+        for(var i=1;i<=6;i++)
+        {
+            f=Good(100+i);f.NowUtc=f.OriginalJourney!.NowUtc=Now.AddMilliseconds(i*125);
+            f.CastDistanceMeters=.51028556-i*.06;f.InwardDisplacementMeters=i*.06;f.SpeedMetersPerSecond=1.8;
+            if(i==6){Ready(f);f.SpeedMetersPerSecond=0;}
+            Assert.Equal(i==6?NativeResumeContactStep.Ready:NativeResumeContactStep.Pending,Frame(p,f));
+        }
+        Assert.True(p.Retired);
+    }
+    [Theory]
+    [InlineData("foreign")] [InlineData("layer")] [InlineData("reference")] [InlineData("live")]
+    [InlineData("gap")] [InlineData("normal")] [InlineData("trigger")] [InlineData("overlap")]
+    public void VegetationSettlingRequiresTheCurrentObservedSupportingCollider(string fault)
+    {
+        var source=Vegetation();
+        switch(fault)
+        {
+            case "foreign":source.OwnerType="entity";break;case "layer":source.Layer=9;break;
+            case "reference":source.CurrentPoolReference=false;break;case "live":source.NativeLiveFlag=false;break;
+            case "gap":source.CastDistance=1.01f;break;case "normal":source.NormalDotUp=.49f;break;
+            case "trigger":source.IsTrigger=true;break;case "overlap":source.AllFootHitsCurrentSupportOrTerrain=false;break;
+        }
+        Assert.False(NativeResumeContactPolicy.VegetationCastProved(source));
+        Assert.False(NativeResumeContactPolicy.ForNativeSupport(100,Now,source,.125).UsesVegetationSettling);
+    }
     [Fact]
     public void InitializedTerrainRequiresAnActualCurrentLayerNineCastAndKeepsGroundFalse()
     {

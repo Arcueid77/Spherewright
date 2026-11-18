@@ -29,8 +29,8 @@ public sealed class NativeResumeContactFacts
     public VoyagerReturnOnlyIdleBudgetFacts? ReturnOnlyBudget { get; set; }
 }
 
-// One attempt, at most eight601s including the failure frame after Pause.
-// The eighth501 must retire with actual idle or Pause before that frame's601.
+// One attempt, normally at most eight601s including the failure frame after
+// Pause. Verified terrain and vegetation have the finite settling allowance below.
 // A151 observation never publishes idle or consumes a501. Nothing
 // here moves an actor, permits a Save, pays energy, or renews the old journey.
 public sealed class NativeResumeContactPolicy
@@ -54,6 +54,17 @@ public sealed class NativeResumeContactPolicy
         && s.Enabled == true && s.ActiveInHierarchy == true && s.IsTrigger == false && s.SameDefaultPhysicsScene == true
         && s.CurrentPoolReference == true && s.LiveObject == true && s.ColliderChain == true && s.NativeLiveFlag is null
         && s.FootOverlapComplete == true && s.FootOverlapCount is >=0 and <=256 && s.AllFootHitsCurrentSupportOrTerrain == true;
+    // A current native vegetation collider can also support an ordinary fall.
+    // This recognizes the real collider; it does not claim the player is grounded.
+    public static bool VegetationCastProved(NativeNearGroundSupportSnapshot s) => s.State == "observed"
+        && s.ActualGroundSphereHit == false && s.CastAttempted == true && s.CastHit == true
+        && s.CastLayerMask == 15873 && s.Layer == 10 && s.OwnerType == "vegetable"
+        && (s.Shape == "sphere" || s.Shape == "capsule" || s.Shape == "box")
+        && s.CastDistance.HasValue && !float.IsNaN(s.CastDistance.Value) && s.CastDistance >= 0f && s.CastDistance <= 1f
+        && s.NormalDotUp.HasValue && !float.IsNaN(s.NormalDotUp.Value) && s.NormalDotUp >= MinimumNormalDotUp && s.NormalDotUp <= 1.001f
+        && s.Enabled == true && s.ActiveInHierarchy == true && s.IsTrigger == false && s.SameDefaultPhysicsScene == true
+        && s.CurrentPoolReference == true && s.LiveObject == true && s.ColliderChain == true && s.NativeLiveFlag == true
+        && s.FootOverlapComplete == true && s.FootOverlapCount is >=0 and <=256 && s.AllFootHitsCurrentSupportOrTerrain == true;
     public const string GroundingPending = "remote_resume_native_contact_pending";
     public const int MaximumNativeWorkTicks = 8;
     public const double MaximumWallSeconds = 2d;
@@ -69,6 +80,8 @@ public sealed class NativeResumeContactPolicy
     public double InwardLimit { get; }
     public double WallSecondsLimit { get; }
     public bool UsesTerrainSettling { get; }
+    public bool UsesVegetationSettling { get; }
+    private bool UsesExtendedSettling => UsesTerrainSettling || UsesVegetationSettling;
     public long SourceGameTick { get; }
     public long LastObservedGameTick { get; private set; }
     public long LastUniverseGameTick { get; private set; }
@@ -81,26 +94,28 @@ public sealed class NativeResumeContactPolicy
     private NativeResumeDecisionEvidence? _decision;
 
     // A loaded current-terrain31 cast and its normal151 conversion to9 are
-    // the same bounded settling route. Object-pool contacts keep the smaller
-    // legacy envelope. A collision layer alone cannot select this profile.
+    // the same bounded settling route. Verified live vegetation can also use
+    // a natural settling attempt; other object-pool contacts keep the legacy envelope.
     public static NativeResumeContactPolicy ForNativeSupport(long sourceTick,DateTimeOffset started,
         NativeNearGroundSupportSnapshot source,double nativeFixedDeltaSeconds)
     {
         var terrain=LoadedTerrainCastProved(source)||InitializedTerrainCastProved(source);
-        return new(sourceTick,started,terrain,nativeFixedDeltaSeconds);
+        var vegetation=VegetationCastProved(source);
+        return new(sourceTick,started,terrain,nativeFixedDeltaSeconds,vegetation);
     }
 
     public NativeResumeContactPolicy(long sourceGameTick, DateTimeOffset startedUtc, bool initializedTerrain = false,
-        double? nativeFixedDeltaSeconds = null)
+        double? nativeFixedDeltaSeconds = null, bool vegetationSupport = false)
     {
         UsesTerrainSettling=initializedTerrain;
-        WorkTickLimit=initializedTerrain?32:MaximumNativeWorkTicks;
-        CastDistanceLimit=initializedTerrain ? .5d : MaximumCastDistanceMeters;
-        // Only the closed, actual-support initialized-terrain subset may use
+        UsesVegetationSettling=vegetationSupport;
+        WorkTickLimit=UsesExtendedSettling?32:MaximumNativeWorkTicks;
+        CastDistanceLimit=vegetationSupport ? 1d : initializedTerrain ? .5d : MaximumCastDistanceMeters;
+        // Only an actual, identity-bound terrain or vegetation support may use
         // this finite settling observation bound. Every velocity/displacement
         // and paid tick is rechecked; this promises no gravity or landing result.
-        SpeedLimit=initializedTerrain?8d:MaximumSpeedMetersPerSecond;
-        InwardLimit=initializedTerrain ? .5d : MaximumInwardDisplacementMeters;
+        SpeedLimit=UsesExtendedSettling?8d:MaximumSpeedMetersPerSecond;
+        InwardLimit=vegetationSupport ? 1d : initializedTerrain ? .5d : MaximumInwardDisplacementMeters;
         WallSecondsLimit=nativeFixedDeltaSeconds.HasValue
             ? NativeConstructionCadencePolicy.WallBudget(WorkTickLimit,nativeFixedDeltaSeconds.Value)??double.NaN
             :MaximumWallSeconds;
@@ -117,7 +132,7 @@ public sealed class NativeResumeContactPolicy
         return _decision!.Require("preflight_source_tick", f.OriginalJourney!.CurrentGameTick == SourceGameTick)
             && _decision.Require("preflight_no_ground", f.NativeGroundSphereHit == false)
             && _decision.Require("preflight_not_idle", f.StrictPhysicalIdleProved == false)
-            && _decision.Require("preflight_foot_cut", f.FootOverlapCount == 0 || UsesTerrainSettling && f.AllFootHitsOwned==true)
+            && _decision.Require("preflight_foot_cut", f.FootOverlapCount == 0 || UsesExtendedSettling && f.AllFootHitsOwned==true)
             && _decision.Require("preflight_at_rest", f.SpeedMetersPerSecond <= .1d)
             && _decision.Require("preflight_zero_inward", f.InwardDisplacementMeters == 0d)
             && _decision.Require("preflight_zero_tangent", f.TangentialDisplacementMeters == 0d)
@@ -198,7 +213,7 @@ public sealed class NativeResumeContactPolicy
             : !R("contact_foot_query_incomplete", f.FootQueryComplete) ? "contact_foot_query_incomplete"
             : !R("contact_native_ground_query_unavailable", f.NativeGroundSphereHit.HasValue ? true : null) ? "contact_native_ground_query_unavailable"
             : !R("contact_foot_count_unproved", f.FootOverlapCount.HasValue ? f.FootOverlapCount >= 0 && f.FootOverlapCount <= NativeTerrainObservationPolicy.MaximumSurfaceColliders : null) ? "contact_foot_count_unproved"
-            : f.NativeGroundSphereHit == false && !R("contact_airborne_foot_overlap", f.FootOverlapCount == 0 || UsesTerrainSettling && f.AllFootHitsOwned==true) ? "contact_airborne_foot_overlap"
+            : f.NativeGroundSphereHit == false && !R("contact_airborne_foot_overlap", f.FootOverlapCount == 0 || UsesExtendedSettling && f.AllFootHitsOwned==true) ? "contact_airborne_foot_overlap"
             : f.NativeGroundSphereHit == true && !R("contact_grounded_foot_count", f.FootOverlapCount >= 1) ? "contact_grounded_foot_count"
             : f.NativeGroundSphereHit == true && !R("contact_grounded_foot_owner_unproved", f.AllFootHitsOwned) ? "contact_grounded_foot_owner_unproved"
             : !R("contact_idle_observation", f.StrictPhysicalIdleProved.HasValue ? true : null) ? "contact_idle_observation"
