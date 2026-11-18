@@ -17,6 +17,23 @@ namespace Spherewright.Contracts.Tests;
 public sealed class ProtocolContractTests
 {
     [Fact]
+    public void AssemblerInputReceiptRetainsSameTickCountAndProliferatorEvidence()
+    {
+        var source=new ActionResultSnapshot { Terminal=true, Succeeded=true, CompletedAtGameTick=123,
+            AssemblerInputReadback=new() { EntityId=987,RecipeId=70,ItemId=1404,RequestedCount=10,
+                InputCountBefore=2,InputCountAfter=12,InputIncBefore=1,InputIncAfter=31,
+                PackageCountBefore=15,PackageCountAfter=5,PackageIncBefore=40,PackageIncAfter=10,
+                ExactNativeBindingVerified=true,OtherBuffersPreserved=true,OtherPackageStockPreserved=true,
+                ConservationVerified=true,CapturedAtGameTick=123 } };
+        var round=JsonSerializer.Deserialize<ActionResultSnapshot>(JsonSerializer.Serialize(source,JsonOptions),JsonOptions)!;
+        Assert.NotNull(round.AssemblerInputReadback);
+        Assert.Equal(12,round.AssemblerInputReadback!.InputCountAfter);
+        Assert.Equal(31,round.AssemblerInputReadback.InputIncAfter);
+        Assert.Equal(10,round.AssemblerInputReadback.PackageIncAfter);
+        Assert.Equal(round.CompletedAtGameTick,round.AssemblerInputReadback.CapturedAtGameTick);
+        Assert.True(round.AssemblerInputReadback.ConservationVerified);
+    }
+    [Fact]
     public void FuelPowerCatalogProfileIsOptionalAndPreservesLongNativeBaseRatings()
     {
         var legacy = JsonSerializer.Deserialize<BuildCatalogItem>("{}", JsonOptions)!;

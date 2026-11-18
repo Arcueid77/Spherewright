@@ -485,6 +485,8 @@ internal sealed partial class NormalGameActionCoordinator
             ? PrepareProductionResetOnMainThread(requestedSessionId,request)
             : request.Direction == TransferDirections.PlayerToGeneratorFuel
             ? PrepareGeneratorColdStartFuelOnMainThread(requestedSessionId, request)
+            : request.Direction == TransferDirections.PlayerToAssemblerInput
+            ? PrepareAssemblerInputOnMainThread(requestedSessionId, request)
             : PrepareStorageTransferOnMainThread(requestedSessionId, request);
 
     public GameCallResult<PreparedNormalAction> PrepareLogisticsStationFleetTransferOnMainThread(
@@ -904,6 +906,7 @@ internal sealed partial class NormalGameActionCoordinator
                 else if (action.Plan.TransferDirection == TransferDirections.StationStorageToPlayer) ExecuteStationCargoWithdrawalOnMainThread(action);
                 else if (action.Plan.TransferDirection == TransferDirections.ProductionResetToPlayer) ExecuteProductionResetOnMainThread(action);
                 else if (action.Plan.TransferDirection == TransferDirections.PlayerToGeneratorFuel) ExecuteGeneratorColdStartFuelOnMainThread(action);
+                else if (action.Plan.TransferDirection == TransferDirections.PlayerToAssemblerInput) ExecuteAssemblerInputOnMainThread(action);
                 else ExecuteStorageTransferOnMainThread(action);
                 break;
             case NormalActionKinds.LogisticsStationFleetTransfer:
@@ -1493,7 +1496,9 @@ internal sealed partial class NormalGameActionCoordinator
                     : plan.TransferDirection == TransferDirections.ProductionResetToPlayer
                     ? RevalidateProductionResetOnMainThread(plan)
                     : plan.TransferDirection == TransferDirections.PlayerToGeneratorFuel
-                    ? RevalidateGeneratorColdStartFuelOnMainThread(plan) : RevalidateStorageTransferOnMainThread(plan);
+                    ? RevalidateGeneratorColdStartFuelOnMainThread(plan)
+                    : plan.TransferDirection == TransferDirections.PlayerToAssemblerInput
+                    ? RevalidateAssemblerInputOnMainThread(plan) : RevalidateStorageTransferOnMainThread(plan);
             case NormalActionKinds.LogisticsStationFleetTransfer:
                 return RevalidateStationFleetTransferOnMainThread(plan);
             case NormalActionKinds.Refuel:
@@ -1821,6 +1826,7 @@ internal sealed partial class NormalGameActionCoordinator
             BeltPathReversalReadback = action.BeltPathReversalReadback,
             StackConstructionReadback = action.StackConstructionReadback,
             StationCargoWithdrawalReadback = action.StationCargoWithdrawalReadback,
+            AssemblerInputReadback = action.AssemblerInputReadback,
             WindTurbineDismantleReadback = action.WindTurbineDismantleReadback,
             MechaWarperSupplyReadback = action.MechaWarperSupplyReadback,
             NativeHomeReturnFirstEffect=action.NativeHomeReturnFirstEffect,
@@ -2582,6 +2588,7 @@ internal sealed partial class NormalGameActionCoordinator
         public BeltPathReversalReadback? BeltPathReversalReadback { get; set; }
         public NativeStackSnapshot? StackConstructionReadback { get; set; }
         public StationCargoWithdrawalReadback? StationCargoWithdrawalReadback { get; set; }
+        public AssemblerInputReadback? AssemblerInputReadback { get; set; }
         public WindTurbineDismantleReadback? WindTurbineDismantleReadback { get; set; }
         public MechaWarperSupplyReadback? MechaWarperSupplyReadback { get; set; }
         public MechaWarperAutoSupplyReadback? MechaWarperAutoSupplyReadback { get; set; }

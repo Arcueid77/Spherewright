@@ -44,6 +44,7 @@ public static class TransferDirections
     public const string StationStorageToPlayer = "station-storage-to-player";
     public const string ProductionResetToPlayer = "production-reset-to-player";
     public const string PlayerToGeneratorFuel = "player-to-generator-fuel";
+    public const string PlayerToAssemblerInput = "player-to-assembler-input";
     public const string PlayerToStorage = "player-to-storage";
     public const string StorageToPlayer = "storage-to-player";
 }
@@ -403,6 +404,7 @@ public sealed class PreparedNormalAction
     public StationCargoWithdrawalPlan? StationCargoWithdrawal { get; set; }
     public int? PlannedStationVesselDeliveryMinimumPercent { get; set; }
     public GeneratorColdStartFuelPlan? GeneratorColdStartFuel { get; set; }
+    public AssemblerInputPlan? AssemblerInput { get; set; }
     public ProductionResetPlan? ProductionReset { get; set; }
     public VoyagerMechaWorkSnapshot? VoyagerMechaWork { get; set; }
 
@@ -502,6 +504,18 @@ public sealed class GeneratorColdStartFuelPlan
     public int ItemId { get; set; }
     public int Count { get; set; }
     public bool EmptyUnlitGenerator { get; set; }
+    public string NativeOperation { get; set; } = string.Empty;
+}
+
+public sealed class AssemblerInputPlan
+{
+    public int EvidenceVersion { get; set; }
+    public int EntityId { get; set; }
+    public int BuildingItemId { get; set; }
+    public int RecipeId { get; set; }
+    public int ItemId { get; set; }
+    public int Count { get; set; }
+    public int BeforeInputCount { get; set; }
     public string NativeOperation { get; set; } = string.Empty;
 }
 

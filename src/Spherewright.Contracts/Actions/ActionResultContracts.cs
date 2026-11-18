@@ -30,6 +30,7 @@ public sealed class ActionResultSnapshot
     public MovementDiagnosticsSnapshot? MovementDiagnostics { get; set; }
     public Spherewright.Contracts.Factory.NativeStackSnapshot? StackConstructionReadback { get; set; }
     public StationCargoWithdrawalReadback? StationCargoWithdrawalReadback { get; set; }
+    public AssemblerInputReadback? AssemblerInputReadback { get; set; }
     public Spherewright.Contracts.Players.NativeResumeFailureSnapshot? NativeFirstFailure { get; set; }
 
     public string ActionId { get; set; } = string.Empty;
