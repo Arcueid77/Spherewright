@@ -450,7 +450,7 @@ Sorter-filter 绑定根配置及手持货物，支持无货 Returning 或普通 
 
 这些值须来自所有者在预览前独立保护的基线。记录 JSON 字符串须保留已安装 Native `PluginJson.Serialize` 的原输出及数值词元；不得在桌面解析/重渲染、归一化浮点数，或以只有 header/metadata 的证据替代任一完整文件指纹。Journal 须保留 Native 识别 BOM 后读取的全部已验证文本及空白/行尾，不得解析后重新序列化再哈希。公开 Core 函数返回带 `sha256:` 前缀的承诺，不依赖 Lab helper；它只计算确定性数据绑定，不验证或签发所有者身份、授权或 Native 失败证书。租约、身份/版本及实机门仍由 coordinator 独立验证。本次预览的 Plugin 计算回显本身不能充当所有者独立 expected 基线；独立证据缺失仍为未知并阻止该模式。
 
-仅在严格接地准入下起步的原活动 Move，才可在单独接触缺失时最多保留原订单8个真实 Native tick。每 tick 须 fresh 证明全部非接地前提及14P储备：当前 tick 加原13 tick停止尾部。只有真实 sphere 命中才清除 gap，越界即走原停止路径；停止尾部缺地使任务失败保持。已知失败仍须 fresh 接地 Walk 与实际零速度，否则结果保持 unknown。此分支不扩 idle、施工、Harvest、飞行、期限或返程储备。
+接地起步的活动 Move 可在接触缺口期间保留原订单，原工作时段、移动进度检查和动作期限继续生效。每个 Native tick 核对非接地条件，并为当前 tick 与既有停止尾部预留能源。新鲜 sphere 命中且实际/帧均为 Walk 时清除缺口；Drift 不代表空闲或到达。订单停止时仍执行原物理停稳检查。此行为不延长旅程或返程储备。
 
 独立的旧本地 Move 未知结果兼容输入仅用于 `recoveryMode=default` 及旧源码组件组 `12e6dfcaaae923c844cc3ae0c2b66c185537b93a`。`legacyLocalMoveUnknownEvidenceJson` 与 `expectedLegacyLocalMoveUnknownEvidenceHash` 须同时提供或同时省略。哈希为精确不可变、严格 UTF-8 编码 JSON 字节的 SHA-256，以无前缀64位小写 hex 表示；整个 carrier 最多64KiB，不接受文件路径。外层对象精确八字段：`sourceProductSha`（该兼容组件组）、`captureAttested`（true）、`actionResponseJson`、`sessionResponseJson`、`ticketSha256`、`journeySha256`、`checkpointSha256`、`journalSha256`。两个响应字符串保留受保护原公开 `success=true`/`result` 响应文本，不用 readback 投影；必要字段核类型，正常 DTO 附加字段仍可保留，重复 JSON 属性拒绝。四项哈希绑定完整原文件字节；票据双副本须字节相同，Journal 哈希包含原文件全部 BOM、空白及行尾。
 

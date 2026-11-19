@@ -26,26 +26,25 @@ public sealed class VoyagerActiveMoveGroundGapPolicyTests
         Assert.Equal(VoyagerMoveGroundGapStep.Grounded, state.Observe(f));
         Assert.Null(state.GapStartedGameTick);
         Assert.Equal(13, VoyagerLocalWalkReservePolicy.StopGameTicks);
-        Assert.Equal(8, VoyagerActiveMoveGroundGapPolicy.MaximumGapWorkGameTicks);
     }
 
     [Fact]
-    public void ContinuousNativeDriftUsesOneFiniteWorkCapAndNeverRenewsAfterStop()
+    public void ContinuousNativeDriftUsesTheOriginalWorkWindowAndNeverRenewsAfterStop()
     {
         var state = new VoyagerActiveMoveGroundGapPolicy(100);
         var f = Good(); f.NativeDriftModeObserved = true;
-        for (var tick = 101L; tick <= 164; tick++)
+        for (var tick = 101L; tick <= 400; tick++)
         {
             f.OriginalJourney!.CurrentGameTick = tick;
             Assert.Equal(VoyagerMoveGroundGapStep.ContinueGap, state.Observe(f));
             Assert.Equal(VoyagerMoveGroundGapStep.Duplicate, state.Observe(f));
         }
-        f.OriginalJourney!.CurrentGameTick = 165;
+        f.OriginalJourney!.CurrentGameTick = 401;
+        f.OriginalWorkWindowOpen = false;
         Assert.Equal(VoyagerMoveGroundGapStep.Stop, state.Observe(f));
-        f.NativeDriftModeObserved = false; f.GroundSphereHit = true;
+        f.NativeDriftModeObserved = false; f.GroundSphereHit = true; f.OriginalWorkWindowOpen = true;
         f.OriginalJourney.CurrentGameTick++;
         Assert.Equal(VoyagerMoveGroundGapStep.Stop, state.Observe(f));
-        Assert.Equal(64, VoyagerActiveMoveGroundGapPolicy.MaximumDriftTransitionWorkGameTicks);
     }
 
     [Fact]
@@ -91,7 +90,6 @@ public sealed class VoyagerActiveMoveGroundGapPolicyTests
         Assert.True(VoyagerActiveMoveGroundGapPolicy.MustPauseBeforeCurrentTick(100, 112, Now, Now.AddSeconds(1.7), Now.AddSeconds(patience)));
         Assert.True(VoyagerActiveMoveGroundGapPolicy.MustPauseBeforeCurrentTick(100, 107, Now, Now.AddSeconds(patience), Now.AddSeconds(patience)));
         Assert.Equal(13, VoyagerLocalWalkReservePolicy.StopGameTicks);
-        Assert.Equal(8, VoyagerActiveMoveGroundGapPolicy.MaximumGapWorkGameTicks);
     }
 
     [Theory]
@@ -112,22 +110,21 @@ public sealed class VoyagerActiveMoveGroundGapPolicyTests
     private static readonly DateTimeOffset Now = new(2025, 1, 1, 0, 0, 0, TimeSpan.Zero);
 
     [Fact]
-    public void OnlyEightActualMissingContactWorkTicksPrecedeTheOriginalStop()
+    public void LongerMissingContactCanReturnToGroundWithinTheOriginalMove()
     {
         var state = new VoyagerActiveMoveGroundGapPolicy(100);
         var facts = Good();
-        for (var tick = 101L; tick <= 108; tick++)
+        for (var tick = 101L; tick <= 220; tick++)
         {
             facts.OriginalJourney!.CurrentGameTick = tick;
             Assert.Equal(VoyagerMoveGroundGapStep.ContinueGap, state.Observe(facts));
         }
-        facts.OriginalJourney!.CurrentGameTick = 109;
-        Assert.Equal(VoyagerMoveGroundGapStep.Stop, state.Observe(facts));
         Assert.Equal(101L, state.GapStartedGameTick);
         facts.GroundSphereHit = true;
-        facts.OriginalJourney.CurrentGameTick = 110;
-        Assert.Equal(VoyagerMoveGroundGapStep.Stop, state.Observe(facts));
-        Assert.True(state.StopLatched); // A later physical recovery cannot revive the failed task.
+        facts.OriginalJourney!.CurrentGameTick = 221;
+        Assert.Equal(VoyagerMoveGroundGapStep.Grounded, state.Observe(facts));
+        Assert.Null(state.GapStartedGameTick);
+        Assert.False(state.StopLatched);
     }
 
     [Fact]
@@ -161,6 +158,10 @@ public sealed class VoyagerActiveMoveGroundGapPolicyTests
             Assert.Equal(101L, state.GapStartedGameTick);
         }
         facts.OriginalJourney!.CurrentGameTick = 109;
+        Assert.Equal(VoyagerMoveGroundGapStep.ContinueGap, state.Observe(facts));
+        Assert.Equal(101L, state.GapStartedGameTick);
+        facts.OriginalWorkWindowOpen = false;
+        facts.OriginalJourney.CurrentGameTick = 110;
         Assert.Equal(VoyagerMoveGroundGapStep.Stop, state.Observe(facts));
     }
 

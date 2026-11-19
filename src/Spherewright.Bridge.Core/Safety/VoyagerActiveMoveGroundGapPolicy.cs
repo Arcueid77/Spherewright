@@ -30,13 +30,9 @@ public sealed class VoyagerActiveMoveGroundGapFacts
 // In-memory sequence only; neither a renewed action nor recovery authority.
 public sealed class VoyagerActiveMoveGroundGapPolicy
 {
-    public const int MaximumGapWorkGameTicks = 8;
-    // Native DetermineDrift requires >.8 seconds in float1/60 increments
-    // outside water before restoring Walk (48 ticks from a fresh transition).
-    // Retain the original eight-tick contact-only bound; a proved Drift mode
-    // may use at most64 consecutive work ticks of the SAME finite Move.
-    // This is bounded work, not a promise of landing or a longer stop tail.
-    public const int MaximumDriftTransitionWorkGameTicks = 64;
+    // An admitted Move may cross a longer gap or water while its own work
+    // window, progress watchdog, per-tick energy and return budget remain
+    // valid. Contact alone does not determine how long the crossing takes.
     public const double MaximumStopWallPatienceSeconds = 5d;
     // Native logic ticks and Unity's scheduling/physics cadence need not run
     // at60 wall frames/s. This is bounded patience for the SAME13 paid ticks.
@@ -78,10 +74,7 @@ public sealed class VoyagerActiveMoveGroundGapPolicy
             return VoyagerMoveGroundGapStep.Grounded;
         }
         GapStartedGameTick ??= tick;
-        var maximumWorkTicks = facts.NativeDriftModeObserved
-            ? MaximumDriftTransitionWorkGameTicks : MaximumGapWorkGameTicks;
-        if (tick - GapStartedGameTick.Value >= maximumWorkTicks
-            || !facts.OriginalWorkWindowOpen || !OriginalBudgetAllows(facts, 1,
+        if (!facts.OriginalWorkWindowOpen || !OriginalBudgetAllows(facts, 1,
                 VoyagerLocalWalkReservePolicy.StopGameTicks, facts.StopWallPatienceSeconds + 1d / 60d)
             || !CanFund(facts, 1 + VoyagerLocalWalkReservePolicy.StopGameTicks))
         {

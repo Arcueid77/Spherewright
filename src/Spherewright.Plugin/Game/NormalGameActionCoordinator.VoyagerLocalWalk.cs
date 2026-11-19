@@ -554,7 +554,7 @@ internal sealed partial class NormalGameActionCoordinator
             case VoyagerMoveGroundGapStep.Grounded: return false;
             case VoyagerMoveGroundGapStep.ContinueGap: return true;
             case VoyagerMoveGroundGapStep.Stop:
-                ArmVoyagerMoveGroundGapStop(action, facts, "The original Move's finite ground-contact gap ended; stop its exact order.");
+                ArmVoyagerMoveGroundGapStop(action, facts, "The original Move's work or return reserve ended during a ground-contact gap; stop its exact order.");
                 return true;
             case VoyagerMoveGroundGapStep.Duplicate: return true;
             default:
