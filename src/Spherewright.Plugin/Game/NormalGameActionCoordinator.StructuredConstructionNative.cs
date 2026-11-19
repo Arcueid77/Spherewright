@@ -91,15 +91,17 @@ internal sealed partial class NormalGameActionCoordinator
             var item = LDB.items.Select(spec.ItemId);
             var desc = item is null ? null : NativeBuildModel(item, spec.NativeModelIndex ?? 0);
             if (desc is null || !FiniteConstruction(desc.selectSize.y)) { reach = double.NaN; break; }
-            var position = ToVector(spec.Position);
-            var target = position + position.normalized * (desc.selectSize.y + 1f);
-            reach = Math.Max(reach, Vector3.Distance(ejectAnchor, target));
-            // Both sorter poses must remain in the same finite local envelope.
-            var offset = ToVector(spec.Position2) - anchor;
+            // Sorters have two native poses; other constructions have one
+            // drone target even when their second preview pose is unused.
+            var second = desc.isInserter ? spec.Position2 : spec.Position;
+            var actualReach = NativeConstructionDroneReservePolicy.MaximumRaisedPoseDistance(
+                ConstructionVector(ejectAnchor), spec.Position, second, desc.selectSize.y);
+            if (!actualReach.HasValue) { reach = double.NaN; break; }
+            reach = Math.Max(reach, actualReach.Value);
+            var offset = ToVector(second) - anchor;
             var span = build.StructuredConstruction?.StackConstruction is null
                 ? offset.magnitude : Vector3.ProjectOnPlane(offset, anchor.normalized).magnitude;
             groundSpan = Math.Max(groundSpan, span);
-            if (groundSpan > 16d) { reach = double.NaN; break; }
         }
         decision?.Number("construction_target_distance_m", reach);
         decision?.Number("construction_ground_span_m", groundSpan);
@@ -109,7 +111,7 @@ internal sealed partial class NormalGameActionCoordinator
         decision?.Number("construction_background_power_w", background);
         decision?.Number("construction_fixed_live_eject_m", ejectDisplacement);
         decision?.Observe("construction_movement_cost_proved", movement.Proved);
-        decision?.Require("construction_ground_span_within_16m", groundSpan <= 16d);
+        decision?.Observe("construction_raised_pose_distance_calculated", !double.IsNaN(reach));
         costHash = CanonicalStateHash.Combine("native-structured-drone-cost-v1", module.droneCount,
             speed, rate, eject, repair, background, player.mecha.coreEnergyCap,
             independent.EnergyShieldCapacity, independent.EnergyShieldRechargeEnabled, independent.LaserActive,

@@ -66,6 +66,26 @@ public static class NativeConstructionDroneReservePolicy
     public const double MaximumVerticalStackTargetDistanceMeters = 46d;
     public const double MaximumVerticalStackDroneDistanceMeters = 48d;
 
+    // Both native sorter poses can be farther away than the first one.  Use
+    // their actual raised target positions instead of a separate ground-span
+    // cutoff; Evaluate still checks the resulting reach against the same
+    // copied-drone and energy envelope.
+    public static double? MaximumRaisedPoseDistance(Vector3Snapshot? eject, Vector3Snapshot? first,
+        Vector3Snapshot? second, float selectHeight)
+    {
+        if (!VectorFinite(eject) || !VectorFinite(first) || !VectorFinite(second)
+            || float.IsNaN(selectHeight) || float.IsInfinity(selectHeight)) return null;
+        var firstRadius = Length(first!);
+        var secondRadius = Length(second!);
+        if (!Finite(firstRadius) || !Finite(secondRadius) || firstRadius < 1f || secondRadius < 1f) return null;
+        var height = selectHeight + 1f;
+        var firstTarget = Add(first!, Scale(Scale(first!, 1f / firstRadius), height));
+        var secondTarget = Add(second!, Scale(Scale(second!, 1f / secondRadius), height));
+        var firstDistance = Length(Subtract(eject!, firstTarget));
+        var secondDistance = Length(Subtract(eject!, secondTarget));
+        return Finite(firstDistance) && Finite(secondDistance) ? Math.Max(firstDistance, secondDistance) : null;
+    }
+
     public static double ReturnClosureFraction(double speedMetersPerSecond, double? fixedToLiveEjectDistanceMeters,
         bool tallStationTarget = false)
         => tallStationTarget && Finite(speedMetersPerSecond) && speedMetersPerSecond >= 10d && speedMetersPerSecond <= 12d

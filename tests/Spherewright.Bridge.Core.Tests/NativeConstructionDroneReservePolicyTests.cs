@@ -9,6 +9,27 @@ namespace Spherewright.Bridge.Core.Tests;
 // invoke a drone update, or establish a live construction/idle acceptance.
 public sealed class NativeConstructionDroneReservePolicyTests
 {
+    [Fact]
+    public void BothActualSorterPosesDetermineTheFundedDroneReach()
+    {
+        var eject = new Vector3Snapshot { X = 0, Y = 202.8f, Z = 0 };
+        var first = new Vector3Snapshot { X = 18, Y = MathF.Sqrt(200 * 200 - 18 * 18), Z = 0 };
+        var second = new Vector3Snapshot { X = 22, Y = MathF.Sqrt(200 * 200 - 22 * 22), Z = 0 };
+        var reach = NativeConstructionDroneReservePolicy.MaximumRaisedPoseDistance(eject, first, second, 1f);
+        Assert.NotNull(reach);
+        Assert.InRange(reach.Value, 22, NativeConstructionDroneReservePolicy.MaximumTargetDistanceMeters);
+        var facts = Facts();
+        facts.MaximumTargetDistanceMeters = reach;
+        Assert.True(NativeConstructionDroneReservePolicy.Evaluate(facts).Proved);
+
+        second.X = 28;
+        second.Y = MathF.Sqrt(200 * 200 - 28 * 28);
+        facts.MaximumTargetDistanceMeters = NativeConstructionDroneReservePolicy.MaximumRaisedPoseDistance(eject, first, second, 1f);
+        Assert.False(NativeConstructionDroneReservePolicy.Evaluate(facts).Proved);
+        second.X = float.NaN;
+        Assert.Null(NativeConstructionDroneReservePolicy.MaximumRaisedPoseDistance(eject, first, second, 1f));
+    }
+
     [Theory]
     [InlineData(6f)]
     [InlineData(10f)]
