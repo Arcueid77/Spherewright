@@ -37,8 +37,11 @@ internal sealed partial class NormalGameActionCoordinator
             || plan.BuildSteps.Any(s => s.DestinationBeltAnchor is not null
                 || s.BeltPathMode == BeltPathModes.NativeElevatedGrid))
             return Stale($"Remote construction requires an original-journey native-validated batch of1..{StructuredConstructionBinding.MaximumNewObjects(plan.BuildingItemId)} supported NEW objects without elevated paths or destination covers; a source tail requires separate empty paid-source evidence. Observed NEW count={plan.BuildSteps.Count}, item={plan.BuildingItemId}, journey phase={journey.Phase}.");
-        if (!_blueprints.TryRead(out var old) || old.Count >= BlueprintBuildStore.MaximumBuilds
-            || old.Any(b => b.StructuredConstruction is not null
+        if (!_blueprints.TryRead(out var old))
+            return BlueprintError("The owned construction history is unavailable; inspect the original store before starting a new build.");
+        if (old.Count >= BlueprintBuildStore.MaximumBuilds)
+            return BlueprintError("The owned construction history reached its storage capacity; no receipts were removed.");
+        if (old.Any(b => b.StructuredConstruction is not null
                 && !PaidFactoryCompletionPolicy.HasCompletedIdleProof(b,GameMain.gameTick)))
             return BlueprintError("Read and fresh-resume the exact existing structured build; do not submit a replacement batch.");
         if (!TryBindStructuredEmptyBeltSource(plan, old, out var sourceEvidence, out var sourceRejection))

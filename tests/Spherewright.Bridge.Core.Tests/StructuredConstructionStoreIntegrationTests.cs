@@ -238,12 +238,27 @@ public sealed class StructuredConstructionStoreIntegrationTests
     }
 
     [Fact]
+    public void LegacyFullHistoryAcceptsAnotherBuildWithoutDiscardingReceipts()
+    {
+        using var fixture = new Fixture();
+        var states = Enumerable.Range(0, 128)
+            .Select(_ => BlueprintBuildState.Create(Site(1, 2304), structuredConstruction: Binding(1))).ToArray();
+        fixture.Seed(states);
+        var next = BlueprintBuildState.Create(Site(1, 2304), structuredConstruction: Binding(1));
+        Assert.True(fixture.Store().TryPut(next));
+        var retained = fixture.Read();
+        Assert.Equal(129, retained.Count);
+        Assert.Equal(states.Select(s => s.BuildId).Append(next.BuildId).OrderBy(s => s),
+            retained.Select(s => s.BuildId).OrderBy(s => s));
+    }
+
+    [Fact]
     public void FactoryReceiptCapacityNeverEvictsAnOlderPaidBuild()
     {
         using var fixture = new Fixture();
         var states = Enumerable.Range(0, BlueprintBuildStore.MaximumBuilds)
             .Select(_ => BlueprintBuildState.Create(Site(1, 2304), structuredConstruction: Binding(1))).ToArray();
-        foreach (var state in states) Assert.True(fixture.Store().TryPut(state));
+        fixture.Seed(states);
         Assert.False(fixture.Store().TryPut(BlueprintBuildState.Create(Site(1, 2304), structuredConstruction: Binding(1))));
         var retained = fixture.Read();
         Assert.Equal(BlueprintBuildStore.MaximumBuilds, retained.Count);
@@ -602,6 +617,13 @@ public sealed class StructuredConstructionStoreIntegrationTests
         internal string Path => System.IO.Path.Combine(_root, "foundry", "blueprints-"
             + CanonicalStateHash.Combine("spherewright-blueprint-progress-owned-v1", Identity).Substring(7) + ".json");
         internal BlueprintBuildStore Store() => new(_root, "0.10.35.29151", _sessions, new ManualLogSource());
+        internal void Seed(IEnumerable<BlueprintBuildState> builds)
+        {
+            Directory.CreateDirectory(System.IO.Path.GetDirectoryName(Path)!);
+            var identity = CanonicalStateHash.Combine("spherewright-blueprint-progress-owned-v1", Identity).Substring(7);
+            var document = new BlueprintBuildDocument { IdentityHash = identity, GameVersion = "0.10.35.29151", Builds = builds.ToList() };
+            File.WriteAllText(Path, PluginJson.Serialize(document));
+        }
         internal IReadOnlyList<BlueprintBuildState> Read()
         { var s = Store(); Assert.True(s.TryRead(out var builds)); return builds; }
         public void Dispose()

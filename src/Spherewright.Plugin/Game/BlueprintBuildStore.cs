@@ -15,8 +15,8 @@ namespace Spherewright.Plugin.Game;
 // current registered identity selects this file; no save picker, prefix test or input path.
 internal sealed class BlueprintBuildStore
 {
-    internal const int MaximumBuilds = 128;
-    private const int MaximumBytes = 4 * 1024 * 1024;
+    internal const int MaximumBuilds = 4096;
+    private const int MaximumBytes = 64 * 1024 * 1024;
     private readonly string _directory;
     private readonly string _gameVersion;
     private readonly GameSessionTracker _sessions;
