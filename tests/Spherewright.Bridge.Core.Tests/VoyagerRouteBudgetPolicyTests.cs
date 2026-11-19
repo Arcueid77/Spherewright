@@ -8,6 +8,31 @@ namespace Spherewright.Bridge.Core.Tests;
 public sealed class VoyagerRouteBudgetPolicyTests
 {
     [Fact]
+    public void PlannedSurfaceWorkExtendsTheJourneyWithoutExtendingFlightOrSpendingReserves()
+    {
+        var input = Facts();
+        var request = Request();
+        request.MaximumRoundTripWallSeconds = 21600;
+        var legacy = VoyagerRouteBudgetPolicy.Evaluate(input, request);
+        request.PlannedSurfaceWorkGameTicks = 2_000_000;
+        var planned = VoyagerRouteBudgetPolicy.Evaluate(input, request);
+        Assert.True(planned.BudgetSufficient);
+        Assert.Equal(request.MaximumFlightGameTicks + 2_000_000, planned.MaximumJourneyGameTicks);
+        Assert.Equal(2_000_000, planned.PlannedSurfaceWorkGameTicks);
+        Assert.Equal(21600, planned.EffectiveRoundTripWallSeconds);
+        Assert.Equal(legacy.OutboundMaximumGameTicks, planned.OutboundMaximumGameTicks);
+        Assert.Equal(legacy.ReturnReserveGameTicks, planned.ReturnReserveGameTicks);
+        Assert.Equal(legacy.RequiredEnergyJoules, planned.RequiredEnergyJoules);
+        Assert.Equal(legacy.RequiredWarpers, planned.RequiredWarpers);
+        Assert.NotEqual(legacy.RouteStateHash, planned.RouteStateHash);
+        var returning = ReturnRequest();
+        returning.PlannedSurfaceWorkGameTicks = 1;
+        Assert.Contains("outbound", VoyagerRouteBudgetPolicy.ValidateRequest(returning));
+        request.PlannedSurfaceWorkGameTicks = VoyagerRecoveryWindowPolicy.MaximumAdditionalVoyagerGameTicks + 1;
+        Assert.NotNull(VoyagerRouteBudgetPolicy.ValidateRequest(request));
+    }
+
+    [Fact]
     public void ExplicitWallBudgetChangesOnlyItsBoundHashAndNeverTheMaterialEnergyOrTickReserves()
     {
         var input=Facts();var request=Request();

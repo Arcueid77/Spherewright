@@ -35,7 +35,7 @@ public static partial class SpherewrightTools
 
     [McpServerTool(Name = "spherewright_preview_voyager_route", Title = "Preview a finite Voyager round-trip budget",
         ReadOnly = true, Destructive = false, Idempotent = true, OpenWorld = false)]
-    [Description("READ-ONLY, tokenless 0.5 Voyager route budget using fresh player/catalog hashes, native-visible destination, current native distance/technology/core/fuel/warper conditions and protected outbound/return reserves. Outbound maximumFlightGameTicks is the whole round-trip window, with returnReserveGameTicks reserved within it; a nonempty journeyId validates only the remaining homebound leg against the original journey reserve. Unknown is not zero cost or spare capacity. Even sufficient budgets return prepared=false, executable=false and commitAllowedNow=false: no planToken, launch, warp, fuel/warper use, save, checkpoint creation or recovery. Preview cannot prove safe landing or enable a cross-star commit. Existing flight recovery requires its exact eligible interrupted action/checkpoint and must never roll back progress covered by a newer primary save.")]
+    [Description("READ-ONLY, tokenless Voyager route budget using fresh player/catalog hashes, native-visible destination, current native distance/technology/core/fuel/warper conditions and protected outbound/return reserves. maximumFlightGameTicks bounds the two flight legs; optional plannedSurfaceWorkGameTicks adds finite on-site time without enlarging either flight leg or providing energy or items. A nonempty journeyId validates only the remaining homebound leg against the original journey reserve. Unknown is not zero cost or spare capacity. Even sufficient budgets return prepared=false, executable=false and commitAllowedNow=false: no planToken, launch, warp, fuel/warper use, save, checkpoint creation or recovery. Preview cannot prove safe landing or enable a cross-star commit. Existing flight recovery requires its exact eligible interrupted action/checkpoint and must never roll back progress covered by a newer primary save.")]
     public static async Task<CallToolResult> PreviewVoyagerRouteAsync(
         IBridgeClient bridgeClient,
         [Description("Current owned session ID from spherewright_get_session_state.")] string sessionId,
@@ -44,7 +44,7 @@ public static partial class SpherewrightTools
         [Description("Fresh complete player stateHash from spherewright_get_player_state; not the narrower player action hash domain.")] string expectedPlayerStateHash,
         [Description("Fresh stateHash from spherewright_get_voyager_star_catalog; not another hash domain.")] string expectedCatalogStateHash,
         [Description("Shared request state-hash version; currently 1.")] int stateHashVersion = 1,
-        [Description("Maximum whole round-trip duration in game ticks, from7200 through108000; includes the reserved return window.")] long maximumFlightGameTicks = 36000,
+        [Description("Finite two-leg flight window in game ticks, from7200 through108000; includes the reserved return window. Planned on-site work is added separately.")] long maximumFlightGameTicks = 36000,
         [Description("Game ticks reserved for return within maximumFlightGameTicks; at least3600, with at least3600 left for outbound travel. Not extra outbound time.")] long returnReserveGameTicks = 18000,
         [Description("Finite minimum departure core-energy ratio from0.8 through1.0; defaults to0.8.")] double minimumCoreEnergyRatio = 0.8d,
         [Description("Extra legitimate warper reserve from0 through18: outbound requires two native entries plus reserve; a homebound journey requires its one remaining entry plus the original reserve.")] int extraWarperReserve = 1,
@@ -53,7 +53,8 @@ public static partial class SpherewrightTools
         [Description("Finite maximum arrival offset in metres, default3000000; an arrival envelope is not proof of landing.")] double maximumArrivalOffsetMeters = 3000000d,
         [Description("Original protected journeyId for a homebound return preview; null starts an outbound round-trip budget. A return validates only the remaining homebound leg and original reserve.")] string? journeyId = null,
         CancellationToken cancellationToken = default,
-        [Description("Optional explicit finite outbound round-trip wall window600..86400 seconds. Omit to retain the legacy tick-derived deadline. This grants no game ticks, items or energy; returns must omit it and inherit the protected original/effective deadline. Read back the matching maximumRoundTripWallSeconds echo; older cohorts cannot supply this window.")] int? maximumRoundTripWallSeconds = null)
+        [Description("Optional explicit finite outbound round-trip wall window600..86400 seconds. Omit to use the tick-derived deadline, including declared surface work. This grants no game ticks, items or energy; returns must omit it and inherit the protected original/effective deadline.")] int? maximumRoundTripWallSeconds = null,
+        [Description("Optional finite on-site work allowance in game ticks, 0..5184000, in addition to the original bounded flight window. Omit for legacy behavior; returns must omit it. It does not increase the flight-leg limits or grant fuel, items or power.")] long plannedSurfaceWorkGameTicks = 0)
     {
         var result = await bridgeClient.PreviewVoyagerRouteAsync(sessionId, new PreviewVoyagerRouteRequest
         {
@@ -71,12 +72,18 @@ public static partial class SpherewrightTools
             MaximumArrivalOffsetMeters = maximumArrivalOffsetMeters,
             JourneyId = journeyId,
             MaximumRoundTripWallSeconds = maximumRoundTripWallSeconds,
+            PlannedSurfaceWorkGameTicks = plannedSurfaceWorkGameTicks,
         }, cancellationToken).ConfigureAwait(false);
         if(result.Success && maximumRoundTripWallSeconds.HasValue
             && result.Value?.MaximumRoundTripWallSeconds!=maximumRoundTripWallSeconds)
             return ToToolResult(BridgeCallResult<VoyagerRouteBudgetSnapshot>.Failed(BridgeError.Create(
                 BridgeErrorCodes.BridgeNotReady,"The Plugin did not echo the explicit finite wall window.",false,
                 "Use matching Plugin/MCP bytes; do not assume an older cohort extended its deadline.")),string.Empty);
+        if(result.Success && plannedSurfaceWorkGameTicks != 0
+            && result.Value?.PlannedSurfaceWorkGameTicks != plannedSurfaceWorkGameTicks)
+            return ToToolResult(BridgeCallResult<VoyagerRouteBudgetSnapshot>.Failed(BridgeError.Create(
+                BridgeErrorCodes.BridgeNotReady,"The Plugin did not echo the planned surface-work allowance.",false,
+                "Use matching Plugin/MCP bytes; do not assume an older cohort admitted the added work time.")),string.Empty);
         if (result.Success && result.Value is { } snapshot && (snapshot.Prepared || snapshot.Executable || snapshot.CommitAllowedNow))
         {
             return UnsafeVoyagerRead<VoyagerRouteBudgetSnapshot>();

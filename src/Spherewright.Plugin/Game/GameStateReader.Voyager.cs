@@ -356,6 +356,7 @@ internal sealed partial class GameStateReader
             ExpectedPlayerStateHash = request.ExpectedPlayerStateHash, ExpectedCatalogStateHash = request.ExpectedCatalogStateHash,
             MaximumFlightGameTicks = request.MaximumFlightGameTicks, ReturnReserveGameTicks = request.ReturnReserveGameTicks,
             MaximumRoundTripWallSeconds = request.MaximumRoundTripWallSeconds,
+            PlannedSurfaceWorkGameTicks = request.PlannedSurfaceWorkGameTicks,
             MaximumWarpGameTicksPerLeg = request.MaximumWarpGameTicksPerLeg, MaximumArrivalOffsetMeters = request.MaximumArrivalOffsetMeters,
             MinimumCoreEnergyRatio = request.MinimumCoreEnergyRatio, ExtraWarperReserve = request.ExtraWarperReserve };
 

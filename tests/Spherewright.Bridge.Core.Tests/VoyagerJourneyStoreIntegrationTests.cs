@@ -18,6 +18,41 @@ namespace Spherewright.Bridge.Core.Tests;
 public sealed partial class VoyagerJourneyStoreIntegrationTests
 {
     [Fact]
+    public void PlannedSurfaceWorkSurvivesReopenButCannotBeChangedMidJourney()
+    {
+        using var fixture = new Fixture(persistJourney: false);
+        var record = fixture.Record;
+        Assert.DoesNotContain("plannedSurfaceWorkGameTicks", PluginJson.Serialize(record));
+        record.Phase = "outbound";
+        record.SpentGameTicks = 0;
+        record.PlannedSurfaceWorkGameTicks = 2_000_000;
+        record.MaximumGameTicks += record.PlannedSurfaceWorkGameTicks;
+        Assert.True(fixture.Store.TryPersistVoyagerJourney(record, out var rejection), rejection);
+        var reopened = fixture.ReopenStore();
+        Assert.Equal(2_000_000, reopened.VoyagerJourney!.PlannedSurfaceWorkGameTicks);
+        Assert.Equal(2_036_000, reopened.VoyagerJourney.MaximumGameTicks);
+        var changed = reopened.VoyagerJourney!;
+        changed.PlannedSurfaceWorkGameTicks++;
+        changed.MaximumGameTicks++;
+        Assert.False(reopened.TryPersistVoyagerJourney(changed, out _));
+    }
+
+    [Fact]
+    public void PlannedWorkSurvivesACompletedOutboundAndKeepsTheOriginalReturnLegBound()
+    {
+        using var fixture = new Fixture(returnLeg: true, plannedSurfaceWorkGameTicks: 2_000_000);
+        var journey = fixture.Store.VoyagerJourney!;
+        Assert.Equal(2_036_000, journey.MaximumGameTicks);
+        journey.SpentGameTicks = 100_000; // beyond the original two-leg window
+        Assert.True(fixture.Store.TryPersistVoyagerJourney(journey, out var rejection), rejection);
+        var reopened = fixture.ReopenStore().VoyagerJourney!;
+        Assert.Equal(2_000_000, reopened.PlannedSurfaceWorkGameTicks);
+        Assert.Equal(reopened.ReturnReserveGameTicks,
+            VoyagerReturnHorizonProjection.PlanTicks(reopened.MaximumGameTicks - reopened.SpentGameTicks,
+                reopened.ReturnReserveGameTicks));
+    }
+
+    [Fact]
     public void ReopenPreservesOriginalDeadlineSpentTicksAndAllReturnReservations()
     {
         using var fixture = new Fixture();
@@ -823,7 +858,8 @@ public sealed partial class VoyagerJourneyStoreIntegrationTests
         internal string PrimaryPath => GameSave.SavePath(Identity);
         internal int SyntheticPrimaryProofWrites { get; private set; }
         internal Fixture(bool returnLeg = false, bool persistJourney = true, bool returnedHome = false,
-            string recoveryPhase = "recovery_required", bool originalWindowExpired = false,int? maximumRoundTripWallSeconds=null)
+            string recoveryPhase = "recovery_required", bool originalWindowExpired = false,int? maximumRoundTripWallSeconds=null,
+            long plannedSurfaceWorkGameTicks=0)
         {
             if (recoveryPhase != "active" && recoveryPhase != "recovery_required" && recoveryPhase != "outcome_unknown")
                 throw new ArgumentException("Use an actual active or interrupted journey phase.", nameof(recoveryPhase));
@@ -848,7 +884,9 @@ public sealed partial class VoyagerJourneyStoreIntegrationTests
                 Record = new VoyagerJourneyRecord { JourneyId = journeyId, OwnedSaveName = Identity, GameVersion = Version,
                     Phase = "outbound", HomePlanetId = 101, HomeStarId = 1, DestinationStarId = 2,
                     ActiveActionId = OriginalFlightId, ActiveCheckpointId = Ticket.CheckpointId,
-                    StartedAtGameTick = outboundSavedTick, SpentGameTicks = 0, MaximumGameTicks = 36000, ReturnReserveGameTicks = 18000,
+                    StartedAtGameTick = outboundSavedTick, SpentGameTicks = 0,
+                    MaximumGameTicks = 36000 + plannedSurfaceWorkGameTicks, PlannedSurfaceWorkGameTicks = plannedSurfaceWorkGameTicks,
+                    ReturnReserveGameTicks = 18000,
                     ReturnEnergyFloorJoules = 20000000d, WithdrawalReserveJoules = 10000000d,
                     ReturnCoreEnergyMinimumJoules = 8000000d, ExtraWarperReserve = 1,
                     IssuedAtUtc = issued, MaximumRoundTripWallSeconds=maximumRoundTripWallSeconds,

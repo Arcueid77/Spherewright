@@ -9,7 +9,9 @@
 
 站内货物新增显式 `station-storage-to-player` 转移子集：当地已建2103/2104站、唯一现物且零增产点槽位、所选槽无在途订单、精确数量1..100、空手、普通建造交互范围及已证背包容量。原生 `StationComponent.TakeItem` 与 `StorageComponent.AddItemStacked` 在同一tick核对数量/增产点守恒；其余槽配置、站状态及背包物料必须不变。此手动UI操作不要求站点供电。prepare必须有 `stationCargoWithdrawal`，终态须有 `stationCargoWithdrawalReadback`；缺少同源回执不暴露token。后续正常机甲自动补给可能移动刚收到的燃料：保留即时原回执，再分别读背包/燃料舱，不重放转移。
 
-新出航预览可显式提供 `maximumRoundTripWallSeconds`600..86400，作为与原游戏tick、物品、能源和返航储备独立的有限墙钟预算。不传则保留旧tick换算时钟；返航必须不传并继承原始/有效时钟。该值进入哈希及同源回显，并在新保护Journey记录中保持不可变；旧记录保留原序列化字节形状和两小时上限。现有确认式远端恢复方案已支持最多24小时有限窗；须在真实所有者授权内选择足够有限时间，经新鲜Native方案/摘要确认，不改旧时钟、不退还消耗。300秒启动到真实实操门及所有逐动作停止/充能帽不变。这些仍是源码能力，实装及实机验收需分别证明。
+新出航预览可显式提供 `maximumRoundTripWallSeconds`600..86400，作为与原游戏tick、物品、能源和返航储备独立的有限墙钟预算。未计划现场工作时不传则保留旧tick换算时钟；计划现场工作时按合计时长推导不超过24小时的有限时钟。返航继承原始/有效时钟。该值进入哈希及同源回显，并在新保护Journey记录中保持不可变；旧记录保留原序列化字节形状和两小时上限。现有确认式远端恢复方案已支持最多24小时有限窗；须在真实所有者授权内选择足够有限时间，经新鲜Native方案/摘要确认，不改旧时钟、不退还消耗。300秒启动到真实实操门及所有逐动作停止/充能帽不变。这些仍是源码能力，实装及实机验收需分别证明。
+
+新出航预览还可选填 `plannedSurfaceWorkGameTicks`，范围为 0 至 5184000。它加入受保护旅程总时长，原去程及返程飞行上限不变；该值绑定航线哈希并在旅程记录中保持不可变，返航不能追加。未显式设置墙钟时，按现场工作量推导不超过 24 小时的有限时钟。填 0 保留旧航线哈希及存档记录形状；这只是时间预算，不会推进游戏，也不提供能源、物品或施工。 非零现场时长写入活动旅程后，需要匹配或更新的运行版本；只支持 108000 tick 的旧版本可能拒绝该记录，因此旅程关闭前保留匹配运行文件及完整备份。
 
 
 协议版本保持 `1`；`0.5.0` Voyager 开发接口面向 DSP `0.10.35.29151`，保留 `0.4` 协议接口。本文描述当前维护的源码，不宣称已安装组件或 Voyager 实机验收。正式 `v0.4.0` tag 指向 `b7c0002dbe2e8f5608c5ca140b0c6326a1818021`，旧生产验收仍固定于 `2a7a98d1932c404e3a7abc2c11233d9c0b8780d9`。参见[产品状态](project-status.zh-CN.md)、[原生验证](validation/native-29151-preflight.zh-CN.md)、[安全模型](safety-model.zh-CN.md)和 [Agent 指南](agent-playbook.zh-CN.md)。
@@ -180,7 +182,7 @@ spherewright_commit_reload_flight_checkpoint
 
 `0.5` 只读工具 `spherewright_get_voyager_star_catalog` 和 `spherewright_preview_voyager_route` 分别映射 Bridge 方法 `get_voyager_star_catalog`、`preview_voyager_route`，均要求当前受管 session 和出发行星。它们观察原生探索可见性并计算有限航线预览；对许可视图，目录可沿正常星图路径请求 `StarData.RunScanningThread` / `PlanetData.RunScanThread`，可能生成合法可见扫描缓存，扫描未就绪仍保持未知。它不调用任意生成器，不创建远端工厂。这些读取不起飞、进入曲速、消耗燃料/翘曲器、保存、创建 checkpoint、读档或创建游戏 action。预览无 token，保持 `executable=false`；预算通过不代表飞行 commit 或实机验收。
 
-目录输入为 `sessionId`、`planetId`、可选 `limit`（1–32 颗恒星，默认 16）及 `stateHashVersion`（1）。航线额外要求 `destinationPlanetId`、`expectedPlayerStateHash` 和 `expectedCatalogStateHash`；默认 `maximumFlightGameTicks=36000`、`returnReserveGameTicks=18000`、`minimumCoreEnergyRatio=0.8`、`extraWarperReserve=1`。最大窗口是整个往返（7200–108000 游戏 tick），返程窗从中预留，去返程各须至少 3600 tick。核心比例须为 0.8–1.0 的有限值；额外翘曲器为 0–18 枚，在原生往返两枚之外预留。能量字段使用焦耳，功率使用瓦，距离明确分别给出米和光年；这些是保守预算边界，不是实测航时或消耗。
+目录输入为 `sessionId`、`planetId`、可选 `limit`（1–32 颗恒星，默认 16）及 `stateHashVersion`（1）。航线额外要求 `destinationPlanetId`、`expectedPlayerStateHash` 和 `expectedCatalogStateHash`；默认 `maximumFlightGameTicks=36000`、`returnReserveGameTicks=18000`、`minimumCoreEnergyRatio=0.8`、`extraWarperReserve=1`。飞行窗口为 7200–108000 游戏 tick，可另加计划现场工作时长，返程窗从飞行窗口中预留，去返程各须至少 3600 tick。核心比例须为 0.8–1.0 的有限值；额外翘曲器为 0–18 枚，在原生往返两枚之外预留。能量字段使用焦耳，功率使用瓦，距离明确分别给出米和光年；这些是保守预算边界，不是实测航时或消耗。
 
 合法可见恒星标记可使用 `destinationPlanetId=0` 和明确 `destinationStarId`，其行星/资源仍保持未知。`maximumWarpGameTicksPerLeg` 默认1800，至少180且不能超过任一单程预留窗口；`maximumArrivalOffsetMeters` 须为100000–3000000有限值，默认3000000。仅恒星距离预算包含该偏移，明确可见行星使用实际已知距离。`budgetBasis=finite_native_warp_duration_and_explicit_return_recharge_v2` 将有限曲速时长与总飞行窗口分开预算。`requiresReturnCoreRecharge=true` 要求返程出发前 fresh 读回核心达到 `returnCoreEnergyMinimumJoules`，同时保留已装燃料/翘曲器储备；单程缓冲不证明之后能充电或落地。
 

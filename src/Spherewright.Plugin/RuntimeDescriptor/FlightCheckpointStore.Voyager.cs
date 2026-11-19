@@ -260,7 +260,8 @@ internal sealed partial class FlightCheckpointStore
         return old.OwnedSaveName == next.OwnedSaveName && old.GameVersion == next.GameVersion
             && old.HomePlanetId == next.HomePlanetId && old.HomeStarId == next.HomeStarId
             && old.DestinationStarId == next.DestinationStarId && old.StartedAtGameTick == next.StartedAtGameTick
-            && old.MaximumGameTicks == next.MaximumGameTicks && old.ReturnReserveGameTicks == next.ReturnReserveGameTicks
+            && old.MaximumGameTicks == next.MaximumGameTicks && old.PlannedSurfaceWorkGameTicks == next.PlannedSurfaceWorkGameTicks
+            && old.ReturnReserveGameTicks == next.ReturnReserveGameTicks
             && old.IssuedAtUtc == next.IssuedAtUtc && old.DeadlineUtc == next.DeadlineUtc
             && old.MaximumRoundTripWallSeconds == next.MaximumRoundTripWallSeconds
             && next.SpentGameTicks >= old.SpentGameTicks && next.ReturnEnergyFloorJoules >= old.ReturnEnergyFloorJoules
@@ -273,8 +274,12 @@ internal sealed partial class FlightCheckpointStore
     private bool ValidVoyagerJourney(VoyagerJourneyRecord? r) => r is not null && r.Version == 1
         && Guid.TryParse(r.JourneyId, out _) && !string.IsNullOrWhiteSpace(r.OwnedSaveName)
         && r.GameVersion == _gameVersion && r.HomePlanetId > 0 && r.HomeStarId > 0 && r.DestinationStarId > 0
-        && r.HomeStarId != r.DestinationStarId && r.MaximumGameTicks >= 7200 && r.MaximumGameTicks <= 108000
-        && r.ReturnReserveGameTicks >= 3600 && r.ReturnReserveGameTicks < r.MaximumGameTicks
+        && r.HomeStarId != r.DestinationStarId
+        && r.PlannedSurfaceWorkGameTicks >= 0
+        && r.PlannedSurfaceWorkGameTicks <= VoyagerRecoveryWindowPolicy.MaximumAdditionalVoyagerGameTicks
+        && r.MaximumGameTicks >= 7200 + r.PlannedSurfaceWorkGameTicks
+        && r.MaximumGameTicks <= 108000 + r.PlannedSurfaceWorkGameTicks
+        && r.ReturnReserveGameTicks >= 3600 && r.ReturnReserveGameTicks < r.MaximumGameTicks - r.PlannedSurfaceWorkGameTicks
         && r.SpentGameTicks >= 0 && ValidReturnOnlyTask(r) && ValidFailedLandingAdmissions(r)
         && r.StartedAtGameTick >= 0 && r.DeadlineUtc > r.IssuedAtUtc && r.IssuedAtUtc != default
         && VoyagerWallWindowPolicy.ValidRecord(r.IssuedAtUtc,r.DeadlineUtc,r.MaximumRoundTripWallSeconds)
@@ -308,6 +313,8 @@ internal sealed partial class VoyagerJourneyRecord
     public string LastAccountedFlightActionId { get; set; } = string.Empty;
     public bool SpentGameTicksIsConservative { get; set; }
     public long MaximumGameTicks { get; set; }
+    public long PlannedSurfaceWorkGameTicks { get; set; }
+    public bool ShouldSerializePlannedSurfaceWorkGameTicks() => PlannedSurfaceWorkGameTicks != 0;
     public long ReturnReserveGameTicks { get; set; }
     public double ReturnEnergyFloorJoules { get; set; }
     public double WithdrawalReserveJoules { get; set; }

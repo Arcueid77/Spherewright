@@ -99,6 +99,10 @@ public sealed class PreviewVoyagerRouteRequest
     public int StateHashVersion { get; set; } = 1;
     public long MaximumFlightGameTicks { get; set; } = 36000;
     public long ReturnReserveGameTicks { get; set; } = 18000;
+    // Optional ordinary work between the bounded outbound and return legs.
+    // Zero preserves the previously published request and journal shape.
+    public long PlannedSurfaceWorkGameTicks { get; set; }
+    public bool ShouldSerializePlannedSurfaceWorkGameTicks() => PlannedSurfaceWorkGameTicks != 0;
     public long MaximumWarpGameTicksPerLeg { get; set; } = 1800;
     public double MaximumArrivalOffsetMeters { get; set; } = 3000000d;
     public double MinimumCoreEnergyRatio { get; set; } = 0.8d;
@@ -108,6 +112,9 @@ public sealed class PreviewVoyagerRouteRequest
 public sealed class VoyagerRouteBudgetSnapshot
 {
     public int? MaximumRoundTripWallSeconds { get; set; }
+    public int? EffectiveRoundTripWallSeconds { get; set; }
+    public long PlannedSurfaceWorkGameTicks { get; set; }
+    public long? MaximumJourneyGameTicks { get; set; }
     // Actual remaining confirmed task budget. MaximumFlightGameTicks on the
     // return preview is only its bounded flight allocation, not a new grant.
     public long? ProtectedRemainingJourneyGameTicks { get; set; }

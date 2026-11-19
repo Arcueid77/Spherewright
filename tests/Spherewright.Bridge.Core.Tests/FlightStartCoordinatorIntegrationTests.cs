@@ -17,6 +17,22 @@ namespace Spherewright.Bridge.Core.Tests;
 public sealed class FlightStartCoordinatorIntegrationTests
 {
     [Fact]
+    public void PlannedSurfaceWorkIsPersistedWithoutExtendingTheOutboundFlightController()
+    {
+        using var f = new Fixture();
+        f.Action.Plan.VoyagerRequest!.PlannedSurfaceWorkGameTicks = 2_000_000;
+        f.Action.Plan.VoyagerRequest.MaximumRoundTripWallSeconds = 21600;
+        f.Coordinator.StartVoyagerForTest(f.Action);
+        Assert.Equal(1, f.Coordinator.NativeFlightEntries);
+        var journey = Assert.IsType<VoyagerJourneyRecord>(f.Store.VoyagerJourney);
+        Assert.Equal(2_108_000, journey.MaximumGameTicks);
+        Assert.Equal(2_000_000, journey.PlannedSurfaceWorkGameTicks);
+        Assert.Equal(54000, journey.ReturnReserveGameTicks);
+        Assert.Equal(GameMain.gameTick + 54000, f.Action.VoyagerDeadlineGameTick);
+        Assert.Equal(21600, journey.MaximumRoundTripWallSeconds);
+    }
+
+    [Fact]
     public void LargeConfirmedTaskProjectionDoesNotReplaceOriginalJourneyOrReturnControllerLimit()
     {
         using var f=new Fixture(returning:true);var original=f.Store.VoyagerJourney!;

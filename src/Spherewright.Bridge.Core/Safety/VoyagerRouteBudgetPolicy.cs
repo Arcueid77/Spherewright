@@ -71,6 +71,10 @@ public static class VoyagerRouteBudgetPolicy
         if(!VoyagerWallWindowPolicy.ValidExplicit(request.MaximumRoundTripWallSeconds)
             || isReturn && request.MaximumRoundTripWallSeconds.HasValue)
             return "Explicit outbound wall seconds must be600..86400; a return inherits its protected original/effective deadline.";
+        if (request.PlannedSurfaceWorkGameTicks < 0
+            || request.PlannedSurfaceWorkGameTicks > VoyagerRecoveryWindowPolicy.MaximumAdditionalVoyagerGameTicks
+            || isReturn && request.PlannedSurfaceWorkGameTicks != 0)
+            return "Planned surface work must be a finite outbound allowance; a return inherits the original journey.";
         if (isReturn && !Guid.TryParse(request.JourneyId, out _))
             return "A return must name the exact protected journey identifier.";
         if (request.PlanetId <= 0 || request.DestinationPlanetId < 0 || request.DestinationStarId < 0
@@ -133,6 +137,7 @@ public static class VoyagerRouteBudgetPolicy
             NativeWarperCount = input.NativeWarperCount,
             PackageWarperCount = input.PackageWarperCount,
             AutoReplenishWarper = input.AutoReplenishWarper,
+            PlannedSurfaceWorkGameTicks = request.PlannedSurfaceWorkGameTicks,
             MaximumFlightGameTicks = isReturn ? input.RemainingJourneyGameTicks : request.MaximumFlightGameTicks,
             ReturnReserveGameTicks = isReturn ? 0L : request.ReturnReserveGameTicks,
             MaximumWarpGameTicksPerLeg = request.MaximumWarpGameTicksPerLeg,
@@ -143,6 +148,12 @@ public static class VoyagerRouteBudgetPolicy
         {
             Block(result, "invalid_voyager_request", invalidRequest);
             return result;
+        }
+        if (!isReturn)
+        {
+            result.MaximumJourneyGameTicks = request.MaximumFlightGameTicks + request.PlannedSurfaceWorkGameTicks;
+            result.EffectiveRoundTripWallSeconds = VoyagerWallWindowPolicy.EffectiveOutboundSeconds(
+                request.MaximumFlightGameTicks, request.PlannedSurfaceWorkGameTicks, request.MaximumRoundTripWallSeconds);
         }
 
         if (isReturn)
@@ -279,6 +290,9 @@ public static class VoyagerRouteBudgetPolicy
         if(request.MaximumRoundTripWallSeconds.HasValue)
             result.RouteStateHash=CanonicalStateHash.Combine("voyager-explicit-wall-v1",result.RouteStateHash,
                 request.MaximumRoundTripWallSeconds.Value);
+        if(request.PlannedSurfaceWorkGameTicks != 0)
+            result.RouteStateHash=CanonicalStateHash.Combine("voyager-planned-surface-work-v1",result.RouteStateHash,
+                request.PlannedSurfaceWorkGameTicks,result.EffectiveRoundTripWallSeconds);
         result.BudgetSufficient = result.Blockers.Count == 0;
         // Even a sufficient preview is tokenless and never grants movement or commit authority.
         return result;

@@ -19,6 +19,18 @@ public sealed class VoyagerWallWindowPolicyTests
         Assert.False(VoyagerWallWindowPolicy.ValidRecord(Issued,Issued.AddHours(12),null));
     }
 
+    [Fact]
+    public void SurfaceWorkGetsAUsefulDefaultWallWindowWithoutChangingLegacyDefaults()
+    {
+        Assert.Null(VoyagerWallWindowPolicy.EffectiveOutboundSeconds(108000,0,null));
+        Assert.Equal(21600,VoyagerWallWindowPolicy.EffectiveOutboundSeconds(108000,2000000,21600));
+        var derived=VoyagerWallWindowPolicy.EffectiveOutboundSeconds(108000,2000000,null);
+        Assert.InRange(derived!.Value,600,86400);
+        var deadline=VoyagerWallWindowPolicy.OutboundDeadline(Issued,108000,derived);
+        Assert.True(VoyagerWallWindowPolicy.ValidRecord(Issued,deadline,derived));
+        Assert.Equal(86400,VoyagerWallWindowPolicy.EffectiveOutboundSeconds(108000,5184000,null));
+    }
+
     [Theory]
     [InlineData(-1)][InlineData(0)][InlineData(599)][InlineData(86401)][InlineData(int.MaxValue)]
     public void UnboundedOrTooShortExplicitWindowsAreRejected(int seconds)

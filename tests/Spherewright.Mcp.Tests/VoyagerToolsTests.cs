@@ -72,6 +72,22 @@ public sealed class VoyagerToolsTests
     }
 
     [Fact]
+    public async Task PlannedSurfaceWorkIsForwardedAndRequiresAMatchingPluginEcho()
+    {
+        var bridge = NewBridge();
+        var proxy = Proxy(bridge);
+        proxy.Budget = new VoyagerRouteBudgetSnapshot { PlannedSurfaceWorkGameTicks = 2_000_000 };
+        var good = await SpherewrightTools.PreviewVoyagerRouteAsync(bridge, "owned-session", 101, 201,
+            "player-hash", "catalog-hash", plannedSurfaceWorkGameTicks: 2_000_000);
+        Assert.False(good.IsError);
+        Assert.Equal(2_000_000, Assert.IsType<PreviewVoyagerRouteRequest>(proxy.LastRequest).PlannedSurfaceWorkGameTicks);
+        proxy.Budget.PlannedSurfaceWorkGameTicks = 0;
+        var oldPlugin = await SpherewrightTools.PreviewVoyagerRouteAsync(bridge, "owned-session", 101, 201,
+            "player-hash", "catalog-hash", plannedSurfaceWorkGameTicks: 2_000_000);
+        Assert.True(oldPlugin.IsError);
+    }
+
+    [Fact]
     public async Task RouteMapsWholeRoundTripAndReturnReserveWithoutPreparingExecution()
     {
         var bridge = NewBridge();

@@ -65,18 +65,23 @@ public sealed class VoyagerContractTests
         var request = new PreviewVoyagerRouteRequest
         {
             PlanetId = 104, DestinationPlanetId = 201, ExpectedPlayerStateHash = "player", ExpectedCatalogStateHash = "catalogue",
-            MaximumFlightGameTicks = 108000, ReturnReserveGameTicks = 54000, MinimumCoreEnergyRatio = 0.9d, ExtraWarperReserve = 2,
+            MaximumFlightGameTicks = 108000, ReturnReserveGameTicks = 54000, PlannedSurfaceWorkGameTicks = 2_000_000,
+            MinimumCoreEnergyRatio = 0.9d, ExtraWarperReserve = 2,
         };
         var copied = JsonSerializer.Deserialize<PreviewVoyagerRouteRequest>(JsonSerializer.Serialize(request, CamelCase), CamelCase)!;
         Assert.Equal(request.MaximumFlightGameTicks, copied.MaximumFlightGameTicks);
         Assert.Equal(request.ReturnReserveGameTicks, copied.ReturnReserveGameTicks);
+        Assert.Equal(2_000_000, copied.PlannedSurfaceWorkGameTicks);
         Assert.Equal(request.ExpectedCatalogStateHash, copied.ExpectedCatalogStateHash);
         Assert.Equal(request.MinimumCoreEnergyRatio, copied.MinimumCoreEnergyRatio);
         Assert.Equal(2, copied.ExtraWarperReserve);
-        var result = new VoyagerRouteBudgetSnapshot { BudgetComputed = true, BudgetSufficient = true, RouteStateHash = "route" };
+        var result = new VoyagerRouteBudgetSnapshot { BudgetComputed = true, BudgetSufficient = true, RouteStateHash = "route",
+            PlannedSurfaceWorkGameTicks = 2_000_000, MaximumJourneyGameTicks = 2_108_000, EffectiveRoundTripWallSeconds = 21600 };
         var json = JsonSerializer.Serialize(result, CamelCase);
         var restored = JsonSerializer.Deserialize<VoyagerRouteBudgetSnapshot>(json, CamelCase)!;
         Assert.True(restored.BudgetSufficient);
+        Assert.Equal(2_108_000, restored.MaximumJourneyGameTicks);
+        Assert.Equal(21600, restored.EffectiveRoundTripWallSeconds);
         Assert.False(restored.Prepared);
         Assert.False(restored.Executable);
         Assert.False(restored.CommitAllowedNow);

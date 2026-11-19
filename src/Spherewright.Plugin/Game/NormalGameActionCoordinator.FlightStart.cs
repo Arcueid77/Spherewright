@@ -13,21 +13,25 @@ internal sealed partial class NormalGameActionCoordinator
         InitializeVoyagerFlightNavigationOnMainThread(action);
         if (!EnsureFlightCheckpointOnMainThread(action)) return;
         var issuedAt=DateTimeOffset.UtcNow;
+        var workTicks = plan.VoyagerReturnLeg ? 0L : plan.VoyagerRequest!.PlannedSurfaceWorkGameTicks;
+        var wallSeconds = plan.VoyagerReturnLeg ? null : VoyagerWallWindowPolicy.EffectiveOutboundSeconds(
+            budget.MaximumFlightGameTicks, workTicks, plan.VoyagerRequest!.MaximumRoundTripWallSeconds);
         var journey = plan.VoyagerReturnLeg ? _flightCheckpoints.VoyagerJourney! : new VoyagerJourneyRecord
         {
             JourneyId = plan.VoyagerJourneyId!, OwnedSaveName = _sessions.CaptureOnMainThread().SaveName!,
             GameVersion = _sessions.CaptureOnMainThread().GameVersion, HomePlanetId = plan.PlanetId,
             HomeStarId = budget.OriginStarId, DestinationStarId = budget.DestinationStarId,
-            StartedAtGameTick = GameMain.gameTick, MaximumGameTicks = budget.MaximumFlightGameTicks,
+            StartedAtGameTick = GameMain.gameTick, MaximumGameTicks = budget.MaximumFlightGameTicks + workTicks,
+            PlannedSurfaceWorkGameTicks = workTicks,
             ReturnReserveGameTicks = budget.ReturnReserveGameTicks,
             ReturnEnergyFloorJoules = budget.ReturnEnergyBudgetJoules + budget.WithdrawalReserveJoules,
             WithdrawalReserveJoules = budget.WithdrawalReserveJoules,
             ReturnCoreEnergyMinimumJoules = budget.ReturnCoreEnergyMinimumJoules,
             ExtraWarperReserve = plan.VoyagerRequest!.ExtraWarperReserve,
             IssuedAtUtc = issuedAt,
-            MaximumRoundTripWallSeconds = plan.VoyagerRequest!.MaximumRoundTripWallSeconds,
+            MaximumRoundTripWallSeconds = wallSeconds,
             DeadlineUtc = VoyagerWallWindowPolicy.OutboundDeadline(issuedAt,budget.MaximumFlightGameTicks,
-                plan.VoyagerRequest!.MaximumRoundTripWallSeconds),
+                wallSeconds),
         };
         if (plan.VoyagerReturnLeg && journey.LastLandedGameTick.HasValue)
             journey.SpentGameTicks += Math.Max(0L, GameMain.gameTick - journey.LastLandedGameTick.Value);
