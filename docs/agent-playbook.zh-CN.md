@@ -500,7 +500,7 @@ Native Import 可将 double 宇宙坐标逆投影为 float 本地位置；普通
 
 ## 同会话暂停水面来源预览
 
-原 Move 已终态 unknown 且同一 owned 会话保持原生暂停/准确隔离时，可用 `spherewright_preview_same_session_surface_recovery` 对一个16米内的新目标做只读检查：传当前星球、原动作 ID、revision、新鲜玩家 `stateHash` 和目标坐标。`awaiting_second_frame` 只表示仍需第二帧；`source_bound` 要求两秒内两帧稳定、原航程/日志和原生地形/能源检查，但不证明路径无障碍或实际落地。核对准确会话、星球、revision、玩家状态哈希、原动作、目标、600 tick/20秒和只读、不可执行、未Resume及旧结果未改回显；缺失或不一致必须拒绝。未提议时窗时，原墙钟储备不足返回 `same_session_surface_original_wall_reserve_unproved`。可选传入更晚的 `proposedRecoveryDeadlineUtc`，对有限新时窗做假设核算，保留原有/当前截止及tick、能源和翘曲器储备；核对版本2回显中的准确提议、零新增tick和 `proposedWindowApplied=false`。它不授权或应用新时窗，不提供令牌，不解除隔离、不移动、不保存/读档。可执行水面恢复仍需另行实现、原生准入和实际验证。
+原 Move 已终态 unknown 且同一 owned 会话保持原生暂停/准确隔离时，可用 `spherewright_preview_same_session_surface_recovery` 对同星球的有限新目标做只读检查：传当前星球、原动作 ID、revision、新鲜玩家 `stateHash` 和目标坐标。`awaiting_second_frame` 只表示仍需第二帧；`source_bound` 要求两秒内两帧稳定、原航程/日志和原生场景、移动模式及能源检查，但不证明路径无障碍或实际落地。核对准确会话、星球、revision、玩家状态哈希、原动作、目标、600 tick/20秒和只读、不可执行、未Resume及旧结果未改回显；缺失或不一致必须拒绝。未提议时窗时，原墙钟储备不足返回 `same_session_surface_original_wall_reserve_unproved`。可选传入更晚的 `proposedRecoveryDeadlineUtc`，对有限新时窗做假设核算，保留原有/当前截止及tick、能源和翘曲器储备；核对版本2回显中的准确提议、零新增tick和 `proposedWindowApplied=false`。它不授权或应用新时窗，不提供令牌，不解除隔离、不移动、不保存/读档。可执行水面恢复仍需另行实现、原生准入和实际验证。
 
 ## 同会话暂停闲置的原地复核
 
@@ -579,7 +579,7 @@ Native Import 可将 double 宇宙坐标逆投影为 float 本地位置；普通
 
 若同一世界正常保存时使用了不同名称，该成功出航地表模式可显式设置 `restoreRenamedLastExitIdentity=true`，并提供 `expectedRenamedLastExitContentHash`（固定 LastExit 完整文件的 `sha256:` 加小写 SHA-256）。仍须提供独立观察的准确保存 tick，通用凭据 tick 两项留空，不接受进度损失。Plugin 核对固定 LastExit 与原主档的原生创建/星系字段、完整来源哈希、原 checkpoint 和 Journal，才回显 `renamedLastExitIdentityRestorationPlanned=true` 及匹配哈希。精确原生加载器完成后，先核加载的来源名称和 tick，再通过正常游戏名属性在内存中恢复受管身份并接管；用户命名的存档不受修改。后续正常主档保存仍要求既有原生恢复成功。创建字段匹配及文件哈希不能认证调用方此前的现场观察，也不证明落地；仍须保留现场切面并重新核验。
 
-新resume任务在准确来源/世界/actor/地形绑定及当tick资金通过后，独占一笔普通原生订单。初次Drift绑定两秒失效，查询和重复生命周期观察不续期。即使独立的旧first-frame锁尚未armed，真实151分发入口也须服务此pending控制器，不伪造旧锁或501观察。移动中复用原生变换绑定，冻结准确localScale输入及完整父链；不将旋转派生lossyScale的舍入微变误判为缩放。实际改尺寸、换父级、非均匀祖先缩放或无效姿态仍拒绝。目标须在1–16m内，以fresh原生射线检查3.5m落点缓冲，而不要求整段路径干燥。真实151/501、准确自有订单、有界Walk/Drift模式、当前地形支撑、每步能源/tick/UTC/翘曲器/返航储备，以及下一完整601加13tick尾部资金均不可缺失。最多600tick（含失败帧）、20秒墙钟及距来源24m，全部计入原Journey。不写姿态/速度，不手动模拟，不注入资源，不提前放行普通写入。原生Drift转Walk时，只有最后的sphere接地项未命中且fresh准确当前地形支撑、其他模式/费用/订单/储备全部通过，才可继续有界工作，绝不视为空闲。接触边界的完整自有足部重叠不是“空中必须零命中”：Native ground为false时，须从重叠外侧发射下行射线，以同一2m/.5法线界限fresh证明准确当前地形平面；Native ground仍保持false。不完整/饱和/外来命中或无支撑平面仍拒绝，并保留原截点数量/归属/投射事实。原生到达/AbortOrder后继续付费停稳，成功仍要求实际/帧接地Walk、速度归零且手动/RTS尾部全零；失败则停止/Pause并隔离新任务，不自动重试。`nativePhysics.resumeSurfaceRecoveryMove`仅是新resume动作的离体观察，不改旧unknown、不增加tick。恢复绑定失败由`nativeFirstFailure.firstFailedPredicate`标出当刻首个实际runtime或first-physics玩家比较项，后来的暂停观测不替换原截点。源码/CI/离线通过不能冒充真实恢复或施工。
+新的 resume 任务绑定保存的世界、玩家、场景和当前能源后，控制一笔普通原生 Move。受控的原生 Drift 可以越过水面，不要求脚下立刻有地面或目标周围整片干燥，也不把这种状态称为已落地。控制器持续核对准确订单、原生模式和场景、逐 tick 能源及原旅程储备，并将工作限制在 600 游戏 tick 和 20 秒内。实际到达有支撑的 Walk 地面时，即使尚未走到指定目标，也停止订单并等待真正接地、运动尾部归零后才允许普通工作。无法完成时保留新失败并暂停；不重放旧 unknown、不设置位置或注入物品。`nativePhysics.resumeSurfaceRecoveryMove` 记录新订单和实际落地。
 
 原活动Move耗尽原有接触丢失停止预算时，`nativeFirstFailure`记录原pre-player当刻复制值：地面查询、实际/帧移动模式、速度、RTS/手动尾部、能量、停止起止tick及订单状态。该截点中的post-player停稳、后续Pause、序列化及Resume保持not_reached；后来的Walk/speed0观测不覆盖首个失败、不认证旧任务成功或续发停止预算。
 

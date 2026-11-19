@@ -106,7 +106,9 @@ internal sealed partial class NormalGameActionCoordinator
             var proof = new NativeResumeDecisionEvidence("same_session_surface_source", GameMain.gameTick, now, true);
             var up = player.position.normalized;
             var grounded = Physics.CheckSphere(player.position + up * .15f, .35f, 15873);
-            var support = SurfaceRecoveryTerrain(player, capture.Scene, grounded, proof);
+            // In an observed paused Drift there need not be land underfoot.
+            // The exact Native scene, motion and cost bindings remain checked.
+            var support = grounded && SurfaceRecoveryTerrain(player, capture.Scene, grounded, proof);
             var patch = SurfaceRecoveryLandingPatch(capture.Scene, capture.Target);
             var budget = new VoyagerLocalActionBudgetFacts
             {

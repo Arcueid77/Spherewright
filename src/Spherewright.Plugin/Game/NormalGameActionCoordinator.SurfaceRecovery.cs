@@ -40,6 +40,7 @@ internal sealed partial class NormalGameActionCoordinator
         public OrderNode? Order { get; set; }
         public bool NativeOrderAccepted { get; set; }
         public bool Draining { get; set; }
+        public bool? LandingPatchDiagnostic { get; set; }
     }
 
     private string? HandleSurfaceRecovery(VoyagerRemoteResumeAdoption a, VoyagerJourneyRecord j,
@@ -72,7 +73,7 @@ internal sealed partial class NormalGameActionCoordinator
                 return SurfaceFailure(a, "surface_recovery_source_native_premises_unproved");
             target = target.normalized * p.position.magnitude;
             var distance = Vector3.Distance(p.position, target);
-            if (distance < 1f || distance > VoyagerSurfaceRecoveryPolicy.MaximumTargetDistanceMeters)
+            if (!IsFinite(distance) || distance < 1f)
                 return SurfaceFailure(a, "surface_recovery_new_target_distance_unproved");
             var sourceCost = EvaluateNativeLocalMovementCost(p, modeTransitionsExcluded: true);
             var armedUtc = DateTimeOffset.UtcNow;
@@ -122,6 +123,13 @@ internal sealed partial class NormalGameActionCoordinator
         var now = DateTimeOffset.UtcNow;
         var grounded = Physics.CheckSphere(player.position + player.position.normalized * .15f, .35f, 15873);
         var c = player.controller;
+        // Native Drift and the observed Walk contact transition can move over
+        // water without a ground plane under the player. The scene, actual
+        // movement mode, one owned order and per-tick costs remain bound.
+        var unlanded = !grounded && modeProved && (player.movementState == EMovementState.Drift
+            || c.movementStateInFrame == EMovementState.Drift || modeBlocker == "remote_idle_ground_contact_unproved");
+        var support = !unlanded && SurfaceRecoveryTerrain(s, grounded, a.CurrentDecisionEvidence!);
+        s.LandingPatchDiagnostic ??= SurfaceRecoveryLandingPatch(s);
         var strict = grounded && player.movementState == EMovementState.Walk && c.movementStateInFrame == EMovementState.Walk
             && player.speed <= .1f && c.actionWalk.rtsVelocity.sqrMagnitude == 0f && c.actionWalk.moveVelocity.sqrMagnitude == 0f
             && c.actionDrift.rtsVelocity.sqrMagnitude == 0f && c.actionDrift.moveVelocity.sqrMagnitude == 0f;
@@ -129,7 +137,8 @@ internal sealed partial class NormalGameActionCoordinator
         {
             GameTick = GameMain.gameTick, NowUtc = now, ExactSourceWorldAndScene = exact,
             NativeModesCostsAndOrderProved = native && reserve.Proved, NativeModeBlocker = modeBlocker,
-            CurrentTerrainSupportProved = SurfaceRecoveryTerrain(s, grounded, a.CurrentDecisionEvidence!), DryLandingPatchProved = SurfaceRecoveryLandingPatch(s),
+            CurrentTerrainSupportProved = support, NativeUnlandedMotionProved = unlanded,
+            DryLandingPatchProved = s.LandingPatchDiagnostic.Value,
             StrictGroundedWalkWithZeroTail = strict, OriginalOrderAbsent = s.Order is not null && player.currentOrder is null,
             DistanceFromSourceMeters = Vector3.Distance(player.position, s.Origin), DistanceToTargetMeters = Vector3.Distance(player.position, s.Target),
             CoreEnergyJoules = player.mecha.coreEnergy, PerNativeTickEnergyJoules = reserve.PerNativeTickEnergyJoules,
@@ -148,6 +157,7 @@ internal sealed partial class NormalGameActionCoordinator
                 sourceStateBlocker is null);
         e.Observe("surface_native_modes_costs_order", f.NativeModesCostsAndOrderProved);
         e.Observe("surface_current_owned_support", f.CurrentTerrainSupportProved);
+        e.Observe("surface_native_unlanded_motion", f.NativeUnlandedMotionProved);
         e.Observe("surface_dry_landing_patch", f.DryLandingPatchProved);
         e.Observe("surface_strict_grounded_walk_zero_tail", strict);
         e.Number("surface_source_tick", s.Policy.SourceGameTick); e.Number("surface_core_j", f.CoreEnergyJoules);
@@ -167,7 +177,8 @@ internal sealed partial class NormalGameActionCoordinator
             s.NativeOrderAccepted = true;
             RecordSurfaceRecovery(s, "normal_native_order_accepted");
         }
-        else if (!s.Draining && (s.Order.targetReached || f.DistanceToTargetMeters <= 1.5d))
+        else if (!s.Draining && (s.Order.targetReached || f.DistanceToTargetMeters <= 1.5d
+            || grounded && player.movementState == EMovementState.Walk && c.movementStateInFrame == EMovementState.Walk))
         {
             if (ReferenceEquals(player.currentOrder, s.Order)) player.AbortOrder();
             if (player.currentOrder is not null) return SurfaceFailure(a, "surface_recovery_original_order_stop_unproved");

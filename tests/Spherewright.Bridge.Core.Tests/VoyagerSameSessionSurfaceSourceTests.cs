@@ -31,6 +31,19 @@ public sealed class VoyagerSameSessionSurfaceSourceTests
         Assert.False(second.OriginalMove.ReconciledFromOutcomeUnknown);
     }
 
+    [Fact]
+    public void PausedNativeDriftCanPreviewALongerMoveWithoutInventingDryGround()
+    {
+        var refs = new References(); var first = Capture(refs, 10, Now); var second = Capture(refs, 11, Now.AddMilliseconds(50));
+        foreach (var cut in new[] { first, second })
+        {
+            cut.CurrentTerrainSupportProved = false; cut.DryLandingPatchProved = false;
+            cut.Target!.Y = 30; // Same planet, beyond the former 16 m limit.
+        }
+        Assert.True(VoyagerSameSessionSurfaceSourcePolicy.TryBind(first, second, out var binding, out var error), error);
+        Assert.NotNull(binding); Assert.False(binding!.GrantsResume); Assert.False(binding.OriginalOutcomeChanged);
+    }
+
     [Theory]
     [InlineData("missing_scene")] [InlineData("changed_transform")] [InlineData("durable_unproved")]
     [InlineData("not_paused")] [InlineData("other_active")]
@@ -41,7 +54,6 @@ public sealed class VoyagerSameSessionSurfaceSourceTests
     [InlineData("missing_failure")] [InlineData("changed_failure")] [InlineData("not_peaceful")]
     [InlineData("moving")] [InlineData("space_transit")] [InlineData("controller_motion")] [InlineData("rigid_motion")]
     [InlineData("queued_order")] [InlineData("no_collider_proof")] [InlineData("input")]
-    [InlineData("unknown_terrain")] [InlineData("wet_target")] [InlineData("far_target")]
     [InlineData("invalid_target")] [InlineData("bad_player_hash")] [InlineData("active_drone")]
     [InlineData("missing_energy")] [InlineData("missing_independent_debits")] [InlineData("unfunded")] [InlineData("lost_warper")]
     [InlineData("mixed_saved_source")] [InlineData("original_before_landing")] [InlineData("unknown_hash_version")]
@@ -79,9 +91,6 @@ public sealed class VoyagerSameSessionSurfaceSourceTests
             case "queued_order": p.NativePhysics!.QueuedOrderCount = 1; break;
             case "no_collider_proof": p.NativePhysics!.CollidersComplete = false; break;
             case "input": second.NativeInputIdle = false; break;
-            case "unknown_terrain": second.CurrentTerrainSupportProved = false; break;
-            case "wet_target": second.DryLandingPatchProved = false; break;
-            case "far_target": second.Target!.Y = 17; break;
             case "invalid_target": second.Target!.X = float.NaN; break;
             case "bad_player_hash": p.StateHash = "sha256:changed"; break;
             case "active_drone": p.ConstructionDrones.Working = 1; p.StateHash = CanonicalStateHash.PlayerAction(p); break;

@@ -84,9 +84,9 @@ public sealed class VoyagerSurfaceRecoveryPolicyTests
     }
 
     [Theory]
-    [InlineData("151")][InlineData("source")][InlineData("native")][InlineData("support")][InlineData("landing")]
+    [InlineData("151")][InlineData("source")][InlineData("native")][InlineData("support")]
     [InlineData("core")][InlineData("loaded")][InlineData("time")][InlineData("ticks")][InlineData("warpers")]
-    [InlineData("idle_surrogate")][InlineData("displacement")][InlineData("nonfinite")][InlineData("journal_tick")]
+    [InlineData("idle_surrogate")][InlineData("nonfinite")][InlineData("journal_tick")]
     public void MissingProofStopsPermanentlyWithoutBorrowingAnotherAction(string fault)
     {
         var p = new VoyagerSurfaceRecoveryPolicy(100, Now); var f = Good();
@@ -96,14 +96,12 @@ public sealed class VoyagerSurfaceRecoveryPolicyTests
             case "source": f.ExactSourceWorldAndScene = false; break;
             case "native": f.NativeModesCostsAndOrderProved = false; break;
             case "support": f.CurrentTerrainSupportProved = false; break;
-            case "landing": f.DryLandingPatchProved = false; break;
             case "core": f.CoreEnergyJoules = 139; break;
             case "loaded": f.OriginalJourney!.AvailableLoadedEnergyJoules = 1139; break;
             case "time": f.OriginalJourney!.JourneyDeadlineUtc = Now.AddSeconds(61); break;
             case "ticks": f.OriginalJourney!.MaximumGameTicks = 3600; break;
             case "warpers": f.OriginalJourney!.NativeWarperCount = 0; break;
             case "idle_surrogate": f.OriginalJourney!.NativePlayerIdle = true; break;
-            case "displacement": f.DistanceFromSourceMeters = 24.01; break;
             case "nonfinite": f.DistanceToTargetMeters = double.NaN; break;
             case "journal_tick": f.OriginalJourney!.CurrentGameTick = 102; break;
         }
@@ -111,6 +109,25 @@ public sealed class VoyagerSurfaceRecoveryPolicyTests
         Assert.NotNull(p.Failure);
         Assert.Equal(VoyagerSurfaceRecoveryStep.Rejected, p.ObservePhysics(Good()));
         Assert.False(p.Completed);
+    }
+
+    [Fact]
+    public void BoundedNativeDriftMayCrossWaterAndStopsOnlyAfterActualGroundedIdle()
+    {
+        var p = new VoyagerSurfaceRecoveryPolicy(100, Now); var f = Good();
+        f.CurrentTerrainSupportProved = false; f.NativeUnlandedMotionProved = true;
+        f.DryLandingPatchProved = false; f.DistanceFromSourceMeters = 35; f.DistanceToTargetMeters = 50;
+        Assert.Null(p.ObserveUniverse(101, Now, true));
+        Assert.Equal(VoyagerSurfaceRecoveryStep.Continue, p.ObservePhysics(f));
+        f.GameTick = f.OriginalJourney!.CurrentGameTick = 102;
+        f.StrictGroundedWalkWithZeroTail = true; f.OriginalOrderAbsent = true;
+        Assert.Null(p.ObserveUniverse(102, Now, true));
+        Assert.Equal(VoyagerSurfaceRecoveryStep.Continue, p.ObservePhysics(f)); // No invented ground.
+        f.GameTick = f.OriginalJourney.CurrentGameTick = 103;
+        f.CurrentTerrainSupportProved = true; f.NativeUnlandedMotionProved = false;
+        Assert.Null(p.ObserveUniverse(103, Now, true));
+        Assert.Equal(VoyagerSurfaceRecoveryStep.Complete, p.ObservePhysics(f));
+        Assert.True(p.Completed); // Grounded before the distant target is sufficient.
     }
 
     [Fact]

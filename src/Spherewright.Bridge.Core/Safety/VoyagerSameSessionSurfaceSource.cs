@@ -179,7 +179,7 @@ public static class VoyagerSameSessionSurfaceSourcePolicy
             || !Zero(f.RigidbodyVelocity) || !Zero(f.RigidbodyAngularVelocity)
             || physics.ControllerVerticalSpeed != 0 || !Finite(p.Speed) || p.Speed < 0 || p.Speed > .15f)
             return "same_session_surface_frozen_pose_unproved";
-        if (!f.CurrentTerrainSupportProved || !f.DryLandingPatchProved || !ValidTarget(p.Position, f.Target))
+        if (!ValidTarget(p.Position, f.Target))
             return "same_session_surface_target_or_support_unproved";
         if (!Guid.TryParse(f.JourneyId, out _) || f.JourneyId != f.ExpectedJourneyId
             || f.Funding is null || f.Funding.OriginalJourney is null
@@ -269,8 +269,7 @@ public static class VoyagerSameSessionSurfaceSourcePolicy
         var sr = Length(source!); var tr = Length(target!);
         var dx = (double)source!.X - target!.X; var dy = (double)source.Y - target.Y; var dz = (double)source.Z - target.Z;
         var distance = Math.Sqrt(dx * dx + dy * dy + dz * dz);
-        return sr >= 1 && Math.Abs(sr - tr) <= 4 && distance >= 1
-            && distance <= VoyagerSurfaceRecoveryPolicy.MaximumTargetDistanceMeters;
+        return sr >= 1 && Math.Abs(sr - tr) <= 4 && distance >= 1 && !double.IsNaN(distance) && !double.IsInfinity(distance);
     }
     private static double Length(Vector3Snapshot p) => Math.Sqrt((double)p.X * p.X + (double)p.Y * p.Y + (double)p.Z * p.Z);
     private static bool Zero(Vector3Snapshot? p) => Finite(p) && p!.X == 0 && p.Y == 0 && p.Z == 0;

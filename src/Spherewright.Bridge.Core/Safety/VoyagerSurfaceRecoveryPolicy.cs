@@ -14,6 +14,7 @@ public sealed class VoyagerSurfaceRecoveryFacts
     public bool NativeModesCostsAndOrderProved { get; set; }
     public string? NativeModeBlocker { get; set; }
     public bool CurrentTerrainSupportProved { get; set; }
+    public bool NativeUnlandedMotionProved { get; set; }
     public bool DryLandingPatchProved { get; set; }
     public bool StrictGroundedWalkWithZeroTail { get; set; }
     public bool OriginalOrderAbsent { get; set; }
@@ -32,9 +33,6 @@ public sealed class VoyagerSurfaceRecoveryPolicy
     public const int MaximumWorkGameTicks = 600;
     public const double MaximumWallSeconds = 20d;
     public const double MaximumInitialBindingWallSeconds = 2d;
-    public const double MaximumTargetDistanceMeters = 16d;
-    public const double MaximumDisplacementMeters = 24d;
-    public const double MaximumArrivalDistanceMeters = 3.5d;
     public static bool HasExactSavedSource(bool remotePrimary, bool completedSavedLanding, bool successfulOutboundSurface) =>
         remotePrimary && completedSavedLanding != successfulOutboundSurface;
     public long SourceGameTick { get; }
@@ -112,18 +110,18 @@ public sealed class VoyagerSurfaceRecoveryPolicy
             : !f.ExactSourceWorldAndScene || !f.NativeModesCostsAndOrderProved ? "surface_recovery_native_binding_unproved"
             : f.NativeModeBlocker is not null && f.NativeModeBlocker != "remote_idle_ground_contact_unproved"
                 ? "surface_recovery_native_mode_unproved"
-            : !f.CurrentTerrainSupportProved || !f.DryLandingPatchProved ? "surface_recovery_surface_unproved"
+            : !f.CurrentTerrainSupportProved && !f.NativeUnlandedMotionProved ? "surface_recovery_surface_unproved"
             : !ClockOpen(f.NowUtc) || !InitialBindingOpen(f.NowUtc) ? "surface_recovery_wall_exhausted"
             : LastPhysicsTick == long.MaxValue || f.GameTick != LastPhysicsTick + 1 || LastUniverseTick != f.GameTick
                 ? "surface_recovery_native151_501_sequence_unproved"
             : (decimal)f.GameTick - SourceGameTick >= MaximumWorkGameTicks ? "surface_recovery_work_exhausted"
-            : !Known(f.DistanceFromSourceMeters) || f.DistanceFromSourceMeters > MaximumDisplacementMeters
-                || !Known(f.DistanceToTargetMeters) ? "surface_recovery_displacement_unproved"
+            : !Known(f.DistanceFromSourceMeters) || !Known(f.DistanceToTargetMeters) ? "surface_recovery_displacement_unproved"
             : !OriginalReserveAllows(f) ? "surface_recovery_original_reserve_unproved" : null;
         if (blocker is not null) { Reject(blocker); return VoyagerSurfaceRecoveryStep.Rejected; }
         LastPhysicsTick = f!.GameTick;
         _lastUtc = f.NowUtc;
-        if (f.NativeModeBlocker is null && f.StrictGroundedWalkWithZeroTail && f.OriginalOrderAbsent && f.DistanceToTargetMeters <= MaximumArrivalDistanceMeters)
+        if (f.NativeModeBlocker is null && f.CurrentTerrainSupportProved
+            && f.StrictGroundedWalkWithZeroTail && f.OriginalOrderAbsent)
         { Completed = true; return VoyagerSurfaceRecoveryStep.Complete; }
         return VoyagerSurfaceRecoveryStep.Continue;
     }
