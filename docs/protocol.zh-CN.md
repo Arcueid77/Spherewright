@@ -539,7 +539,7 @@ Move 地表预览是观察，不是寻路，180/600 tick 失败指导禁止重�
 
 `player-to-belt-cargo`转移子集接受背包中的1件inc0物品，完整独立空路径上限4096格/64带。新增可选`beltCargoInsertion`以原生`CargoTraffic.PutItemOnBelt`绑定准确路径、所选带、物品和单件数量，MCP核对该回显后暴露token。提交重新核对原生实例、拓扑、空货物及完整背包，再证明同tick背包扣除与路径增加准确守恒。原生拒绝后，先证明货物仍为空且未变化，再允许正常退回物品并核对完整背包守恒。
 
-现有transfer入口新增`belt-cargo-to-player`及item/count0形态，可选`beltCargoPickup`绑定完整独立路径、成员带、关联普通分拣器货物及全部返回物品。MCP仅在准确原生操作和完整预算回显一致时暴露token，由同tick背包/货物/成员证明核销原生回收。
+现有transfer入口新增`belt-cargo-to-player`及item/count0形态，可选`beltCargoPickup`绑定完整独立路径、成员带、关联普通分拣器货物及全部返回物品。MCP仅在准确原生操作和完整预算回显一致时暴露token。活动外星旅程与其他即时本地转移一样核对落地会话和返航储备，再由同tick背包/货物/成员证明核销原生回收。
 
 目录记录`buildMode`、可空`maximumLayers`、`heightLimitKind`和`maximumConstructionHeightMetres`。原生自动集装机走Click放置，喷涂机走Addon放置，其`native_reach`上限仍须通过原生全局建造高度/可达范围检查。新计划绑定`buildToolKind`及`heightLimitKind`，省略的默认值保留原Click/technology计划哈希和持久记录。
 

@@ -16,8 +16,8 @@ internal sealed partial class NormalGameActionCoordinator
             finiteWaterCostWithNativePause: true, allowBudgetedRecharge: true, allowNativePause: allowNativePause)
         && NativePlayerLocalOrdersIdle(player) && VoyagerMechaWorkIdle(player);
 
-    // These closed-journey, same-tick UI operations do not drive the mecha or
-    // reserve future work ticks. A research queue may legitimately be active.
+    // Same-tick UI operations do not drive the mecha. Each operation's journey
+    // admission is checked separately. A research queue may be active.
     private static string? NativePlayerStationaryForSettingBlocker(Player player)
     {
         var physical = NativeWalkPhysicalModeBlocker(player, stationary: true, scene: null,
