@@ -384,7 +384,7 @@ internal sealed partial class NormalGameActionCoordinator
         // Recipes and inventories may evolve through normal operation after a
         // build. The immutable construction receipt binds the component and
         // geometry; later configuration/production must be observed separately.
-        if (itemId == 2302 || itemId == 2304 || itemId == 2309)
+        if (itemId == 2302 || BuildingUpgradePolicy.IsAssembler(itemId) || itemId == 2309)
         {
             var system = factory.factorySystem;
             if (!desc.isAssembler || system?.assemblerPool is null || e.assemblerId <= 0

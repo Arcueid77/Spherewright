@@ -38,7 +38,7 @@ public sealed class StructuredConstructionBinding
 
     // These ordinary core types still need current-version Native placement,
     // paid drone work and exact component/pose/topology completion proof.
-    public static bool IsFactoryCoreItem(int id) => id == 2302 || id == 2304 || id == 2309
+    public static bool IsFactoryCoreItem(int id) => id == 2302 || BuildingUpgradePolicy.IsAssembler(id) || id == 2309
         || id == 2101 || id == 2102 || id == 2106 || id == 2020 || id == 2901 || id == 2902
         || id == 3009 || id == 2040 || id == 2313 || id == 2211 || id == 2311 || id == 2312 || id == 2208;
 
