@@ -14,7 +14,7 @@ public sealed class ProtectedMainMenuReturnTests
         var calls = new List<string>(); var operation = new ProtectedMainMenuReturn();
         operation.Begin(() => { calls.Add("save"); return 42; }, _ =>
         { calls.Add("complete"); return ProtectedMainMenuReturn.ReadinessBlocker(false, true, true, true, false) is null; },
-        () => calls.Add("end"), Now);
+        () => calls.Add("end"));
         Assert.Equal(new[] { "save", "complete", "end" }, calls);
         operation.Observe(() => true, Now.AddSeconds(1));
         Assert.True(operation.Succeeded);
@@ -37,7 +37,7 @@ public sealed class ProtectedMainMenuReturnTests
         var calls = new List<string>();
         var operation = new ProtectedMainMenuReturn();
         operation.Begin(() => { calls.Add("save"); return 42; }, tick =>
-        { Assert.Equal(42, tick); calls.Add("complete"); return true; }, () => calls.Add("end"), Now);
+        { Assert.Equal(42, tick); calls.Add("complete"); return true; }, () => calls.Add("end"));
         Assert.Equal(new[] { "save", "complete", "end" }, calls);
         Assert.False(operation.Terminal);
         Assert.True(operation.Readback.CompleteSaveVerified);
@@ -59,7 +59,7 @@ public sealed class ProtectedMainMenuReturnTests
         var operation = new ProtectedMainMenuReturn();
         operation.Begin(() => fault == "save" ? throw new IOException("fixture") : fault == "invalid_tick" ? -1 : 42,
             _ => fault == "verify_throw" ? throw new IOException("fixture") : fault != "verify_false",
-            () => ended = true, Now);
+            () => ended = true);
         Assert.False(ended);
         Assert.True(operation.Terminal);
         Assert.False(operation.Succeeded);
@@ -75,8 +75,8 @@ public sealed class ProtectedMainMenuReturnTests
         var saves = 0; var ends = 0;
         var operation = new ProtectedMainMenuReturn();
         void End() { ends++; if (throwAtEnd) throw new InvalidOperationException("fixture"); }
-        operation.Begin(() => { saves++; return 42; }, _ => true, End, Now);
-        operation.Begin(() => { saves++; return 42; }, _ => true, End, Now.AddSeconds(1));
+        operation.Begin(() => { saves++; return 42; }, _ => true, End);
+        operation.Begin(() => { saves++; return 42; }, _ => true, End);
         Assert.Equal(1, saves); Assert.Equal(1, ends);
         Assert.True(operation.Readback.NativeEndRequested);
         Assert.Equal(throwAtEnd, operation.Terminal);
@@ -89,24 +89,41 @@ public sealed class ProtectedMainMenuReturnTests
     public void UnprovedMenuHasFiniteOriginalFailure(bool throwOnRead, string expected)
     {
         var operation = new ProtectedMainMenuReturn();
-        operation.Begin(() => 42, _ => true, () => { }, Now);
+        operation.Begin(() => 42, _ => true, () => { });
         operation.Observe(() => throwOnRead ? throw new InvalidOperationException("fixture") : false,
-            Now.AddSeconds(throwOnRead ? 1 : 10));
+            Now.AddSeconds(1));
+        if (!throwOnRead)
+        {
+            Assert.False(operation.Terminal);
+            operation.Observe(() => false, Now.AddSeconds(121));
+        }
         Assert.True(operation.Terminal); Assert.False(operation.Succeeded);
         Assert.Equal(expected, operation.Readback.FailedPredicate);
-        operation.Observe(() => true, Now.AddSeconds(11));
+        operation.Observe(() => true, Now.AddSeconds(122));
         Assert.Equal(expected, operation.Readback.FailedPredicate);
         Assert.False(operation.Succeeded);
     }
 
     [Fact]
-    public void LateMenuObservationCannotBecomeBoundedSuccess()
+    public void SlowSaveAndNativeExitDoNotConsumeTheMenuReadbackWait()
     {
         var operation = new ProtectedMainMenuReturn();
-        operation.Begin(() => 42, _ => true, () => { }, Now);
-        operation.Observe(() => true, Now.AddSeconds(11));
-        Assert.True(operation.Terminal);
-        Assert.False(operation.Succeeded);
-        Assert.Equal("main_menu_readback_timeout", operation.Readback.FailedPredicate);
+        operation.Begin(() => 42, _ => true, () => { });
+        // The first menu observation can happen long after save and EndGame began.
+        operation.Observe(() => false, Now.AddSeconds(90));
+        Assert.False(operation.Terminal);
+        operation.Observe(() => true, Now.AddSeconds(150));
+        Assert.True(operation.Succeeded);
+    }
+
+    [Fact]
+    public void VerifiedMenuAtALateFirstAvailablePollIsStillSuccess()
+    {
+        var operation = new ProtectedMainMenuReturn();
+        operation.Begin(() => 42, _ => true, () => { });
+        operation.Observe(() => false, Now);
+        operation.Observe(() => true, Now.AddSeconds(121));
+        Assert.True(operation.Succeeded);
+        Assert.Null(operation.Readback.FailedPredicate);
     }
 }

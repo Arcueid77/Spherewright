@@ -64,7 +64,7 @@ internal sealed partial class NormalGameActionCoordinator
                 // Exactly UIEscMenu.OnButton5Click, never ExitProgram or Quit.
                 UIRoot.instance.backToMainMenu = true;
                 DSPGame.EndGame();
-            }, DateTimeOffset.UtcNow);
+            });
         UpdateReturnToMainMenuOnMainThread(action);
     }
 

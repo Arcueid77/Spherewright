@@ -4,6 +4,7 @@
 
 ## 0.6.0 — Ascension development
 
+- Start the main-menu readback wait after the normal save and native exit call, allowing slow menu transitions and accepting an actually verified menu on a delayed poll.
 - Corrected empty-belt dismantling to detect every retained quaternion component change before exact Native renderer/collider verification.
 - Added opt-in funded Native same-planet navigation through the existing move action, with current threshold binding, Fly/arrival/grounded-stop readback and owned-task failure isolation.
 - Funded recipe-only mecha research during planetary navigation while preserving buffered matrix points, complete queued-effect checks and specific preparation blockers.

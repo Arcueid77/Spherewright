@@ -6,7 +6,8 @@ namespace Spherewright.Bridge.Core.Safety;
 // native Esc-menu EndGame path. There is deliberately no process-exit callback.
 public sealed class ProtectedMainMenuReturn
 {
-    private DateTimeOffset _deadline;
+    private DateTimeOffset? _deadline;
+    private const int ReadbackWaitSeconds = 120;
     public MainMenuReturnReadback Readback { get; } = new MainMenuReturnReadback();
     public bool Terminal { get; private set; }
     public bool Succeeded => Terminal && Readback.MainMenuVerified;
@@ -24,7 +25,7 @@ public sealed class ProtectedMainMenuReturn
         return physicallyIdle ? null : "Returning to the main menu requires the grounded, order-free player and physically idle construction drones.";
     }
 
-    public void Begin(Func<long> save, Func<long, bool> verify, Action endGame, DateTimeOffset now)
+    public void Begin(Func<long> save, Func<long, bool> verify, Action endGame)
     {
         if (Readback.NativeEndRequested || Terminal) return;
         var predicate = "normal_owned_save";
@@ -38,7 +39,6 @@ public sealed class ProtectedMainMenuReturn
             Readback.CompleteSaveVerified = true;
             predicate = "native_end_game";
             Readback.NativeEndRequested = true;
-            _deadline = now.AddSeconds(10);
             endGame();
         }
         catch { Fail(predicate); }
@@ -47,15 +47,18 @@ public sealed class ProtectedMainMenuReturn
     public void Observe(Func<bool> mainMenuReady, DateTimeOffset now)
     {
         if (Terminal || !Readback.NativeEndRequested) return;
-        if (now >= _deadline) { Fail("main_menu_readback_timeout"); return; }
         try
         {
+            // Save and EndGame have already returned. A verified menu remains
+            // success even when the first available poll arrives late.
             if (mainMenuReady())
             {
                 Readback.MainMenuVerified = true;
                 Terminal = true;
                 return;
             }
+            if (_deadline is null) _deadline = now.AddSeconds(ReadbackWaitSeconds);
+            else if (now >= _deadline.Value) Fail("main_menu_readback_timeout");
         }
         catch { Fail("main_menu_readback"); return; }
     }
