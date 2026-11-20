@@ -417,6 +417,21 @@ public sealed class StructuredConstructionStoreIntegrationTests
     }
 
     [Fact]
+    public void MeasuredEnvelopeSurvivesRestartAndCannotChangeInsideTheOriginalWindow()
+    {
+        using var fixture = new Fixture(); var state = Pending(1);
+        state.ConstructionControl!.MeasuredOrdinaryEnvelope = true;
+        var store = fixture.Store(); Assert.True(store.TryPut(state));
+        var original = Assert.Single(fixture.Read());
+        Assert.True(original.ConstructionControl!.MeasuredOrdinaryEnvelope);
+        Assert.Equal(state.ConstructionControl.EvidenceHash(), original.ConstructionControl.EvidenceHash());
+        var bytes = File.ReadAllBytes(fixture.Path);
+        original.ConstructionControl.MeasuredOrdinaryEnvelope = null; original.Generation++;
+        Assert.False(store.TryPut(original));
+        Assert.Equal(bytes, File.ReadAllBytes(fixture.Path));
+    }
+
+    [Fact]
     public void CompletedOriginalDroneRestorationSurvivesDurableStoreAndRestart()
     {
         using var fixture = new Fixture(); var state = Pending(1);

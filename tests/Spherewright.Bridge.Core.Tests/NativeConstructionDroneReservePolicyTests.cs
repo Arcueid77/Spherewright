@@ -10,6 +10,107 @@ namespace Spherewright.Bridge.Core.Tests;
 public sealed class NativeConstructionDroneReservePolicyTests
 {
     [Fact]
+    public void NearbyOrdinaryTargetsFundTheirActualBoundInsteadOfTheFull28Metres()
+    {
+        var facts = Facts();
+        facts.MaximumMechaDrones = 6; facts.NativeSpeedMetersPerSecond = 10;
+        facts.NativeEnergyPerMeter = 9000; facts.NativeRepairEnergyPerTick = 3600;
+        facts.NativeEjectEnergyJoules = 60000; facts.OtherMechaPowerUpperWatts = 218602038.89195016;
+        facts.FixedToLiveEjectDistanceMeters = 0; facts.MaximumTargetDistanceMeters = 12.959869384765625;
+        var legacy = NativeConstructionDroneReservePolicy.Evaluate(facts);
+        facts.UseMeasuredOrdinaryEnvelope = true;
+        var measured = NativeConstructionDroneReservePolicy.Evaluate(facts);
+        Assert.True(legacy.Proved); Assert.True(measured.Proved); Assert.True(measured.MeasuredOrdinaryEnvelope);
+        Assert.True(measured.TargetDistanceLimitMeters >= facts.MaximumTargetDistanceMeters);
+        Assert.True(measured.DroneDistanceLimitMeters >= measured.TargetDistanceLimitMeters + 2);
+        Assert.True(measured.TailGameTicks < legacy.TailGameTicks);
+        Assert.True(measured.TailAndNextTickEnergyJoules < legacy.TailAndNextTickEnergyJoules);
+        Assert.True(NativeConstructionDroneReservePolicy.CanFundNativeTail(1100000000, 64000000000, 5300000000,
+            measured.TailAndNextTickEnergyJoules));
+        Assert.False(NativeConstructionDroneReservePolicy.CanFundNativeTail(1100000000, 64000000000, 5300000000,
+            legacy.TailAndNextTickEnergyJoules));
+        Assert.False(NativeConstructionDroneReservePolicy.CopiedDroneStepPreservesEnvelope(2, 10, 0,
+            measured.DroneDistanceLimitMeters, measured.TargetDistanceLimitMeters,
+            measured.DroneDistanceLimitMeters + .001, measuredTargetLimitMeters: measured.TargetDistanceLimitMeters,
+            measuredDroneLimitMeters: measured.DroneDistanceLimitMeters));
+    }
+
+    [Theory]
+    [InlineData(0d)] [InlineData(5d)] [InlineData(12.959869384765625d)] [InlineData(25.99d)]
+    public void MeasuredEnvelopesFundAndGuardCopiedNativeReturn(double reach)
+    {
+        var facts = Facts(); facts.NativeSpeedMetersPerSecond = 10; facts.MaximumTargetDistanceMeters = reach;
+        facts.UseMeasuredOrdinaryEnvelope = true; facts.FixedToLiveEjectDistanceMeters = 0;
+        var reserve = NativeConstructionDroneReservePolicy.Evaluate(facts);
+        Assert.True(reserve.Proved);
+        for (var direction = 0; direction < 16; direction++)
+        {
+            var motion = Motion(200, 10); var angle = direction * Math.PI / 8;
+            var distance = reserve.DroneDistanceLimitMeters - 1e-5;
+            motion.Position = new() { X = motion.Eject.X + distance * Math.Cos(angle),
+                Y = motion.Eject.Y + distance * Math.Sin(angle), Z = motion.Eject.Z };
+            var ticks = 0;
+            while (!NativeConstructionDroneReservePolicy.CopiedStepWouldNativeRecycle(motion)
+                && ticks < reserve.TailGameTicks)
+            {
+                var next = NativeConstructionDroneReservePolicy.PredictCopiedOrdinaryStep(motion)!;
+                Assert.True(NativeConstructionDroneReservePolicy.CopiedDroneStepPreservesEnvelope(4, 10, 0,
+                    Distance(motion.Position, motion.Eject), 0, Distance(next, motion.Eject),
+                    fixedToLiveEjectDistanceMeters: 0, measuredTargetLimitMeters: reserve.TargetDistanceLimitMeters,
+                    measuredDroneLimitMeters: reserve.DroneDistanceLimitMeters));
+                motion.Position = next; ticks++;
+            }
+            Assert.True(NativeConstructionDroneReservePolicy.CopiedStepWouldNativeRecycle(motion));
+            Assert.True(ticks < reserve.TailGameTicks - 64);
+        }
+    }
+
+    [Theory]
+    [InlineData(3d)] [InlineData(12.959869384765625d)] [InlineData(25.99d)]
+    public void MeasuredEnvelopeContainsCopiedNativeLaunchAndOutboundSteps(double reach)
+    {
+        var facts = Facts(); facts.NativeSpeedMetersPerSecond = 10; facts.MaximumTargetDistanceMeters = reach;
+        facts.UseMeasuredOrdinaryEnvelope = true; facts.FixedToLiveEjectDistanceMeters = 0;
+        var reserve = NativeConstructionDroneReservePolicy.Evaluate(facts);
+        Assert.True(reserve.Proved);
+        var motion = Motion(200, 10); var eject = motion.Eject;
+        motion.Initial = new() { X = eject.X + 7.5f, Y = eject.Y, Z = eject.Z };
+        motion.Target = new() { X = eject.X, Y = (float)(eject.Y + reach), Z = eject.Z };
+        motion.Stage = 1;
+        for (var i = 0; i < 64; i++)
+        {
+            motion.Progress = i / 64f;
+            var next = NativeConstructionDroneReservePolicy.PredictCopiedOrdinaryStep(motion)!;
+            Assert.InRange(Distance(next, eject), 0, reserve.DroneDistanceLimitMeters);
+        }
+        motion.Stage = 2;
+        motion.Position = new() { X = motion.Initial.X, Y = motion.Initial.Y, Z = motion.Initial.Z };
+        for (var i = 0; i < 1000 && Distance(motion.Position, motion.Target) > .5; i++)
+        {
+            var next = NativeConstructionDroneReservePolicy.PredictCopiedOrdinaryStep(motion)!;
+            Assert.True(NativeConstructionDroneReservePolicy.CopiedDroneStepPreservesEnvelope(2, 10, 0,
+                Distance(motion.Position, eject), reach, Distance(next, eject),
+                measuredTargetLimitMeters: reserve.TargetDistanceLimitMeters,
+                measuredDroneLimitMeters: reserve.DroneDistanceLimitMeters));
+            motion.Position = next;
+        }
+        Assert.InRange(Distance(motion.Position, motion.Target), 0, .5);
+    }
+
+    [Fact]
+    public void MeasuredEnvelopeCannotExceedOrBorrowAnotherProfile()
+    {
+        var f = Facts(); f.UseMeasuredOrdinaryEnvelope = true; f.MaximumTargetDistanceMeters = 26.001;
+        Assert.False(NativeConstructionDroneReservePolicy.Evaluate(f).Proved);
+        f.MaximumTargetDistanceMeters = 10; f.VerticalStackTarget = true;
+        Assert.False(NativeConstructionDroneReservePolicy.Evaluate(f).Proved);
+        Assert.False(NativeConstructionDroneReservePolicy.CopiedDroneStepPreservesEnvelope(2, 10, 0, 8, 8, 8,
+            measuredTargetLimitMeters: 8, measuredDroneLimitMeters: 9));
+        Assert.False(NativeConstructionDroneReservePolicy.CopiedDroneStepPreservesEnvelope(2, 10, 0, 8, 8, 8,
+            measuredTargetLimitMeters: 8));
+    }
+
+    [Fact]
     public void BothActualSorterPosesDetermineTheFundedDroneReach()
     {
         var eject = new Vector3Snapshot { X = 0, Y = 202.8f, Z = 0 };
@@ -28,6 +129,20 @@ public sealed class NativeConstructionDroneReservePolicyTests
         Assert.False(NativeConstructionDroneReservePolicy.Evaluate(facts).Proved);
         second.X = float.NaN;
         Assert.Null(NativeConstructionDroneReservePolicy.MaximumRaisedPoseDistance(eject, first, second, 1f));
+    }
+
+    [Fact]
+    public void SelectedModelAndNativeDefaultBothContributeToRaisedTargetReach()
+    {
+        var eject = new Vector3Snapshot { X = 0, Y = 202.8f, Z = 0 };
+        var first = new Vector3Snapshot { X = 10, Y = MathF.Sqrt(200 * 200 - 100), Z = 0 };
+        var second = new Vector3Snapshot { X = 12, Y = MathF.Sqrt(200 * 200 - 144), Z = 0 };
+        var selected = NativeConstructionDroneReservePolicy.MaximumRaisedPoseDistance(eject, first, second, 1f);
+        var native = NativeConstructionDroneReservePolicy.MaximumRaisedPoseDistance(eject, first, second, 10f);
+        var combined = NativeConstructionDroneReservePolicy.MaximumRaisedPoseDistance(eject, first, second, 1f, 10f);
+        Assert.NotNull(selected); Assert.NotNull(native); Assert.NotNull(combined);
+        Assert.Equal(Math.Max(selected.Value, native.Value), combined.Value);
+        Assert.Null(NativeConstructionDroneReservePolicy.MaximumRaisedPoseDistance(eject, first, second, 1f, float.NaN));
     }
 
     [Theory]

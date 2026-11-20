@@ -212,6 +212,10 @@ public sealed class StructuredConstructionControlState
     public string Phase { get; set; } = "reserved";
     public Vector3Snapshot Anchor { get; set; } = new Vector3Snapshot();
     public string NativeCostHash { get; set; } = string.Empty;
+    // Absent on previously saved construction windows; their fixed proof and
+    // evidence hash must remain byte-for-byte compatible.
+    public bool? MeasuredOrdinaryEnvelope { get; set; }
+    public bool ShouldSerializeMeasuredOrdinaryEnvelope() => MeasuredOrdinaryEnvelope.HasValue;
     public long StartedAtGameTick { get; set; }
     public DateTimeOffset StartedAtUtc { get; set; }
     public long WorkDeadlineGameTick { get; set; }
@@ -252,6 +256,7 @@ public sealed class StructuredConstructionControlState
         StartedAtGameTick == original.StartedAtGameTick && StartedAtUtc == original.StartedAtUtc
         && WorkDeadlineGameTick == original.WorkDeadlineGameTick && WorkDeadlineUtc == original.WorkDeadlineUtc
         && NativeFixedDeltaTimeSeconds == original.NativeFixedDeltaTimeSeconds
+        && MeasuredOrdinaryEnvelope == original.MeasuredOrdinaryEnvelope
         && OriginalDroneEnabled == original.OriginalDroneEnabled
         && (original.NativeCreateActionId is null || NativeCreateActionId == original.NativeCreateActionId)
         && PreexistingEntityIds.SequenceEqual(original.PreexistingEntityIds);
@@ -373,7 +378,9 @@ public sealed class StructuredConstructionControlState
         DispatchDisabled, PhysicalIdleVerified, PhysicalIdleVerifiedAtGameTick, DisabledNativeFactoryPassGameTick,
         BindingLost, OriginalDroneEnabled, NativeCreateActionId, StopReason,
         CanonicalStateHash.Combine("old-entities", PreexistingEntityIds.Cast<object>().ToArray()));
-        return NativeFixedDeltaTimeSeconds.HasValue ? CanonicalStateHash.Combine("structured-control-cadence-v1",old,NativeFixedDeltaTimeSeconds) : old;
+        var cadence = NativeFixedDeltaTimeSeconds.HasValue ? CanonicalStateHash.Combine("structured-control-cadence-v1",old,NativeFixedDeltaTimeSeconds) : old;
+        return MeasuredOrdinaryEnvelope.HasValue
+            ? CanonicalStateHash.Combine("structured-control-measured-envelope-v1", cadence, MeasuredOrdinaryEnvelope) : cadence;
     }
 
     private static bool Finite(double x) => !double.IsNaN(x) && !double.IsInfinity(x) && x >= 0d;

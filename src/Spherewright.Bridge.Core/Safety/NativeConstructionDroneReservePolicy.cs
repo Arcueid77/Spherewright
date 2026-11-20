@@ -19,6 +19,9 @@ public sealed class NativeConstructionDroneFacts
     // A fresh distance between the fixed and live Native float eject points.
     // Missing observations retain the original quarter-step return reserve.
     public double? FixedToLiveEjectDistanceMeters { get; set; }
+    // New ordinary construction can pay for its measured target envelope.
+    // Older retained windows keep their original fixed envelope.
+    public bool UseMeasuredOrdinaryEnvelope { get; set; }
     public NativeMechaBackgroundCostFacts? IndependentMechaCosts { get; set; }
     public bool AllowBudgetedIndependentRecharge { get; set; }
     public NativeMechaRechargeFacts? BoundedRechargeCosts { get; set; }
@@ -28,6 +31,9 @@ public sealed class NativeConstructionDroneReserve
 {
     public bool VerticalStackTarget { get; internal set; }
     public bool TallStationTarget { get; internal set; }
+    public bool MeasuredOrdinaryEnvelope { get; internal set; }
+    public double TargetDistanceLimitMeters { get; internal set; }
+    public double DroneDistanceLimitMeters { get; internal set; }
     public bool Proved { get; internal set; }
     public string? BlockerCode { get; internal set; }
     public long TailGameTicks { get; internal set; }
@@ -66,6 +72,18 @@ public static class NativeConstructionDroneReservePolicy
     public const double MaximumVerticalStackTargetDistanceMeters = 46d;
     public const double MaximumVerticalStackDroneDistanceMeters = 48d;
 
+    // Preserve a two-metre drone margin around the rounded-up actual target,
+    // and at least ten metres for the Native launch point (at most 7.5m).
+    // The original 26m/28m envelope remains the upper bound for this profile.
+    public static (double Target, double Outer)? MeasuredOrdinaryEnvelope(double reach)
+    {
+        if (!Finite(reach) || reach > MaximumTargetDistanceMeters) return null;
+        var target = Math.Min(MaximumTargetDistanceMeters, Math.Ceiling(reach * 10d) / 10d + .25d);
+        var outer = Math.Max(10d, target + 2d);
+        return Finite(target) && Finite(outer) && outer <= MaximumDroneDistanceMeters
+            ? (target, outer) : null;
+    }
+
     // Both native sorter poses can be farther away than the first one.  Use
     // their actual raised target positions instead of a separate ground-span
     // cutoff; Evaluate still checks the resulting reach against the same
@@ -84,6 +102,14 @@ public static class NativeConstructionDroneReservePolicy
         var firstDistance = Length(Subtract(eject!, firstTarget));
         var secondDistance = Length(Subtract(eject!, secondTarget));
         return Finite(firstDistance) && Finite(secondDistance) ? Math.Max(firstDistance, secondDistance) : null;
+    }
+
+    public static double? MaximumRaisedPoseDistance(Vector3Snapshot? eject, Vector3Snapshot? first,
+        Vector3Snapshot? second, float selectedModelHeight, float nativeDefaultHeight)
+    {
+        var selected = MaximumRaisedPoseDistance(eject, first, second, selectedModelHeight);
+        var native = MaximumRaisedPoseDistance(eject, first, second, nativeDefaultHeight);
+        return selected.HasValue && native.HasValue ? Math.Max(selected.Value, native.Value) : null;
     }
 
     public static double ReturnClosureFraction(double speedMetersPerSecond, double? fixedToLiveEjectDistanceMeters,
@@ -146,6 +172,12 @@ public static class NativeConstructionDroneReservePolicy
             : f.TallStationTarget ? MaximumTallStationDroneDistanceMeters : MaximumDroneDistanceMeters;
         var target = f.VerticalStackTarget ? MaximumVerticalStackTargetDistanceMeters
             : f.TallStationTarget ? MaximumTallStationTargetDistanceMeters : MaximumTargetDistanceMeters;
+        if (f.UseMeasuredOrdinaryEnvelope)
+        {
+            if (f.VerticalStackTarget || f.TallStationTarget || MeasuredOrdinaryEnvelope(reach) is not { } measured)
+                return Blocked("native_measured_drone_envelope_unproved");
+            target = measured.Target; outer = measured.Outer;
+        }
         var closure = ReturnClosureFraction(speed, f.FixedToLiveEjectDistanceMeters, f.TallStationTarget);
         if (f.TallStationTarget && closure != 2d / 3d)
             return Blocked("native_tall_station_strict_eject_or_speed_unproved");
@@ -174,7 +206,8 @@ public static class NativeConstructionDroneReservePolicy
         if (!Finite(ticks) || ticks > 7200d || !Finite(power) || !Finite(margin))
             return Blocked("native_drone_tail_or_energy_bound_exceeded");
         return new NativeConstructionDroneReserve { Proved = true, TallStationTarget = f.TallStationTarget,
-            VerticalStackTarget = f.VerticalStackTarget, TailGameTicks = (long)ticks,
+            VerticalStackTarget = f.VerticalStackTarget, MeasuredOrdinaryEnvelope = f.UseMeasuredOrdinaryEnvelope,
+            TargetDistanceLimitMeters = target, DroneDistanceLimitMeters = outer, TailGameTicks = (long)ticks,
             PowerUpperWatts = power, TailAndNextTickEnergyJoules = margin };
     }
 
@@ -185,13 +218,24 @@ public static class NativeConstructionDroneReservePolicy
     public static bool CopiedDroneStepPreservesEnvelope(int stage, double speedMetersPerSecond,
         double anchorDisplacementMeters, double droneDistanceMeters, double targetDistanceMeters,
         double nextDroneDistanceMeters, bool nativeWouldRecycle = false, double? fixedToLiveEjectDistanceMeters = null,
-        bool tallStationTarget = false, bool verticalStackTarget = false)
+        bool tallStationTarget = false, bool verticalStackTarget = false,
+        double? measuredTargetLimitMeters = null, double? measuredDroneLimitMeters = null)
     {
         if (verticalStackTarget && tallStationTarget) return false;
         var outer = verticalStackTarget ? MaximumVerticalStackDroneDistanceMeters
             : tallStationTarget ? MaximumTallStationDroneDistanceMeters : MaximumDroneDistanceMeters;
         var target = verticalStackTarget ? MaximumVerticalStackTargetDistanceMeters
             : tallStationTarget ? MaximumTallStationTargetDistanceMeters : MaximumTargetDistanceMeters;
+        if (measuredTargetLimitMeters.HasValue || measuredDroneLimitMeters.HasValue)
+        {
+            if (tallStationTarget || verticalStackTarget || !measuredTargetLimitMeters.HasValue || !measuredDroneLimitMeters.HasValue
+                || !Finite(measuredTargetLimitMeters.Value) || !Finite(measuredDroneLimitMeters.Value)
+                || measuredTargetLimitMeters.Value > MaximumTargetDistanceMeters
+                || measuredDroneLimitMeters.Value > MaximumDroneDistanceMeters
+                || measuredDroneLimitMeters.Value < 10d || measuredDroneLimitMeters.Value < measuredTargetLimitMeters.Value + 2d)
+                return false;
+            target = measuredTargetLimitMeters.Value; outer = measuredDroneLimitMeters.Value;
+        }
         var anchor = tallStationTarget ? MaximumTallStationAnchorDisplacementMeters : MaximumAnchorDisplacementMeters;
         if (tallStationTarget && ReturnClosureFraction(speedMetersPerSecond, fixedToLiveEjectDistanceMeters, true) != 2d / 3d) return false;
         if (stage < 1 || stage > 4 || !Finite(speedMetersPerSecond) || speedMetersPerSecond < 6d

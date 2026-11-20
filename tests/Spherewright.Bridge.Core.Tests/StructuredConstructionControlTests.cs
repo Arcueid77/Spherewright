@@ -7,6 +7,19 @@ public sealed class StructuredConstructionControlTests
 {
     private static readonly DateTimeOffset Start = new(2025, 1, 1, 0, 0, 0, TimeSpan.Zero);
 
+    [Fact]
+    public void ExistingWindowCannotSilentlyChangeItsMeasuredEnvelopeProfile()
+    {
+        var original = Control(); var resumed = Control();
+        var oldHash = original.EvidenceHash();
+        Assert.True(resumed.RetainsOriginalWindowAndSubmission(original));
+        resumed.MeasuredOrdinaryEnvelope = true;
+        Assert.False(resumed.RetainsOriginalWindowAndSubmission(original));
+        Assert.NotEqual(oldHash, resumed.EvidenceHash());
+        original.MeasuredOrdinaryEnvelope = true;
+        Assert.True(resumed.RetainsOriginalWindowAndSubmission(original));
+    }
+
     [Theory]
     [InlineData("working")]
     [InlineData("unknown")]

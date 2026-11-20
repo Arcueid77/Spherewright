@@ -90,12 +90,17 @@ internal sealed partial class NormalGameActionCoordinator
         {
             var item = LDB.items.Select(spec.ItemId);
             var desc = item is null ? null : NativeBuildModel(item, spec.NativeModelIndex ?? 0);
-            if (desc is null || !FiniteConstruction(desc.selectSize.y)) { reach = double.NaN; break; }
+            // Native _obj_hpos reads the item's default prefab even when the
+            // selected model has its own description. Fund the larger of the
+            // two raised poses so a model variant cannot shorten the bound.
+            var nativeDefault = item?.prefabDesc;
+            if (desc is null || nativeDefault is null || !FiniteConstruction(desc.selectSize.y)
+                || !FiniteConstruction(nativeDefault.selectSize.y)) { reach = double.NaN; break; }
             // Sorters have two native poses; other constructions have one
             // drone target even when their second preview pose is unused.
             var second = desc.isInserter ? spec.Position2 : spec.Position;
             var actualReach = NativeConstructionDroneReservePolicy.MaximumRaisedPoseDistance(
-                ConstructionVector(ejectAnchor), spec.Position, second, desc.selectSize.y);
+                ConstructionVector(ejectAnchor), spec.Position, second, desc.selectSize.y, nativeDefault.selectSize.y);
             if (!actualReach.HasValue) { reach = double.NaN; break; }
             reach = Math.Max(reach, actualReach.Value);
             var offset = ToVector(second) - anchor;
@@ -129,6 +134,12 @@ internal sealed partial class NormalGameActionCoordinator
             build.Site.Objects[0].ItemId, build.Site.Objects.Count, reach);
         var verticalStack = build.StructuredConstruction?.StackConstruction is not null
             && reach > NativeConstructionDroneReservePolicy.MaximumTargetDistanceMeters;
+        // New ordinary windows may fund the actual target envelope. Retained
+        // windows continue the profile recorded in their original control.
+        var measuredOrdinary = !tallStation && !verticalStack
+            && build.StructuredConstruction?.StackConstruction is null
+            && (build.ConstructionControl is null || startsNewPaidWindow
+                || build.ConstructionControl.MeasuredOrdinaryEnvelope == true);
         if (verticalStack)
             costHash = CanonicalStateHash.Combine("native-vertical-stack-drone-envelope-v1", costHash,
                 NativeStackingPolicy.PlanHash(build.StructuredConstruction!.StackConstruction),
@@ -137,10 +148,14 @@ internal sealed partial class NormalGameActionCoordinator
         if (tallStation) costHash = CanonicalStateHash.Combine("native-single-ils-tight34m-return-v1", costHash,
             NativeConstructionDroneReservePolicy.MaximumTallStationAnchorDisplacementMeters,
             NativeConstructionDroneReservePolicy.MaximumTallStationEjectDisplacementMeters);
+        if (measuredOrdinary && NativeConstructionDroneReservePolicy.MeasuredOrdinaryEnvelope(reach) is { } measured)
+            costHash = CanonicalStateHash.Combine("native-measured-ordinary-drone-envelope-v1", costHash,
+                measured.Target, measured.Outer);
         return NativeConstructionDroneReservePolicy.Evaluate(new NativeConstructionDroneFacts
         {
             TallStationTarget = tallStation,
             VerticalStackTarget = verticalStack,
+            UseMeasuredOrdinaryEnvelope = measuredOrdinary,
             MaximumMechaDrones = module.droneCount, NativeSpeedMetersPerSecond = speed,
             NativeEnergyPerMeter = rate, NativeEjectEnergyJoules = eject, NativeRepairEnergyPerTick = repair,
             OtherMechaPowerUpperWatts = background, AnchorRadiusMeters = anchor.magnitude,
@@ -244,7 +259,11 @@ internal sealed partial class NormalGameActionCoordinator
                     Math.Sqrt(Math.Pow(next.X - fixedEject.x, 2d) + Math.Pow(next.Y - fixedEject.y, 2d) + Math.Pow(next.Z - fixedEject.z, 2d)),
                     NativeConstructionDroneReservePolicy.CopiedStepWouldNativeRecycle(motion),
                     Vector3.Distance(fixedEject, liveEject), action.Plan.ConstructionReserve?.TallStationTarget == true,
-                    action.Plan.ConstructionReserve?.VerticalStackTarget == true))
+                    action.Plan.ConstructionReserve?.VerticalStackTarget == true,
+                    action.Plan.ConstructionReserve?.MeasuredOrdinaryEnvelope == true
+                        ? action.Plan.ConstructionReserve.TargetDistanceLimitMeters : null,
+                    action.Plan.ConstructionReserve?.MeasuredOrdinaryEnvelope == true
+                        ? action.Plan.ConstructionReserve.DroneDistanceLimitMeters : null))
                 return false;
         }
         return true;

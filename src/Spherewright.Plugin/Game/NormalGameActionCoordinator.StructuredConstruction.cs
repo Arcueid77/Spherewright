@@ -272,6 +272,8 @@ internal sealed partial class NormalGameActionCoordinator
             WorkDeadlineUtc = readmit ? nowUtc.AddSeconds(workWall.Value) : oldControl?.WorkDeadlineUtc ?? nowUtc.AddSeconds(workWall.Value),
             ObservationLeaseExpiresAtUtc = nowUtc.AddSeconds(StructuredConstructionLeaseSeconds),
             TailGameTicks = reserve.TailGameTicks, TailAndNextTickEnergyJoules = reserve.TailAndNextTickEnergyJoules,
+            MeasuredOrdinaryEnvelope = readmit || oldControl is null
+                ? reserve.MeasuredOrdinaryEnvelope ? true : null : oldControl.MeasuredOrdinaryEnvelope,
             NativeFixedDeltaTimeSeconds = readmit || oldControl is null ? cadence : oldControl.NativeFixedDeltaTimeSeconds,
             NativePowerUpperWatts = reserve.PowerUpperWatts, OriginalDroneEnabled = oldControl?.OriginalDroneEnabled ?? player.mecha.constructionModule.droneEnabled,
             NativeCreateActionId = oldControl?.NativeCreateActionId,
