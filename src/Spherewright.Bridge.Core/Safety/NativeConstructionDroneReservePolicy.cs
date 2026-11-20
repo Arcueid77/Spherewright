@@ -72,6 +72,10 @@ public static class NativeConstructionDroneReservePolicy
     public const double MaximumVerticalStackTargetDistanceMeters = 46d;
     public const double MaximumVerticalStackDroneDistanceMeters = 48d;
 
+    public static bool UseMeasuredOrdinaryWindow(bool stacked, bool hasRetainedControl,
+        bool startsNewPaidWindow, bool? retainedMeasuredProfile) =>
+        !stacked && (!hasRetainedControl || startsNewPaidWindow || retainedMeasuredProfile == true);
+
     // Preserve a two-metre drone margin around the rounded-up actual target,
     // and at least ten metres for the Native launch point (at most 7.5m).
     // The original 26m/28m envelope remains the upper bound for this profile.

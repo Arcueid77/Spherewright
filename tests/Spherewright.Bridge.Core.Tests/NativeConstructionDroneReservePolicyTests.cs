@@ -9,6 +9,20 @@ namespace Spherewright.Bridge.Core.Tests;
 // invoke a drone update, or establish a live construction/idle acceptance.
 public sealed class NativeConstructionDroneReservePolicyTests
 {
+    [Theory]
+    [InlineData(false, false, false, null, true)]
+    [InlineData(false, true, false, null, false)]
+    [InlineData(false, true, false, true, true)]
+    [InlineData(false, true, true, null, true)]
+    [InlineData(true, false, false, null, false)]
+    [InlineData(true, true, true, true, false)]
+    public void OnlyNewOrAlreadyMeasuredOrdinaryWindowsUseTheMeasuredProfile(
+        bool stacked, bool retainedControl, bool newWindow, bool? retainedProfile, bool expected)
+    {
+        Assert.Equal(expected, NativeConstructionDroneReservePolicy.UseMeasuredOrdinaryWindow(
+            stacked, retainedControl, newWindow, retainedProfile));
+    }
+
     [Fact]
     public void NearbyOrdinaryTargetsFundTheirActualBoundInsteadOfTheFull28Metres()
     {
