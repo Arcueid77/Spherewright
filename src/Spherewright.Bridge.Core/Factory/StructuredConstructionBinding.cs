@@ -22,8 +22,8 @@ public sealed class StructuredConstructionBinding
     public StructuredEmptyBeltSource? EmptyBeltSource { get; set; }
     public bool ShouldSerializeEmptyBeltSource() => EmptyBeltSource is not null;
 
-    public static bool SupportsItem(int id) => id == 2301 || IsLogisticsStationItem(id) || id == 2201 || id == 2203
-        || id == 2205 || id == 2001 || id == 2011 || IsFactoryCoreItem(id);
+    public static bool SupportsItem(int id) => id == 2301 || IsLogisticsStationItem(id) || id == 2201 || id == 2202
+        || id == 2203 || id == 2205 || id == 2001 || id == 2011 || IsFactoryCoreItem(id);
 
     public static bool IsLogisticsStationItem(int id) => id is 2103 or 2104;
 

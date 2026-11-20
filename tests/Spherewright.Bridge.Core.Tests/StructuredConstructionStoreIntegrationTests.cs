@@ -12,19 +12,21 @@ namespace Spherewright.Bridge.Core.Tests;
 // No DSP invocation, Native Create, flight or construction acceptance.
 public sealed class StructuredConstructionStoreIntegrationTests
 {
-    [Fact]
-    public void PlanetaryStationUsesThePaidStructuredReceiptWithoutBroadeningBlueprintSyntax()
+    [Theory]
+    [InlineData(2103)]
+    [InlineData(2202)]
+    public void SupportedRemoteBuildingUsesPaidReceiptWithoutBroadeningBlueprintSyntax(int itemId)
     {
         using var fixture = new Fixture();
-        var state = BlueprintBuildState.Create(Site(1, 2103), structuredConstruction: Binding(1));
-        Assert.True(StructuredConstructionBinding.SupportsItem(2103));
-        Assert.False(BoundedBlueprintReader.SupportsItem(2103));
+        var state = BlueprintBuildState.Create(Site(1, itemId), structuredConstruction: Binding(1));
+        Assert.True(StructuredConstructionBinding.SupportsItem(itemId));
+        Assert.False(BoundedBlueprintReader.SupportsItem(itemId));
         Start(state);
         state.BeforeStructuredSubmission(101, 1, "before");
         state.ConfirmStructuredSubmission(new[] { 20 }, 0, "after");
         Assert.True(fixture.Store().TryPut(state));
         var restored = Assert.Single(fixture.Read());
-        Assert.Equal(2103, restored.Site.Objects[0].ItemId);
+        Assert.Equal(itemId, restored.Site.Objects[0].ItemId);
         Assert.Equal(20, restored.Objects[0].PrebuildId);
         Assert.Equal(1, restored.Objects[0].InventoryBefore);
         Assert.Equal(0, restored.Objects[0].InventoryAfter);
@@ -45,6 +47,7 @@ public sealed class StructuredConstructionStoreIntegrationTests
     public void UnsupportedRemoteItemIsNotMisreportedAsRetryableStaleState()
     {
         Assert.Null(StructuredConstructionBinding.UnsupportedItemError(2103));
+        Assert.Null(StructuredConstructionBinding.UnsupportedItemError(2202));
         var rejection = Assert.IsType<Spherewright.Contracts.Errors.BridgeError>(
             StructuredConstructionBinding.UnsupportedItemError(2105));
         Assert.Equal(Spherewright.Contracts.Errors.BridgeErrorCodes.ActionRejected, rejection.Code);

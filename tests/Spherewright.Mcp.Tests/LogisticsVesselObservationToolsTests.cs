@@ -88,7 +88,7 @@ public sealed class LogisticsVesselObservationToolsTests
             .GetCustomAttribute<DescriptionAttribute>()!.Description;
         var prepare = Description(nameof(SpherewrightTools.PrepareBuildAsync));
         Assert.Contains("up to12 belts2001", prepare);
-        Assert.Contains("or1..8 of2301/2103/2104/2201/2203/2205/2011", prepare);
+        Assert.Contains("or1..8 of2301/2103/2104/2201/2202/2203/2205/2011", prepare);
         Assert.Contains("does not increase the caller approved material allowance", prepare);
         Assert.Contains("within30seconds", prepare);
         Assert.Contains("pending objects must never be recreated", prepare);

@@ -366,7 +366,7 @@ internal sealed partial class NormalGameActionCoordinator
                 spec.ItemId, e.stationId, id, factory.planetId, station.id, station.entityId, station.planetId,
                 station.gid, station.isStellar, station.isCollector, station.isVeinCollector);
         }
-        if (spec.ItemId == 2201 || spec.ItemId == 2203 || spec.ItemId == 2205)
+        if (spec.ItemId == 2201 || spec.ItemId == 2202 || spec.ItemId == 2203 || spec.ItemId == 2205)
         {
             if (e.powerNodeId <= 0 || factory.powerSystem?.nodePool is null || e.powerNodeId >= factory.powerSystem.nodeCursor
                 || e.powerNodeId >= factory.powerSystem.nodePool.Length) return false;
