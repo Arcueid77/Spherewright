@@ -692,4 +692,4 @@ Move/Harvest失败可在原失败tick保留`movementDiagnostics`。合读位置�
 
 完整观测的队列配方解锁及原生戴森节点纬度科研可保留正常矩阵缓冲，并将科研工作计入导航能源预算。纬度科研要求唯一原生函数26、有限且大于0至90度的增量，以及0完成物品奖励。已观测的空配方解锁数组属于完整元数据。准备拒绝保留具体工作或充能前提。启动无人机施工、手搓或修改科研设置前，等待原导航任务释放并终结。
 
-原移动令牌提交一次，轮询同一动作直至原生Fly、地表投影抵达及任务释放。要求 `nativeSurfaceNavigationReadback.nativeFlyObserved`、`nativeArrivalObserved`及 `nativeNavigationReleased`通过，`finalSurfaceDistanceMetres`满足声明容差。`movementState`报告Walk、Drift或Fly，`groundedStopVerified`单独报告实际接地观察。抵达水面后，可用 `allowPassiveDrift=true`新鲜准备普通移动前往陆地，或准备符合条件的新导航目标。导航保留游戏正常物理及资源消耗，原unknown结果沿原动作隔离核销。源码与原生依据见[行星导航研究](research/game-api-native-surface-navigation.zh-CN.md)。
+原移动令牌提交一次，轮询同一动作直至原生Fly、地表投影抵达及任务释放。要求 `nativeSurfaceNavigationReadback.nativeFlyObserved`、`nativeArrivalObserved`及 `nativeNavigationReleased`通过，`finalSurfaceDistanceMetres`满足声明容差。`movementState`报告Walk、Drift或Fly，`groundedStopVerified`单独报告实际接地观察。抵达水面后，可用 `allowPassiveDrift=true`新鲜准备普通移动前往陆地，或准备符合条件的新导航目标。导航保留游戏正常物理及资源消耗，原unknown结果沿原动作隔离核销。源码与原生依据见[行星导航研究](https://github.com/Arcueid77/Spherewright/blob/e221b263496c6f786f1c42e7b71d38e4312f9b62/docs/research/game-api-native-surface-navigation.zh-CN.md)。
