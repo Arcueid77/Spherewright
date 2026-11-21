@@ -195,7 +195,7 @@ Detailed scenario evidence and the active snapshot belong in [Spherewright-Lab V
 
 The narrow first-sail slice was brought forward into 0.5 by the owner's 2026-11-01 direction. Reuse its qualified evidence when available; 0.6 retains sustained rocket networks and general Dyson node/frame/shell design, sustained receiver power and the remaining gates below.
 
-Status is **in development** following the owner's 2026-11-11 continuation request. The first slice observes Dyson structure/progress and actual receiver electricity. The remaining work follows the scope and gates below, retaining the full former `0.8.0` scope.
+Status is **published** as `v0.6.0` on 2026-11-21. Lab records shell completion, sampled daylight receiver output and cold recovery in the tested save. [Release](https://github.com/Arcueid77/Spherewright/releases/tag/v0.6.0) · [Live acceptance](https://github.com/Arcueid77/Spherewright-Lab/blob/47580368d44f0d033072be5911bc366009c7c000/scenarios/v0.6-ascension/acceptance-2026-11-20.md)
 
 ### Goal and scope
 
