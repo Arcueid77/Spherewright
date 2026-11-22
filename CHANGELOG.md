@@ -2,7 +2,7 @@
 
 [English](CHANGELOG.md) · [简体中文](CHANGELOG.zh-CN.md)
 
-## 0.6.0 — Ascension development
+## 0.6.0 — Ascension (2026-11-21)
 
 - Start the main-menu readback wait after the normal save and native exit call, allowing slow menu transitions and accepting an actually verified menu on a delayed poll.
 - Corrected empty-belt dismantling to detect every retained quaternion component change before exact Native renderer/collider verification.
@@ -17,6 +17,12 @@
 - Added ray-receiver detail and current-star receiver coverage with Native recent electrical generation, capacity, photon buffers and catalyst accounting.
 - Preserved nullable totals for incomplete identities, topology or scan coverage.
 - Added bounded read-only multi-object design/cost previews and individually prepared Native node/frame/shell creation, with exact geometry, technology, allocation and original-action readbacks.
+
+[0.6.0 release notes](docs/release-notes/v0.6.0.md)
+
+## 0.5.1 — Wind Recovery (2026-11-13)
+
+Preview the power-grid impact of dismantling one wind turbine, then use a fresh prepare and the normal dismantle action to recover it. A rebuild uses a separate construction action. [Tagged release notes](https://github.com/Arcueid77/Spherewright/blob/v0.5.1/docs/release-notes/v0.5.1.md)
 
 ## 0.5.0 — 2026-11-10
 

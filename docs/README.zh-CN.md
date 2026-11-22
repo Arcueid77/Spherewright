@@ -10,7 +10,7 @@
 | --- | --- | --- |
 | 产品概览 | [README](../README.md) | [说明](../README.zh-CN.md) |
 | 当前产品与候选状态 | [Status](project-status.md) | [状态](project-status.zh-CN.md) |
-| 安装 | [Install](release-installation.md) | [安装](release-installation.zh-CN.md) |
+| 安装与首次连接检查 | [Install](release-installation.md) · [Codex read-only check](release-installation.md#connect-codex-and-verify-read-only-access) | [安装](release-installation.zh-CN.md) · [Codex 只读检查](release-installation.zh-CN.md#连接-codex-并检查只读访问) |
 | 手动安装中断 | [Recovery](installation-recovery.md) | [恢复](installation-recovery.zh-CN.md) |
 | Agent 操作 | [Playbook](agent-playbook.md) | [指南](agent-playbook.zh-CN.md) |
 | 协议与工具边界 | [Protocol](protocol.md) | [协议](protocol.zh-CN.md) |
@@ -24,6 +24,7 @@
 ## 发行证据及边界
 
 - [0.6 发行说明](release-notes/v0.6.0.md) / [中文](release-notes/v0.6.0.zh-CN.md)记录 Ascension 功能、包体兼容要求与实机范围。
+- [0.5.1 Wind Recovery](https://github.com/Arcueid77/Spherewright/blob/v0.5.1/docs/release-notes/v0.5.1.md) / [中文](https://github.com/Arcueid77/Spherewright/blob/v0.5.1/docs/release-notes/v0.5.1.zh-CN.md)记录 0.5 维护线上的电网影响预览、单座风机拆除及独立重建。
 - [0.5发行说明](release-notes/v0.5.0.md) / [中文](release-notes/v0.5.0.zh-CN.md)汇总Voyager、发射、叠放和包来源。
 - [0.4 验收](validation/v0.4.0.md) / [中文](validation/v0.4.0.zh-CN.md)：冻结生产验收源码、hash、本机证据与未验证分支。
 - [0.4 发行说明](release-notes/v0.4.0.md) / [中文](release-notes/v0.4.0.zh-CN.md)：已正式发布版本、最终双包/安装证据及支持限制。
@@ -35,6 +36,15 @@
 最新正式版本为 `v0.6.0`，打包源码 `78274df5e93ca912a2d4b6670f7eb707d3562e94`。发行清单记录包体校验值和实机验收所用的构建。[GitHub 发行](https://github.com/Arcueid77/Spherewright/releases/tag/v0.6.0)
 
 ## 原生研究
+
+| 主题 | English | 简体中文 |
+| --- | --- | --- |
+| 戴森节点、壳面与接收功率 | [Research](research/game-api-dyson-state.md) | [中文](research/game-api-dyson-state.zh-CN.md) |
+| 首张太阳帆 | [Research](research/game-api-first-sail.md) | [中文](research/game-api-first-sail.zh-CN.md) |
+| 首枚运载火箭 | [Research](research/game-api-first-rocket.md) | [中文](research/game-api-first-rocket.zh-CN.md) |
+| 星球导航与抵岸 | [Research](research/game-api-native-surface-navigation.md) | [中文](research/game-api-native-surface-navigation.zh-CN.md) |
+| 科研暂停与恢复 | [Research](research/game-api-research-pause.md) | [中文](research/game-api-research-pause.zh-CN.md) |
+| 地表恢复流程 | [Research](research/native-surface-recovery-lifecycle.md) | [中文](research/native-surface-recovery-lifecycle.zh-CN.md) |
 
 - [29151 兼容预检](validation/native-29151-preflight.md) / [中文](validation/native-29151-preflight.zh-CN.md)：精确过期主存档方向、完成历史保留、离线证据及待完成实机检查。
 

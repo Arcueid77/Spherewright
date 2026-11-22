@@ -9,12 +9,14 @@
 
 站内货物新增显式 `station-storage-to-player` 转移子集：当地已建2103/2104站、唯一现物且零增产点槽位、所选槽无在途订单、精确数量1..100、空手、普通建造交互范围及已证背包容量。原生 `StationComponent.TakeItem` 与 `StorageComponent.AddItemStacked` 在同一tick核对数量/增产点守恒；其余槽配置、站状态及背包物料必须不变。此手动UI操作不要求站点供电。prepare必须有 `stationCargoWithdrawal`，终态须有 `stationCargoWithdrawalReadback`；缺少同源回执不暴露token。后续正常机甲自动补给可能移动刚收到的燃料：保留即时原回执，再分别读背包/燃料舱，不重放转移。
 
-新出航预览可显式提供 `maximumRoundTripWallSeconds`600..86400，作为与原游戏tick、物品、能源和返航储备独立的有限墙钟预算。未计划现场工作时不传则保留旧tick换算时钟；计划现场工作时按合计时长推导不超过24小时的有限时钟。返航继承原始/有效时钟。该值进入哈希及同源回显，并在新保护Journey记录中保持不可变；旧记录保留原序列化字节形状和两小时上限。现有确认式远端恢复方案已支持最多24小时有限窗；须在真实所有者授权内选择足够有限时间，经新鲜Native方案/摘要确认，不改旧时钟、不退还消耗。300秒启动到真实实操门及所有逐动作停止/充能帽不变。这些仍是源码能力，实装及实机验收需分别证明。
+新出航预览可显式提供 `maximumRoundTripWallSeconds`600..86400，作为与原游戏tick、物品、能源和返航储备独立的有限墙钟预算。未计划现场工作时不传则保留旧tick换算时钟；计划现场工作时按合计时长推导不超过24小时的有限时钟。返航继承原始/有效时钟。该值进入哈希及同源回显，并在新保护Journey记录中保持不可变；旧记录保留原序列化字节形状和两小时上限。现有确认式远端恢复方案已支持最多24小时有限窗；须在真实所有者授权内选择足够有限时间，经新鲜Native方案/摘要确认，不改旧时钟、不退还消耗。使用航线参数前应核对已安装构建的支持情况。
+
+Lab 从原始启动请求计时，直到首笔真实游戏操作。2026-11-16 核定的 Ascension 恢复时限为 600 秒，优化目标为 120 秒。Lab 其他范围的默认上限为 300 秒。单次动作和充能另按各自限额执行。[Lab 时限依据](https://github.com/Arcueid77/Spherewright-Lab/blob/main/operations/standing-authority.md#proportionate-restrictions-2026-11-15--限制应当合理)
 
 新出航预览还可选填 `plannedSurfaceWorkGameTicks`，范围为 0 至 5184000。它加入受保护旅程总时长，原去程及返程飞行上限不变；该值绑定航线哈希并在旅程记录中保持不可变，返航不能追加。未显式设置墙钟时，按现场工作量推导不超过 24 小时的有限时钟。填 0 保留旧航线哈希及存档记录形状；这只是时间预算，不会推进游戏，也不提供能源、物品或施工。 非零现场时长写入活动旅程后，需要匹配或更新的运行版本；只支持 108000 tick 的旧版本可能拒绝该记录，因此旅程关闭前保留匹配运行文件及完整备份。
 
 
-协议版本保持 `1`；`0.5.0` Voyager 开发接口面向 DSP `0.10.35.29151`，保留 `0.4` 协议接口。本文描述当前维护的源码，不宣称已安装组件或 Voyager 实机验收。正式 `v0.4.0` tag 指向 `b7c0002dbe2e8f5608c5ca140b0c6326a1818021`，旧生产验收仍固定于 `2a7a98d1932c404e3a7abc2c11233d9c0b8780d9`。参见[产品状态](project-status.zh-CN.md)、[原生验证](validation/native-29151-preflight.zh-CN.md)、[安全模型](safety-model.zh-CN.md)和 [Agent 指南](agent-playbook.zh-CN.md)。
+Spherewright 0.6.0 在 DSP `0.10.35.29151` 上使用 Bridge 协议 `1`。MCP 服务注册 76 个工具和 1 份 Markdown 指南资源。[发行说明](release-notes/v0.6.0.zh-CN.md) · [安全模型](safety-model.zh-CN.md) · [Agent 指南](agent-playbook.zh-CN.md)
 
 <a id="framing-and-authentication"></a>
 ## 帧与认证
@@ -53,6 +55,7 @@ spherewright_get_player_state
 spherewright_get_progression_state
 spherewright_get_gameplay_journal
 spherewright_get_local_star_system
+spherewright_get_dyson_state
 spherewright_get_voyager_star_catalog
 spherewright_preview_voyager_route
 spherewright_preview_same_session_surface_recovery
@@ -114,6 +117,8 @@ spherewright_prepare_supply_mecha_warpers
 spherewright_commit_supply_mecha_warpers
 spherewright_prepare_save
 spherewright_commit_save
+spherewright_prepare_return_to_main_menu
+spherewright_commit_return_to_main_menu
 spherewright_prepare_quarantine_reconciliation
 spherewright_commit_quarantine_reconciliation
 spherewright_prepare_resume_owned_game

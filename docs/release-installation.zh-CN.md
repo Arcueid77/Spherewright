@@ -8,9 +8,11 @@ Windows x64 直接安装推荐 [Spherewright v0.6.0（Ascension）](https://gith
 
 - [下载 v0.6.0 Windows x64 手动安装包](https://github.com/Arcueid77/Spherewright/releases/download/v0.6.0/Spherewright-0.6.0-win-x64.zip)，然后按下方「手动包」安装。
 - [下载 v0.6.0 校验和](https://github.com/Arcueid77/Spherewright/releases/download/v0.6.0/SHA256SUMS.txt)。请用同一版本发行页上的 SHA-256 核对 ZIP；不要混用不同版本的安装包、校验和、Plugin 或 MCP。
-- [Thunderstore 商店](https://thunderstore.io/c/dyson-sphere-program/p/Arcueid_77/Spherewright/)截至 2026-11-21 上架的是 `0.5.0`。v0.6.0 的 [Thunderstore 布局 ZIP](https://github.com/Arcueid77/Spherewright/releases/download/v0.6.0/Spherewright-0.6.0-thunderstore.zip) 仅在 GitHub 发行页提供，未上架商店。想安装 v0.6.0，请使用上述手动包，不要通过管理器安装商店上的旧版。
+- 使用 Thunderstore Mod Manager 或 r2modman 时，选择 `Arcueid_77-Spherewright` 的 `0.6.0` 版本。GitHub 发行页也提供这种布局的压缩包。[Thunderstore 商店](https://thunderstore.io/c/dyson-sphere-program/p/Arcueid_77/Spherewright/) · [GitHub 布局包](https://github.com/Arcueid77/Spherewright/releases/download/v0.6.0/Spherewright-0.6.0-thunderstore.zip)
 
-两种布局提供相同游戏和 MCP 能力：
+原版 0.6.0 手动 ZIP 内的 `INSTALL.md` 及中文安装指南沿用了旧下载说明，列的是 GitHub 0.4.0 和 Thunderstore 0.3.3。安装这个包时请使用上面的 0.6.0 下载链接和校验和。
+
+两种布局提供相同的游戏和 MCP 能力。
 
 | 布局 | Plugin | MCP |
 | --- | --- | --- |
@@ -36,19 +38,35 @@ $dspDir = Read-Host 'Exact DSP installation directory'
 
 重装同版本 MCP 需要 `-Force`，但不会绕过完整性、进程、目标目录或 pending 恢复检查。安装器不会启动 DSP、启用写入、安装 BepInEx 或修改存档。
 
-将返回的 `Spherewright.Mcp.exe` 注册为 Agent 应用的本地 stdio MCP 服务。命令行不得传入运行时描述文件、认证 token 或存档身份。阅读包内 `AGENT-PLAYBOOK.md` 或 MCP 资源 `spherewright://agent/playbooks/opening-movement-v1`。从当前维护源码生成的新包也包含中文伴页；冻结候选保留原内容。
+复制安装器输出的 `mcpExecutable` 完整路径，在下方连接检查中使用。
 
 ## Thunderstore 布局
 
 使用标准 Thunderstore 布局，Plugin 与配套单文件 MCP 一同安装。引用的本机标准布局检查不证明独立 Mod Manager/r2modman profile；应核对选定 profile 的实际组件和 MCP 路径。
 
-以下步骤只适用于商店已上架的版本，不会安装目前仅在 GitHub 提供的 v0.6.0。通过管理器安装选定版本及其声明的 `xiaoye97-BepInEx-5.4.17` 依赖。在该 profile 中找到：
+在《戴森球计划》的目标 profile 中安装 `0.6.0` 和声明的依赖 `xiaoye97-BepInEx-5.4.17`，然后在这个 profile 中找到配套的可执行文件。
 
 ```text
 BepInEx/plugins/Arcueid_77-Spherewright/Spherewright.Mcp.exe
 ```
 
-将其注册为本地 stdio MCP。管理器更新必须同时保持 Plugin/MCP 配套。另一 profile 或计算机需要单独验证。
+复制该文件的完整路径。通过同一 profile 启动带 Mod 的游戏，使 Plugin 与 MCP 对应同一份安装。
+
+## 连接 Codex 并检查只读访问
+
+已安装 Codex CLI 时，运行以下命令，并在提示时粘贴所选布局的 MCP 程序完整路径。
+
+```powershell
+$mcpExe = Read-Host 'Full path to Spherewright.Mcp.exe'
+codex mcp add spherewright -- "$mcpExe"
+codex mcp list
+```
+
+其他 MCP 客户端也可将该程序注册为本地 stdio 服务，参数留空。运行时描述文件、令牌和存档身份请保存在本机受保护的位置。
+
+1. 新开已启用该服务的 Codex 会话，读取 `spherewright://agent/playbooks/opening-movement-v1`。游戏关闭时，MCP 也能提供这份指南。
+2. 启动带 Mod 的 DSP 并等到主菜单，让 Codex 调用 `spherewright_get_status`。成功回执会列出已连接的 Plugin 和游戏版本，应分别为 Spherewright `0.6.0` 和 DSP `0.10.35.29151`。这一步使用默认只读设置即可。
+3. 如果能读取指南但状态调用失败，核对 MCP 程序路径是否属于启动游戏的安装目录或管理器 profile，再查看该次调用返回的错误码和恢复提示。
 
 ## 开始会话
 
@@ -69,7 +87,7 @@ Spherewright 默认仅观察。仅在确实准备授权结构化动作时设置 
 - 安装事务崩溃恢复、另一台计算机、广泛第三方 Mod、黑雾战斗及多人/Nebula 尚未验证。启动门不能阻止旧 Plugin 已经驻留内存。
 - 报告准确 Spherewright/DSP/BepInEx 版本、结构化错误及脱敏证据，不发布 Save、存档名、token、运行时描述文件或私有路径。
 
-另见 [v0.6.0 发行说明](release-notes/v0.6.0.zh-CN.md)及[发布和验收范围](https://github.com/Arcueid77/Spherewright-Lab/blob/dc954d40cc0e75ea21a83a979513007084f53110/releases/v0.6.0/publication-2026-11-21.md)。
+另见 [v0.6.0 发行说明](release-notes/v0.6.0.zh-CN.md)及[发布和验收范围](https://github.com/Arcueid77/Spherewright-Lab/blob/c012e723d75c35e1d72d82f3bb5f286926259945/releases/v0.6.0/publication-2026-11-21.md)。
 
 ## 历史安装与实机验收记录
 

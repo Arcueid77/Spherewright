@@ -6,7 +6,7 @@ Paid off-world factory continuation retains each original Create, debit, object 
 
 Spherewright exposes bounded normal-game capabilities. A capability, a positive preview, an accepted local candidate and permission to execute are separate facts. This document grants no gameplay, Save/Load, recovery/migration, installation, deployment or publication authority. Game work starts in the current [Spherewright-Lab](https://github.com/Arcueid77/Spherewright-Lab) checkout after reading its current [AGENTS.md](https://github.com/Arcueid77/Spherewright-Lab/blob/main/AGENTS.md) and [active handoff](https://github.com/Arcueid77/Spherewright-Lab/blob/main/operations/active-handoff.md).
 
-The maintained compatibility candidate targets `0.10.35.29151`; see [offline native evidence and pending live checks](validation/native-29151-preflight.md). The accepted 0.4.0 candidate remains fixed at `2a7a98d1932c404e3a7abc2c11233d9c0b8780d9`; latest published release is v0.3.3. A documentation update does not install a new cohort or republish that candidate. See [product status](project-status.md).
+The published 0.6.0 Plugin and MCP target DSP `0.10.35.29151`. The release notes identify the supported peaceful single-player configuration and the scope of current live validation. Historical 0.4 production acceptance remains tied to `2a7a98d1932c404e3a7abc2c11233d9c0b8780d9`. [0.6 release notes](release-notes/v0.6.0.md) · [Native compatibility preflight](validation/native-29151-preflight.md) · [Product status](project-status.md)
 
 ## Native execution and transport
 

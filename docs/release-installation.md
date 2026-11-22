@@ -8,9 +8,11 @@ For a direct Windows x64 installation, use [Spherewright v0.6.0 (Ascension)](htt
 
 - [Download the v0.6.0 Windows x64 manual ZIP](https://github.com/Arcueid77/Spherewright/releases/download/v0.6.0/Spherewright-0.6.0-win-x64.zip), then follow the manual package steps below.
 - [Download the v0.6.0 checksums](https://github.com/Arcueid77/Spherewright/releases/download/v0.6.0/SHA256SUMS.txt). Verify the ZIP against the SHA-256 from the same release. Do not mix packages, checksums, Plugin or MCP across versions.
-- As of 2026-11-21, the [Thunderstore listing](https://thunderstore.io/c/dyson-sphere-program/p/Arcueid_77/Spherewright/) offers `0.5.0`. The [v0.6.0 Thunderstore-layout ZIP](https://github.com/Arcueid77/Spherewright/releases/download/v0.6.0/Spherewright-0.6.0-thunderstore.zip) is available only as a GitHub Release asset, not on the store. To install v0.6.0, use the manual ZIP above rather than the older store version.
+- For a managed installation, select `Arcueid_77-Spherewright` version `0.6.0` in Thunderstore Mod Manager or r2modman. The same layout is also offered as a GitHub release asset. [Thunderstore package](https://thunderstore.io/c/dyson-sphere-program/p/Arcueid_77/Spherewright/) · [GitHub layout ZIP](https://github.com/Arcueid77/Spherewright/releases/download/v0.6.0/Spherewright-0.6.0-thunderstore.zip)
 
-Two layouts provide the same gameplay/MCP capabilities:
+The download section of `INSTALL.md` and its Chinese companion inside the original 0.6.0 manual ZIP still describes GitHub 0.4.0 and Thunderstore 0.3.3. Use the 0.6.0 downloads and checksums above for this archive.
+
+Both layouts provide the same gameplay and MCP capabilities.
 
 | Layout | Plugin | MCP |
 | --- | --- | --- |
@@ -36,19 +38,35 @@ $dspDir = Read-Host 'Exact DSP installation directory'
 
 Reinstalling the same MCP version requires `-Force`; this does not bypass integrity, process, target-tree or pending-recovery checks. The installer does not start DSP, enable writes, install BepInEx or modify a save.
 
-Register the returned `Spherewright.Mcp.exe` as a local stdio MCP server in your Agent host. Never pass a runtime descriptor, authentication token or save identity on its command line. Read the packaged `AGENT-PLAYBOOK.md` or MCP resource `spherewright://agent/playbooks/opening-movement-v1`. New packages from the maintained source also include Chinese companion guides; the frozen candidates retain their original contents.
+Copy the `mcpExecutable` path from the installer output. Use it in the connection check below.
 
 ## Thunderstore layout
 
 Use the standard Thunderstore layout with the Plugin and matching single-file MCP together. The cited local standard-layout checks do not certify a separate Mod Manager/r2modman profile; verify the selected profile's actual components and MCP path.
 
-These manager steps apply only to versions listed on the store; they do not install the GitHub-only v0.6.0. Install the selected version and its declared `xiaoye97-BepInEx-5.4.17` dependency through your manager. In that selected profile, locate:
+In your Dyson Sphere Program profile, install version `0.6.0` with its declared `xiaoye97-BepInEx-5.4.17` dependency. Locate the matching executable inside that profile.
 
 ```text
 BepInEx/plugins/Arcueid_77-Spherewright/Spherewright.Mcp.exe
 ```
 
-Register it as local stdio MCP. Updating through the manager must keep Plugin and MCP together. Another profile/computer requires its own verification.
+Copy its full path. Launch the modded game from that profile so the Plugin and MCP use the same installation.
+
+## Connect Codex and verify read-only access
+
+With Codex CLI installed, paste the full executable path from your chosen layout when prompted.
+
+```powershell
+$mcpExe = Read-Host 'Full path to Spherewright.Mcp.exe'
+codex mcp add spherewright -- "$mcpExe"
+codex mcp list
+```
+
+Other MCP hosts can use the same executable as a local stdio server with no arguments. Keep the runtime descriptor, tokens and save identity out of the command line.
+
+1. Open a Codex session with the server enabled. Read `spherewright://agent/playbooks/opening-movement-v1`. The MCP serves this guide even when DSP is closed.
+2. Start modded DSP and wait for the main menu. Ask Codex to call `spherewright_get_status`. A successful reply reports the connected Plugin and game versions. Check for Spherewright `0.6.0` and DSP `0.10.35.29151`. This check works with the default read-only settings.
+3. If the guide opens but the status call fails, compare the executable path with the installation or manager profile that launched DSP. Use the error code and recovery message from that call.
 
 ## Begin a session
 
@@ -69,7 +87,7 @@ Back up the protected Journal together with ticket replicas. Missing, truncated,
 - Installation transaction-crash recovery, another computer, broad third-party Mods, Dark Fog/combat and multiplayer/Nebula are not validated. A startup guard cannot stop an older Plugin already loaded in memory.
 - Report exact Spherewright/DSP/BepInEx versions, the structured error and sanitized evidence. Never publish Saves, save names, tokens, runtime descriptors or private paths.
 
-See the [v0.6.0 release notes](release-notes/v0.6.0.md) and [publication and verification scope](https://github.com/Arcueid77/Spherewright-Lab/blob/dc954d40cc0e75ea21a83a979513007084f53110/releases/v0.6.0/publication-2026-11-21.md).
+See the [v0.6.0 release notes](release-notes/v0.6.0.md) and [publication and verification scope](https://github.com/Arcueid77/Spherewright-Lab/blob/c012e723d75c35e1d72d82f3bb5f286926259945/releases/v0.6.0/publication-2026-11-21.md).
 
 ## Historical installation and live acceptance records
 

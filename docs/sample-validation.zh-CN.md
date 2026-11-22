@@ -6,7 +6,7 @@
 
 ## 当前工作与历史证据
 
-当前工作从 Lab 的[协作规则](https://github.com/Arcueid77/Spherewright-Lab/blob/main/AGENTS.md)、[活动交接](https://github.com/Arcueid77/Spherewright-Lab/blob/main/operations/active-handoff.md)、[源码锁](https://github.com/Arcueid77/Spherewright-Lab/blob/main/source-lock.json)和 [Voyager 活动快照](https://github.com/Arcueid77/Spherewright-Lab/blob/main/scenarios/v0.5-voyager/current-status.md)开始。这些入口随已审事实推进，不沿用历史授权。
+当前工作从 Lab 的[协作规则](https://github.com/Arcueid77/Spherewright-Lab/blob/main/AGENTS.md)、[活动交接](https://github.com/Arcueid77/Spherewright-Lab/blob/main/operations/active-handoff.md)和[源码锁](https://github.com/Arcueid77/Spherewright-Lab/blob/main/source-lock.json)开始。[Ascension 实机验收](https://github.com/Arcueid77/Spherewright-Lab/blob/47580368d44f0d033072be5911bc366009c7c000/scenarios/v0.6-ascension/acceptance-2026-11-20.md)记录 0.6 的闭壳、日照功率和冷读档结果。[Voyager 快照](https://github.com/Arcueid77/Spherewright-Lab/blob/main/scenarios/v0.5-voyager/current-status.md)保留 0.5 的验收基线。
 
 下方不可变迁移快照为 `14478a03c64c550e644c559405c8496b647552e7`，产品子模块固定 `2a7a98d1932c404e3a7abc2c11233d9c0b8780d9`。在该历史截点，锁为 `status: provisional` / `releaseTag: null`，导入运行事实来自产品 `e7d5f7d8661092b7c8089710488c448f290638be`。之后正式发布的 [`v0.4.0`](https://github.com/Arcueid77/Spherewright/releases/tag/v0.4.0) 独立绑定 `b7c0002dbe2e8f5608c5ca140b0c6326a1818021`，不改写该固定快照。
 

@@ -4,9 +4,9 @@
 
 Spherewright is a version-coupled product with four source projects. It exposes bounded normal-game operations to an external Agent; the Agent chooses goals and finite plans.
 
-This document describes the maintained source. Formal v0.4 is fixed at `b7c0002dbe2e8f5608c5ca140b0c6326a1818021` with Native `0.10.35.29151`. Documentation changes do not update an installed Plugin/MCP cohort or alter frozen archives. See [v0.4 validation](validation/v0.4.0.md), [product status](project-status.md) and the [active Lab snapshot](https://github.com/Arcueid77/Spherewright-Lab/blob/main/scenarios/v0.5-voyager/current-status.md) for their respective release and current-installation evidence.
+The current release is [0.6.0 Ascension](release-notes/v0.6.0.md) for DSP `0.10.35.29151`. Its packaging and live build are identified in [product status](project-status.md). The [Lab handoff](https://github.com/Arcueid77/Spherewright-Lab/blob/main/operations/active-handoff.md) records the current installation.
 
-The earlier `2a7a98d1932c404e3a7abc2c11233d9c0b8780d9` / `0.10.35.29145` baseline and the compatibility investigation in [native preflight](validation/native-29151-preflight.md) are historical. Their earlier pending status is not the current formal-v0.4 baseline or a claim about the latest published release.
+The [0.4 validation record](validation/v0.4.0.md) covers the earlier `0.10.35.29145` production run at `2a7a98d1932c404e3a7abc2c11233d9c0b8780d9` and the 0.4.0 release at `b7c0002dbe2e8f5608c5ca140b0c6326a1818021`. The [29151 preflight](validation/native-29151-preflight.md) records the compatibility investigation.
 
 ## Four product boundaries
 

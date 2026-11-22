@@ -4,17 +4,17 @@
 
 ## Maintained baseline
 
-The accepted local `0.4.0` candidate is source `2a7a98d1932c404e3a7abc2c11233d9c0b8780d9`, on Windows x64, DSP `0.10.35.29145` and BepInEx `5.4.17.0`. [Product status](../project-status.md) and [final validation](../validation/v0.4.0.md) distinguish that candidate from the latest published `v0.3.3`. Candidate archives remain frozen; documentation changes do not rebuild them or establish a new installation/native trial.
+The 0.6.0 release targets Windows x64, DSP `0.10.35.29151` and BepInEx `5.4.17.0`. The release archives identify `78274df5e93ca912a2d4b6670f7eb707d3562e94`. The installed build used for the shell and cold-recovery tests was `e221b263`. [Release notes](../release-notes/v0.6.0.md) · [Lab source lock](https://github.com/Arcueid77/Spherewright-Lab/blob/c012e723d75c35e1d72d82f3bb5f286926259945/source-lock.json)
 
-The earlier per-deployment chronology, machine-specific audit and then-pending results are historical. Their complete immutable source is the [research at the accepted commit](https://github.com/Arcueid77/Spherewright/blob/2a7a98d1932c404e3a7abc2c11233d9c0b8780d9/docs/research/environment.md). Detailed operational evidence belongs in [Spherewright-Lab](https://github.com/Arcueid77/Spherewright-Lab/tree/14478a03c64c550e644c559405c8496b647552e7), which consumes a fixed read-only product dependency. Product build/test/package has no Lab dependency.
+The 0.4 production trial ran on DSP `0.10.35.29145` at commit `2a7a98d1932c404e3a7abc2c11233d9c0b8780d9`. Its native assembly SHA-256 was `B84B60DF5A24947A014801F23B9B85D1E77853F42A331918E2DC85B153E50527`. The recorded BepInEx reference SHA-256 was `DC1CB6B58B962BDA5AAA1D6B5F9AE14EC174F61836A1A1F96C1A040C7E8381F7`. [Historical validation](../validation/v0.4.0.md)
 
 ## Reproducible inputs
 
 | Input | Maintained fact |
 | --- | --- |
-| Platform accepted for this candidate | Windows x64 |
-| Native DSP reference | `0.10.35.29145`; `Assembly-CSharp.dll` SHA-256 `B84B60DF5A24947A014801F23B9B85D1E77853F42A331918E2DC85B153E50527` |
-| BepInEx reference | `5.4.17.0`; SHA-256 `DC1CB6B58B962BDA5AAA1D6B5F9AE14EC174F61836A1A1F96C1A040C7E8381F7` |
+| Supported platform | Windows x64 |
+| Native DSP reference | `0.10.35.29151`, `Assembly-CSharp.dll` SHA-256 `EF314425DADE51F529F184F07BE136CD3C2660A6A81515603C7226FBE7AB1D8C` |
+| BepInEx reference | `5.4.17.0` (Thunderstore dependency `xiaoye97-BepInEx-5.4.17`) |
 | Plugin target | `net472`, BepInEx 5; game/Unity references are not copied into release output |
 | Contracts / Bridge.Core | `netstandard2.0` |
 | MCP / tests | `net8.0`; self-contained Windows x64 MCP is a release artifact |
@@ -37,4 +37,4 @@ Use the repository project files and locks for package versions, rather than old
 
 Portable SDK use, explicit NuGet sources and case-insensitive Steam-root deduplication solved historical environment issues without changing global user settings. The Plugin explicitly disables SDK-dependent implicit framework-reference injection and pins its `net472` reference package. The sandbox `BasicProductionLineCoordinator.cs` remains excluded from compilation; historical injected production is not ordinary-world acceptance.
 
-The final candidate has same-machine package installation, native runtime, playbook and owned-primary recovery evidence. Another computer, a Mod Manager/r2modman profile, installation transaction-crash recovery and broad third-party compatibility remain unestablished. A planned remote-validation host is not an implemented feature. Secrets, raw saves, embedded identities, credentials, runtime descriptors and private paths remain protected local material and never become research fixtures or public evidence.
+See the [0.6 live record](https://github.com/Arcueid77/Spherewright-Lab/blob/47580368d44f0d033072be5911bc366009c7c000/scenarios/v0.6-ascension/acceptance-2026-11-20.md) for gameplay and cold-recovery results and the [archive checks](https://github.com/Arcueid77/Spherewright-Lab/blob/c012e723d75c35e1d72d82f3bb5f286926259945/releases/v0.6.0/review-candidate-2026-11-20.md) for the two package layouts. Independent manager profiles, another machine and installation transaction-crash recovery remain unverified. Keep raw saves, credentials and machine-specific descriptors local.

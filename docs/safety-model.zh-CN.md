@@ -7,7 +7,7 @@
 
 Spherewright 提供有界的正常游戏能力。具备能力、预览通过、候选本地验收通过与获准执行是不同事实。本文不授予游戏、Save/Load、恢复或迁移、安装、部署、发布权限。游戏工作从当前 [Spherewright-Lab](https://github.com/Arcueid77/Spherewright-Lab) 检出目录开始，先读取其当前 [AGENTS.md](https://github.com/Arcueid77/Spherewright-Lab/blob/main/AGENTS.md) 与[活动交接](https://github.com/Arcueid77/Spherewright-Lab/blob/main/operations/active-handoff.md)。
 
-当前维护的兼容候选面向 `0.10.35.29151`，见[离线原生证据及待完成实机检查](validation/native-29151-preflight.zh-CN.md)。已验收 0.4.0 候选仍固定于 `2a7a98d1932c404e3a7abc2c11233d9c0b8780d9`，最新正式版本为 v0.3.3。更新文档不会安装新组件组合，也不会重新发布候选。参见[产品状态](project-status.zh-CN.md)。
+已发布的 0.6.0 Plugin 和 MCP 面向 DSP `0.10.35.29151`。发行说明记录了支持的和平单人环境和当前实机验收范围。0.4 的历史生产实测对应 `2a7a98d1932c404e3a7abc2c11233d9c0b8780d9`。[0.6 发行说明](release-notes/v0.6.0.zh-CN.md) · [原生兼容预检](validation/native-29151-preflight.zh-CN.md) · [产品状态](project-status.zh-CN.md)
 
 <a id="native-execution-and-transport"></a>
 ## 原生执行与传输

@@ -6,12 +6,14 @@ Recovery progress debit and recovery window authority are scoped to the exact im
 
 Station cargo has an explicit `station-storage-to-player` transfer subset: a local built2103/2104 station, one unique physical zero-inc slot, no selected-slot orders, count1..100, empty hand, ordinary build range and proven package capacity. Native `StationComponent.TakeItem` and `StorageComponent.AddItemStacked` conserve same-tick count/inc; unrelated slot configuration, station state and package stock must remain unchanged. Power is not required for this manual UI operation. Require `stationCargoWithdrawal` at prepare and `stationCargoWithdrawalReadback` at terminal; missing cohort proof exposes no token. A later ordinary mecha auto-supply may move newly received fuel: retain the immediate receipt and inspect the later package/chamber separately, without replay.
 
-New outbound previews optionally accept `maximumRoundTripWallSeconds`600..86400. It is an explicit finite wall allowance, independent of unchanged game-tick, item, energy and return reserves. With no planned surface work, omission retains the legacy tick-derived deadline; planned work gets a derived finite window capped at 24 hours. Returns inherit their original/effective clock. The value is hashed, echoed and immutable in new protected journey records. Legacy records keep their old serialized shape and two-hour bound. The existing confirmed remote-recovery proposal already permits a finite window up to24 hours; select enough finite time under actual owner authority, with a fresh Native plan/digest, without rewriting old deadlines or refunding spending. The300-second startup-to-real-work gate and all per-action stop/charge caps remain unchanged. These are source capabilities until separately cold-installed and accepted live.
+New outbound previews optionally accept `maximumRoundTripWallSeconds`600..86400. It is an explicit finite wall allowance, independent of unchanged game-tick, item, energy and return reserves. With no planned surface work, omission retains the legacy tick-derived deadline; planned work gets a derived finite window capped at 24 hours. Returns inherit their original/effective clock. The value is hashed, echoed and immutable in new protected journey records. Legacy records keep their old serialized shape and two-hour bound. The existing confirmed remote-recovery proposal already permits a finite window up to24 hours; select enough finite time under actual owner authority, with a fresh Native plan/digest, without rewriting old deadlines or refunding spending. Check the installed build for the route parameters it supports.
+
+Lab measures startup from the original launch request to the first actual game operation. Its 2026-11-16 Ascension recovery allocation allowed 600 seconds, with a 120-second target. The Lab default for other scopes is 300 seconds. Individual action and charging limits are separate. [Lab timing decision](https://github.com/Arcueid77/Spherewright-Lab/blob/main/operations/standing-authority.md#proportionate-restrictions-2026-11-15--限制应当合理)
 
 Outbound previews also accept optional `plannedSurfaceWorkGameTicks` from 0 through 5184000. It is added to the protected journey total while the original outbound and return flight limits stay unchanged. The value is bound into the route hash and immutable journal, and returns cannot add it. With no explicit wall window, the effective window includes planned work and remains capped at 24 hours. Zero keeps the legacy route hash and journal shape. This is a time budget: it does not advance the game or grant energy, items or construction. An active journal with a nonzero planned allowance requires a matching or newer cohort; older cohorts limited to 108000 ticks may reject it, so retain the matching runtime and protected backup until the journey is closed.
 
 
-Protocol version remains `1`; the `0.5.0` Voyager development interface targets DSP `0.10.35.29151` and retains the `0.4` protocol surface. This describes maintained source, not an installed-cohort or Voyager live-acceptance claim. Formal `v0.4.0` is tagged at `b7c0002dbe2e8f5608c5ca140b0c6326a1818021`; older production acceptance remains fixed at `2a7a98d1932c404e3a7abc2c11233d9c0b8780d9`. See [product status](project-status.md), [native validation](validation/native-29151-preflight.md), [safety](safety-model.md) and the [Agent playbook](agent-playbook.md).
+Spherewright 0.6.0 uses Bridge protocol `1` on DSP `0.10.35.29151`. Its MCP server registers 76 tools and one Markdown playbook resource. [Release notes](release-notes/v0.6.0.md) · [Safety model](safety-model.md) · [Agent playbook](agent-playbook.md)
 
 An owned harvest order stopped after the existing native power-starvation grace period reports `failureKind=mecha_power_starved`. The original terminal result remains failed and may retain a partial inventory delta; the reason is evidence for a fresh independent audit, not permission to replay or infer completion. Older results may omit the reason. This source change does not claim live acceptance.
 
@@ -50,6 +52,7 @@ spherewright_get_player_state
 spherewright_get_progression_state
 spherewright_get_gameplay_journal
 spherewright_get_local_star_system
+spherewright_get_dyson_state
 spherewright_get_voyager_star_catalog
 spherewright_preview_voyager_route
 spherewright_preview_same_session_surface_recovery
@@ -111,6 +114,8 @@ spherewright_prepare_supply_mecha_warpers
 spherewright_commit_supply_mecha_warpers
 spherewright_prepare_save
 spherewright_commit_save
+spherewright_prepare_return_to_main_menu
+spherewright_commit_return_to_main_menu
 spherewright_prepare_quarantine_reconciliation
 spherewright_commit_quarantine_reconciliation
 spherewright_prepare_resume_owned_game

@@ -11,14 +11,14 @@ Plugin、MCP、Contracts 和 Bridge.Core 构成一个版本强耦合的 monorepo
 | 项目 | 当前状态 |
 | --- | --- |
 | 最新正式版本 | [`v0.6.0`](https://github.com/Arcueid77/Spherewright/releases/tag/v0.6.0)，2026-11-21 发布，源码 `78274df5e93ca912a2d4b6670f7eb707d3562e94`，面向 DSP `0.10.35.29151`、BepInEx `5.4.17.0` |
-| 0.6 Ascension | 戴森设计、结构进度及射线接收站实际发电观察。[发行说明](docs/release-notes/v0.6.0.zh-CN.md) |
+| 0.6 Ascension | 在一个和平 1× 存档中，Agent 通过正常生产和发射完成了一块戴森球壳面。冷读档后 150 个结构点和 224 个壳面单元全部保留，同一射线接收站在日照采样期间继续发电。[实机验收](https://github.com/Arcueid77/Spherewright-Lab/blob/47580368d44f0d033072be5911bc366009c7c000/scenarios/v0.6-ascension/acceptance-2026-11-20.md) |
 | Voyager 基线 | 原三项条款已在各自源码范围内验收，同源交审双包保留于 Lab |
 | 首帆/首枚运载火箭扩展 | 2026-11-06 记录有界实机验收：外星当地制造、4 帆真实入云、1 枚火箭抵达并增加 1 个原生结构点、辅料送达及普通保存/冷恢复续接 |
 | 首帆/火箭实现源码 | `d3b7ac897bb44d62c8a7ed54c51a55ff2b8de7b0`；准确源码 CI、Native 构建、同源安装和包载荷检查在记录范围内通过 |
 | 叠放实现源码 | `19cd5eb505ffd30f4832f3bfbf0ced9ddad4a889`，9模型/19有向组合、分层仓储筛选及真实合堆。其两种实现包布局分别通过冷恢复，47成员和完整背包保持 |
 | 0.5 发布 | GitHub标签及6个附件已正式发布，回下载字节核对通过。发布源码在已实测实现上仅增加8份Markdown变更。2026-11-11的Thunderstore公开页已列出0.5.0 |
 
-GitHub Release 提供手动 ZIP、Thunderstore 布局 ZIP、校验和及源码清单。直接安装请选择手动包。[发行下载](https://github.com/Arcueid77/Spherewright/releases/tag/v0.6.0) · [Thunderstore 页面](https://thunderstore.io/c/dyson-sphere-program/p/Arcueid_77/Spherewright/)
+Windows 直接安装可下载手动 ZIP 和校验和。通过 Thunderstore Mod Manager 或 r2modman 安装时，选择 `Arcueid_77-Spherewright` 0.6.0。[GitHub 下载](https://github.com/Arcueid77/Spherewright/releases/tag/v0.6.0) · [Thunderstore](https://thunderstore.io/c/dyson-sphere-program/p/Arcueid_77/Spherewright/)
 
 发行清单记录打包源码和实机验收所用的构建。[产品状态](docs/project-status.zh-CN.md) · [路线图](ROADMAP.zh-CN.md) · [Ascension 实机记录](https://github.com/Arcueid77/Spherewright-Lab/blob/47580368d44f0d033072be5911bc366009c7c000/scenarios/v0.6-ascension/acceptance-2026-11-20.md)
 
@@ -35,12 +35,12 @@ GitHub Release 提供手动 ZIP、Thunderstore 布局 ZIP、校验和及源码�
 
 ## 安装与使用
 
-1. 阅读[安装指南](docs/release-installation.zh-CN.md)，使用配套的 Plugin、MCP 和共享程序集。
+1. 安装配套的 Plugin 和 MCP，注册可执行文件，然后调用只读的 `spherewright_get_status` 验证连接。[安装指南](docs/release-installation.zh-CN.md)提供了可直接运行的 Codex CLI 示例。
 2. 替换现有安装前，先了解[中断安装恢复](docs/installation-recovery.zh-CN.md)。
 3. 遵循 [Agent 指南](docs/agent-playbook.zh-CN.md)；英文指南同时嵌入 MCP 并随包提供。
 4. 集成或审阅行为时，查阅[协议](docs/protocol.zh-CN.md)、[安全模型](docs/safety-model.zh-CN.md)和[架构](docs/architecture.zh-CN.md)。
 
-发行证据按源码和用途区分。[0.6 发行说明](docs/release-notes/v0.6.0.zh-CN.md)、[0.5 发行说明](docs/release-notes/v0.5.0.zh-CN.md)、[0.4 发行说明](docs/release-notes/v0.4.0.zh-CN.md)、[0.4 验收](docs/validation/v0.4.0.zh-CN.md)、[29151 兼容证据](docs/validation/native-29151-preflight.zh-CN.md)和[固定对应源码实机报告](https://github.com/Arcueid77/Spherewright-Lab/blob/74a4ec3d91608467911460eaf0d317800e60309b/operations/formal-release-2026-10-17.md)。完整导航见[文档索引](docs/README.zh-CN.md)。
+发行证据按源码和用途区分。[0.6 发行说明](docs/release-notes/v0.6.0.zh-CN.md)、[0.5.1 风机回收](https://github.com/Arcueid77/Spherewright/blob/v0.5.1/docs/release-notes/v0.5.1.zh-CN.md)、[0.5 发行说明](docs/release-notes/v0.5.0.zh-CN.md)、[0.4 发行说明](docs/release-notes/v0.4.0.zh-CN.md)、[0.4 验收](docs/validation/v0.4.0.zh-CN.md)、[29151 兼容证据](docs/validation/native-29151-preflight.zh-CN.md)和[固定对应源码实机报告](https://github.com/Arcueid77/Spherewright-Lab/blob/74a4ec3d91608467911460eaf0d317800e60309b/operations/formal-release-2026-10-17.md)。完整导航见[文档索引](docs/README.zh-CN.md)。
 
 ## 开发
 

@@ -6,15 +6,15 @@
 
 ## 当前基线与状态
 
-文档复核日期为 2026-11-11。本路线图负责版本范围与验收门；[产品状态](docs/project-status.zh-CN.md)负责开发截点；[Lab 活动快照](https://github.com/Arcueid77/Spherewright-Lab/blob/main/scenarios/v0.5-voyager/current-status.md)负责当前安装态与实机证据。源码、实装、候选资格与发布是四种不同状态。后续实现不得改写历史证据，也不会自动继承其实机信用。
+2026-11-22 复核。本路线图记录各版本的范围与验收标准。正式版本及其实测构建见[产品状态](docs/project-status.zh-CN.md)，当前安装与实机证据见 [Lab 活动交接](https://github.com/Arcueid77/Spherewright-Lab/blob/main/operations/active-handoff.md)。
 
 | 项目 | 当前基线 | 剩余工作 / 边界 |
 | --- | --- | --- |
-| 最新正式版本 | `v0.5.0`，源码 `b574c616346c4e087b433de3633e23fb12075add`，DSP `0.10.35.29151` / BepInEx `5.4.17.0` | GitHub发行已完成，2026-11-11的Thunderstore公开页已列出0.5.0 |
+| 最新正式版本 | [0.6.0 Ascension](https://github.com/Arcueid77/Spherewright/releases/tag/v0.6.0)，源码 `78274df5e93ca912a2d4b6670f7eb707d3562e94`，DSP `0.10.35.29151`、BepInEx `5.4.17.0` | GitHub 提供手动包，[Thunderstore](https://thunderstore.io/c/dyson-sphere-program/p/Arcueid_77/Spherewright/) 已上架 0.6.0 |
 | Voyager 基线 | 原三项条款已在各自源码范围内验收，同源交审双包保留于 Lab | 保留既有证据，不重放原验收门制造进度 |
 | 首帆/首枚运载火箭扩展 | 2026-11-06 在选定实装/交审源码 `d3b7ac897bb44d62c8a7ed54c51a55ff2b8de7b0` 记录有界实机验收 | 通用戴森结构设计和持续发射网络仍归 0.6；后续每个源码单独验证 |
-| 开发线 | 外星普通制造/施工、观察、配置和恢复能力持续演进 | 每个准确源码先验证再作实装或运行声明；工具数量和离线测试不等于实机验收 |
-| 0.5 发布 | 交审档案已保留，未创建 tag、Release 或平台上传 | 正式发布仍需独立明确批准和准确候选审核 |
+| Ascension 实机结果 | 冷恢复保留了已完成的 150 个结构点与 224 个壳面单元。同一接收站在日照采样窗口内持续测得正功率。 | 实机版本 `e221b263`。[采样条件及实测范围](https://github.com/Arcueid77/Spherewright-Lab/blob/47580368d44f0d033072be5911bc366009c7c000/scenarios/v0.6-ascension/acceptance-2026-11-20.md) |
+| Voyager 发行 | [0.5.0 Voyager](https://github.com/Arcueid77/Spherewright/releases/tag/v0.5.0) 与 [0.5.1 风机回收](https://github.com/Arcueid77/Spherewright/releases/tag/v0.5.1) 均已发布。 | 0.5.1 标签保留了单座风机电网影响预览与回收说明。 |
 
 旧 0.4 生产验收源码 `2a7a98d1932c404e3a7abc2c11233d9c0b8780d9`、DSP `0.10.35.29145` 及其冻结包仍为历史证据，不是 Voyager 基线。证据与限制见 [0.4 验收](docs/validation/v0.4.0.zh-CN.md)。保留已发布 tag、包、哈希、锁及验收，不重做已验收的 0.4 建厂、两倍扩产或长窗。
 
@@ -159,7 +159,7 @@
 
 ## 0.5.0 — Voyager
 
-状态：**基线与有界首帆/首枚运载火箭扩展已验收**。原阶段于 2026-10-19 启动并由原 `0.7.0` 完整前移，三项原条款已在各自源码范围闭合。所有者 2026-11-01/02 的指令将首张太阳帆、首枚运载火箭及最小原生接收结构纳入 0.5。后续开发与正式发布仍是独立状态。
+状态：**基线与有界首帆/首枚运载火箭扩展已验收**。原阶段于 2026-10-19 启动并由原 `0.7.0` 完整前移，三项原条款已在各自源码范围闭合。所有者 2026-11-01/02 的指令将首张太阳帆、首枚运载火箭及最小原生接收结构纳入 0.5。[0.5.0 正式版](https://github.com/Arcueid77/Spherewright/releases/tag/v0.5.0)于 2026-11-10 发布。
 
 ### 目标与实现约定
 
@@ -187,7 +187,7 @@
 1. 保留已验收基线和扩展证据，不为制造活动重复已验收飞行、物流或发射。
 2. 后续每个开发源码独立完整构建/回归，取得准确已推送 SHA 的绿色 CI，再固定 Lab 采用并执行必要的源码特定安装/运行检查。工具数量和离线测试不产生实机信用。
 3. 候选源码、选定实装与后续纯证据 SHA 分开；文档或状态提交不替换任何交审档案。
-4. `0.5` tag、Release 或 Thunderstore 上传仍需单独明确批准和准确候选审核。
+4. 已发行 [0.5.0](https://github.com/Arcueid77/Spherewright/releases/tag/v0.5.0) 的来源与校验和可在发行页核对。后续新版本分别按其范围审核和授权。
 
 完整场景证据和活动快照归 [Spherewright-Lab Voyager](https://github.com/Arcueid77/Spherewright-Lab/tree/main/scenarios/v0.5-voyager)；通用能力、协议、playbook 和用户指南留在产品仓。
 

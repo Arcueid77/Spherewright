@@ -2,6 +2,19 @@
 
 [English](project-status.md) · [简体中文](project-status.zh-CN.md)
 
+## Published release
+
+**Spherewright 0.6.0 (Ascension)** was released on 2026-11-21 for Windows x64, DSP `0.10.35.29151` and BepInEx `5.4.17`. Direct installation and mod-manager installation are both available. [Install](release-installation.md) · [GitHub](https://github.com/Arcueid77/Spherewright/releases/tag/v0.6.0) · [Thunderstore](https://thunderstore.io/c/dyson-sphere-program/p/Arcueid_77/Spherewright/)
+
+| Evidence | Result |
+| --- | --- |
+| Installed gameplay build `e221b263` | Normal production and launches delivered all 150 structure points and 224 cells. Cold recovery preserved the topology and counts. In the post-recovery daylight window, the lowest sampled receiver output was 122,520 W over 1,846 game ticks. [Live record](https://github.com/Arcueid77/Spherewright-Lab/blob/47580368d44f0d033072be5911bc366009c7c000/scenarios/v0.6-ascension/acceptance-2026-11-20.md) |
+| Release source `78274df5` | The six changed documentation files include the embedded Agent guide. Both packaged MCP executables reported 76 tools and one resource. All six GitHub release assets passed public download verification. [Publication record](https://github.com/Arcueid77/Spherewright-Lab/blob/c012e723d75c35e1d72d82f3bb5f286926259945/releases/v0.6.0/publication-2026-11-21.md) |
+
+## Historical development checkpoints
+
+The entries below describe the source and installation at the time of each checkpoint.
+
 **Proportionate remote-work timing.** Finite local action wall patience now accommodates naturally slow game ticks without extending the original work-tick limit or consuming the protected return/cleanup wall reserve. Tests cover slow progress, the unchanged tick boundary and return-time clamp. This source change is not live acceptance.
 
 **Ascension design binding correction.** Fractional node coordinates now bind their exact single-precision bits rather than runtime-specific float display text. A classic Windows/.NET serialized-plan regression and the current-runtime echo verify the same binding while retaining exact request, cost and Native checks. This is source validation; coherent installation and live verification remain separate.

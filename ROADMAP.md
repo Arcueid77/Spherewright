@@ -6,15 +6,15 @@ This roadmap defines the approved capability sequence, acceptance gates and rele
 
 ## Current baseline and status
 
-Documentation reviewed 2026-11-10. This roadmap owns version scope and acceptance gates; [product status](docs/project-status.md) owns development checkpoints, and the [Lab active snapshot](https://github.com/Arcueid77/Spherewright-Lab/blob/main/scenarios/v0.5-voyager/current-status.md) owns current installation and live evidence. Source, installation, candidate qualification and publication are separate states. Later implementation never rewrites historical evidence or inherits its live credit automatically.
+Reviewed 2026-11-22. This roadmap defines the version scopes and acceptance criteria. Use [product status](docs/project-status.md) for the release and its tested build, and the [Lab handoff](https://github.com/Arcueid77/Spherewright-Lab/blob/main/operations/active-handoff.md) for the current installation and live evidence.
 
 | Item | Current baseline | Remaining work / boundary |
 | --- | --- | --- |
-| Latest formal release | `v0.5.0`, source `b574c616346c4e087b433de3633e23fb12075add`, DSP `0.10.35.29151` / BepInEx `5.4.17.0` | GitHub publication is complete. Thunderstore publicly lists 0.5.0 on 2026-11-11 |
+| Latest formal release | [0.6.0 Ascension](https://github.com/Arcueid77/Spherewright/releases/tag/v0.6.0), source `78274df5e93ca912a2d4b6670f7eb707d3562e94`, DSP `0.10.35.29151` and BepInEx `5.4.17.0` | Manual ZIP on GitHub and version 0.6.0 on [Thunderstore](https://thunderstore.io/c/dyson-sphere-program/p/Arcueid_77/Spherewright/) |
 | Voyager baseline | All three original clauses are accepted within their recorded source scopes; the same-source review pair is retained in Lab | Preserve accepted evidence; do not replay the original gates to manufacture progress |
 | First-sail/carrier-rocket extension | Bounded live acceptance recorded 2026-11-06 on selected runtime/review source `d3b7ac897bb44d62c8a7ed54c51a55ff2b8de7b0` | General Dyson structural design and sustained launch networks remain in 0.6; each later source requires separate qualification |
-| Development line | Off-world ordinary manufacture/construction, observations, configuration and recovery continue to evolve | Validate each exact source before installation or runtime claims; tool counts and offline tests are not live acceptance |
-| 0.5 publication | Review archives are retained; no tag, Release or platform upload | Formal publication still requires its own explicit approval and exact candidate review |
+| Ascension live result | A completed design with 150 structure points and 224 cells survived cold recovery. The same receiver produced power in the measured daylight intervals. | Live build `e221b263`. [Sampling conditions and remaining coverage](https://github.com/Arcueid77/Spherewright-Lab/blob/47580368d44f0d033072be5911bc366009c7c000/scenarios/v0.6-ascension/acceptance-2026-11-20.md) |
+| Voyager releases | [0.5.0 Voyager](https://github.com/Arcueid77/Spherewright/releases/tag/v0.5.0) and [0.5.1 Wind Recovery](https://github.com/Arcueid77/Spherewright/releases/tag/v0.5.1) are published. | The 0.5.1 tag documents the single-turbine power preview and recovery. |
 
 The older 0.4 production-acceptance source `2a7a98d1932c404e3a7abc2c11233d9c0b8780d9` on DSP `0.10.35.29145` and its frozen archives remain historical evidence, not the Voyager baseline. See [0.4 validation](docs/validation/v0.4.0.md) for its evidence and limits. Preserve published tags, packages, hashes, locks and acceptance; do not repeat accepted 0.4 construction, doubled throughput or long windows.
 
@@ -159,7 +159,7 @@ The accepted candidate retains separate mid-plan three-stage and whole-kit recov
 
 ## 0.5.0 — Voyager
 
-Status: **accepted baseline and bounded first-sail/carrier-rocket extension**. The original phase started on 2026-10-19 and moved intact from former `0.7.0`; all three original clauses are closed within their recorded source scopes. The owner's 2026-11-01/02 directions brought the first solar sail, first carrier rocket and minimum native receiving structure into 0.5. Later development and formal publication remain separate states.
+Status: **accepted baseline and bounded first-sail/carrier-rocket extension**. The original phase started on 2026-10-19 and moved intact from former `0.7.0`; all three original clauses are closed within their recorded source scopes. The owner's 2026-11-01/02 directions brought the first solar sail, first carrier rocket and minimum native receiving structure into 0.5. The [0.5.0 release](https://github.com/Arcueid77/Spherewright/releases/tag/v0.5.0) followed on 2026-11-10.
 
 ### Goal and implementation contract
 
@@ -187,7 +187,7 @@ The accepted 2026-11-06 extension review records ordinary off-world local manufa
 1. Preserve the accepted baseline and extension evidence; do not repeat accepted flights, logistics or launches merely to create new activity.
 2. Qualify every later development source independently through complete relevant builds/regressions, green exact-pushed-SHA CI, fixed Lab adoption and necessary source-specific installation/runtime checks. Tool counts and offline tests do not create live credit.
 3. Keep candidate source, selected runtime and later evidence-only SHAs distinct. A documentation or status commit does not replace either review archive.
-4. A `0.5` tag, Release or Thunderstore upload still requires separate explicit approval and exact candidate review.
+4. The publication record identifies the source and checksums for the shipped [0.5.0 release](https://github.com/Arcueid77/Spherewright/releases/tag/v0.5.0). Any future release follows its own review and authorization.
 
 Detailed scenario evidence and the active snapshot belong in [Spherewright-Lab Voyager](https://github.com/Arcueid77/Spherewright-Lab/tree/main/scenarios/v0.5-voyager); general capabilities, protocol, playbook and user guides stay here.
 

@@ -2,6 +2,19 @@
 
 [English](project-status.md) · [简体中文](project-status.zh-CN.md)
 
+## 正式版本
+
+**Spherewright 0.6.0（Ascension）** 于 2026-11-21 发布，支持 Windows x64、DSP `0.10.35.29151` 和 BepInEx `5.4.17`。可手动安装，也可通过 Mod 管理器安装。[安装指南](release-installation.zh-CN.md) · [GitHub](https://github.com/Arcueid77/Spherewright/releases/tag/v0.6.0) · [Thunderstore](https://thunderstore.io/c/dyson-sphere-program/p/Arcueid_77/Spherewright/)
+
+| 证据 | 结果 |
+| --- | --- |
+| 实机版本 `e221b263` | 正常生产与发射交付了全部 150 个结构点和 224 个壳面单元。冷恢复后拓扑和数量一致。恢复后的 1,846 个游戏 tick 日照窗口内，射线接收站的最低采样功率为 122,520 W。[实机记录](https://github.com/Arcueid77/Spherewright-Lab/blob/47580368d44f0d033072be5911bc366009c7c000/scenarios/v0.6-ascension/acceptance-2026-11-20.md) |
+| 发行源码 `78274df5` | 与实机版本相差六份说明文件，其中包括内置 Agent 指南。两包的 MCP 程序都返回 76 个工具和 1 份资源，GitHub 六项发行附件均通过公开下载校验。[发布记录](https://github.com/Arcueid77/Spherewright-Lab/blob/c012e723d75c35e1d72d82f3bb5f286926259945/releases/v0.6.0/publication-2026-11-21.md) |
+
+## 历史开发记录
+
+以下条目记录各次验证当时的源码与安装状态。
+
 **远端工作时限相称性。** 有限本地动作的墙钟等待现可容纳自然慢速游戏tick，不延长原工作tick上限，也不消耗受保护的返程/清理墙钟储备。测试覆盖慢速进度、不变的tick边界及返程时间截断；源码变更不等于实机验收。
 
 **Ascension设计绑定修正。** 小数节点坐标现按准确单精度位值绑定，不再依赖运行环境各自的浮点显示文本。经典Windows/.NET序列化方案与当前运行环境回显的回归核对同一绑定，同时保留准确请求、成本和原生检查。这是源码验证；同源安装与实机验证另计。

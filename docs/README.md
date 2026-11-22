@@ -10,7 +10,7 @@ Maintained guides have equivalent English and Simplified Chinese editions. Open 
 | --- | --- | --- |
 | Product overview | [README](../README.md) | [说明](../README.zh-CN.md) |
 | Current product/candidate status | [Status](project-status.md) | [状态](project-status.zh-CN.md) |
-| Installation | [Install](release-installation.md) | [安装](release-installation.zh-CN.md) |
+| Install and verify the first connection | [Install](release-installation.md) · [Codex read-only check](release-installation.md#connect-codex-and-verify-read-only-access) | [安装](release-installation.zh-CN.md) · [Codex 只读检查](release-installation.zh-CN.md#连接-codex-并检查只读访问) |
 | Interrupted manual installation | [Recovery](installation-recovery.md) | [恢复](installation-recovery.zh-CN.md) |
 | Agent operation | [Playbook](agent-playbook.md) | [指南](agent-playbook.zh-CN.md) |
 | Protocol and tool boundary | [Protocol](protocol.md) | [协议](protocol.zh-CN.md) |
@@ -24,6 +24,7 @@ Maintained guides have equivalent English and Simplified Chinese editions. Open 
 ## Release evidence and boundaries
 
 - [0.6 release notes](release-notes/v0.6.0.md) / [中文](release-notes/v0.6.0.zh-CN.md) cover Ascension, package compatibility and the scope of live validation.
+- [0.5.1 Wind Recovery](https://github.com/Arcueid77/Spherewright/blob/v0.5.1/docs/release-notes/v0.5.1.md) / [中文](https://github.com/Arcueid77/Spherewright/blob/v0.5.1/docs/release-notes/v0.5.1.zh-CN.md) cover the power-grid impact preview, single-turbine dismantle and independent rebuild on the 0.5 maintenance line.
 - [0.5 release notes](release-notes/v0.5.0.md) / [中文](release-notes/v0.5.0.zh-CN.md) summarize Voyager, launch, stacking and package provenance.
 - [0.4 validation](validation/v0.4.0.md) / [中文](validation/v0.4.0.zh-CN.md): frozen production-acceptance source, hashes, local evidence and unverified branches.
 - [0.4 release notes](release-notes/v0.4.0.md) / [中文](release-notes/v0.4.0.zh-CN.md): the published release, final package/install evidence and support limits.
@@ -35,6 +36,15 @@ Maintained guides have equivalent English and Simplified Chinese editions. Open 
 The latest formal release is `v0.6.0`, built from `78274df5e93ca912a2d4b6670f7eb707d3562e94`. The manifest records archive checksums and the build used for live validation. [GitHub Release](https://github.com/Arcueid77/Spherewright/releases/tag/v0.6.0)
 
 ## Native research
+
+| Topic | English | 简体中文 |
+| --- | --- | --- |
+| Dyson nodes, shells and receiver power | [Research](research/game-api-dyson-state.md) | [中文](research/game-api-dyson-state.zh-CN.md) |
+| First sail | [Research](research/game-api-first-sail.md) | [中文](research/game-api-first-sail.zh-CN.md) |
+| First carrier rocket | [Research](research/game-api-first-rocket.md) | [中文](research/game-api-first-rocket.zh-CN.md) |
+| Planetary navigation and shore arrival | [Research](research/game-api-native-surface-navigation.md) | [中文](research/game-api-native-surface-navigation.zh-CN.md) |
+| Research pause and resume | [Research](research/game-api-research-pause.md) | [中文](research/game-api-research-pause.zh-CN.md) |
+| Surface recovery lifecycle | [Research](research/native-surface-recovery-lifecycle.md) | [中文](research/native-surface-recovery-lifecycle.zh-CN.md) |
 
 - [29151 compatibility preflight](validation/native-29151-preflight.md) / [中文](validation/native-29151-preflight.zh-CN.md): exact expired-primary direction, completed-history retention, offline evidence and pending live checks.
 

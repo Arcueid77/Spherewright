@@ -4,17 +4,17 @@
 
 ## 维护基线
 
-已验收的本机 `0.4.0` 候选源码为 `2a7a98d1932c404e3a7abc2c11233d9c0b8780d9`，环境为 Windows x64、DSP `0.10.35.29145`、BepInEx `5.4.17.0`。[产品状态](../project-status.md)和[最终验收](../validation/v0.4.0.md)区分此候选与最新正式 `v0.3.3`。候选包保持冻结；文档变更不重建工件，也不构成新安装或实机验证。
+0.6.0 正式版面向 Windows x64、DSP `0.10.35.29151` 和 BepInEx `5.4.17.0`。发行包来自 `78274df5e93ca912a2d4b6670f7eb707d3562e94`，闭壳与冷恢复在已安装的 `e221b263` 上实测。[发行说明](../release-notes/v0.6.0.zh-CN.md) · [Lab 源码锁](https://github.com/Arcueid77/Spherewright-Lab/blob/c012e723d75c35e1d72d82f3bb5f286926259945/source-lock.json)
 
-早期逐次部署流水、特定机器审计和当时待验结果属于历史，完整不可变来源见[已验收提交中的研究](https://github.com/Arcueid77/Spherewright/blob/2a7a98d1932c404e3a7abc2c11233d9c0b8780d9/docs/research/environment.md)。详细运行证据属于 [Spherewright-Lab](https://github.com/Arcueid77/Spherewright-Lab/tree/14478a03c64c550e644c559405c8496b647552e7)，Lab 消费固定、只读产品依赖；产品构建/测试/打包不依赖 Lab。
+0.4 历史生产实测使用 DSP `0.10.35.29145`，对应源码 `2a7a98d1932c404e3a7abc2c11233d9c0b8780d9`，原生程序集 SHA-256 为 `B84B60DF5A24947A014801F23B9B85D1E77853F42A331918E2DC85B153E50527`。当时记录的 BepInEx 引用 SHA-256 为 `DC1CB6B58B962BDA5AAA1D6B5F9AE14EC174F61836A1A1F96C1A040C7E8381F7`。[历史验收](../validation/v0.4.0.zh-CN.md)
 
 ## 可复现输入
 
 | 输入 | 维护事实 |
 | --- | --- |
-| 此候选已验收平台 | Windows x64 |
-| 原生 DSP 引用 | `0.10.35.29145`；`Assembly-CSharp.dll` SHA-256 `B84B60DF5A24947A014801F23B9B85D1E77853F42A331918E2DC85B153E50527` |
-| BepInEx 引用 | `5.4.17.0`；SHA-256 `DC1CB6B58B962BDA5AAA1D6B5F9AE14EC174F61836A1A1F96C1A040C7E8381F7` |
+| 支持平台 | Windows x64 |
+| 原生 DSP 引用 | `0.10.35.29151`，`Assembly-CSharp.dll` SHA-256 `EF314425DADE51F529F184F07BE136CD3C2660A6A81515603C7226FBE7AB1D8C` |
+| BepInEx 引用 | `5.4.17.0`（Thunderstore 依赖 `xiaoye97-BepInEx-5.4.17`） |
 | Plugin 目标 | `net472`、BepInEx 5；游戏/Unity 引用不复制到发行输出 |
 | Contracts / Bridge.Core | `netstandard2.0` |
 | MCP / 测试 | `net8.0`；自包含 Windows x64 MCP 是发行工件 |
@@ -37,4 +37,4 @@
 
 便携 SDK、显式 NuGet 源和大小写不敏感的 Steam 根目录去重解决了历史环境问题，未修改全局用户设置。Plugin 显式禁用依赖 SDK 环境的隐式框架引用注入，并锁定 `net472` 引用包。沙盒 `BasicProductionLineCoordinator.cs` 仍被排除编译；历史注入生产不算普通世界验收。
 
-最终候选具有同机包安装、原生运行、指南和 owned-primary 恢复证据。异机、Mod Manager/r2modman profile、安装事务崩溃恢复和广泛第三方兼容仍未建立。规划中的远程验证机器不是已实现功能。秘密、原始存档、嵌入身份、凭据、运行时描述符和私有路径始终是受保护本地材料，不成为研究 fixture 或公开证据。
+玩法与冷恢复的结果见 [0.6 实机记录](https://github.com/Arcueid77/Spherewright-Lab/blob/47580368d44f0d033072be5911bc366009c7c000/scenarios/v0.6-ascension/acceptance-2026-11-20.md)，两种布局的检查见[发行包核验](https://github.com/Arcueid77/Spherewright-Lab/blob/c012e723d75c35e1d72d82f3bb5f286926259945/releases/v0.6.0/review-candidate-2026-11-20.md)。独立管理器 profile、异机及安装事务崩溃恢复仍待验证。原始存档、凭据与机器专用描述文件仅保存在本机。
