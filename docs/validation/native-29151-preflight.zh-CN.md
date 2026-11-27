@@ -38,3 +38,5 @@
 上方离线检查保留研究范围；冻结 29145 包及历史生产证据未变，不继承到新源码/session。任意存档安全、另一台计算机、独立管理器 profile、安装事务崩溃恢复及新的持续生产长窗仍未验证。后续事实文档提交不改变 b7 双包或安装源码，不重包。
 
 **下载（2026-10-17）：**[GitHub v0.4.0](https://github.com/Arcueid77/Spherewright/releases/tag/v0.4.0) 已发布手动 ZIP、Thunderstore 布局 ZIP、校验和及生成清单。附注 tag `v0.4.0` 指向源码 `b7c0002dbe2e8f5608c5ca140b0c6326a1818021`。[Thunderstore 条目](https://thunderstore.io/c/dyson-sphere-program/p/Arcueid_77/Spherewright/)仍为 `0.3.3`，其 `0.4.0` 上传尚未完成；安装 0.4.0 请使用 GitHub 手动包。
+
+**分发后续核对（2026-11-28）。** Thunderstore 公开版本历史已列出 [Spherewright 0.4.0](https://thunderstore.io/c/dyson-sphere-program/p/Arcueid_77/Spherewright/v/0.4.0/)。
